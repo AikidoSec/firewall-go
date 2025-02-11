@@ -1,7 +1,7 @@
 # Contributing
 
 ## Linting
-Make sure to lint your code, you can use Go's built-in linter : 
+Make sure to lint your code before committing : 
 ```sh
-go fmt
+make lint
 ```

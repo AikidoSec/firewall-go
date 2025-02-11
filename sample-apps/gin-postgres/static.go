@@ -7,7 +7,7 @@ import (
 
 func defineStaticRoutes(r *gin.Engine) {
 	r.LoadHTMLGlob("html/*")
-	
+
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{})
 	})
