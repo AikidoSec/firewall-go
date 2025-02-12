@@ -1,6 +1,7 @@
 package context
 
 import (
+	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"net"
 	"regexp"
 	"strings"
@@ -70,7 +71,7 @@ func replaceURLSegmentWithParam(segment string) string {
 		return ":hash"
 	}
 
-	if looksLikeASecret(segment) {
+	if helpers.LooksLikeASecret(segment) {
 		return ":secret"
 	}
 
@@ -83,12 +84,6 @@ func isStartsWithNumber(segment string) bool {
 
 func isIP(segment string) bool {
 	return net.ParseIP(segment) != nil
-}
-
-// Placeholder for the actual implementation of looksLikeASecret
-func looksLikeASecret(segment string) bool {
-	// Implement secret checking logic here
-	return false // For demonstration purposes, returning false
 }
 
 func containsHashLength(segment string) bool {
