@@ -7,6 +7,7 @@ import (
 
 func GetContext(r *http.Request) Context {
 	url := r.URL.String()
+	route := BuildRouteFromURI(r.URL.Path)
 	return Context{
 		URL:            &url,
 		Method:         &r.Method,
@@ -18,7 +19,7 @@ func GetContext(r *http.Request) Context {
 		Cookies:        cookiesToMap(r.Cookies()),
 		AttackDetected: nil,
 		Source:         "gin",
-		Route:          nil,
+		Route:          &route,
 		Subdomains:     []string{},
 	}
 }
