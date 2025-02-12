@@ -1,9 +1,7 @@
 package context
 
-import "net/url"
-
 type Context struct {
-	URL                *url.URL            `json:"url,omitempty"`
+	URL                *string             `json:"url,omitempty"`
 	Method             *string             `json:"method,omitempty"`
 	Query              map[string][]string `json:"query"`
 	Headers            map[string][]string `json:"headers"`
