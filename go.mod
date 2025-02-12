@@ -1,4 +1,4 @@
-module firewall-go
+module github.com/AikidoSec/firewall-go
 
 go 1.17
 
