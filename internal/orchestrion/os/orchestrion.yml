@@ -1,0 +1,51 @@
+# Unless explicitly stated otherwise all files in this repository are licensed
+# under the Apache License Version 2.0.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2023-present Datadog, Inc.
+---
+# yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
+meta:
+  name: github.com/AikidoSec/firewall-go/internal/orchestrion/os
+  description: |-
+    Protection from Local File Inclusion (LFI) Attacks
+
+    All known functions that open files are susceptible to Local File Inclusion (LFI) attacks. This aspect protects
+    against LFI attacks by wrapping the `os.OpenFile` function with a security operation that will block the operation if
+    it is deemed unsafe.
+
+    Instrumenting only the `os.OpenFile` function is sufficient to protect against LFI attacks, as all other functions in
+    the `os` package that open files ultimately call `os.OpenFile` (as of Go 1.23).
+
+aspects:
+  - id: OpenFile
+    join-point:
+      all-of:
+        - import-path: os
+        - function-body:
+            function:
+              - name: OpenFile
+    advice:
+      - prepend-statements:
+          imports:
+            os: os
+            zen_os: github.com/AikidoSec/firewall-go/internal/orchestrion/os
+          template: |-
+            _aikido_block := zen_os.Examine({{ .Function.Argument 0 }})
+            
+            if _aikido_block != nil {
+              return nil, _aikido_block
+            }
+#      - wrap-expression:
+#          imports:
+#            fmt: fmt
+#            os: os
+#            fs: io/fs
+#            zen_os: github.com/AikidoSec/firewall-go/internal/orchestrion/os
+#          template: |-
+#            func(name string, flag int, perm fs.FileMode) (*os.File, error) {
+#              err := zen_os.Examine(name)
+#              if err != nil {
+#                return nil, err // Throw an error
+#              }
+#              return os.OpenFile(name, flag, perm)
+#            }({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }})
