@@ -14,6 +14,7 @@ func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		fmt.Println(c.Params)
 		ginContext := context.GetContext(c.Request)
+		context.Set(ginContext) // Store context in Thread-Local storage.
 		recorder := SetRecorder(c)
 
 		// serve the request to the next middleware
