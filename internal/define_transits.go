@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/orchestrion/os"
+	"github.com/AikidoSec/firewall-go/internal/sinks/os"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits"
 )
 

@@ -1,6 +1,6 @@
 package main
 
 import (
-	_ "github.com/AikidoSec/firewall-go/internal/orchestrion/gin-gonic"
-	_ "github.com/AikidoSec/firewall-go/internal/orchestrion/os"
+	_ "github.com/AikidoSec/firewall-go/internal/sinks/os"
+	_ "github.com/AikidoSec/firewall-go/internal/sources/gin-gonic"
 )
