@@ -1,12 +1,17 @@
 package os
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits"
+	"github.com/AikidoSec/firewall-go/internal/context"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/path_traversal"
 )
 
 func Examine(path string) error {
-	if transits.PathTraversalFunction != nil {
-		return transits.PathTraversalFunction(path)
+	ctx := context.Get()
+	if ctx == nil {
+		return nil
 	}
-	return nil
+	return vulnerabilities.Scan(*ctx, path_traversal.PathTraversalVulnerability, []string{
+		path /* checkPathStart */, "1",
+	})
 }
