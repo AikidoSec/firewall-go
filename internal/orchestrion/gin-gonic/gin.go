@@ -3,6 +3,7 @@ package gin_gonic
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -14,6 +15,7 @@ func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		fmt.Println(c.Params)
 		ginContext := context.GetContext(c.Request)
+		internal.DefineTransits()
 		context.Set(ginContext) // Store context in Thread-Local storage.
 		recorder := SetRecorder(c)
 
