@@ -7,19 +7,21 @@ meta:
 aspects:
   - id: database/sql.DB.Query
     join-point:
-      all-of:
-        - import-path: database/sql
+      one-of:
         - function-body:
             function:
               - receiver: '*database/sql.DB'
               - name: Query
+        - function-body:
+            function:
+              - receiver: '*database/sql.DB'
+              - name: QueryRow
     advice:
       - prepend-statements:
           imports:
-            sql: database/sql
             sink: github.com/AikidoSec/firewall-go/internal/sinks/database_sql
           template: |-
             _aikido_block := sink.Examine({{ .Function.Argument 0}})
             if _aikido_block != nil {
-              return nil, _aikido_block
+              panic(_aikido_block)
             }
