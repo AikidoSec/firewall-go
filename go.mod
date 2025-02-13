@@ -1,8 +1,6 @@
 module github.com/AikidoSec/firewall-go
 
-go 1.22
-
-toolchain go1.23.6
+go 1.17
 
 require (
 	github.com/gin-gonic/gin v1.10.0

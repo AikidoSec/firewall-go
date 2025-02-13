@@ -28,24 +28,11 @@ aspects:
       - prepend-statements:
           imports:
             os: os
-            zen_os: github.com/AikidoSec/firewall-go/internal/orchestrion/os
+            transits: github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits
           template: |-
-            _aikido_block := zen_os.Examine({{ .Function.Argument 0 }})
-            
-            if _aikido_block != nil {
-              return nil, _aikido_block
+            if transits.PathTraversalFunction != nil {
+              _aikido_block := transits.PathTraversalFunction({{ .Function.Argument 0 }})
+              if _aikido_block != nil {
+                return nil, _aikido_block
+              }
             }
-#      - wrap-expression:
-#          imports:
-#            fmt: fmt
-#            os: os
-#            fs: io/fs
-#            zen_os: github.com/AikidoSec/firewall-go/internal/orchestrion/os
-#          template: |-
-#            func(name string, flag int, perm fs.FileMode) (*os.File, error) {
-#              err := zen_os.Examine(name)
-#              if err != nil {
-#                return nil, err // Throw an error
-#              }
-#              return os.OpenFile(name, flag, perm)
-#            }({{ index .AST.Args 0 }}, {{ index .AST.Args 1 }}, {{ index .AST.Args 2 }})

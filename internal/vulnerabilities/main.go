@@ -3,6 +3,7 @@ package vulnerabilities
 import (
 	"errors"
 	"github.com/AikidoSec/firewall-go/internal/context"
+	"github.com/AikidoSec/firewall-go/internal/helpers"
 )
 
 type Vulnerability struct {
@@ -15,7 +16,7 @@ type Attack struct {
 }
 
 func Scan(ctx context.Context, vulnerability Vulnerability, args []string) error {
-	userInputMap := context.ExtractStrings(ctx.Query)
+	userInputMap := helpers.ExtractStringsFromUserInput(ctx.Query, []helpers.PathPart{})
 	var attack *Attack = nil
 
 	for userInput, _ := range userInputMap {
