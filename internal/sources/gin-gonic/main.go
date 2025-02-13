@@ -13,9 +13,9 @@ import (
 // default service name will be used.
 func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		internal.Init()
 		fmt.Println(c.Params)
 		ginContext := context.GetContext(c.Request)
-		internal.DefineTransits()
 		context.Set(ginContext) // Store context in Thread-Local storage.
 		recorder := SetRecorder(c)
 
