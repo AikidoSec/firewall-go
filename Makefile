@@ -1,6 +1,6 @@
 .PHONY: prepare
 prepare: check_binaries
-	mkdir -p /opt/aikido
+	mkdir -p /opt/aikido/lib
 	cp .cache/binaries/* /opt/aikido/lib/
 
 .PHONY: test
