@@ -38,7 +38,7 @@ func Scan(ctx context.Context, operation string, vulnerability Vulnerability, ar
 				Payload:       userInput,
 			}
 			log.Debugf("Attack: %s", attack.ToString())
-
+			ReportAttackDetected(attack)
 			break
 		}
 	}
