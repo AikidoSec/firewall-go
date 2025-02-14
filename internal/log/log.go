@@ -18,9 +18,9 @@ const (
 )
 
 var (
-	currentLogLevel = ErrorLevel
+	currentLogLevel = DebugLevel
 	Logger          = log.New(os.Stdout, "", 0)
-	cliLogging      = false
+	cliLogging      = true
 	logFilePath     = ""
 )
 var LogFile *os.File
