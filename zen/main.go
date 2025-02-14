@@ -20,13 +20,14 @@ type combined struct {
 func Init() {
 	globals.AikidoConfig.LogLevel = "DEBUG"
 	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
+	globals.EnvironmentConfig.SocketPath = "/var/home/primary/firewall-go/socks/aikido-test.sock"
 	environmentConfig := aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
 		PlatformVersion: runtime.Version(),
 		Library:         "firewall-go",
 		Endpoint:        "https://guard.aikido.dev/",
 		ConfigEndpoint:  "https://runtime.aikido.dev/",
-		SocketPath:      "/var/home/primary/firewall-go/socks/aikido-test.sock",
+		SocketPath:      globals.EnvironmentConfig.SocketPath,
 		Version:         globals.Version, // firewall-go version
 	}
 	aikidoConfig := aikido_types.AikidoConfigData{
