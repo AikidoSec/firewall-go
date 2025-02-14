@@ -14,7 +14,7 @@ func GetContext(r *http.Request) Context {
 		Query:          r.URL.Query(),
 		Headers:        headersToMap(r.Header),
 		RouteParams:    nil,
-		RemoteAddress:  &r.RemoteAddr,
+		RemoteAddress:  GetRemoteAddress(r),
 		Body:           nil,
 		Cookies:        cookiesToMap(r.Cookies()),
 		AttackDetected: nil,
