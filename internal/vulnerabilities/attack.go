@@ -21,7 +21,7 @@ func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
 }
 
 /* Convert headers map to protobuf structure to be sent via gRPC to the Agent */
-func GetHeadersProto(context context.Context) []*protos.Header {
+func GetHeadersProto(context *context.Context) []*protos.Header {
 	var headersProto []*protos.Header
 	for key, value := range context.Headers {
 		// Only report first header :
@@ -39,7 +39,7 @@ func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected 
 			IpAddress: *context.RemoteAddress,
 			UserAgent: context.GetUserAgent(),
 			Url:       *context.URL,
-			Headers:   GetHeadersProto(),
+			Headers:   GetHeadersProto(context),
 			Body:      context.GetBodyRaw(),
 			Source:    context.Source,
 			Route:     *context.Route,
