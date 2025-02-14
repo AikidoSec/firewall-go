@@ -28,10 +28,11 @@ func Init() {
 	// gRPC Config :
 	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
 	globals.EnvironmentConfig.SocketPath = "/var/home/primary/firewall-go/socks/aikido-test.sock"
+	initGRPCServer() // gRPC Server
+	grpc.Init()      // gRPC Client
+}
 
-	// gRPC Client :
-	grpc.Init()
-
+func initGRPCServer() {
 	// gRPC Server :
 	environmentConfig := aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
@@ -50,6 +51,5 @@ func Init() {
 	if err != nil {
 		panic(err)
 	}
-
 	go zen_go_bindings.AgentInit(string(jsonBytes))
 }
