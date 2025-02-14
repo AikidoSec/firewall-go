@@ -26,7 +26,7 @@ var (
 
 func Init() bool {
 	zenInternalsLibPath := C.CString(fmt.Sprintf(
-		"/var/home/primary/Aikido/firewall-go/internal/vulnerabilities/zen_internals/lib/libzen_internals_%s-unknown-linux-gnu.so",
+		"/opt/aikido/lib/libzen_internals_%s-unknown-linux-gnu.so",
 		helpers.GetArch(),
 	))
 	defer C.free(unsafe.Pointer(zenInternalsLibPath))

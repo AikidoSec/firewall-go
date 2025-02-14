@@ -1,6 +1,7 @@
 .PHONY: prepare
 prepare: check_binaries
-	cp -r .cache/binaries internal/vulnerabilities/zen_internals/lib
+	mkdir -p /opt/aikido
+	cp .cache/binaries/* /opt/aikido/lib/
 
 .PHONY: test
 test: prepare
