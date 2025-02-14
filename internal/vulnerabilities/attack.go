@@ -8,7 +8,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
-	"github.com/AikidoSec/zen-internals-agent/utils"
 )
 
 /* Convert metadata map to protobuf structure to be sent via gRPC to the Agent */
@@ -48,7 +47,7 @@ func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected 
 			Kind:      string(res.Kind),
 			Operation: res.Operation,
 			Module:    "Module",
-			Blocked:   utils.IsBlockingEnabled(),
+			Blocked:   helpers.IsBlockingEnabled(),
 			Source:    res.Source,
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
