@@ -7,7 +7,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/sql_injection"
 )
 
-func Examine(query string) error {
+func Examine(query string, op string) error {
 	fmt.Println("Examining query:", query)
 
 	ctx := context.Get()
@@ -15,7 +15,7 @@ func Examine(query string) error {
 		return nil
 	}
 
-	return vulnerabilities.Scan(*ctx, sql_injection.SQLInjectionVulnerability, []string{
+	return vulnerabilities.Scan(*ctx, op, sql_injection.SQLInjectionVulnerability, []string{
 		query /* dialect */, "default",
 	})
 }

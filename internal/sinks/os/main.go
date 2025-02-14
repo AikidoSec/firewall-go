@@ -11,7 +11,7 @@ func Examine(path string) error {
 	if ctx == nil {
 		return nil
 	}
-	return vulnerabilities.Scan(*ctx, path_traversal.PathTraversalVulnerability, []string{
+	return vulnerabilities.Scan(*ctx, "os.OpenFile", path_traversal.PathTraversalVulnerability, []string{
 		path /* checkPathStart */, "1",
 	})
 }
