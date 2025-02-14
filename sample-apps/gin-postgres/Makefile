@@ -1,6 +1,3 @@
-.PHONY: env
-env:
-	export PATH="$PATH:/var/home/primary/go/bin"
 .PHONY: run
 run:
 	go clean -a
