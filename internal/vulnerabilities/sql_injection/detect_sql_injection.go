@@ -7,12 +7,16 @@ import (
 )
 
 func detectSQLInjection(query string, userInput string, dialect int) bool {
-	if shouldReturnEarly(query, userInput) {
+	// Lowercase versions of query and user input
+	queryLowercase := strings.ToLower(query)
+	userInputLowercase := strings.ToLower(userInput)
+
+	if shouldReturnEarly(queryLowercase, userInputLowercase) {
 		return false
 	}
 
 	// Executing our final check with zen_internals
-	return zen_internals.DetectSQLInjection(query, userInput, dialect) == 1
+	return zen_internals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect) == 1
 
 }
 
@@ -24,22 +28,18 @@ func shouldReturnEarly(query, userInput string) bool {
 		return true
 	}
 
-	// Lowercase versions of query and user input
-	queryLowercase := strings.ToLower(query)
-	userInputLowercase := strings.ToLower(userInput)
-
 	// User input not in query
-	if !strings.Contains(queryLowercase, userInputLowercase) {
+	if !strings.Contains(query, userInput) {
 		return true
 	}
 
 	// User input is alphanumerical (with underscores allowed)
-	if isAlphanumeric(userInputLowercase) {
+	if isAlphanumeric(userInput) {
 		return true
 	}
 
 	// Check if user input is a valid comma-separated list of numbers
-	cleanedInputForList := strings.ReplaceAll(strings.ReplaceAll(userInputLowercase, " ", ""), ",", "")
+	cleanedInputForList := strings.ReplaceAll(strings.ReplaceAll(userInput, " ", ""), ",", "")
 	match, _ := regexp.MatchString(`^\d+$`, cleanedInputForList)
 	return match
 }
