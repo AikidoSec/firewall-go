@@ -5,6 +5,7 @@ package zen
 import (
 	"encoding/json"
 	"github.com/AikidoSec/firewall-go/internal/globals"
+	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/AikidoSec/zen-internals-agent/zen_go_bindings"
@@ -24,9 +25,14 @@ func Init() {
 	log.Init()
 	log.SetLogLevel(globals.AikidoConfig.LogLevel)
 
-	// gRPC :
+	// gRPC Config :
 	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
 	globals.EnvironmentConfig.SocketPath = "/var/home/primary/firewall-go/socks/aikido-test.sock"
+
+	// gRPC Client :
+	grpc.Init()
+
+	// gRPC Server :
 	environmentConfig := aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
 		PlatformVersion: runtime.Version(),
