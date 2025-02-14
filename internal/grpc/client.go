@@ -131,6 +131,7 @@ func OnUserEvent(id string, username string, ip string) {
 }
 
 func OnAttackDetected(attackDetected *protos.AttackDetected) {
+	log.Debugf("Reporting attack back over gRPC")
 	if client == nil {
 		return
 	}
