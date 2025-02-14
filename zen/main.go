@@ -4,6 +4,7 @@ package zen
 
 import (
 	"encoding/json"
+	"github.com/AikidoSec/firewall-go/internal/globals"
 	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/AikidoSec/zen-internals-agent/zen_go_bindings"
 	"os"
@@ -17,6 +18,8 @@ type combined struct {
 
 // Init needs to be called in the user's app to start the background process
 func Init() {
+	globals.AikidoConfig.LogLevel = "DEBUG"
+	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
 	environmentConfig := aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
 		PlatformVersion: runtime.Version(),
@@ -24,11 +27,11 @@ func Init() {
 		Endpoint:        "https://guard.aikido.dev/",
 		ConfigEndpoint:  "https://runtime.aikido.dev/",
 		SocketPath:      "/var/home/primary/firewall-go/socks/aikido-test.sock",
-		Version:         "1.0.0", // Firewall go version
+		Version:         globals.Version, // firewall-go version
 	}
 	aikidoConfig := aikido_types.AikidoConfigData{
-		LogLevel: "DEBUG",
-		Token:    os.Getenv("AIKIDO_TOKEN"),
+		LogLevel: globals.AikidoConfig.LogLevel,
+		Token:    globals.AikidoConfig.Token,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
 	if err != nil {
