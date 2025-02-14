@@ -11,6 +11,7 @@ import (
 	"github.com/AikidoSec/zen-internals-agent/zen_go_bindings"
 	"os"
 	"runtime"
+	"strings"
 )
 
 type combined struct {
@@ -20,13 +21,18 @@ type combined struct {
 
 // Init needs to be called in the user's app to start the background process
 func Init() {
+	// Initialize Aikido config :
+	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
+	globals.AikidoConfig.LogLevel = os.Getenv("AIKIDO_LOG_LEVEL")
+	globals.AikidoConfig.Blocking = envIsTrue(os.Getenv("AIKIDO_BLOCK"))
+	globals.AikidoConfig.CollectApiSchema = true
+	globals.AikidoConfig.TrustProxy = envIsTrue(os.Getenv("AIKIDO_TRUST_PROXY"))
+
 	// Logger :
-	globals.AikidoConfig.LogLevel = "DEBUG"
 	log.Init()
 	log.SetLogLevel(globals.AikidoConfig.LogLevel)
 
 	// gRPC Config :
-	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
 	globals.EnvironmentConfig.SocketPath = "/var/home/primary/firewall-go/socks/aikido-test.sock"
 	initGRPCServer() // gRPC Server
 	grpc.Init()      // gRPC Client
@@ -46,10 +52,15 @@ func initGRPCServer() {
 	aikidoConfig := aikido_types.AikidoConfigData{
 		LogLevel: globals.AikidoConfig.LogLevel,
 		Token:    globals.AikidoConfig.Token,
+		Blocking: globals.AikidoConfig.Blocking,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
 	if err != nil {
 		panic(err)
 	}
 	go zen_go_bindings.AgentInit(string(jsonBytes))
+}
+
+func envIsTrue(s string) bool {
+	return strings.ToLower(s) == "1" || strings.ToLower(s) == "true"
 }
