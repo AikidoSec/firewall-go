@@ -5,6 +5,7 @@ package zen
 import (
 	"encoding/json"
 	"github.com/AikidoSec/firewall-go/internal/globals"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/AikidoSec/zen-internals-agent/zen_go_bindings"
 	"os"
@@ -18,7 +19,12 @@ type combined struct {
 
 // Init needs to be called in the user's app to start the background process
 func Init() {
+	// Logger :
 	globals.AikidoConfig.LogLevel = "DEBUG"
+	log.Init()
+	log.SetLogLevel(globals.AikidoConfig.LogLevel)
+
+	// gRPC :
 	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
 	globals.EnvironmentConfig.SocketPath = "/var/home/primary/firewall-go/socks/aikido-test.sock"
 	environmentConfig := aikido_types.EnvironmentConfigData{

@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	currentLogLevel = DebugLevel
+	currentLogLevel = ErrorLevel
 	Logger          = log.New(os.Stdout, "", 0)
 	cliLogging      = true
 	logFilePath     = ""
@@ -131,5 +131,5 @@ func SetLogLevel(level string) error {
 func Init() {
 	currentTime := time.Now()
 	timeStr := currentTime.Format("20060102150405")
-	logFilePath = fmt.Sprintf("/var/log/aikido/aikido-request-processor-%s-%d.log", timeStr, os.Getpid())
+	logFilePath = fmt.Sprintf("/var/log/aikido/firewall-go-%s-%d.log", timeStr, os.Getpid())
 }
