@@ -34,6 +34,15 @@ func Get() *Context {
 	return nil
 }
 
+func Clear() {
+	if Store == nil {
+		Store = newContextStore() // Create new global store if it doesn't exist.
+	}
+	Store.mu.Lock()
+	defer Store.mu.Unlock()
+	delete(Store.store, getGoroutineID())
+}
+
 func getGoroutineID() int {
 	// This is a simple way to get a unique ID for the goroutine.
 	// In a real-world application, you might want to use a more robust method.
