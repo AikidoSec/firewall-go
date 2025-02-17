@@ -15,14 +15,11 @@ import (
 func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		internal.Init()
-		fmt.Println(c.Params)
-		ginContext := context.GetContext(c.Request)
-		context.Set(ginContext) // Store context in Thread-Local storage.
 		recorder := SetRecorder(c)
+		ginContext := context.GetContext(c.Request)
 
-		// serve the request to the next middleware
-		c.Next()
-
+		functions.OnInitRequest(ginContext)
+		c.Next()                                     // serve the request to the next middleware
 		functions.OnPostRequest(recorder.StatusCode) // Run post-request logic (should discover route, api spec,...)
 
 		jsonData, err := json.Marshal(ginContext)
