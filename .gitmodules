@@ -1,3 +1,4 @@
 [submodule "agent"]
 	path = agent
 	url = git@github.com:AikidoSec/zen-internals-agent.git
+	branch = add-go-support
