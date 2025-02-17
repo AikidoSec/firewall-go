@@ -12,6 +12,7 @@ require (
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/gqlgen v0.17.62 // indirect
+	github.com/AikidoSec/zen-internals-agent v0.0.0-00010101000000-000000000000 // indirect
 	github.com/DataDog/appsec-internal-go v1.9.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.60.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/proto v0.60.1 // indirect
@@ -161,6 +162,8 @@ require (
 	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/seancfoley/bintree v1.3.1 // indirect
+	github.com/seancfoley/ipaddress-go v1.7.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
@@ -208,7 +211,7 @@ require (
 	golang.org/x/tools v0.28.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
-	google.golang.org/grpc v1.69.2 // indirect
+	google.golang.org/grpc v1.70.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.71.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
@@ -222,4 +225,6 @@ require (
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 )
 
-replace github.com/AikidoSec/firewall-go => /var/home/primary/Aikido/firewall-go
+replace github.com/AikidoSec/firewall-go => ../../
+
+replace github.com/AikidoSec/zen-internals-agent => ../../agent/
