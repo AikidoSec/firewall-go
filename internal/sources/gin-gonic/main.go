@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
+	"github.com/AikidoSec/firewall-go/internal/sources/functions"
 	"github.com/gin-gonic/gin"
 	"log"
 )
@@ -22,7 +23,8 @@ func GetMiddleware() gin.HandlerFunc {
 		// serve the request to the next middleware
 		c.Next()
 
-		fmt.Println("Status code", recorder.StatusCode)
+		functions.OnPostRequest(recorder.StatusCode) // Run post-request logic (should discover route, api spec,...)
+
 		jsonData, err := json.Marshal(ginContext)
 		if err != nil {
 			log.Fatalf("Error marshaling to JSON: %v", err)
