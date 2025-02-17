@@ -11,6 +11,7 @@ import (
 
 func GetApiInfo(ctx context.Context) *protos.APISpec {
 	if !globals.EnvironmentConfig.CollectApiSchema {
+		log.Debug("Collection of API Discovery was disabled.")
 		return nil
 	}
 	var bodyInfo *protos.APIBodyInfo
