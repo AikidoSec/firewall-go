@@ -18,7 +18,7 @@ type Context struct {
 }
 
 func (ctx *Context) GetUserAgent() string {
-	if ctx.Headers != nil && len(ctx.Headers["User-Agent"]) > 0 {
+	if ctx.Headers != nil && len(ctx.Headers["user-agent"]) > 0 {
 		return ctx.Headers["user-agent"][0]
 	}
 	return "unknown"
