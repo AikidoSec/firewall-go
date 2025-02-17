@@ -5,15 +5,16 @@ import (
 	"strings"
 )
 
-func getBodyDataType(headers map[string]interface{}) BodyDataType {
+func getBodyDataType(headers map[string][]string) BodyDataType {
 	if headers == nil {
 		return Undefined
 	}
 
-	contentType, exists := headers["content_type"].(string)
-	if !exists {
+	contentTypeArray, exists := headers["content_type"]
+	if !exists || len(contentTypeArray) < 1 {
 		return Undefined
 	}
+	contentType := contentTypeArray[0] // Unwrap
 
 	// Check if contentType has multiple values (comma separated or otherwise)
 	// and use the first one.

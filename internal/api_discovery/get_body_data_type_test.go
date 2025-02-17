@@ -24,21 +24,21 @@ func determineType(contentType string) string {
 func TestGetBodyDataType(t *testing.T) {
 	tests := []struct {
 		name     string
-		headers  map[string]interface{}
+		headers  map[string][]string
 		expected string
 	}{
-		{"JSON content_type", map[string]interface{}{"content_type": "application/json"}, "json"},
-		{"API JSON content_type", map[string]interface{}{"content_type": "application/vnd.api+json"}, "json"},
-		{"CSP report content_type", map[string]interface{}{"content_type": "application/csp-report"}, "json"},
-		{"X JSON content_type", map[string]interface{}{"content_type": "application/x-json"}, "json"},
-		{"Form-urlencoded content_type", map[string]interface{}{"content_type": "application/x-www-form-urlencoded"}, "form-urlencoded"},
-		{"Multipart form-data content_type", map[string]interface{}{"content_type": "multipart/form-data"}, "form-data"},
-		{"XML content_type", map[string]interface{}{"content_type": "text/xml"}, "xml"},
-		{"HTML content_type", map[string]interface{}{"content_type": "text/html"}, ""},
-		{"Multiple content_types", map[string]interface{}{"content_type": "application/json"}, "json"},
-		{"Nonexistent content_type", map[string]interface{}{"x-test": "abc"}, ""},
+		{"JSON content_type", map[string][]string{"content_type": {"application/json"}}, "json"},
+		{"API JSON content_type", map[string][]string{"content_type": {"application/vnd.api+json"}}, "json"},
+		{"CSP report content_type", map[string][]string{"content_type": {"application/csp-report"}}, "json"},
+		{"X JSON content_type", map[string][]string{"content_type": {"application/x-json"}}, "json"},
+		{"Form-urlencoded content_type", map[string][]string{"content_type": {"application/x-www-form-urlencoded"}}, "form-urlencoded"},
+		{"Multipart form-data content_type", map[string][]string{"content_type": {"multipart/form-data"}}, "form-data"},
+		{"XML content_type", map[string][]string{"content_type": {"text/xml"}}, "xml"},
+		{"HTML content_type", map[string][]string{"content_type": {"text/html"}}, ""},
+		{"Multiple content_types", map[string][]string{"content_type": {"application/json"}}, "json"},
+		{"Nonexistent content_type", map[string][]string{"x-test": {"abc"}}, ""},
 		{"Null input", nil, ""},
-		{"Empty headers", map[string]interface{}{}, ""},
+		{"Empty headers", map[string][]string{}, ""},
 	}
 
 	for _, tt := range tests {
