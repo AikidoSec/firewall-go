@@ -32,7 +32,7 @@ func GetApiAuthType(headers map[string][]string, cookies map[string]string) []*p
 	var result []*protos.APIAuthType
 
 	// Check the Authorization header
-	if _, exists := headers["authorization"]; exists {
+	if _, exists := headers["authorization"]; exists && len(headers["authorization"]) > 0 {
 		authHeaderType := getAuthorizationHeaderType(headers["authorization"][0])
 		if authHeaderType != nil {
 			result = append(result, authHeaderType)
@@ -80,7 +80,7 @@ func findApiKeys(headers map[string][]string, cookies map[string]string) []*prot
 	var result []*protos.APIAuthType
 
 	for headerIndex, header := range commonApiKeyHeaderNames {
-		if value, exists := headers[getPhpHttpHeaderEquivalent(header)]; exists && value[0] != "" {
+		if value, exists := headers[getPhpHttpHeaderEquivalent(header)]; exists && len(value) > 0 && value[0] != "" {
 			result = append(result, &protos.APIAuthType{
 				Type: "apiKey",
 				In:   "header",
