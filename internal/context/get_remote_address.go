@@ -15,6 +15,6 @@ func GetRemoteAddress(r *http.Request) *string {
 	} else {
 		result = host // Remove port number
 	}
-	
+
 	return &result
 }
