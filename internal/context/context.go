@@ -28,5 +28,32 @@ func (ctx *Context) GetBodyRaw() string {
 	return "" // To be implemented
 }
 func (ctx *Context) GetUserId() string {
-	return (*ctx.User).Id
+	if ctx.User != nil {
+		return ctx.User.Id
+	}
+	return "" // Empty ID
+}
+func (ctx *Context) GetURL() string {
+	if ctx.URL != nil {
+		return *ctx.URL
+	}
+	return ""
+}
+func (ctx *Context) GetMethod() string {
+	if ctx.Method != nil {
+		return *ctx.Method
+	}
+	return "*"
+}
+func (ctx *Context) GetIP() string {
+	if ctx.RemoteAddress != nil {
+		return *ctx.RemoteAddress
+	}
+	return "0.0.0.0"
+}
+func (ctx *Context) GetRoute() string {
+	if ctx.Route != nil {
+		return *ctx.Route
+	}
+	return ""
 }
