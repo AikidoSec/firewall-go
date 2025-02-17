@@ -1,7 +1,7 @@
 package context
 
 type Context struct {
-	URL                *string             `json:"url,omitempty"`
+	URL                string              `json:"url,omitempty"`
 	Method             *string             `json:"method,omitempty"`
 	Query              map[string][]string `json:"query"`
 	Headers            map[string][]string `json:"headers"`
@@ -32,12 +32,6 @@ func (ctx *Context) GetUserId() string {
 		return ctx.User.Id
 	}
 	return "" // Empty ID
-}
-func (ctx *Context) GetURL() string {
-	if ctx.URL != nil {
-		return *ctx.URL
-	}
-	return ""
 }
 func (ctx *Context) GetMethod() string {
 	if ctx.Method != nil {
