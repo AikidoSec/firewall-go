@@ -6,6 +6,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 	. "github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
+	"reflect"
 )
 
 func GetApiInfo(ctx context.Context) *protos.APISpec {
@@ -54,6 +55,5 @@ func GetApiInfo(ctx context.Context) *protos.APISpec {
 
 func isObject(data interface{}) bool {
 	// Helper function to determine if the data is an object (map in Go)
-	_, ok := data.(map[string]interface{})
-	return ok
+	return reflect.TypeOf(data).Kind() == reflect.Map
 }
