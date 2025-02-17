@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"github.com/AikidoSec/firewall-go/internal/api_discovery"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
@@ -30,9 +31,11 @@ func OnPostRequest(statusCode int) {
 		return
 	}
 
+	apiSpec := api_discovery.GetApiInfo(*ctx)
+
 	// Start a goroutine to handle reporting of a route :
 	go OnRequestShutdownReporting(
-		ctx.GetMethod(), ctx.GetRoute(), statusCode, ctx.GetUserId(), ctx.GetIP(), nil,
+		ctx.GetMethod(), ctx.GetRoute(), statusCode, ctx.GetUserId(), ctx.GetIP(), apiSpec,
 	)
 
 	context.Clear() // Clear context.
