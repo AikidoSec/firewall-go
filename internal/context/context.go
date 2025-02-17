@@ -14,14 +14,19 @@ type Context struct {
 	Route              *string             `json:"route,omitempty"`
 	Subdomains         []string            `json:"subdomains,omitempty"`
 	ExecutedMiddleware *bool               `json:"executedMiddleware,omitempty"`
+	User               *User               `json:"user,omitempty"`
 }
 
 func (ctx *Context) GetUserAgent() string {
-	return "to be implemented" // To be implemented
+	if ctx.Headers != nil {
+		return ctx.Headers["user-agent"][0]
+	}
+	return "unknown"
 }
 func (ctx *Context) GetBodyRaw() string {
-	return "to be implemented" // To be implemented
+
+	return "" // To be implemented
 }
 func (ctx *Context) GetUserId() string {
-	return "to be implemented" // To be implemented
+	return (*ctx.User).Id
 }
