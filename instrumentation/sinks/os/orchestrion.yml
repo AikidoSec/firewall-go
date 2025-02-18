@@ -28,10 +28,10 @@ aspects:
       - prepend-statements:
           imports:
             os: os
-            transits: github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits
+            transits: github.com/AikidoSec/firewall-go/internal/transits
           template: |-
-            if transits.PathTraversalFunction != nil {
-              _aikido_block := transits.PathTraversalFunction({{ .Function.Argument 0 }})
+            if transits.OSSinkFunction != nil {
+              _aikido_block := transits.OSSinkFunction({{ .Function.Argument 0 }})
               if _aikido_block != nil {
                 return nil, _aikido_block
               }
