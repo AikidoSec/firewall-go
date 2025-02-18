@@ -3,8 +3,8 @@ package gin_gonic
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
-	"github.com/AikidoSec/firewall-go/internal/transits"
 	"github.com/gin-gonic/gin"
 	"log"
 )
@@ -15,7 +15,7 @@ func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		fmt.Println(c.Params)
 		ginContext := context.GetContext(c.Request)
-		transits.DefineTransits()
+		internal.DefineTransits()
 		context.Set(ginContext) // Store context in Thread-Local storage.
 
 		// Make sure it runs after the request is finished : (defer)

@@ -5,9 +5,3 @@ package transits
 // This is due to the fact that our code gets inserted on compile of `os`, and some code for path traversal
 // Uses the `os` module resulting in a stuck compile loop.
 var OSSinkFunction func(file string) error = nil
-
-func DefineTransits() {
-	if OSSinkFunction == nil {
-		OSSinkFunction = OSExamine
-	}
-}
