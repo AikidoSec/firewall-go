@@ -24,7 +24,7 @@ func GetMiddleware() gin.HandlerFunc {
 		}()
 
 		functions.OnInitRequest(ginContext)
-		c.Next()                                     // serve the request to the next middleware
+		c.Next() // serve the request to the next middleware
 
 		jsonData, err := json.Marshal(ginContext)
 		if err != nil {
