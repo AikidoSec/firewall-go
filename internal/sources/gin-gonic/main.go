@@ -17,12 +17,16 @@ func GetMiddleware() gin.HandlerFunc {
 		ginContext := context.GetContext(c.Request)
 		internal.DefineTransits()
 		context.Set(ginContext) // Store context in Thread-Local storage.
-		recorder := SetRecorder(c)
+
+		// Make sure it runs after the request is finished : (defer)
+		defer func() {
+			statusCode := c.Writer.Status()
+			fmt.Println("Status code", statusCode)
+		}()
 
 		// serve the request to the next middleware
 		c.Next()
 
-		fmt.Println("Status code", recorder.StatusCode)
 		jsonData, err := json.Marshal(ginContext)
 		if err != nil {
 			log.Fatalf("Error marshaling to JSON: %v", err)
