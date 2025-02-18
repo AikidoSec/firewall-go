@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func GetContext(r *http.Request) Context {
+func GetContext(r *http.Request, source string) Context {
 	route := BuildRouteFromURI(r.URL.Path)
 	return Context{
 		URL:            fullURL(r),
@@ -17,7 +17,7 @@ func GetContext(r *http.Request) Context {
 		Body:           nil,
 		Cookies:        cookiesToMap(r.Cookies()),
 		AttackDetected: nil,
-		Source:         "gin",
+		Source:         source,
 		Route:          &route,
 		Subdomains:     []string{},
 	}

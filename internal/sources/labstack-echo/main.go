@@ -19,7 +19,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			if httpRequest == nil {
 				return next(c) // Do not continue.
 			}
-			echoContext := context.GetContext(httpRequest)
+			echoContext := context.GetContext(httpRequest, "echo")
 
 			functions.OnInitRequest(echoContext)
 			err := next(c)               // serve the request to the next middleware
