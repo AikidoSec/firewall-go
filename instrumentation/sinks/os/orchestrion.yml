@@ -5,7 +5,7 @@
 ---
 # yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
 meta:
-  name: github.com/AikidoSec/firewall-go/internal/sinks/os
+  name: github.com/AikidoSec/firewall-go/instrumentation/sinks/os
   description: |-
     Protection from Local File Inclusion (LFI) Attacks
 
