@@ -57,6 +57,6 @@ func fullURL(r *http.Request) string {
 	if len(r.URL.Fragment) > 0 {
 		fragment = "#" + r.URL.Fragment
 	}
-	
+
 	return scheme + r.Host + r.URL.Path + query + fragment
 }
