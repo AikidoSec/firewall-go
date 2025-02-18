@@ -1,4 +1,4 @@
-package os
+package transits
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/context"
@@ -6,7 +6,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/path_traversal"
 )
 
-func Examine(path string) error {
+func OSExamine(path string) error {
 	ctx := context.Get()
 	if ctx == nil {
 		return nil
