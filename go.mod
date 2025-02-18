@@ -1,6 +1,8 @@
 module github.com/AikidoSec/firewall-go
 
-go 1.22
+go 1.22.7
+
+toolchain go1.23.6
 
 require (
 	github.com/AikidoSec/zen-internals-agent v0.0.0-00010101000000-000000000000
