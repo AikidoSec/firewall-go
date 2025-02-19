@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
@@ -16,7 +15,7 @@ func executeShellCommand(command string) string {
 	cmd.Stderr = &output
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Sprintf("Error: %s", err.Error())
+		panic(err)
 	}
 	return output.String()
 }
@@ -25,13 +24,13 @@ func executeShellCommand(command string) string {
 func makeHttpRequest(url string) string {
 	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Sprintf("Error: %s", err.Error())
+		panic(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Sprintf("Error: %s", err.Error())
+		panic(err)
 	}
 	return string(body)
 }
@@ -40,7 +39,8 @@ func makeHttpRequest(url string) string {
 func readFile(filePath string) string {
 	content, err := ioutil.ReadFile("content/blogs/" + filePath)
 	if err != nil {
-		return fmt.Sprintf("Error: %s", err.Error())
+
+		panic(err)
 	}
 	return string(content)
 }
