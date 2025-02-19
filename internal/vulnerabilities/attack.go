@@ -42,7 +42,7 @@ func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected 
 			Headers:   GetHeadersProto(context),
 			Body:      context.GetBodyRaw(),
 			Source:    context.Source,
-			Route:     *context.Route,
+			Route:     context.Route,
 		},
 		Attack: &protos.Attack{
 			Kind:      string(res.Kind),

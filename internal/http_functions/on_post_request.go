@@ -35,7 +35,7 @@ func OnPostRequest(statusCode int) {
 
 	// Start a goroutine to handle reporting of a route :
 	go OnRequestShutdownReporting(
-		ctx.GetMethod(), ctx.GetRoute(), statusCode, ctx.GetUserId(), ctx.GetIP(), apiSpec,
+		ctx.GetMethod(), ctx.Route, statusCode, ctx.GetUserId(), ctx.GetIP(), apiSpec,
 	)
 
 	context.Clear() // Clear context.
