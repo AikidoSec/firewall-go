@@ -45,9 +45,3 @@ func (ctx *Context) GetIP() string {
 	}
 	return "0.0.0.0"
 }
-func (ctx *Context) GetRoute() string {
-	if ctx.Route != nil {
-		return *ctx.Route
-	}
-	return ""
-}
