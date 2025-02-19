@@ -6,6 +6,9 @@ import (
 )
 
 func GetContext(r *http.Request, route string, source string) Context {
+	if len(route) == 0 {
+		route = r.URL.Path // Use path from URL as default.
+	}
 	return Context{
 		URL:            fullURL(r),
 		Method:         &r.Method,
