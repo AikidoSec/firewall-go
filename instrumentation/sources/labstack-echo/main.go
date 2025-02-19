@@ -1,11 +1,10 @@
 package labstack_echo
 
 import (
-	"encoding/json"
+	"errors"
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	functions "github.com/AikidoSec/firewall-go/internal/http_functions"
-	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/labstack/echo/v4"
 )
 
@@ -14,26 +13,31 @@ import (
 func GetMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			internal.Init()
 			httpRequest := c.Request()
-			ip := c.RealIP()
 			if httpRequest == nil {
 				return next(c) // Do not continue.
 			}
+
+			internal.Init()
+
+			ip := c.RealIP()
 			echoContext := context.GetContext(httpRequest, c.Path(), "echo")
 			echoContext.RemoteAddress = &ip // use real ip function, which checks x-forwarded-for.
-
 			functions.OnInitRequest(echoContext)
-			err := next(c)               // serve the request to the next middleware
-			functions.OnPostRequest(200) // Run post-request logic (should discover route, api spec,...)
 
-			jsonData, err := json.Marshal(echoContext)
-			if err != nil {
-				log.Errorf("Error marshaling to JSON: %v", err)
-			}
+			err := next(c) // serve the request to the next middleware
 
-			// Print the JSON output
-			log.Debug(string(jsonData))
+			// Report after call with status code :
+			defer (func() {
+				status := c.Response().Status
+
+				httpErr := new(echo.HTTPError)
+				if errors.As(err, &httpErr) {
+					status = httpErr.Code
+				}
+				functions.OnPostRequest(status) // Run post-request logic (should discover route, api spec,...)
+			})()
+
 			return err
 		}
 	}
