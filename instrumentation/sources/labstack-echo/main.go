@@ -16,10 +16,12 @@ func GetMiddleware() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			internal.Init()
 			httpRequest := c.Request()
+			ip := c.RealIP()
 			if httpRequest == nil {
 				return next(c) // Do not continue.
 			}
 			echoContext := context.GetContext(httpRequest, c.Path(), "echo")
+			echoContext.RemoteAddress = &ip // use real ip function, which checks x-forwarded-for.
 
 			functions.OnInitRequest(echoContext)
 			err := next(c)               // serve the request to the next middleware
