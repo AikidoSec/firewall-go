@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
+	functions "github.com/AikidoSec/firewall-go/internal/http_functions"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/firewall-go/internal/sources/functions"
 	"github.com/labstack/echo"
 )
 
