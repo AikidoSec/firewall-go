@@ -14,8 +14,7 @@ import (
 func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		internal.Init()
-		fmt.Println(c.Params)
-		ginContext := context.GetContext(c.Request)
+		ginContext := context.GetContext(c.Request, c.FullPath(), "gin")
 		context.Set(ginContext) // Store context in Thread-Local storage.
 
 		// Make sure it runs after the request is finished : (defer)
