@@ -6,7 +6,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/context"
 	functions "github.com/AikidoSec/firewall-go/internal/http_functions"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // GetMiddleware returns middleware that will create contexts of incoming requests. If service is empty then the

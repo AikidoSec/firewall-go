@@ -4,6 +4,8 @@
 
 //go:build tools
 
+//go:generate go run github.com/DataDog/orchestrion pin
+
 package tools
 
 // Imports in this file determine which tracer intergations are enabled in
@@ -15,6 +17,6 @@ package tools
 import (
 	// Ensures `orchestrion` is present in `go.mod` so that builds are repeatable.
 	// Do not remove.
-	_ "github.com/AikidoSec/firewall-go"
+	_ "github.com/AikidoSec/firewall-go/instrumentation"
 	_ "github.com/DataDog/orchestrion"
 )

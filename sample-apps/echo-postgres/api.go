@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
@@ -35,7 +36,7 @@ func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
 		return c.String(http.StatusOK, string(rowsCreated))
 	})
 
-	e.POST("/api/execute/", func(c echo.Context) error {
+	e.POST("/api/execute", func(c echo.Context) error {
 		req := new(CommandRequest)
 		if err := c.Bind(req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -50,7 +51,7 @@ func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
 		return c.String(http.StatusOK, result)
 	})
 
-	e.POST("/api/request/", func(c echo.Context) error {
+	e.POST("/api/request", func(c echo.Context) error {
 		req := new(RequestRequest)
 		if err := c.Bind(req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -59,9 +60,11 @@ func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
 		return c.String(http.StatusOK, response)
 	})
 
-	e.GET("/api/read/", func(c echo.Context) error {
+	e.GET("/api/read", func(c echo.Context) error {
 		filePath := c.QueryParam("path")
+		fmt.Println("Opening file: ", filePath)
 		content := readFile(filePath)
+		fmt.Println("File content: ", content)
 		return c.String(http.StatusOK, content)
 	})
 }
