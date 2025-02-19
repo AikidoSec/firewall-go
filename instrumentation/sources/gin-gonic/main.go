@@ -14,7 +14,10 @@ import (
 func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		internal.Init()
+		ip := c.ClientIP()
+
 		ginContext := context.GetContext(c.Request, c.FullPath(), "gin")
+		ginContext.RemoteAddress = &ip // Use ClientIP() which parses X-Forwarded-For for us.
 		context.Set(ginContext) // Store context in Thread-Local storage.
 
 		// Make sure it runs after the request is finished : (defer)
