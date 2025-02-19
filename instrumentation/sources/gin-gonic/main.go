@@ -13,7 +13,9 @@ import (
 // default service name will be used.
 func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ip := c.ClientIP()
 		ginContext := context.GetContext(c.Request, c.FullPath(), "gin")
+		ginContext.RemoteAddress = &ip // Use ClientIP() which parses X-Forwarded-For for us.
 		internal.DefineTransits()
 		context.Set(ginContext) // Store context in Thread-Local storage.
 
