@@ -15,7 +15,7 @@ import (
 func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		internal.Init()
-		ginContext := context.GetContext(c.Request)
+		ginContext := context.GetContext(c.Request, c.FullPath(), "gin")
 
 		// Make sure it runs after the request is finished : (defer)
 		defer func() {
