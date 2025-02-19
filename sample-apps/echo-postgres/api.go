@@ -41,13 +41,19 @@ func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
 		if err := c.Bind(req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
-		result := executeShellCommand(req.UserCommand)
+		result, err := executeShellCommand(req.UserCommand)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
 		return c.String(http.StatusOK, result)
 	})
 
 	e.GET("/api/execute/:command", func(c echo.Context) error {
 		userCommand := c.Param("command")
-		result := executeShellCommand(userCommand)
+		result, err := executeShellCommand(userCommand)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
 		return c.String(http.StatusOK, result)
 	})
 
@@ -56,14 +62,20 @@ func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
 		if err := c.Bind(req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
-		response := makeHttpRequest(req.URL)
+		response, err := makeHttpRequest(req.URL)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
 		return c.String(http.StatusOK, response)
 	})
 
 	e.GET("/api/read", func(c echo.Context) error {
 		filePath := c.QueryParam("path")
 		fmt.Println("Opening file: ", filePath)
-		content := readFile(filePath)
+		content, err := readFile(filePath)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
 		fmt.Println("File content: ", content)
 		return c.String(http.StatusOK, content)
 	})
