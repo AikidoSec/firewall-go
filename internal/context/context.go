@@ -11,7 +11,7 @@ type Context struct {
 	Cookies            map[string]string   `json:"cookies"`
 	AttackDetected     *bool               `json:"attackDetected,omitempty"`
 	Source             string              `json:"source"`
-	Route              *string             `json:"route,omitempty"`
+	Route              string              `json:"route,omitempty"`
 	Subdomains         []string            `json:"subdomains,omitempty"`
 	ExecutedMiddleware *bool               `json:"executedMiddleware,omitempty"`
 }
