@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
-	"github.com/AikidoSec/firewall-go/internal/sources/functions"
+	"github.com/AikidoSec/firewall-go/internal/http_functions"
 	"github.com/gin-gonic/gin"
 	"log"
 )
@@ -20,10 +20,10 @@ func GetMiddleware() gin.HandlerFunc {
 		// Make sure it runs after the request is finished : (defer)
 		defer func() {
 			statusCode := c.Writer.Status()
-			functions.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
+			http_functions.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
 		}()
 
-		functions.OnInitRequest(ginContext)
+		http_functions.OnInitRequest(ginContext)
 		c.Next() // serve the request to the next middleware
 
 		jsonData, err := json.Marshal(ginContext)

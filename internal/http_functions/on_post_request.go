@@ -1,4 +1,4 @@
-package functions
+package http_functions
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/api_discovery"
