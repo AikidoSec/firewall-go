@@ -23,7 +23,14 @@ func GetMiddleware() gin.HandlerFunc {
 			http_functions.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
 		}()
 
-		http_functions.OnInitRequest(ginContext)
+		// Write a response using Gin :
+		res := http_functions.OnInitRequest(ginContext)
+		if res != nil {
+			c.String(res.StatusCode, res.Message)
+			c.Abort()
+			return
+		}
+		
 		c.Next() // serve the request to the next middleware
 
 		jsonData, err := json.Marshal(ginContext)
