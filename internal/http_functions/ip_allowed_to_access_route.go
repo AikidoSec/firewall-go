@@ -23,18 +23,21 @@ func ipAllowedToAccessRoute(ip string, matches []Endpoint) bool {
 			return false // No IP was recognized.
 		}
 
-		allowedIPAddresses := endpoint.AllowedIPAddresses
-
-		// Check if the remote address is in the allowed IP addresses
-		for _, allowedIP := range allowedIPAddresses {
-			if allowedIP == ip {
-				return true
-			}
+		if !ipAllowed(ip, endpoint) {
+			return false // Checks the entire array for 1 match (contains).
 		}
-
-		// If the remote address is not allowed, return false
-		return false
 	}
 
 	return true
+}
+
+func ipAllowed(remoteAddress string, endpoint Endpoint) bool {
+	for _, allowedIP := range endpoint.AllowedIPAddresses {
+		if allowedIP == remoteAddress {
+			// The IP is in the allowlist, so allow
+			return true
+		}
+	}
+	// The IP is not in the allowlist, so block
+	return false
 }
