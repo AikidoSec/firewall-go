@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 	"regexp"
 )
@@ -46,7 +47,7 @@ type IpBlockList struct {
 
 type CloudConfigData struct {
 	ConfigUpdatedAt   int64
-	Endpoints         map[EndpointKey]EndpointData
+	Endpoints         []aikido_types.Endpoint
 	BlockedUserIds    map[string]bool
 	BypassedIps       map[string]bool
 	BlockedIps        map[string]IpBlockList

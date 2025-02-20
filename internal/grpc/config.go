@@ -4,6 +4,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	. "github.com/AikidoSec/firewall-go/internal/types"
+	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 	"regexp"
@@ -51,20 +52,19 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 
 	globals.CloudConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
 
-	globals.CloudConfig.Endpoints = map[EndpointKey]EndpointData{}
+	var endpoints []aikido_types.Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
-		endpointData := EndpointData{
+		endpoints = append(endpoints, aikido_types.Endpoint{
+			Method:             ep.Method,
+			Route:              ep.Route,
 			ForceProtectionOff: ep.ForceProtectionOff,
-			RateLimiting: RateLimiting{
+			AllowedIPAddresses: ep.AllowedIPAddresses,
+			RateLimiting: aikido_types.RateLimiting{
 				Enabled: ep.RateLimiting.Enabled,
 			},
-			AllowedIPAddresses: map[string]bool{},
-		}
-		for _, ip := range ep.AllowedIPAddresses {
-			endpointData.AllowedIPAddresses[ip] = true
-		}
-		globals.CloudConfig.Endpoints[EndpointKey{Method: ep.Method, Route: ep.Route}] = endpointData
+		})
 	}
+	globals.CloudConfig.Endpoints = endpoints
 
 	globals.CloudConfig.BlockedUserIds = map[string]bool{}
 	for _, userId := range cloudConfigFromAgent.BlockedUserIds {

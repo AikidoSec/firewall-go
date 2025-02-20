@@ -3,6 +3,7 @@ package helpers
 import (
 	"github.com/AikidoSec/firewall-go/internal/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
@@ -48,4 +49,10 @@ func IsUserAgentBlocked(userAgent string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+func GetEndpoints() []aikido_types.Endpoint {
+	globals.CloudConfigMutex.Lock()
+	defer globals.CloudConfigMutex.Unlock()
+	return globals.CloudConfig.Endpoints
 }
