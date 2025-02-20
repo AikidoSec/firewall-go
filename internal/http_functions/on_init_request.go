@@ -27,11 +27,11 @@ func OnInitRequest(ctx context.Context) *Response {
 		return &Response{403, msg}
 	}
 
-	// Check endpoint settings :
 	matches := helpers.MatchEndpoints(
 		helpers.RouteMetadata{URL: ctx.URL, Method: ctx.GetMethod(), Route: ctx.Route},
 		helpers.GetEndpoints(),
 	)
+	// IP Allowlists per route
 	if !ipAllowedToAccessRoute(ip, matches) {
 		msg := "Your IP address is not allowed to access this resource."
 		msg += " (Your IP: " + ip + ")"
