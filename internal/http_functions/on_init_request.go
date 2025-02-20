@@ -19,7 +19,7 @@ func OnInitRequest(ctx context.Context) *Response {
 	if ipBlocked, ipBlockedDescription := helpers.IsIpBlocked(ip); ipBlocked {
 		log.Infof("IP \"%s\" blocked due to: %s!", ip, ipBlockedDescription)
 		msg := "Your IP address is not allowed to access this resource."
-		msg += "Your message here" + " (Your IP: " + ip + ")"
+		msg += " (Your IP: " + ip + ")"
 		return &Response{403, msg}
 	}
 
