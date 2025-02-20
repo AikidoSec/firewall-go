@@ -2,6 +2,7 @@ package helpers
 
 import (
 	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
+	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -73,9 +74,14 @@ func MatchEndpoints(context RouteMetadata, endpoints []Endpoint) []Endpoint {
 	return matches
 }
 
-// tryParseURLPath is a placeholder for the actual implementation that extracts the path from a URL.
-func tryParseURLPath(url string) string {
-	// This function should extract the path from the URL.
-	// For simplicity, we will return the URL itself in this example.
-	return url
+// tryParseURLPath extracts the path from a given URL.
+func tryParseURLPath(rawURL string) string {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		// If there's an error in parsing, return an empty string or handle it as needed
+		return ""
+	}
+
+	// Return the path component of the URL
+	return parsedURL.Path
 }
