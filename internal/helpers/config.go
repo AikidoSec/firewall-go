@@ -33,3 +33,19 @@ func IsIpBlocked(ip string) (bool, string) {
 
 	return false, ""
 }
+
+// IsUserAgentBlocked returns true if we block (e.g. bot blocking), and a string with the reason why.
+func IsUserAgentBlocked(userAgent string) (bool, string) {
+	globals.CloudConfigMutex.Lock()
+	defer globals.CloudConfigMutex.Unlock()
+
+	if globals.CloudConfig.BlockedUserAgents == nil {
+		return false, ""
+	}
+
+	if globals.CloudConfig.BlockedUserAgents.MatchString(userAgent) {
+		return true, "bot detection"
+	}
+
+	return false, ""
+}

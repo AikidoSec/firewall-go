@@ -3,7 +3,6 @@ package http_functions
 import (
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
-	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 type Response struct {
@@ -16,10 +15,15 @@ func OnInitRequest(ctx context.Context) *Response {
 
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
 	ip := ctx.GetIP()
-	if ipBlocked, ipBlockedDescription := helpers.IsIpBlocked(ip); ipBlocked {
-		log.Infof("IP \"%s\" blocked due to: %s!", ip, ipBlockedDescription)
+	if ipBlocked, _ := helpers.IsIpBlocked(ip); ipBlocked {
 		msg := "Your IP address is not allowed to access this resource."
 		msg += " (Your IP: " + ip + ")"
+		return &Response{403, msg}
+	}
+
+	// Check for blocked user agents using a regex (e.g. bot blocking)
+	if userAgentBlocked, _ := helpers.IsUserAgentBlocked(ctx.GetUserAgent()); userAgentBlocked {
+		msg := "You are not allowed to access this resource because you have been identified as a bot."
 		return &Response{403, msg}
 	}
 
