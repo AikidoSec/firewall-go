@@ -1,5 +1,7 @@
 package context
 
+import "encoding/json"
+
 type Context struct {
 	URL                string              `json:"url,omitempty"`
 	Method             *string             `json:"method,omitempty"`
@@ -24,8 +26,11 @@ func (ctx *Context) GetUserAgent() string {
 	return "unknown"
 }
 func (ctx *Context) GetBodyRaw() string {
-
-	return "" // To be implemented
+	data, err := json.Marshal(ctx.Body)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 func (ctx *Context) GetUserId() string {
 	if ctx.User != nil {
