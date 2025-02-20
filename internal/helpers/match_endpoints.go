@@ -2,7 +2,6 @@ package helpers
 
 import (
 	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
-	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -46,42 +45,26 @@ func MatchEndpoints(context RouteMetadata, endpoints []Endpoint) []Endpoint {
 		}
 	}
 
-	if context.URL != "" {
-		// Match the pathname
-		path := tryParseURLPath(context.URL)
-		var wildcards []Endpoint
+	var wildcards []Endpoint
 
-		// Filter wildcards and sort by the number of '*' in the route
-		for _, endpoint := range possible {
-			if strings.Contains(endpoint.Route, "*") {
-				wildcards = append(wildcards, endpoint)
-			}
+	// Filter wildcards and sort by the number of '*' in the route
+	for _, endpoint := range possible {
+		if strings.Contains(endpoint.Route, "*") {
+			wildcards = append(wildcards, endpoint)
 		}
+	}
 
-		sort.Slice(wildcards, func(i, j int) bool {
-			return strings.Count(wildcards[i].Route, "*") > strings.Count(wildcards[j].Route, "*")
-		})
+	sort.Slice(wildcards, func(i, j int) bool {
+		return strings.Count(wildcards[i].Route, "*") > strings.Count(wildcards[j].Route, "*")
+	})
 
-		// Check wildcards
-		for _, wildcard := range wildcards {
-			regex := regexp.MustCompile("^" + strings.ReplaceAll(wildcard.Route, "*", "(.*)") + "/?$")
-			if regex.MatchString(path) {
-				matches = append(matches, wildcard)
-			}
+	// Check wildcards
+	for _, wildcard := range wildcards {
+		regex := regexp.MustCompile("^" + strings.ReplaceAll(wildcard.Route, "*", "(.*)") + "/?$")
+		if regex.MatchString(context.Route) {
+			matches = append(matches, wildcard)
 		}
 	}
 
 	return matches
-}
-
-// tryParseURLPath extracts the path from a given URL.
-func tryParseURLPath(rawURL string) string {
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		// If there's an error in parsing, return an empty string or handle it as needed
-		return ""
-	}
-
-	// Return the path component of the URL
-	return parsedURL.Path
 }
