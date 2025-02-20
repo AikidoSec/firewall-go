@@ -6,6 +6,7 @@ import (
 	. "github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
+	"regexp"
 	"time"
 )
 
@@ -84,6 +85,12 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 	globals.CloudConfig.BlockedIps = map[string]IpBlockList{}
 	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIps {
 		globals.CloudConfig.BlockedIps[ipBlocklistSource] = buildIpBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
+	}
+
+	if cloudConfigFromAgent.BlockedUserAgents != "" {
+		globals.CloudConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
+	} else {
+		globals.CloudConfig.BlockedUserAgents = nil
 	}
 }
 
