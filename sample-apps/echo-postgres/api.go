@@ -37,14 +37,17 @@ func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
 	})
 
 	e.POST("/api/execute", func(c echo.Context) error {
-		req := new(CommandRequest)
-		if err := c.Bind(req); err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+		userCommand := c.FormValue("user_command")
+
+		if userCommand == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "user_command is required"})
 		}
-		result, err := executeShellCommand(req.UserCommand)
+
+		result, err := executeShellCommand(userCommand)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
+
 		return c.String(http.StatusOK, result)
 	})
 

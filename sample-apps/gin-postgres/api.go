@@ -38,7 +38,7 @@ func defineApiRoutes(r *gin.Engine, db *DatabaseHelper) {
 	})
 
 	r.POST("/api/execute", func(c *gin.Context) {
-		userCommand := c.PostForm("user_command") // Assuming the form field is named "user_command"
+		userCommand := c.PostForm("user_command")
 
 		if userCommand == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "user_command is required"})
