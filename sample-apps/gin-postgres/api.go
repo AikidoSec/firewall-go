@@ -38,12 +38,14 @@ func defineApiRoutes(r *gin.Engine, db *DatabaseHelper) {
 	})
 
 	r.POST("/api/execute", func(c *gin.Context) {
-		var req CommandRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		userCommand := c.PostForm("user_command") // Assuming the form field is named "user_command"
+
+		if userCommand == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user_command is required"})
 			return
 		}
-		result := executeShellCommand(req.UserCommand)
+
+		result := executeShellCommand(userCommand)
 		c.String(http.StatusOK, result)
 	})
 
