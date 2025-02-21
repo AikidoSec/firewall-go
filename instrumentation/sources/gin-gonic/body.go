@@ -3,8 +3,12 @@ package gin_gonic
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"github.com/AikidoSec/zen-internals-agent/log"
 	"github.com/gin-gonic/gin"
 	"io"
+	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -13,6 +17,10 @@ func tryExtractBody(c gin.Context) interface{} {
 	bodyFromJson := tryExtractJSON(c)
 	if bodyFromJson != nil {
 		return bodyFromJson
+	}
+	bodyFromForm := tryExtractFormBody(c)
+	if bodyFromForm != nil {
+		return bodyFromForm
 	}
 
 	// No use-able data found, returning nil :
@@ -37,4 +45,13 @@ func tryExtractJSON(c gin.Context) interface{} {
 		}
 	}
 	return nil
+}
+func tryExtractFormBody(c gin.Context) url.Values {
+	if _, err := c.MultipartForm(); err != nil {
+		if !errors.Is(err, http.ErrNotMultipart) {
+			log.Debugf("(gin) error on parse multipart form array: %v", err)
+			return nil
+		}
+	}
+	return c.Request.PostForm
 }
