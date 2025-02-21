@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/AikidoSec/zen-internals-agent/log"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
