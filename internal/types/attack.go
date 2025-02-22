@@ -5,9 +5,10 @@ import "encoding/json"
 type Kind string
 
 const (
-	Sql_injection  Kind = "sql_injection"
-	Path_traversal Kind = "path_traversal"
-	Ssrf           Kind = "ssrf"
+	Sql_injection   Kind = "sql_injection"
+	Shell_injection Kind = "shell_injection"
+	Path_traversal  Kind = "path_traversal"
+	Ssrf            Kind = "ssrf"
 )
 
 func GetDisplayNameForAttackKind(kind Kind) string {
