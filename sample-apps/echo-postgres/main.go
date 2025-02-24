@@ -14,7 +14,6 @@ func main() {
 	db = NewDatabaseHelper()
 	// Set up Echo router
 	e := echo.New()
-	e.Use(AikidoMiddleware())
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			userHeader := c.Request().Header.Get("user")
@@ -25,6 +24,7 @@ func main() {
 			return next(c)
 		}
 	})
+	e.Use(AikidoMiddleware())
 	defineStaticRoutes(e)
 	defineApiRoutes(e, db)
 
