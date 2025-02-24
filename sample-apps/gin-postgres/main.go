@@ -13,6 +13,11 @@ func main() {
 	db = NewDatabaseHelper()
 	// Set up Gin router
 	r := gin.Default()
+	r.Use(func(c *gin.Context) {
+		if c.GetHeader("user") != "" {
+			zen.SetUser(c.GetHeader("user"), "John Doe")
+		}
+	})
 	r.Use(RateLimitMiddleware())
 
 	defineStaticRoutes(r)
@@ -42,6 +47,6 @@ func RateLimitMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		c.Next() // Proceed to the next middleware/handler if not blocked
+		c.Next()
 	}
 }
