@@ -17,6 +17,13 @@ func ShouldBlockRequest() *BlockResponse {
 	ctx.ExecutedMiddleware = true
 	context.Set(*ctx) // Store the change.
 
+	// user-blocking :
+	userId := ctx.GetUserId()
+	if helpers.IsUserBlocked(userId) {
+		log.Infof("User \"%s\" is blocked!", userId)
+		return &BlockResponse{"blocked", "user", nil}
+	}
+	// rate-limiting :
 	matches := helpers.MatchEndpoints(
 		helpers.RouteMetadata{URL: ctx.URL, Method: ctx.GetMethod(), Route: ctx.Route},
 		helpers.GetEndpoints(),
