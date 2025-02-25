@@ -60,7 +60,7 @@ func IsUserBlocked(userID string) bool {
 func IsIpBypassed(ip string) bool {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
-	
+
 	if KeyExists(globals.CloudConfig.BypassedIps, ip) {
 		return true
 	}
