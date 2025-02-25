@@ -57,6 +57,17 @@ func IsUserBlocked(userID string) bool {
 	return KeyExists(globals.CloudConfig.BlockedUserIds, userID)
 }
 
+func IsIpBypassed(ip string) bool {
+	globals.CloudConfigMutex.Lock()
+	defer globals.CloudConfigMutex.Unlock()
+	
+	if KeyExists(globals.CloudConfig.BypassedIps, ip) {
+		return true
+	}
+
+	return false
+}
+
 func GetEndpoints() []aikido_types.Endpoint {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
