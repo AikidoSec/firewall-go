@@ -40,8 +40,23 @@ services:
       - "1433:1433"
     volumes:
       - mssql_db_data:/var/opt/mssql
+  clickhouse_database:
+    image: yandex/clickhouse-server:latest
+    container_name: sample_clickhouse_db
+    ports:
+      - "9000:9000"
+      - "8123:8123"  # HTTP interface
+    volumes:
+      - clickhouse_db_data:/var/lib/clickhouse
+      - ./clickhouse_init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      CLICKHOUSE_USER: user
+      CLICKHOUSE_PASSWORD: password
+      CLICKHOUSE_DB: db
+
 
 volumes:
+  clickhouse_db_data:
   postgres_db_data:
   mysql_db_data:
   mssql_db_data:
