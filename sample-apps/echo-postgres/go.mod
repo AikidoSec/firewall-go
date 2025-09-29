@@ -8,7 +8,6 @@ require (
 	github.com/DataDog/orchestrion v1.0.4
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/labstack/echo/v4 v4.13.3
-
 )
 
 require (
@@ -89,7 +88,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/gocql/gocql v1.7.0 // indirect
-	github.com/gofiber/fiber/v2 v2.52.6 // indirect
+	github.com/gofiber/fiber/v2 v2.52.9 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
