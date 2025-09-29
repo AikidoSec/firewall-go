@@ -73,6 +73,9 @@ func ExtractStringsFromUserInput(obj interface{}, pathToPayload []PathPart) map[
 		jwt := tryDecodeAsJWT(str)
 		if jwt.JWT {
 			for k, v := range ExtractStringsFromUserInput(jwt.Object, append(pathToPayload, PathPart{Type: "jwt"})) {
+				if k == "iss" || strings.HasSuffix(v, "<jwt>.iss") {
+					continue
+				}
 				results[k] = v
 			}
 		}
