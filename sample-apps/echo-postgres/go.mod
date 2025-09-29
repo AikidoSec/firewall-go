@@ -1,6 +1,6 @@
 module echo-postgres
 
-go 1.22.10
+go 1.23.0
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
@@ -8,7 +8,6 @@ require (
 	github.com/DataDog/orchestrion v1.0.4
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/labstack/echo/v4 v4.13.3
-
 )
 
 require (
@@ -204,7 +203,7 @@ require (
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/oauth2 v0.25.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
