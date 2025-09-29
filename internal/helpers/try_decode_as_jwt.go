@@ -23,7 +23,6 @@ func tryDecodeAsJWT(jwt string) JWTDecodeResult {
 	if len(parts) != 3 {
 		return JWTDecodeResult{JWT: false}
 	}
-	//remove padding
 
 	payload, err := base64.RawURLEncoding.DecodeString(removePadding(parts[1]))
 	if err != nil {
