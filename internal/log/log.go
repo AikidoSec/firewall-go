@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 )
 
-type LogLevel int
+type Level int
 
 const (
-	DebugLevel LogLevel = iota
+	DebugLevel Level = iota
 	InfoLevel
 	WarnLevel
 	ErrorLevel
@@ -20,14 +19,11 @@ const (
 var (
 	currentLogLevel = ErrorLevel
 	Logger          = log.New(os.Stdout, "", 0)
-	cliLogging      = true
-	logFilePath     = ""
 )
-var LogFile *os.File
 
 type AikidoFormatter struct{}
 
-func (f *AikidoFormatter) Format(level LogLevel, message string) string {
+func (f *AikidoFormatter) Format(level Level, message string) string {
 	var levelStr string
 	switch level {
 	case DebugLevel:
@@ -42,27 +38,11 @@ func (f *AikidoFormatter) Format(level LogLevel, message string) string {
 		return "invalid log level"
 	}
 
-	if cliLogging {
-		return fmt.Sprintf("[AIKIDO][%s] %s\n", levelStr, message)
-	}
-	return fmt.Sprintf("[AIKIDO][%s][%s] %s\n", levelStr, time.Now().Format("15:04:05"), message)
+	return fmt.Sprintf("[AIKIDO][%s] %s\n", levelStr, message)
 }
 
-func initLogFile() {
-	if LogFile != nil {
-		return
-	}
-	var err error
-	LogFile, err = os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return
-	}
-	Logger.SetOutput(LogFile)
-}
-
-func logMessage(level LogLevel, args ...interface{}) {
+func logMessage(level Level, args ...interface{}) {
 	if level >= currentLogLevel {
-		initLogFile()
 		formatter := &AikidoFormatter{}
 		message := fmt.Sprint(args...)
 		formattedMessage := formatter.Format(level, message)
@@ -70,7 +50,7 @@ func logMessage(level LogLevel, args ...interface{}) {
 	}
 }
 
-func logMessagef(level LogLevel, format string, args ...interface{}) {
+func logMessagef(level Level, format string, args ...interface{}) {
 	if level >= currentLogLevel {
 		formatter := &AikidoFormatter{}
 		message := fmt.Sprintf(format, args...)
@@ -126,10 +106,4 @@ func SetLogLevel(level string) error {
 		return errors.New("invalid log level")
 	}
 	return nil
-}
-
-func Init() {
-	currentTime := time.Now()
-	timeStr := currentTime.Format("20060102150405")
-	logFilePath = fmt.Sprintf("/var/log/aikido/firewall-go-%s-%d.log", timeStr, os.Getpid())
 }
