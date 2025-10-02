@@ -1,8 +1,9 @@
-package api_discovery
+package apidiscovery
 
 import (
-	. "github.com/AikidoSec/firewall-go/internal/types"
 	"strings"
+
+	. "github.com/AikidoSec/firewall-go/internal/types"
 )
 
 func getBodyDataType(headers map[string][]string) BodyDataType {

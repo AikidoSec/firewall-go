@@ -1,9 +1,10 @@
-package api_discovery
+package apidiscovery
 
 import (
+	"testing"
+
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // Test for detecting authorization header

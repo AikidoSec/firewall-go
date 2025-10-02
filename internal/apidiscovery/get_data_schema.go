@@ -1,8 +1,9 @@
-package api_discovery
+package apidiscovery
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"reflect"
+
+	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 )
 
 const maxDepth = 20

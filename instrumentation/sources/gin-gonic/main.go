@@ -3,7 +3,7 @@ package gin_gonic
 import (
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
-	"github.com/AikidoSec/firewall-go/internal/http_functions"
+	"github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,7 +23,7 @@ func GetMiddleware() gin.HandlerFunc {
 		context.Set(ginContext)             // Store context in Thread-Local storage.
 
 		// Write a response using Gin :
-		res := http_functions.OnInitRequest(ginContext)
+		res := http.OnInitRequest(ginContext)
 		if res != nil {
 			c.String(res.StatusCode, res.Message)
 			c.Abort()
@@ -33,6 +33,6 @@ func GetMiddleware() gin.HandlerFunc {
 		c.Next() // serve the request to the next middleware
 
 		statusCode := c.Writer.Status()
-		http_functions.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
+		http.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
 	}
 }

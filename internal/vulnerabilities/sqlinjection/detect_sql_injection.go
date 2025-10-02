@@ -1,9 +1,10 @@
-package sql_injection
+package sqlinjection
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/zen_internals"
 	"regexp"
 	"strings"
+
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/zeninternals"
 )
 
 func detectSQLInjection(query string, userInput string, dialect int) bool {
@@ -16,7 +17,7 @@ func detectSQLInjection(query string, userInput string, dialect int) bool {
 	}
 
 	// Executing our final check with zen_internals
-	return zen_internals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect) == 1
+	return zeninternals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect) == 1
 
 }
 

@@ -1,9 +1,10 @@
-package http_functions
+package http
 
 import (
+	"testing"
+
 	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // genEndpoint creates a new Endpoint for testing.

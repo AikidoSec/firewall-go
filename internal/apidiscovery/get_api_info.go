@@ -1,12 +1,13 @@
-package api_discovery
+package apidiscovery
 
 import (
+	"reflect"
+
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	. "github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
-	"reflect"
 )
 
 func GetApiInfo(ctx context.Context) *protos.APISpec {

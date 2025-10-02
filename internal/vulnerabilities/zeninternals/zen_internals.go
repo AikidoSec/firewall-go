@@ -1,4 +1,4 @@
-package zen_internals
+package zeninternals
 
 /*
 #cgo LDFLAGS: -ldl
@@ -14,9 +14,10 @@ int call_detect_sql_injection(detect_sql_injection_func func, const char* query,
 import "C"
 import (
 	"fmt"
+	"unsafe"
+
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"unsafe"
 )
 
 var (

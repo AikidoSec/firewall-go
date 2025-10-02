@@ -1,4 +1,4 @@
-package zen_internals
+package zeninternals
 
 import "strings"
 

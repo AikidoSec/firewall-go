@@ -4,7 +4,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/transits"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/path_traversal"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/pathtraversal"
 )
 
 // DefineTransits helps define transit functions. These are functions we cannot directly call
@@ -22,7 +22,7 @@ func OSExamine(path string) error {
 	if ctx == nil {
 		return nil
 	}
-	return vulnerabilities.Scan(*ctx, operation, path_traversal.PathTraversalVulnerability, []string{
+	return vulnerabilities.Scan(*ctx, operation, pathtraversal.PathTraversalVulnerability, []string{
 		path /* checkPathStart */, "1",
 	})
 }

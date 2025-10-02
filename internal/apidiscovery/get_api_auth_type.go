@@ -1,8 +1,9 @@
-package api_discovery
+package apidiscovery
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"strings"
+
+	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 )
 
 // Common API key header and cookie names

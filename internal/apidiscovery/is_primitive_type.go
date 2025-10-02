@@ -1,4 +1,4 @@
-package api_discovery
+package apidiscovery
 
 func onlyContainsPrimitiveTypes(types interface{}) bool {
 	switch t := types.(type) {

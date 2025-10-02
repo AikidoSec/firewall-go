@@ -5,7 +5,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
-	functions "github.com/AikidoSec/firewall-go/internal/http_functions"
+	"github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/labstack/echo/v4"
 )
 
@@ -27,7 +27,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			echoContext.Body = tryExtractBody(c) // Extract body from Echo req
 
 			// Write a possible response (i.e. geo-blocking bot blocking)
-			res := functions.OnInitRequest(echoContext)
+			res := http.OnInitRequest(echoContext)
 			if res != nil {
 				return c.String(res.StatusCode, res.Message)
 			}
@@ -41,7 +41,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			if errors.As(err, &httpErr) {
 				status = httpErr.Code
 			}
-			functions.OnPostRequest(status) // Run post-request logic (should discover route, api spec,...)
+			http.OnPostRequest(status) // Run post-request logic (should discover route, api spec,...)
 
 			return err
 		}

@@ -1,4 +1,4 @@
-package http_functions
+package http
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/helpers"

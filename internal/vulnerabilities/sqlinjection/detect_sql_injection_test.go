@@ -1,9 +1,10 @@
-package sql_injection
+package sqlinjection
 
 import (
+	"testing"
+
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestIsNotSqlInjection(t *testing.T) {
