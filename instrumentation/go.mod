@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/instrumentation
 
-go 1.22
+go 1.22.7
 
 toolchain go1.23.6
 
@@ -38,3 +38,4 @@ require (
 )
 
 replace github.com/AikidoSec/firewall-go v0.0.0 => ./../
+replace github.com/AikidoSec/zen-internals-agent => ./../agent

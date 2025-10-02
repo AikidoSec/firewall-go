@@ -13,6 +13,7 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/gqlgen v0.17.62 // indirect
 	github.com/AikidoSec/firewall-go v0.0.0 // indirect
+	github.com/AikidoSec/zen-internals-agent v0.0.0-00010101000000-000000000000 // indirect
 	github.com/DataDog/appsec-internal-go v1.9.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.60.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/proto v0.60.1 // indirect
@@ -161,6 +162,8 @@ require (
 	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/seancfoley/bintree v1.3.1 // indirect
+	github.com/seancfoley/ipaddress-go v1.7.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
@@ -225,3 +228,4 @@ require (
 replace github.com/AikidoSec/firewall-go => ../../
 
 replace github.com/AikidoSec/firewall-go/instrumentation => ../../instrumentation
+replace github.com/AikidoSec/zen-internals-agent => ../../agent/

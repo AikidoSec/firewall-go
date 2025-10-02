@@ -21,7 +21,7 @@ aspects:
           imports:
             sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database_sql
           template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}})
+            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Query(Row)")
             if _aikido_block != nil {
               panic(_aikido_block)
             }

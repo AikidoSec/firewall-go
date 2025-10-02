@@ -1,7 +1,9 @@
 .PHONY: prepare
 prepare: check_binaries
+	git submodule update --remote --merge
 	mkdir -p /opt/aikido/lib
 	cp .cache/binaries/* /opt/aikido/lib/
+	cd agent/ && make install_protoc go_setup build
 
 .PHONY: test
 test: prepare

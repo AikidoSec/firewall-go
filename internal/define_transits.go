@@ -18,10 +18,11 @@ func DefineTransits() {
 
 func OSExamine(path string) error {
 	ctx := context.Get()
+	operation := "os.OpenFile"
 	if ctx == nil {
 		return nil
 	}
-	return vulnerabilities.Scan(*ctx, path_traversal.PathTraversalVulnerability, []string{
+	return vulnerabilities.Scan(*ctx, operation, path_traversal.PathTraversalVulnerability, []string{
 		path /* checkPathStart */, "1",
 	})
 }

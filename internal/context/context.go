@@ -15,3 +15,13 @@ type Context struct {
 	Subdomains         []string            `json:"subdomains,omitempty"`
 	ExecutedMiddleware *bool               `json:"executedMiddleware,omitempty"`
 }
+
+func (ctx *Context) GetUserAgent() string {
+	return "to be implemented" // To be implemented
+}
+func (ctx *Context) GetBodyRaw() string {
+	return "to be implemented" // To be implemented
+}
+func (ctx *Context) GetUserId() string {
+	return "to be implemented" // To be implemented
+}
