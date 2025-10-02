@@ -38,11 +38,11 @@ func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected 
 			Method:    *context.Method,
 			IpAddress: *context.RemoteAddress,
 			UserAgent: context.GetUserAgent(),
-			Url:       *context.URL,
+			Url:       context.URL,
 			Headers:   GetHeadersProto(context),
 			Body:      context.GetBodyRaw(),
 			Source:    context.Source,
-			Route:     *context.Route,
+			Route:     context.Route,
 		},
 		Attack: &protos.Attack{
 			Kind:      string(res.Kind),

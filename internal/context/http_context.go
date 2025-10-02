@@ -6,12 +6,11 @@ import (
 )
 
 func GetContext(r *http.Request, route string, source string) Context {
-	url := r.URL.String()
 	if len(route) == 0 {
 		route = r.URL.Path // Use path from URL as default.
 	}
 	return Context{
-		URL:            &url,
+		URL:            fullURL(r),
 		Method:         &r.Method,
 		Query:          r.URL.Query(),
 		Headers:        headersToMap(r.Header),
@@ -42,4 +41,24 @@ func cookiesToMap(cookies []*http.Cookie) map[string]string {
 		cookieInfo[cookie.Name] = cookie.Value
 	}
 	return cookieInfo
+}
+
+func fullURL(r *http.Request) string {
+	// Scheme
+	scheme := "http://"
+	if r.TLS != nil {
+		scheme = "https://"
+	}
+	//Query
+	query := ""
+	if len(r.URL.RawQuery) > 0 {
+		query = "?" + r.URL.RawQuery
+	}
+	// Fragment
+	fragment := ""
+	if len(r.URL.Fragment) > 0 {
+		fragment = "#" + r.URL.Fragment
+	}
+
+	return scheme + r.Host + r.URL.Path + query + fragment
 }

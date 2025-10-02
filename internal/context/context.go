@@ -1,7 +1,7 @@
 package context
 
 type Context struct {
-	URL                *string             `json:"url,omitempty"`
+	URL                string              `json:"url,omitempty"`
 	Method             *string             `json:"method,omitempty"`
 	Query              map[string][]string `json:"query"`
 	Headers            map[string][]string `json:"headers"`
@@ -14,14 +14,34 @@ type Context struct {
 	Route              string              `json:"route,omitempty"`
 	Subdomains         []string            `json:"subdomains,omitempty"`
 	ExecutedMiddleware *bool               `json:"executedMiddleware,omitempty"`
+	User               *User               `json:"user,omitempty"`
 }
 
 func (ctx *Context) GetUserAgent() string {
-	return "to be implemented" // To be implemented
+	if ctx.Headers != nil && len(ctx.Headers["user-agent"]) > 0 {
+		return ctx.Headers["user-agent"][0]
+	}
+	return "unknown"
 }
 func (ctx *Context) GetBodyRaw() string {
-	return "to be implemented" // To be implemented
+
+	return "" // To be implemented
 }
 func (ctx *Context) GetUserId() string {
-	return "to be implemented" // To be implemented
+	if ctx.User != nil {
+		return ctx.User.Id
+	}
+	return "" // Empty ID
+}
+func (ctx *Context) GetMethod() string {
+	if ctx.Method != nil {
+		return *ctx.Method
+	}
+	return "*"
+}
+func (ctx *Context) GetIP() string {
+	if ctx.RemoteAddress != nil {
+		return *ctx.RemoteAddress
+	}
+	return "0.0.0.0"
 }

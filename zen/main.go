@@ -28,6 +28,7 @@ func Init() {
 	// gRPC Config :
 	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
 	globals.EnvironmentConfig.SocketPath = "/var/home/primary/firewall-go/socks/aikido-test.sock"
+	globals.EnvironmentConfig.CollectApiSchema = true
 	initGRPCServer() // gRPC Server
 	grpc.Init()      // gRPC Client
 }
@@ -44,8 +45,9 @@ func initGRPCServer() {
 		Version:         globals.Version, // firewall-go version
 	}
 	aikidoConfig := aikido_types.AikidoConfigData{
-		LogLevel: globals.AikidoConfig.LogLevel,
-		Token:    globals.AikidoConfig.Token,
+		LogLevel:         globals.AikidoConfig.LogLevel,
+		Token:            globals.AikidoConfig.Token,
+		CollectApiSchema: globals.EnvironmentConfig.CollectApiSchema,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
 	if err != nil {
