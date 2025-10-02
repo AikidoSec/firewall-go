@@ -2,6 +2,7 @@ package labstack_echo
 
 import (
 	"errors"
+
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	functions "github.com/AikidoSec/firewall-go/internal/http_functions"
@@ -34,15 +35,13 @@ func GetMiddleware() echo.MiddlewareFunc {
 			err := next(c) // serve the request to the next middleware
 
 			// Report after call with status code :
-			defer (func() {
-				status := c.Response().Status
+			status := c.Response().Status
 
-				httpErr := new(echo.HTTPError)
-				if errors.As(err, &httpErr) {
-					status = httpErr.Code
-				}
-				functions.OnPostRequest(status) // Run post-request logic (should discover route, api spec,...)
-			})()
+			httpErr := new(echo.HTTPError)
+			if errors.As(err, &httpErr) {
+				status = httpErr.Code
+			}
+			functions.OnPostRequest(status) // Run post-request logic (should discover route, api spec,...)
 
 			return err
 		}

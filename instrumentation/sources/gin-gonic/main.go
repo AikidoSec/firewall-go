@@ -18,15 +18,9 @@ func GetMiddleware() gin.HandlerFunc {
 		ip := c.ClientIP()
 
 		ginContext := context.GetContext(c.Request, c.FullPath(), "gin")
-    ginContext.RemoteAddress = &ip       // Use ClientIP() which parses X-Forwarded-For for us.
+		ginContext.RemoteAddress = &ip       // Use ClientIP() which parses X-Forwarded-For for us.
 		ginContext.Body = tryExtractBody(*c) // Extract body from gin request.
-		context.Set(ginContext)        // Store context in Thread-Local storage.
-
-		// Make sure it runs after the request is finished : (defer)
-		defer func() {
-			statusCode := c.Writer.Status()
-			http_functions.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
-		}()
+		context.Set(ginContext)              // Store context in Thread-Local storage.
 
 		// Write a response using Gin :
 		res := http_functions.OnInitRequest(ginContext)
@@ -37,5 +31,8 @@ func GetMiddleware() gin.HandlerFunc {
 		}
 
 		c.Next() // serve the request to the next middleware
+
+		statusCode := c.Writer.Status()
+		http_functions.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
 	}
 }
