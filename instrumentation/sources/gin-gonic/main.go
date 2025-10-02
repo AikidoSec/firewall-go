@@ -1,13 +1,10 @@
 package gin_gonic
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/http_functions"
 	"github.com/gin-gonic/gin"
-	"log"
 )
 
 // GetMiddleware returns middleware that will create contexts of incoming requests. If service is empty then the
@@ -27,16 +24,14 @@ func GetMiddleware() gin.HandlerFunc {
 			http_functions.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
 		}()
 
-		http_functions.OnInitRequest(ginContext)
-		c.Next() // serve the request to the next middleware
-
-		jsonData, err := json.Marshal(ginContext)
-		if err != nil {
-			log.Fatalf("Error marshaling to JSON: %v", err)
+		// Write a response using Gin :
+		res := http_functions.OnInitRequest(ginContext)
+		if res != nil {
+			c.String(res.StatusCode, res.Message)
+			c.Abort()
+			return
 		}
 
-		// Print the JSON output
-		fmt.Println(string(jsonData))
-
+		c.Next() // serve the request to the next middleware
 	}
 }

@@ -43,5 +43,5 @@ func (ctx *Context) GetIP() string {
 	if ctx.RemoteAddress != nil {
 		return *ctx.RemoteAddress
 	}
-	return "0.0.0.0"
+	return ""
 }

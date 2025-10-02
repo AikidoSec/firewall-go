@@ -23,7 +23,12 @@ func GetMiddleware() echo.MiddlewareFunc {
 			ip := c.RealIP()
 			echoContext := context.GetContext(httpRequest, c.Path(), "echo")
 			echoContext.RemoteAddress = &ip // use real ip function, which checks x-forwarded-for.
-			functions.OnInitRequest(echoContext)
+
+			// Write a possible response (i.e. geo blocking bot blocking)
+			res := functions.OnInitRequest(echoContext)
+			if res != nil {
+				return c.String(res.StatusCode, res.Message)
+			}
 
 			err := next(c) // serve the request to the next middleware
 
