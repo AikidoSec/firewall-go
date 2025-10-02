@@ -4,20 +4,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/gin-gonic/gin"
 )
 
-func tryExtractBody(c gin.Context) interface{} {
+func tryExtractBody(c *gin.Context) any {
 	// Try extracting JSON from the raw request :
-	bodyFromJson := tryExtractJSON(c)
-	if bodyFromJson != nil {
-		return bodyFromJson
+	bodyFromJSON := tryExtractJSON(c)
+	if bodyFromJSON != nil {
+		return bodyFromJSON
 	}
+
 	bodyFromForm := tryExtractFormBody(c)
 	if bodyFromForm != nil {
 		return bodyFromForm
@@ -27,7 +29,7 @@ func tryExtractBody(c gin.Context) interface{} {
 	return nil
 }
 
-func tryExtractJSON(c gin.Context) interface{} {
+func tryExtractJSON(c *gin.Context) any {
 	// Read the raw body
 	body, err := io.ReadAll(c.Request.Body)
 	// Restore body after read
@@ -38,7 +40,7 @@ func tryExtractJSON(c gin.Context) interface{} {
 			return nil
 		}
 		// Parse :
-		var data interface{}
+		var data any
 		err = json.Unmarshal(body, &data)
 		if err == nil {
 			return data
@@ -46,7 +48,8 @@ func tryExtractJSON(c gin.Context) interface{} {
 	}
 	return nil
 }
-func tryExtractFormBody(c gin.Context) url.Values {
+
+func tryExtractFormBody(c *gin.Context) url.Values {
 	if _, err := c.MultipartForm(); err != nil {
 		if !errors.Is(err, http.ErrNotMultipart) {
 			log.Debugf("(gin) error on parse multipart form array: %v", err)
