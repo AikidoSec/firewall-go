@@ -46,7 +46,7 @@ func (i InterceptorResult) ToString() string {
 	return string(json)
 }
 
-/* Convert metadata map to protobuf structure to be sent via gRPC to the Agent */
+// Convert metadata map to protobuf structure to be sent via gRPC to the Agent
 func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
 	var metadataProto []*protos.Metadata
 	for key, value := range metadata {
@@ -55,7 +55,7 @@ func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
 	return metadataProto
 }
 
-/* Convert headers map to protobuf structure to be sent via gRPC to the Agent */
+// Convert headers map to protobuf structure to be sent via gRPC to the Agent
 func GetHeadersProto(context *context.Context) []*protos.Header {
 	var headersProto []*protos.Header
 	for key, value := range context.Headers {
@@ -65,7 +65,7 @@ func GetHeadersProto(context *context.Context) []*protos.Header {
 	return headersProto
 }
 
-/* Construct the AttackDetected protobuf structure to be sent via gRPC to the Agent */
+// Construct the AttackDetected protobuf structure to be sent via gRPC to the Agent
 func GetAttackDetectedProto(res InterceptorResult) *protos.AttackDetected {
 	context := context.Get()
 	return &protos.AttackDetected{

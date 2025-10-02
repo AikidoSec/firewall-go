@@ -1,17 +1,16 @@
 package zeninternals
 
-/*
-#cgo LDFLAGS: -ldl
-#include <dlfcn.h>
-#include <stdlib.h>
-
-typedef int (*detect_sql_injection_func)(const char*, const char*, int);
-
-int call_detect_sql_injection(detect_sql_injection_func func, const char* query, const char* input, int sql_dialect) {
-    return func(query, input, sql_dialect);
-}
-*/
+// #cgo LDFLAGS: -ldl
+// #include <dlfcn.h>
+// #include <stdlib.h>
+//
+// typedef int (*detect_sql_injection_func)(const char*, const char*, int);
+//
+// int call_detect_sql_injection(detect_sql_injection_func func, const char* query, const char* input, int sql_dialect) {
+//     return func(query, input, sql_dialect);
+// }
 import "C"
+
 import (
 	"fmt"
 	"unsafe"
