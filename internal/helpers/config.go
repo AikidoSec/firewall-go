@@ -51,8 +51,18 @@ func IsUserAgentBlocked(userAgent string) (bool, string) {
 	return false, ""
 }
 
+func IsUserBlocked(userID string) bool {
+	globals.CloudConfigMutex.Lock()
+	defer globals.CloudConfigMutex.Unlock()
+	return KeyExists(globals.CloudConfig.BlockedUserIds, userID)
+}
+
 func GetEndpoints() []aikido_types.Endpoint {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
 	return globals.CloudConfig.Endpoints
+}
+func KeyExists[K comparable, V any](m map[K]V, key K) bool {
+	_, exists := m[key]
+	return exists
 }

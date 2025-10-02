@@ -15,7 +15,7 @@ type Context struct {
 	Source             string              `json:"source"`
 	Route              string              `json:"route,omitempty"`
 	Subdomains         []string            `json:"subdomains,omitempty"`
-	ExecutedMiddleware *bool               `json:"executedMiddleware,omitempty"`
+	ExecutedMiddleware bool                `json:"executedMiddleware"`
 	User               *User               `json:"user,omitempty"`
 }
 
