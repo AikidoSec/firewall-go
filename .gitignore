@@ -26,3 +26,7 @@ go.work.sum
 
 # Editors
 .idea*
+
+# Zen libs
+.cache*
+internal/vulnerabilities/zen_internals/lib/*

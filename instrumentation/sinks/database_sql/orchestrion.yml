@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
+meta:
+  name: github.com/AikidoSec/firewall-go/instrumentation/sinks/database_sql
+  description: |-
+    Protection from SQL Injection.
+
+aspects:
+  - id: database/sql.DB.Query
+    join-point:
+      one-of:
+        - function-body:
+            function:
+              - receiver: '*database/sql.DB'
+              - name: Query
+        - function-body:
+            function:
+              - receiver: '*database/sql.DB'
+              - name: QueryRow
+    advice:
+      - prepend-statements:
+          imports:
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database_sql
+          template: |-
+            _aikido_block := sink.Examine({{ .Function.Argument 0}})
+            if _aikido_block != nil {
+              panic(_aikido_block)
+            }

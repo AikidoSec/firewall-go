@@ -26,6 +26,8 @@ jobs:
 
       - name: Install dependencies
         run: go mod tidy
+      - name: Install binaries
+        run: make prepare
 
       - name: Run tests
         run: make test

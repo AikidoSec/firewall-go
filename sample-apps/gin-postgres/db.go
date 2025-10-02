@@ -59,13 +59,14 @@ func (dh *DatabaseHelper) GetPetByID(id int) (Pet, error) {
 
 // CreatePetByName inserts a new pet into the database
 func (dh *DatabaseHelper) CreatePetByName(petName string) (int64, error) {
-	sqlStatement := "INSERT INTO pets (pet_name, owner) VALUES ($1, 'Aikido Security') RETURNING pet_id"
+	// Intentionally vulnerable to SQL injection
+	sqlStatement := "INSERT INTO pets (pet_name, owner) VALUES ('" + petName + "', 'Aikido Security') RETURNING pet_id"
 	var petID int64
-	err := dh.db.QueryRow(sqlStatement, petName).Scan(&petID)
+	err := dh.db.QueryRow(sqlStatement).Scan(&petID)
 	if err != nil {
-		return 0, err
+		return 0, err // Return 0 and the error if something goes wrong
 	}
-	return petID, nil
+	return petID, nil // Return the petID and nil error if successful
 }
 
 // Close closes the database connection
