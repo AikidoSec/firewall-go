@@ -16,6 +16,27 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		}
 	})
 
+	t.Run("it ignores iss value of jwt", func(t *testing.T) {
+		obj := map[string]interface{}{
+			"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJodHRwczovL2V4YW1wbGUuY29tIn0.QLC0vl-A11a1WcUPD6vQR2PlUvRMsqpegddfQzPajQM",
+		}
+
+		expected := map[string]string{
+			"token": ".",
+			"iat":   ".token<jwt>",
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJodHRwczovL2V4YW1wbGUuY29tIn0.QLC0vl-A11a1WcUPD6vQR2PlUvRMsqpegddfQzPajQM": ".token",
+			"sub":        ".token<jwt>",
+			"1234567890": ".token<jwt>.sub",
+			"name":       ".token<jwt>",
+			"John Doe":   ".token<jwt>.name",
+		}
+
+		actual := ExtractStringsFromUserInput(obj, []PathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
 	t.Run("it can extract query objects", func(t *testing.T) {
 		obj := map[string]interface{}{
 			"age": map[string]interface{}{
