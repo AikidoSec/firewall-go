@@ -11,6 +11,9 @@ type Response struct {
 }
 
 func OnInitRequest(ctx context.Context) *Response {
+	if helpers.IsIpBypassed(ctx.GetIP()) {
+		return nil // Return early, not setting a context object.
+	}
 	context.Set(ctx) // Store the new context
 
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
