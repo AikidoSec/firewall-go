@@ -11,8 +11,8 @@ type JWTDecodeResult struct {
 	Object interface{}
 }
 
-func removePadding(s string) string {
-	return strings.TrimRight(strings.TrimLeft(s, "="), "=")
+func removeBase64Padding(s string) string {
+	return strings.TrimRight(s, "=")
 }
 
 func tryDecodeAsJWT(jwt string) JWTDecodeResult {
@@ -23,9 +23,8 @@ func tryDecodeAsJWT(jwt string) JWTDecodeResult {
 	if len(parts) != 3 {
 		return JWTDecodeResult{JWT: false}
 	}
-	//remove padding
 
-	payload, err := base64.RawURLEncoding.DecodeString(removePadding(parts[1]))
+	payload, err := base64.RawURLEncoding.DecodeString(removeBase64Padding(parts[1]))
 	if err != nil {
 		return JWTDecodeResult{JWT: false}
 	}

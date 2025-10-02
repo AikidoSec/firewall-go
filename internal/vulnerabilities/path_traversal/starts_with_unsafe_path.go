@@ -25,6 +25,14 @@ var linuxRootFolders = []string{
 	"/tmp/",
 	"/usr/",
 	"/var/",
+	// macOS specific
+	"/applications/",
+	"/cores/",
+	"/library/",
+	"/private/",
+	"/users/",
+	"/system/",
+	"/volumes/",
 }
 
 var dangerousPathStarts = append(linuxRootFolders, "c:/", "c:\\")
