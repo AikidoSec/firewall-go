@@ -84,42 +84,16 @@
 <body>
 <div class="container">
     <h1>Execute command: </h1>
-    <form id="commandForm">
+    <form id="commandForm" action="/api/execute" method="post">
         <details>
             <summary>Examples</summary>
             <code>whoami</code>
             <code>ls -la</code>
         </details>
         <label for="userCommand">Command input :</label>
-        <input type="text" id="userCommand" name="userCommand" required>
+        <input type="text" id="userCommand" name="user_command" required>
         <button type="submit">Execute!</button>
     </form>
 </div>
-
-<script>
-    document.getElementById('commandForm').addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent the default form submission
-
-        const userCommand = document.getElementById('userCommand').value;
-
-        // Here you would typically send the data to your server
-        // For example, using fetch:
-        fetch('/api/execute', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ userCommand })
-        })
-        .then(async (response) => {
-            if (response.ok) {
-                alert(await response.text());
-            } else {
-                alert('Error executing command. Please try again.');
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    });
-</script>
 </body>
 </html>

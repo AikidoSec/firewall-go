@@ -10,7 +10,7 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 		return Undefined
 	}
 
-	contentTypeArray, exists := headers["content_type"]
+	contentTypeArray, exists := headers["content-type"]
 	if !exists || len(contentTypeArray) < 1 {
 		return Undefined
 	}

@@ -22,7 +22,27 @@ type Attack struct {
 }
 
 func Scan(ctx context.Context, operation string, vulnerability Vulnerability, args []string) error {
-	userInputMap := helpers.ExtractStringsFromUserInput(ctx.Query, []helpers.PathPart{})
+	err := ScanSource("query", ctx.Query, operation, vulnerability, args)
+	if err != nil {
+		return err
+	}
+	err = ScanSource("headers", ctx.Headers, operation, vulnerability, args)
+	if err != nil {
+		return err
+	}
+	err = ScanSource("cookies", ctx.Cookies, operation, vulnerability, args)
+	if err != nil {
+		return err
+	}
+	err = ScanSource("body", ctx.Body, operation, vulnerability, args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ScanSource(source string, sourceData interface{}, operation string, vulnerability Vulnerability, args []string) error {
+	userInputMap := helpers.ExtractStringsFromUserInput(sourceData, []helpers.PathPart{})
 	var attack *types.InterceptorResult = nil
 
 	for userInput, path := range userInputMap {
@@ -32,7 +52,7 @@ func Scan(ctx context.Context, operation string, vulnerability Vulnerability, ar
 			attack = &types.InterceptorResult{
 				Operation:     operation,
 				Kind:          vulnerability.Kind,
-				Source:        "query",
+				Source:        source,
 				PathToPayload: path,
 				Metadata:      results.Metadata,
 				Payload:       userInput,
