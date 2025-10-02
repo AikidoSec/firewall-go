@@ -1,14 +1,14 @@
 package grpc
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/globals"
+	"regexp"
+	"time"
+
+	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	. "github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
-	"regexp"
-	"time"
 )
 
 var (
@@ -16,8 +16,8 @@ var (
 	cloudConfigTicker = time.NewTicker(1 * time.Minute)
 )
 
-func buildIpBlocklist(name, description string, ipsList []string) IpBlockList {
-	ipBlocklist := IpBlockList{
+func buildIpBlocklist(name, description string, ipsList []string) config.IpBlockList {
+	ipBlocklist := config.IpBlockList{
 		Description: description,
 		TrieV4:      &ipaddr.IPv4AddressTrie{},
 		TrieV6:      &ipaddr.IPv6AddressTrie{},
@@ -47,10 +47,10 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 		return
 	}
 
-	globals.CloudConfigMutex.Lock()
-	defer globals.CloudConfigMutex.Unlock()
+	config.CloudConfigMutex.Lock()
+	defer config.CloudConfigMutex.Unlock()
 
-	globals.CloudConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
+	config.CloudConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
 
 	var endpoints []aikido_types.Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
@@ -64,33 +64,33 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 			},
 		})
 	}
-	globals.CloudConfig.Endpoints = endpoints
+	config.CloudConfig.Endpoints = endpoints
 
-	globals.CloudConfig.BlockedUserIds = map[string]bool{}
+	config.CloudConfig.BlockedUserIds = map[string]bool{}
 	for _, userId := range cloudConfigFromAgent.BlockedUserIds {
-		globals.CloudConfig.BlockedUserIds[userId] = true
+		config.CloudConfig.BlockedUserIds[userId] = true
 	}
 
-	globals.CloudConfig.BypassedIps = map[string]bool{}
+	config.CloudConfig.BypassedIps = map[string]bool{}
 	for _, ip := range cloudConfigFromAgent.BypassedIps {
-		globals.CloudConfig.BypassedIps[ip] = true
+		config.CloudConfig.BypassedIps[ip] = true
 	}
 
 	if cloudConfigFromAgent.Block {
-		globals.CloudConfig.Block = 1
+		config.CloudConfig.Block = 1
 	} else {
-		globals.CloudConfig.Block = 0
+		config.CloudConfig.Block = 0
 	}
 
-	globals.CloudConfig.BlockedIps = map[string]IpBlockList{}
+	config.CloudConfig.BlockedIps = map[string]config.IpBlockList{}
 	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIps {
-		globals.CloudConfig.BlockedIps[ipBlocklistSource] = buildIpBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
+		config.CloudConfig.BlockedIps[ipBlocklistSource] = buildIpBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
 	}
 
 	if cloudConfigFromAgent.BlockedUserAgents != "" {
-		globals.CloudConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
+		config.CloudConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
 	} else {
-		globals.CloudConfig.BlockedUserAgents = nil
+		config.CloudConfig.BlockedUserAgents = nil
 	}
 }
 

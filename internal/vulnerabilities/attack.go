@@ -3,13 +3,48 @@ package vulnerabilities
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
-	"github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/AikidoSec/zen-internals-agent/utils"
 )
+
+type AttackKind string
+
+const (
+	KindSqlInjection  AttackKind = "sql_injection"
+	KindPathTraversal AttackKind = "path_traversal"
+	KindSSRF          AttackKind = "ssrf"
+)
+
+func GetDisplayNameForAttackKind(kind AttackKind) string {
+	switch kind {
+	case KindSqlInjection:
+		return "an SQL injection"
+	case KindPathTraversal:
+		return "a path traversal attack"
+	case KindSSRF:
+		return "a server-side request forgery"
+	default:
+		return "unknown attack type"
+	}
+}
+
+type InterceptorResult struct {
+	Kind          AttackKind
+	Operation     string
+	Source        string
+	PathToPayload string
+	Metadata      map[string]string
+	Payload       string
+}
+
+func (i InterceptorResult) ToString() string {
+	json, _ := json.Marshal(i)
+	return string(json)
+}
 
 /* Convert metadata map to protobuf structure to be sent via gRPC to the Agent */
 func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
@@ -31,7 +66,7 @@ func GetHeadersProto(context *context.Context) []*protos.Header {
 }
 
 /* Construct the AttackDetected protobuf structure to be sent via gRPC to the Agent */
-func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected {
+func GetAttackDetectedProto(res InterceptorResult) *protos.AttackDetected {
 	context := context.Get()
 	return &protos.AttackDetected{
 		Request: &protos.Request{
@@ -58,9 +93,9 @@ func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected 
 	}
 }
 
-func BuildAttackDetectedMessage(result types.InterceptorResult) string {
+func BuildAttackDetectedMessage(result InterceptorResult) string {
 	return fmt.Sprintf("Aikido firewall has blocked %s: %s(...) originating from %s%s",
-		types.GetDisplayNameForAttackKind(result.Kind),
+		GetDisplayNameForAttackKind(result.Kind),
 		result.Operation,
 		result.Source,
 		helpers.EscapeHTML(result.PathToPayload))
@@ -79,11 +114,11 @@ func GetThrowAction(message string, code int) string {
 	return string(actionJson)
 }
 
-func GetAttackDetectedAction(result types.InterceptorResult) string {
+func GetAttackDetectedAction(result InterceptorResult) string {
 	return GetThrowAction(BuildAttackDetectedMessage(result), -1)
 }
 
-func ReportAttackDetected(res *types.InterceptorResult) string {
+func ReportAttackDetected(res *InterceptorResult) string {
 	if res == nil {
 		return ""
 	}

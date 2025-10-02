@@ -1,9 +1,10 @@
-package types
+package config
 
 import (
+	"regexp"
+
 	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
-	"regexp"
 )
 
 type EnvironmentConfigData struct {

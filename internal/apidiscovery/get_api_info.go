@@ -3,15 +3,14 @@ package apidiscovery
 import (
 	"reflect"
 
+	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/context"
-	"github.com/AikidoSec/firewall-go/internal/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	. "github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 )
 
 func GetApiInfo(ctx context.Context) *protos.APISpec {
-	if !globals.EnvironmentConfig.CollectApiSchema {
+	if !config.EnvironmentConfig.CollectApiSchema {
 		log.Debug("Collection of API Discovery was disabled.")
 		return nil
 	}
@@ -23,7 +22,7 @@ func GetApiInfo(ctx context.Context) *protos.APISpec {
 	// Check body data
 	if body != nil && isObject(body) {
 		bodyType := getBodyDataType(ctx.Headers)
-		if bodyType == Undefined {
+		if bodyType == BodyTypeUndefined {
 			log.Debug("Body type is undefined -> no API schema!")
 			return nil
 		}

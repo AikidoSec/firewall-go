@@ -3,14 +3,15 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/AikidoSec/firewall-go/internal/globals"
+	"time"
+
+	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"time"
 )
 
 var conn *grpc.ClientConn
@@ -18,7 +19,7 @@ var client protos.AikidoClient
 
 func Init() {
 	conn, err := grpc.Dial(
-		"unix://"+globals.EnvironmentConfig.SocketPath,
+		"unix://"+config.EnvironmentConfig.SocketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 

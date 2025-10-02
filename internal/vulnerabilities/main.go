@@ -5,7 +5,6 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
-	"github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/log"
 )
 
@@ -15,7 +14,7 @@ type ScanResult struct {
 }
 type Vulnerability struct {
 	ScanFunction func(string, []string) *ScanResult
-	Kind         types.Kind
+	Kind         AttackKind
 	Error        string
 }
 type Attack struct {
@@ -49,7 +48,7 @@ func ScanSource(source string, sourceData any, operation string, vulnerability V
 		results := vulnerability.ScanFunction(userInput, args)
 		if results != nil && results.DetectedAttack {
 			// Attack detected :
-			attack := &types.InterceptorResult{
+			attack := &InterceptorResult{
 				Operation:     operation,
 				Kind:          vulnerability.Kind,
 				Source:        source,
