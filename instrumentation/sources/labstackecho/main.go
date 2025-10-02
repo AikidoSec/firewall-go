@@ -1,4 +1,4 @@
-package labstack_echo
+package labstackecho
 
 import (
 	"errors"

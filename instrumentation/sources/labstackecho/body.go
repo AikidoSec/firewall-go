@@ -1,4 +1,4 @@
-package gin_gonic
+package labstackecho
 
 import (
 	"bytes"
@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
-func tryExtractBody(c *gin.Context) any {
+func tryExtractBody(c echo.Context) any {
 	// Try extracting JSON from the raw request :
 	bodyFromJSON := tryExtractJSON(c)
 	if bodyFromJSON != nil {
@@ -29,11 +29,11 @@ func tryExtractBody(c *gin.Context) any {
 	return nil
 }
 
-func tryExtractJSON(c *gin.Context) any {
+func tryExtractJSON(c echo.Context) any {
 	// Read the raw body
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(c.Request().Body)
 	// Restore body after read
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+	c.Request().Body = io.NopCloser(bytes.NewBuffer(body))
 	if err == nil && len(body) > 0 {
 		trimmedBody := strings.TrimSpace(string(body))
 		if !strings.HasPrefix(trimmedBody, "{") && !strings.HasPrefix(trimmedBody, "[") {
@@ -49,12 +49,12 @@ func tryExtractJSON(c *gin.Context) any {
 	return nil
 }
 
-func tryExtractFormBody(c *gin.Context) url.Values {
+func tryExtractFormBody(c echo.Context) url.Values {
 	if _, err := c.MultipartForm(); err != nil {
 		if !errors.Is(err, http.ErrNotMultipart) {
 			log.Debugf("(gin) error on parse multipart form array: %v", err)
 			return nil
 		}
 	}
-	return c.Request.PostForm
+	return c.Request().PostForm
 }

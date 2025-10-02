@@ -1,10 +1,11 @@
-package database_sql
+package databasesql
 
 import (
 	"fmt"
+
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/sql_injection"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/sqlinjection"
 )
 
 func Examine(query string, op string) error {
@@ -15,7 +16,7 @@ func Examine(query string, op string) error {
 		return nil
 	}
 
-	return vulnerabilities.Scan(*ctx, op, sql_injection.SQLInjectionVulnerability, []string{
+	return vulnerabilities.Scan(*ctx, op, sqlinjection.SQLInjectionVulnerability, []string{
 		query /* dialect */, "default",
 	})
 }
