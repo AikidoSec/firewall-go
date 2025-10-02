@@ -17,5 +17,5 @@ func main() {
 	defineApiRoutes(e, db)
 
 	// Start the server
-	e.Start(":8080")
+	e.Start(":8082")
 }

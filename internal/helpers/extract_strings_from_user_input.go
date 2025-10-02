@@ -57,7 +57,7 @@ func ExtractStringsFromUserInput(obj interface{}, pathToPayload []PathPart) map[
 
 		// Add array as string to results
 		// This prevents bypassing the firewall by HTTP Parameter Pollution
-		// Example: ?param=value1&param=value2 will be treated as array by express
+		// Example: ?param=value1&param=value2 could be treated as an array
 		// If its used inside a string, it will be converted to a comma separated string
 		if val.Len() > 0 {
 			var values []string
@@ -73,6 +73,9 @@ func ExtractStringsFromUserInput(obj interface{}, pathToPayload []PathPart) map[
 		jwt := tryDecodeAsJWT(str)
 		if jwt.JWT {
 			for k, v := range ExtractStringsFromUserInput(jwt.Object, append(pathToPayload, PathPart{Type: "jwt"})) {
+				if k == "iss" || strings.HasSuffix(v, "<jwt>.iss") {
+					continue
+				}
 				results[k] = v
 			}
 		}

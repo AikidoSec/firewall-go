@@ -38,5 +38,5 @@ func OnPostRequest(statusCode int) {
 		ctx.GetMethod(), ctx.Route, statusCode, ctx.GetUserId(), ctx.GetIP(), apiSpec,
 	)
 
-	context.Clear() // Clear context.
+	context.Clear()
 }
