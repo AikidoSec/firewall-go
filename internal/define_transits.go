@@ -22,6 +22,6 @@ func OSExamine(path string) error {
 		return nil
 	}
 	return vulnerabilities.Scan(*ctx, path_traversal.PathTraversalVulnerability, []string{
-		path, /* checkPathStart */ "1",
+		path /* checkPathStart */, "1",
 	})
 }
