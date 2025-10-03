@@ -3,10 +3,10 @@ package vulnerabilities
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
-	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/AikidoSec/zen-internals-agent/utils"
 )
@@ -98,7 +98,7 @@ func BuildAttackDetectedMessage(result InterceptorResult) string {
 		GetDisplayNameForAttackKind(result.Kind),
 		result.Operation,
 		result.Source,
-		helpers.EscapeHTML(result.PathToPayload))
+		html.EscapeString(result.PathToPayload))
 }
 
 func GetThrowAction(message string, code int) string {
