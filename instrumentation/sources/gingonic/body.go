@@ -39,7 +39,6 @@ func tryExtractJSON(c *gin.Context) any {
 		if !strings.HasPrefix(trimmedBody, "{") && !strings.HasPrefix(trimmedBody, "[") {
 			return nil
 		}
-		// Parse :
 		var data any
 		err = json.Unmarshal(body, &data)
 		if err == nil {
