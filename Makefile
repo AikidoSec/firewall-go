@@ -40,7 +40,7 @@ lint-fix:
 	@echo "✅ Linting and fixing completed successfully"
 
 
-BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/v0.1.37
+BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/v0.1.51
 FILES = \
     libzen_internals_aarch64-apple-darwin.dylib \
     libzen_internals_aarch64-apple-darwin.dylib.sha256sum \
