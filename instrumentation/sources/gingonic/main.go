@@ -19,7 +19,7 @@ func GetMiddleware() gin.HandlerFunc {
 
 		ginContext := context.GetContext(c.Request, c.FullPath(), "gin")
 		ginContext.RemoteAddress = &ip      // Use ClientIP() which parses X-Forwarded-For for us.
-		ginContext.Body = tryExtractBody(c) // Extract body from gin request.
+		ginContext.Body = tryExtractBody(c)
 		context.Set(ginContext)
 
 		// Write a response using Gin :
