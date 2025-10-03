@@ -3,15 +3,50 @@ package vulnerabilities
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
-	"github.com/AikidoSec/firewall-go/internal/types"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/AikidoSec/zen-internals-agent/utils"
 )
 
-/* Convert metadata map to protobuf structure to be sent via gRPC to the Agent */
+type AttackKind string
+
+const (
+	KindSQLInjection  AttackKind = "sql_injection"
+	KindPathTraversal AttackKind = "path_traversal"
+	KindSSRF          AttackKind = "ssrf"
+)
+
+func GetDisplayNameForAttackKind(kind AttackKind) string {
+	switch kind {
+	case KindSQLInjection:
+		return "an SQL injection"
+	case KindPathTraversal:
+		return "a path traversal attack"
+	case KindSSRF:
+		return "a server-side request forgery"
+	default:
+		return "unknown attack type"
+	}
+}
+
+type InterceptorResult struct {
+	Kind          AttackKind
+	Operation     string
+	Source        string
+	PathToPayload string
+	Metadata      map[string]string
+	Payload       string
+}
+
+func (i InterceptorResult) ToString() string {
+	json, _ := json.Marshal(i)
+	return string(json)
+}
+
+// GetMetadataProto converts metadata map to protobuf structure to be sent via gRPC to the Agent
 func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
 	var metadataProto []*protos.Metadata
 	for key, value := range metadata {
@@ -20,7 +55,7 @@ func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
 	return metadataProto
 }
 
-/* Convert headers map to protobuf structure to be sent via gRPC to the Agent */
+// GetHeadersProto converts headers map to protobuf structure to be sent via gRPC to the Agent
 func GetHeadersProto(context *context.Context) []*protos.Header {
 	var headersProto []*protos.Header
 	for key, value := range context.Headers {
@@ -30,8 +65,8 @@ func GetHeadersProto(context *context.Context) []*protos.Header {
 	return headersProto
 }
 
-/* Construct the AttackDetected protobuf structure to be sent via gRPC to the Agent */
-func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected {
+// GetAttackDetectedProto constructs the AttackDetected protobuf structure to be sent via gRPC to the Agent
+func GetAttackDetectedProto(res InterceptorResult) *protos.AttackDetected {
 	context := context.Get()
 	return &protos.AttackDetected{
 		Request: &protos.Request{
@@ -53,37 +88,37 @@ func GetAttackDetectedProto(res types.InterceptorResult) *protos.AttackDetected 
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  GetMetadataProto(res.Metadata),
-			UserId:    context.GetUserId(),
+			UserId:    context.GetUserID(),
 		},
 	}
 }
 
-func BuildAttackDetectedMessage(result types.InterceptorResult) string {
+func BuildAttackDetectedMessage(result InterceptorResult) string {
 	return fmt.Sprintf("Aikido firewall has blocked %s: %s(...) originating from %s%s",
-		types.GetDisplayNameForAttackKind(result.Kind),
+		GetDisplayNameForAttackKind(result.Kind),
 		result.Operation,
 		result.Source,
 		helpers.EscapeHTML(result.PathToPayload))
 }
 
 func GetThrowAction(message string, code int) string {
-	actionMap := map[string]interface{}{
+	actionMap := map[string]any{
 		"action":  "throw",
 		"message": message,
 		"code":    code,
 	}
-	actionJson, err := json.Marshal(actionMap)
+	actionJSON, err := json.Marshal(actionMap)
 	if err != nil {
 		return ""
 	}
-	return string(actionJson)
+	return string(actionJSON)
 }
 
-func GetAttackDetectedAction(result types.InterceptorResult) string {
+func GetAttackDetectedAction(result InterceptorResult) string {
 	return GetThrowAction(BuildAttackDetectedMessage(result), -1)
 }
 
-func ReportAttackDetected(res *types.InterceptorResult) string {
+func ReportAttackDetected(res *InterceptorResult) string {
 	if res == nil {
 		return ""
 	}

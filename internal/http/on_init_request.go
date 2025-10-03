@@ -11,14 +11,14 @@ type Response struct {
 }
 
 func OnInitRequest(ctx context.Context) *Response {
-	if helpers.IsIpBypassed(ctx.GetIP()) {
+	if helpers.IsIPBypassed(ctx.GetIP()) {
 		return nil // Return early, not setting a context object.
 	}
 	context.Set(ctx) // Store the new context
 
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
 	ip := ctx.GetIP()
-	if ipBlocked, _ := helpers.IsIpBlocked(ip); ipBlocked {
+	if ipBlocked, _ := helpers.IsIPBlocked(ip); ipBlocked {
 		msg := "Your IP address is not allowed to access this resource."
 		msg += " (Your IP: " + ip + ")"
 		return &Response{403, msg}

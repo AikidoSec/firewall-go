@@ -2,18 +2,27 @@ package apidiscovery
 
 import (
 	"strings"
+)
 
-	. "github.com/AikidoSec/firewall-go/internal/types"
+// BodyDataType represents the type of the body data.
+type BodyDataType string
+
+const (
+	BodyTypeJSON           BodyDataType = "json"
+	BodyTypeFormURLEncoded BodyDataType = "form-urlencoded"
+	BodyTypeFormData       BodyDataType = "form-data"
+	BodyTypeXML            BodyDataType = "xml"
+	BodyTypeUndefined      BodyDataType = ""
 )
 
 func getBodyDataType(headers map[string][]string) BodyDataType {
 	if headers == nil {
-		return Undefined
+		return BodyTypeUndefined
 	}
 
 	contentTypeArray, exists := headers["content-type"]
 	if !exists || len(contentTypeArray) < 1 {
-		return Undefined
+		return BodyTypeUndefined
 	}
 	contentType := contentTypeArray[0] // Unwrap
 
@@ -24,20 +33,20 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 	}
 
 	if IsJsonContentType(contentType) {
-		return JSON
+		return BodyTypeJSON
 	}
 
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
-		return FormURLEncoded
+		return BodyTypeFormURLEncoded
 	}
 
 	if strings.HasPrefix(contentType, "multipart/form-data") {
-		return FormData
+		return BodyTypeFormData
 	}
 
 	if strings.Contains(contentType, "xml") {
-		return XML
+		return BodyTypeXML
 	}
 
-	return Undefined
+	return BodyTypeUndefined
 }

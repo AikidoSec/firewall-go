@@ -3,14 +3,15 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/AikidoSec/firewall-go/internal/globals"
+	"time"
+
+	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"time"
 )
 
 var conn *grpc.ClientConn
@@ -18,7 +19,7 @@ var client protos.AikidoClient
 
 func Init() {
 	conn, err := grpc.Dial(
-		"unix://"+globals.EnvironmentConfig.SocketPath,
+		"unix://"+config.EnvironmentConfig.SocketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 
@@ -57,7 +58,7 @@ func OnDomain(domain string, port uint32) {
 	log.Debugf("Domain sent via socket: %v:%v", domain, port)
 }
 
-/* Send request metadata (route & method) to Aikido Agent via gRPC */
+// Send request metadata (route & method) to Aikido Agent via gRPC
 func GetRateLimitingStatus(method string, route string, user string, ip string, timeout time.Duration) *protos.RateLimitingStatus {
 	if client == nil {
 		return nil
@@ -76,7 +77,7 @@ func GetRateLimitingStatus(method string, route string, user string, ip string, 
 	return RateLimitingStatus
 }
 
-/* Send request metadata (route, method & status code) to Aikido Agent via gRPC */
+// Send request metadata (route, method & status code) to Aikido Agent via gRPC
 func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *protos.APISpec) {
 	if client == nil {
 		return
@@ -94,7 +95,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 	log.Debugf("Request metadata sent via socket (%v %v %v)", method, route, statusCode)
 }
 
-/* Get latest cloud config from Aikido Agent via gRPC */
+// Get latest cloud config from Aikido Agent via gRPC
 func GetCloudConfig() {
 	if client == nil {
 		return

@@ -1,10 +1,11 @@
 package helpers
 
 import (
-	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 )
 
 // RouteMetadata represents a limited context with URL, method, and route.
@@ -15,15 +16,15 @@ type RouteMetadata struct {
 }
 
 // MatchEndpoints finds matching endpoints based on the provided context.
-func MatchEndpoints(context RouteMetadata, endpoints []Endpoint) []Endpoint {
-	var matches []Endpoint
+func MatchEndpoints(context RouteMetadata, endpoints []aikido_types.Endpoint) []aikido_types.Endpoint {
+	var matches []aikido_types.Endpoint
 
 	if context.Method == "" {
 		return matches
 	}
 
 	// Filter possible endpoints based on method
-	var possible []Endpoint
+	var possible []aikido_types.Endpoint
 	for _, endpoint := range endpoints {
 		if endpoint.Method == "*" || endpoint.Method == context.Method {
 			possible = append(possible, endpoint)
@@ -45,7 +46,7 @@ func MatchEndpoints(context RouteMetadata, endpoints []Endpoint) []Endpoint {
 		}
 	}
 
-	var wildcards []Endpoint
+	var wildcards []aikido_types.Endpoint
 
 	// Filter wildcards and sort by the number of '*' in the route
 	for _, endpoint := range possible {

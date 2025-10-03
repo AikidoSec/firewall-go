@@ -31,10 +31,10 @@ func OnPostRequest(statusCode int) {
 		return
 	}
 
-	apiSpec := apidiscovery.GetApiInfo(*ctx)
+	apiSpec := apidiscovery.GetAPIInfo(*ctx)
 
 	go OnRequestShutdownReporting(
-		ctx.GetMethod(), ctx.Route, statusCode, ctx.GetUserId(), ctx.GetIP(), apiSpec,
+		ctx.GetMethod(), ctx.Route, statusCode, ctx.GetUserID(), ctx.GetIP(), apiSpec,
 	)
 
 	context.Clear()

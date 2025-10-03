@@ -7,7 +7,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/AikidoSec/firewall-go/internal/globals"
+	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/aikido_types"
@@ -22,9 +22,9 @@ type combined struct {
 // Init needs to be called in the user's app to start the background process
 func Init() error {
 	// Logger :
-	globals.AikidoConfig.LogLevel = "DEBUG"
+	config.AikidoConfig.LogLevel = "DEBUG"
 	log.Init()
-	log.SetLogLevel(globals.AikidoConfig.LogLevel)
+	log.SetLogLevel(config.AikidoConfig.LogLevel)
 
 	socket, err := os.CreateTemp("", "aikido-test.sock")
 	if err != nil {
@@ -32,9 +32,9 @@ func Init() error {
 	}
 
 	// gRPC Config :
-	globals.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
-	globals.EnvironmentConfig.SocketPath = socket.Name()
-	globals.EnvironmentConfig.CollectApiSchema = true
+	config.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
+	config.EnvironmentConfig.SocketPath = socket.Name()
+	config.EnvironmentConfig.CollectAPISchema = true
 
 	err = initGRPCServer() // gRPC Server
 	if err != nil {
@@ -54,13 +54,13 @@ func initGRPCServer() error {
 		Library:         "firewall-go",
 		Endpoint:        "https://guard.aikido.dev/",
 		ConfigEndpoint:  "https://runtime.aikido.dev/",
-		SocketPath:      globals.EnvironmentConfig.SocketPath,
-		Version:         globals.Version, // firewall-go version
+		SocketPath:      config.EnvironmentConfig.SocketPath,
+		Version:         config.Version, // firewall-go version
 	}
 	aikidoConfig := aikido_types.AikidoConfigData{
-		LogLevel:         globals.AikidoConfig.LogLevel,
-		Token:            globals.AikidoConfig.Token,
-		CollectApiSchema: globals.EnvironmentConfig.CollectApiSchema,
+		LogLevel:         config.AikidoConfig.LogLevel,
+		Token:            config.AikidoConfig.Token,
+		CollectApiSchema: config.EnvironmentConfig.CollectAPISchema,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
 	if err != nil {

@@ -23,7 +23,7 @@ func SetUser(id string, name string) {
 	}
 
 	// Set :
-	ctx.User = &context.User{Id: id, Name: name}
+	ctx.User = &context.User{ID: id, Name: name}
 	context.Set(*ctx)
 	go grpc.OnUserEvent(id, name, ctx.GetIP())
 }

@@ -1,17 +1,16 @@
 package zeninternals
 
-/*
-#cgo LDFLAGS: -ldl
-#include <dlfcn.h>
-#include <stdlib.h>
-
-typedef int (*detect_sql_injection_func)(const char*, const char*, int);
-
-int call_detect_sql_injection(detect_sql_injection_func func, const char* query, const char* input, int sql_dialect) {
-    return func(query, input, sql_dialect);
-}
-*/
+// #cgo LDFLAGS: -ldl
+// #include <dlfcn.h>
+// #include <stdlib.h>
+//
+// typedef int (*detect_sql_injection_func)(const char*, const char*, int);
+//
+// int call_detect_sql_injection(detect_sql_injection_func func, const char* query, const char* input, int sql_dialect) {
+//     return func(query, input, sql_dialect);
+// }
 import "C"
+
 import (
 	"fmt"
 	"unsafe"
@@ -22,7 +21,7 @@ import (
 
 var (
 	handle             unsafe.Pointer
-	detectSqlInjection C.detect_sql_injection_func
+	detectSQLInjection C.detect_sql_injection_func
 )
 
 func Init() bool {
@@ -38,22 +37,22 @@ func Init() bool {
 		return false
 	}
 
-	detectSqlInjectionFnName := C.CString("detect_sql_injection")
-	defer C.free(unsafe.Pointer(detectSqlInjectionFnName))
+	detectSQLInjectionFnName := C.CString("detect_sql_injection")
+	defer C.free(unsafe.Pointer(detectSQLInjectionFnName))
 
-	vDetectSqlInjection := C.dlsym(handle, detectSqlInjectionFnName)
-	if vDetectSqlInjection == nil {
+	vDetectSQLInjection := C.dlsym(handle, detectSQLInjectionFnName)
+	if vDetectSQLInjection == nil {
 		log.Error("Failed to load detect_sql_injection function from zen-internals library!")
 		return false
 	}
 
-	detectSqlInjection = (C.detect_sql_injection_func)(vDetectSqlInjection)
+	detectSQLInjection = (C.detect_sql_injection_func)(vDetectSQLInjection)
 	log.Debugf("Loaded zen-internals library!")
 	return true
 }
 
 func Uninit() {
-	detectSqlInjection = nil
+	detectSQLInjection = nil
 
 	if handle != nil {
 		C.dlclose(handle)
@@ -62,19 +61,19 @@ func Uninit() {
 }
 
 // DetectSQLInjection performs SQL injection detection using the loaded library
-func DetectSQLInjection(query string, user_input string, dialect int) int {
-	if detectSqlInjection == nil {
+func DetectSQLInjection(query string, userInput string, dialect int) int {
+	if detectSQLInjection == nil {
 		return 0
 	}
 
 	// Convert strings to C strings
 	cQuery := C.CString(query)
-	cUserInput := C.CString(user_input)
+	cUserInput := C.CString(userInput)
 	defer C.free(unsafe.Pointer(cQuery))
 	defer C.free(unsafe.Pointer(cUserInput))
 
 	// Call the detect_sql_injection function
-	result := int(C.call_detect_sql_injection(detectSqlInjection, cQuery, cUserInput, C.int(dialect)))
-	log.Debugf("DetectSqlInjection(%s, %s, %d) -> %d", query, user_input, dialect, result)
+	result := int(C.call_detect_sql_injection(detectSQLInjection, cQuery, cUserInput, C.int(dialect)))
+	log.Debugf("DetectSqlInjection(%s, %s, %d) -> %d", query, userInput, dialect, result)
 	return result
 }
