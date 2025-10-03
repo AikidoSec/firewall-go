@@ -4,8 +4,6 @@
 
 //go:build tools
 
-//go:generate go run github.com/DataDog/orchestrion pin
-
 package tools
 
 // Imports in this file determine which tracer intergations are enabled in
