@@ -9,7 +9,7 @@ type Context struct {
 	Headers            map[string][]string `json:"headers"`
 	RouteParams        map[string]string   `json:"routeParams,omitempty"`
 	RemoteAddress      *string             `json:"remoteAddress,omitempty"`
-	Body               interface{}         `json:"body"`
+	Body               any                 `json:"body"`
 	Cookies            map[string]string   `json:"cookies"`
 	AttackDetected     *bool               `json:"attackDetected,omitempty"`
 	Source             string              `json:"source"`
@@ -25,6 +25,7 @@ func (ctx *Context) GetUserAgent() string {
 	}
 	return "unknown"
 }
+
 func (ctx *Context) GetBodyRaw() string {
 	data, err := json.Marshal(ctx.Body)
 	if err != nil {
@@ -32,18 +33,21 @@ func (ctx *Context) GetBodyRaw() string {
 	}
 	return string(data)
 }
-func (ctx *Context) GetUserId() string {
+
+func (ctx *Context) GetUserID() string {
 	if ctx.User != nil {
-		return ctx.User.Id
+		return ctx.User.ID
 	}
 	return "" // Empty ID
 }
+
 func (ctx *Context) GetMethod() string {
 	if ctx.Method != nil {
 		return *ctx.Method
 	}
 	return "*"
 }
+
 func (ctx *Context) GetIP() string {
 	if ctx.RemoteAddress != nil {
 		return *ctx.RemoteAddress

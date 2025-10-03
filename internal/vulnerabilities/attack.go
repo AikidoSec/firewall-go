@@ -14,14 +14,14 @@ import (
 type AttackKind string
 
 const (
-	KindSqlInjection  AttackKind = "sql_injection"
+	KindSQLInjection  AttackKind = "sql_injection"
 	KindPathTraversal AttackKind = "path_traversal"
 	KindSSRF          AttackKind = "ssrf"
 )
 
 func GetDisplayNameForAttackKind(kind AttackKind) string {
 	switch kind {
-	case KindSqlInjection:
+	case KindSQLInjection:
 		return "an SQL injection"
 	case KindPathTraversal:
 		return "a path traversal attack"
@@ -46,7 +46,7 @@ func (i InterceptorResult) ToString() string {
 	return string(json)
 }
 
-// Convert metadata map to protobuf structure to be sent via gRPC to the Agent
+// GetMetadataProto converts metadata map to protobuf structure to be sent via gRPC to the Agent
 func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
 	var metadataProto []*protos.Metadata
 	for key, value := range metadata {
@@ -55,7 +55,7 @@ func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
 	return metadataProto
 }
 
-// Convert headers map to protobuf structure to be sent via gRPC to the Agent
+// GetHeadersProto converts headers map to protobuf structure to be sent via gRPC to the Agent
 func GetHeadersProto(context *context.Context) []*protos.Header {
 	var headersProto []*protos.Header
 	for key, value := range context.Headers {
@@ -65,7 +65,7 @@ func GetHeadersProto(context *context.Context) []*protos.Header {
 	return headersProto
 }
 
-// Construct the AttackDetected protobuf structure to be sent via gRPC to the Agent
+// GetAttackDetectedProto constructs the AttackDetected protobuf structure to be sent via gRPC to the Agent
 func GetAttackDetectedProto(res InterceptorResult) *protos.AttackDetected {
 	context := context.Get()
 	return &protos.AttackDetected{
@@ -88,7 +88,7 @@ func GetAttackDetectedProto(res InterceptorResult) *protos.AttackDetected {
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  GetMetadataProto(res.Metadata),
-			UserId:    context.GetUserId(),
+			UserId:    context.GetUserID(),
 		},
 	}
 }
@@ -102,16 +102,16 @@ func BuildAttackDetectedMessage(result InterceptorResult) string {
 }
 
 func GetThrowAction(message string, code int) string {
-	actionMap := map[string]interface{}{
+	actionMap := map[string]any{
 		"action":  "throw",
 		"message": message,
 		"code":    code,
 	}
-	actionJson, err := json.Marshal(actionMap)
+	actionJSON, err := json.Marshal(actionMap)
 	if err != nil {
 		return ""
 	}
-	return string(actionJson)
+	return string(actionJSON)
 }
 
 func GetAttackDetectedAction(result InterceptorResult) string {

@@ -16,8 +16,8 @@ var (
 	cloudConfigTicker = time.NewTicker(1 * time.Minute)
 )
 
-func buildIpBlocklist(name, description string, ipsList []string) config.IpBlockList {
-	ipBlocklist := config.IpBlockList{
+func buildIPBlocklist(name, description string, ipsList []string) config.IPBlockList {
+	ipBlocklist := config.IPBlockList{
 		Description: description,
 		TrieV4:      &ipaddr.IPv4AddressTrie{},
 		TrieV6:      &ipaddr.IPv6AddressTrie{},
@@ -66,9 +66,9 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 	}
 	config.CloudConfig.Endpoints = endpoints
 
-	config.CloudConfig.BlockedUserIds = map[string]bool{}
+	config.CloudConfig.BlockedUserIDs = map[string]bool{}
 	for _, userId := range cloudConfigFromAgent.BlockedUserIds {
-		config.CloudConfig.BlockedUserIds[userId] = true
+		config.CloudConfig.BlockedUserIDs[userId] = true
 	}
 
 	config.CloudConfig.BypassedIps = map[string]bool{}
@@ -82,9 +82,9 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 		config.CloudConfig.Block = 0
 	}
 
-	config.CloudConfig.BlockedIps = map[string]config.IpBlockList{}
+	config.CloudConfig.BlockedIps = map[string]config.IPBlockList{}
 	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIps {
-		config.CloudConfig.BlockedIps[ipBlocklistSource] = buildIpBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
+		config.CloudConfig.BlockedIps[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
 	}
 
 	if cloudConfigFromAgent.BlockedUserAgents != "" {

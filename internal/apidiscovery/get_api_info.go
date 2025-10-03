@@ -9,8 +9,8 @@ import (
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 )
 
-func GetApiInfo(ctx context.Context) *protos.APISpec {
-	if !config.EnvironmentConfig.CollectApiSchema {
+func GetAPIInfo(ctx context.Context) *protos.APISpec {
+	if !config.EnvironmentConfig.CollectAPISchema {
 		log.Debug("Collection of API Discovery was disabled.")
 		return nil
 	}
@@ -54,7 +54,7 @@ func GetApiInfo(ctx context.Context) *protos.APISpec {
 	}
 }
 
-func isObject(data interface{}) bool {
+func isObject(data any) bool {
 	// Helper function to determine if the data is an object (map in Go)
 	return reflect.TypeOf(data).Kind() == reflect.Map
 }

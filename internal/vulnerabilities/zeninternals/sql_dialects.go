@@ -20,7 +20,7 @@ const (
 	SQLite
 )
 
-func GetSqlDialectFromString(dialect string) int {
+func GetSQLDialectFromString(dialect string) int {
 	dialect = strings.ToLower(dialect)
 	switch dialect {
 	case "mysql":

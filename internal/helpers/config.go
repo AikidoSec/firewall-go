@@ -14,8 +14,8 @@ func GetCloudConfigUpdatedAt() int64 {
 	return config.CloudConfig.ConfigUpdatedAt
 }
 
-// IsIpBlocked function checks the cloud config mutex for blocked IP addresses.
-func IsIpBlocked(ip string) (bool, string) {
+// IsIPBlocked function checks the cloud config mutex for blocked IP addresses.
+func IsIPBlocked(ip string) (bool, string) {
 	config.CloudConfigMutex.Lock()
 	defer config.CloudConfigMutex.Unlock()
 
@@ -54,18 +54,14 @@ func IsUserAgentBlocked(userAgent string) (bool, string) {
 func IsUserBlocked(userID string) bool {
 	config.CloudConfigMutex.Lock()
 	defer config.CloudConfigMutex.Unlock()
-	return KeyExists(config.CloudConfig.BlockedUserIds, userID)
+	return KeyExists(config.CloudConfig.BlockedUserIDs, userID)
 }
 
-func IsIpBypassed(ip string) bool {
+func IsIPBypassed(ip string) bool {
 	config.CloudConfigMutex.Lock()
 	defer config.CloudConfigMutex.Unlock()
 
-	if KeyExists(config.CloudConfig.BypassedIps, ip) {
-		return true
-	}
-
-	return false
+	return KeyExists(config.CloudConfig.BypassedIps, ip)
 }
 
 func GetEndpoints() []aikido_types.Endpoint {
@@ -73,6 +69,7 @@ func GetEndpoints() []aikido_types.Endpoint {
 	defer config.CloudConfigMutex.Unlock()
 	return config.CloudConfig.Endpoints
 }
+
 func KeyExists[K comparable, V any](m map[K]V, key K) bool {
 	_, exists := m[key]
 	return exists

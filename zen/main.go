@@ -34,7 +34,7 @@ func Init() error {
 	// gRPC Config :
 	config.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
 	config.EnvironmentConfig.SocketPath = socket.Name()
-	config.EnvironmentConfig.CollectApiSchema = true
+	config.EnvironmentConfig.CollectAPISchema = true
 
 	err = initGRPCServer() // gRPC Server
 	if err != nil {
@@ -60,7 +60,7 @@ func initGRPCServer() error {
 	aikidoConfig := aikido_types.AikidoConfigData{
 		LogLevel:         config.AikidoConfig.LogLevel,
 		Token:            config.AikidoConfig.Token,
-		CollectApiSchema: config.EnvironmentConfig.CollectApiSchema,
+		CollectApiSchema: config.EnvironmentConfig.CollectAPISchema,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
 	if err != nil {
