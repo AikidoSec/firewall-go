@@ -1,8 +1,8 @@
 package internal
 
-import "github.com/AikidoSec/firewall-go/internal/vulnerabilities/zen_internals"
+import "github.com/AikidoSec/firewall-go/internal/vulnerabilities/zeninternals"
 
 func Init() {
-	zen_internals.Init()
+	zeninternals.Init()
 	DefineTransits()
 }

@@ -2,6 +2,7 @@ package vulnerabilities
 
 import (
 	"errors"
+
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/types"
@@ -41,15 +42,14 @@ func Scan(ctx context.Context, operation string, vulnerability Vulnerability, ar
 	return nil
 }
 
-func ScanSource(source string, sourceData interface{}, operation string, vulnerability Vulnerability, args []string) error {
+func ScanSource(source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
 	userInputMap := helpers.ExtractStringsFromUserInput(sourceData, []helpers.PathPart{})
-	var attack *types.InterceptorResult = nil
 
 	for userInput, path := range userInputMap {
 		results := vulnerability.ScanFunction(userInput, args)
 		if results != nil && results.DetectedAttack {
 			// Attack detected :
-			attack = &types.InterceptorResult{
+			attack := &types.InterceptorResult{
 				Operation:     operation,
 				Kind:          vulnerability.Kind,
 				Source:        source,
@@ -59,12 +59,10 @@ func ScanSource(source string, sourceData interface{}, operation string, vulnera
 			}
 			log.Debugf("Attack: %s", attack.ToString())
 			ReportAttackDetected(attack)
-			break
+
+			return errors.New("Aikido: " + vulnerability.Error)
 		}
 	}
 
-	if attack != nil {
-		return errors.New("Aikido: " + vulnerability.Error)
-	}
 	return nil
 }
