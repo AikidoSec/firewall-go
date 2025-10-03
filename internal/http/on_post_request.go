@@ -33,7 +33,6 @@ func OnPostRequest(statusCode int) {
 
 	apiSpec := apidiscovery.GetApiInfo(*ctx)
 
-	// Start a goroutine to handle reporting of a route :
 	go OnRequestShutdownReporting(
 		ctx.GetMethod(), ctx.Route, statusCode, ctx.GetUserId(), ctx.GetIP(), apiSpec,
 	)
