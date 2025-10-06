@@ -3,25 +3,12 @@ package config
 import (
 	"regexp"
 
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
-type EnvironmentConfigData struct {
-	SocketPath                string `json:"socket_path"`                  // '/run/aikido-{version}/aikido-{datetime}-{randint}.sock'
-	SAPI                      string `json:"sapi"`                         // '{php-sapi}'
-	TrustProxy                bool   `json:"trust_proxy"`                  // default: true
-	LocalhostAllowedByDefault bool   `json:"localhost_allowed_by_default"` // default: true
-	CollectAPISchema          bool   `json:"collect_api_schema"`           // default: true
-}
-
-type AikidoConfigData struct {
-	Token                     string `json:"token"`                        // default: ''
-	LogLevel                  string `json:"log_level"`                    // default: 'WARN'
-	Blocking                  bool   `json:"blocking"`                     // default: false
-	TrustProxy                bool   `json:"trust_proxy"`                  // default: true
-	LocalhostAllowedByDefault bool   `json:"localhost_allowed_by_default"` // default: true
-}
+var CollectAPISchema bool
 
 type RateLimiting struct {
 	Enabled        bool
@@ -50,8 +37,78 @@ type CloudConfigData struct {
 	ConfigUpdatedAt   int64
 	Endpoints         []aikido_types.Endpoint
 	BlockedUserIDs    map[string]bool
-	BypassedIps       map[string]bool
-	BlockedIps        map[string]IPBlockList
+	BypassedIPs       map[string]bool
+	BlockedIPs        map[string]IPBlockList
 	BlockedUserAgents *regexp.Regexp
 	Block             int
+}
+
+func GetCloudConfigUpdatedAt() int64 {
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
+
+	return CloudConfig.ConfigUpdatedAt
+}
+
+// IsIPBlocked function checks the cloud config mutex for blocked IP addresses.
+func IsIPBlocked(ip string) (bool, string) {
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
+
+	ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
+	if err != nil {
+		log.Infof("Invalid ip address: %s\n", ip)
+		return false, ""
+	}
+
+	for _, ipBlocklist := range CloudConfig.BlockedIPs {
+		if (ipAddress.IsIPv4() && ipBlocklist.TrieV4.ElementContains(ipAddress.ToIPv4())) ||
+			(ipAddress.IsIPv6() && ipBlocklist.TrieV6.ElementContains(ipAddress.ToIPv6())) {
+			return true, ipBlocklist.Description
+		}
+	}
+
+	return false, ""
+}
+
+// IsUserAgentBlocked returns true if we block (e.g. bot blocking), and a string with the reason why.
+func IsUserAgentBlocked(userAgent string) (bool, string) {
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
+
+	if CloudConfig.BlockedUserAgents == nil {
+		return false, ""
+	}
+
+	if CloudConfig.BlockedUserAgents.MatchString(userAgent) {
+		return true, "bot detection"
+	}
+
+	return false, ""
+}
+
+func IsUserBlocked(userID string) bool {
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
+
+	return keyExists(CloudConfig.BlockedUserIDs, userID)
+}
+
+func IsIPBypassed(ip string) bool {
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
+
+	return keyExists(CloudConfig.BypassedIPs, ip)
+}
+
+func GetEndpoints() []aikido_types.Endpoint {
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
+
+	return CloudConfig.Endpoints
+}
+
+func keyExists[K comparable, V any](m map[K]V, key K) bool {
+	_, exists := m[key]
+	return exists
 }

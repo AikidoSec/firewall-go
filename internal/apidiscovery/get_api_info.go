@@ -10,7 +10,7 @@ import (
 )
 
 func GetAPIInfo(ctx context.Context) *protos.APISpec {
-	if !config.EnvironmentConfig.CollectAPISchema {
+	if !config.CollectAPISchema {
 		log.Debug("Collection of API Discovery was disabled.")
 		return nil
 	}
