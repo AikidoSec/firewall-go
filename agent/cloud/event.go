@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/AikidoSec/zen-internals-agent/config"
-	"github.com/AikidoSec/zen-internals-agent/log"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/AikidoSec/firewall-go/agent/config"
+	"github.com/AikidoSec/firewall-go/agent/log"
 )
 
 func SendCloudRequest(endpoint string, route string, method string, payload interface{}) ([]byte, error) {

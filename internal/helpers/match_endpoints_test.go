@@ -1,9 +1,10 @@
 package helpers
 
 import (
-	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/stretchr/testify/assert"
 )
 
 // sampleRouteMetadata creates a new RouteMetadata for testing.

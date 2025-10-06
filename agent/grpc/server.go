@@ -3,15 +3,16 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/AikidoSec/zen-internals-agent/cloud"
-	"github.com/AikidoSec/zen-internals-agent/config"
-	"github.com/AikidoSec/zen-internals-agent/globals"
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
-	"github.com/AikidoSec/zen-internals-agent/log"
 	"net"
 	"os"
 	"path/filepath"
 	"sync/atomic"
+
+	"github.com/AikidoSec/firewall-go/agent/cloud"
+	"github.com/AikidoSec/firewall-go/agent/config"
+	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

@@ -3,8 +3,8 @@ package config
 import (
 	"regexp"
 
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 

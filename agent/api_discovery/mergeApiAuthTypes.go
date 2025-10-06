@@ -1,7 +1,7 @@
 package api_discovery
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 )
 
 // Merge two APIAuthType slices into one without duplicates.

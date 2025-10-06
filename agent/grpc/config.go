@@ -1,8 +1,8 @@
 package grpc
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/globals"
-	"github.com/AikidoSec/zen-internals-agent/log"
+	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/agent/log"
 )
 
 func storeConfig(token, logLevel string, blocking, localhostAllowedByDefault, collectApiSchema bool) {

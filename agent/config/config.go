@@ -3,8 +3,9 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/AikidoSec/zen-internals-agent/globals"
-	"github.com/AikidoSec/zen-internals-agent/log"
+
+	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/agent/log"
 )
 
 func setConfigFromJson(jsonString []byte) bool {

@@ -3,11 +3,12 @@ package log
 import (
 	"errors"
 	"fmt"
-	"github.com/AikidoSec/zen-internals-agent/globals"
 	"log"
 	"os"
 	"sync/atomic"
 	"time"
+
+	"github.com/AikidoSec/firewall-go/agent/globals"
 )
 
 const (

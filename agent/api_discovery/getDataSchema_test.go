@@ -3,9 +3,10 @@ package api_discovery
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"strings"
 	"testing"
+
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 )
 
 // Helper function for comparing two DataSchema structs

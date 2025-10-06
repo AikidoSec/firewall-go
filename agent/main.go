@@ -2,7 +2,8 @@ package main
 
 import (
 	"C"
-	"github.com/AikidoSec/zen-internals-agent/zen_go_bindings"
+
+	"github.com/AikidoSec/firewall-go/agent/zen_go_bindings"
 )
 
 //export AgentInit

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 )
 
 // Helper function for comparing two DataSchema structs

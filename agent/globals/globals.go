@@ -1,8 +1,9 @@
 package globals
 
 import (
-	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
 	"sync"
+
+	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
 )
 
 // Local config that contains info about socket path, platform, library version...

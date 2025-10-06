@@ -1,8 +1,9 @@
 package api_discovery
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"reflect"
+
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 )
 
 // mergeDataSchemas merges two DataSchema objects.

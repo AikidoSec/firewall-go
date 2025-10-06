@@ -1,9 +1,10 @@
 package api_discovery
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"reflect"
 	"testing"
+
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 )
 
 // TestMergeApiAuthTypes tests the mergeApiAuthTypes function.

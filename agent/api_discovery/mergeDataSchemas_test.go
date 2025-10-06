@@ -1,8 +1,9 @@
 package api_discovery
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"testing"
+
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 
 	"github.com/stretchr/testify/assert"
 )

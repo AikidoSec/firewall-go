@@ -1,12 +1,12 @@
 package http
 
 import (
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/internal/apidiscovery"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 )
 
 func OnRequestShutdownReporting(method string, route string, statusCode int, user string, ip string, apiSpec *protos.APISpec) {

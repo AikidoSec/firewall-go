@@ -3,10 +3,10 @@ package apidiscovery
 import (
 	"reflect"
 
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 )
 
 func GetAPIInfo(ctx context.Context) *protos.APISpec {
