@@ -1,13 +1,13 @@
 package zen_go_bindings
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/cloud"
-	"github.com/AikidoSec/zen-internals-agent/config"
-	"github.com/AikidoSec/zen-internals-agent/globals"
-	"github.com/AikidoSec/zen-internals-agent/grpc"
-	"github.com/AikidoSec/zen-internals-agent/log"
-	"github.com/AikidoSec/zen-internals-agent/machine"
-	"github.com/AikidoSec/zen-internals-agent/rate_limiting"
+	"github.com/AikidoSec/firewall-go/agent/cloud"
+	"github.com/AikidoSec/firewall-go/agent/config"
+	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/agent/grpc"
+	"github.com/AikidoSec/firewall-go/agent/log"
+	"github.com/AikidoSec/firewall-go/agent/machine"
+	"github.com/AikidoSec/firewall-go/agent/rate_limiting"
 )
 
 func AgentInit(initJson string) (initOk bool) {

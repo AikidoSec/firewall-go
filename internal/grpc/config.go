@@ -4,10 +4,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/zen-internals-agent/aikido_types"
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 

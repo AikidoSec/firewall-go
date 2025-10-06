@@ -1,12 +1,12 @@
 package grpc
 
 import (
-	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
-	"github.com/AikidoSec/zen-internals-agent/api_discovery"
-	"github.com/AikidoSec/zen-internals-agent/globals"
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
-	"github.com/AikidoSec/zen-internals-agent/log"
-	"github.com/AikidoSec/zen-internals-agent/utils"
+	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/api_discovery"
+	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/log"
+	"github.com/AikidoSec/firewall-go/agent/utils"
 )
 
 func storeStats() {

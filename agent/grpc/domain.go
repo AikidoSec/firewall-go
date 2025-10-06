@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	"github.com/AikidoSec/zen-internals-agent/globals"
+	"github.com/AikidoSec/firewall-go/agent/globals"
 )
 
 func storeDomain(domain string, port uint32) {

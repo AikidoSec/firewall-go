@@ -3,9 +3,9 @@ package vulnerabilities
 import (
 	"errors"
 
+	"github.com/AikidoSec/firewall-go/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
-	"github.com/AikidoSec/zen-internals-agent/log"
 )
 
 type ScanResult struct {

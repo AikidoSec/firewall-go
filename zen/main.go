@@ -7,11 +7,11 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/zen_go_bindings"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/zen-internals-agent/aikido_types"
-	"github.com/AikidoSec/zen-internals-agent/zen_go_bindings"
 )
 
 type combined struct {

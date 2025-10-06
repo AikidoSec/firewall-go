@@ -2,12 +2,13 @@ package utils
 
 import (
 	"fmt"
-	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
-	"github.com/AikidoSec/zen-internals-agent/config"
-	"github.com/AikidoSec/zen-internals-agent/globals"
 	"net"
 	"sort"
 	"time"
+
+	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/config"
+	"github.com/AikidoSec/firewall-go/agent/globals"
 )
 
 func KeyMustExist[K comparable, V any](m map[K]V, key K) {

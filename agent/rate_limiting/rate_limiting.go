@@ -1,11 +1,12 @@
 package rate_limiting
 
 import (
-	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
-	"github.com/AikidoSec/zen-internals-agent/globals"
-	"github.com/AikidoSec/zen-internals-agent/log"
-	"github.com/AikidoSec/zen-internals-agent/utils"
 	"time"
+
+	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/agent/log"
+	"github.com/AikidoSec/firewall-go/agent/utils"
 )
 
 var (

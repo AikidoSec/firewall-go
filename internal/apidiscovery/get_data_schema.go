@@ -3,7 +3,7 @@ package apidiscovery
 import (
 	"reflect"
 
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 )
 
 const maxDepth = 20

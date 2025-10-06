@@ -3,7 +3,7 @@ package apidiscovery
 import (
 	"strings"
 
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 )
 
 // Common API key header and cookie names

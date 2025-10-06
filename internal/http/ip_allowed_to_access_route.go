@@ -3,8 +3,8 @@ package http
 import (
 	"slices"
 
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
-	"github.com/AikidoSec/zen-internals-agent/aikido_types"
 )
 
 // ipAllowedToAccessRoute checks if the IP address is allowed to access the route.

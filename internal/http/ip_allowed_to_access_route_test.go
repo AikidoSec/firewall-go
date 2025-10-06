@@ -3,7 +3,7 @@ package http
 import (
 	"testing"
 
-	. "github.com/AikidoSec/zen-internals-agent/aikido_types"
+	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/stretchr/testify/assert"
 )
 

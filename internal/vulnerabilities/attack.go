@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"html"
 
+	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
-	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
-	"github.com/AikidoSec/zen-internals-agent/utils"
 )
 
 type AttackKind string

@@ -1,6 +1,6 @@
 package aikido_types
 
-import "github.com/AikidoSec/zen-internals-agent/ipc/protos"
+import "github.com/AikidoSec/firewall-go/agent/ipc/protos"
 
 type OsInfo struct {
 	Name    string `json:"name"`
