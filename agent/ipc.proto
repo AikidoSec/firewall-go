@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package ipc;
+
+option go_package = "ipc/protos;protos";
+
+service Aikido {
+  rpc OnConfig (Config) returns (google.protobuf.Empty);
+  rpc OnDomain (Domain) returns (google.protobuf.Empty);
+  rpc GetRateLimitingStatus (RateLimitingInfo) returns (RateLimitingStatus);
+  rpc OnRequestShutdown (RequestMetadataShutdown) returns (google.protobuf.Empty);
+  rpc GetCloudConfig(CloudConfigUpdatedAt) returns (CloudConfig);
+  rpc OnUser(User) returns (google.protobuf.Empty);
+  rpc OnAttackDetected(AttackDetected) returns (google.protobuf.Empty);
+  rpc OnMonitoredSinkStats(MonitoredSinkStats) returns (google.protobuf.Empty);
+  rpc OnMiddlewareInstalled(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message Config {
+	string token = 1;
+  string log_level = 2;
+  bool blocking = 3;
+  bool localhost_allowed_by_default = 4;
+  bool collect_api_schema = 5;
+}
+
+message Domain {
+  string domain = 1;
+  uint32 port = 2;
+}
+
+message RateLimitingInfo {
+  string method = 1;
+  string route = 2;
+  string user = 3;
+  string ip = 4;
+}
+
+message RequestMetadataShutdown {
+  string method = 1;
+  string route = 2;
+  int32 statusCode = 3;
+  string user = 4;
+  string ip = 5;
+  APISpec apiSpec = 6;
+}
+
+message MonitoredSinkStats {
+  string sink = 1;
+  int32 attacksDetected = 2;
+  int32 attacksBlocked = 3;
+  int32 interceptorThrewError = 4;
+  int32 withoutContext = 5;
+  int32 total = 6;
+  repeated int64 timings = 7;
+}
+
+message RateLimiting {
+  bool enabled = 1;
+}
+
+message Endpoint {
+  string method = 1;
+  string route = 2;
+  bool forceProtectionOff = 3;
+  RateLimiting rateLimiting = 4;
+  repeated string allowedIPAddresses = 5;
+}
+
+message CloudConfigUpdatedAt {
+  int64 configUpdatedAt = 1;
+}
+
+message IpBlockList {
+  string description = 1;
+  repeated string ips = 2;
+}
+
+message CloudConfig {
+  int64 configUpdatedAt = 1;
+  repeated Endpoint endpoints = 2;
+  repeated string blockedUserIds = 3;
+  repeated string bypassedIps = 4;
+  map<string, IpBlockList> blockedIps = 5;
+  string blockedUserAgents = 6;
+  bool block = 7;
+}
+
+message RateLimitingStatus {
+  bool block = 1;
+  string trigger = 2;
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string ip = 3;
+}
+
+message Header {
+  string key = 1;
+  string value = 2;
+}
+
+message Request {
+  string method = 1;
+  string ipAddress = 2;
+  string userAgent = 3;
+  string url = 4;
+  repeated Header headers = 5;
+  string body = 6;
+  string source = 7;
+  string route = 8;
+}
+
+message Metadata {
+  string key = 1;
+  string value = 2;
+}
+
+message Attack {
+  string kind = 1;
+  string operation = 2;
+  string module = 3;
+  bool blocked = 4;
+  string source = 5;
+  string path = 6;
+  string stack = 7;
+  string payload = 8;
+  repeated Metadata metadata = 9;
+  string userId = 10;
+}
+
+message AttackDetected {
+  Request request = 1;
+  Attack attack = 2;
+}
+
+message APIAuthType {
+	string type = 1;
+	string scheme = 2;
+	string in = 3;
+	string name = 4;
+	string bearerFormat = 5;
+}
+
+message DataSchema {
+  repeated string type = 1;
+  map<string, DataSchema> properties = 2;
+  DataSchema items = 3;
+  bool optional = 4;
+}
+
+message APIBodyInfo {
+  string type = 1;
+  DataSchema schema = 2;
+}
+
+message APISpec {
+  APIBodyInfo body = 1;
+  DataSchema query = 2;
+  repeated APIAuthType auth = 3;
+}
