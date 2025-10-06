@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/internal/helpers"
+	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
 	"google.golang.org/grpc"
@@ -103,7 +103,7 @@ func GetCloudConfig() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cloudConfig, err := client.GetCloudConfig(ctx, &protos.CloudConfigUpdatedAt{ConfigUpdatedAt: helpers.GetCloudConfigUpdatedAt()})
+	cloudConfig, err := client.GetCloudConfig(ctx, &protos.CloudConfigUpdatedAt{ConfigUpdatedAt: config.GetCloudConfigUpdatedAt()})
 	if err != nil {
 		log.Infof("Could not get cloud config: %v", err)
 		return

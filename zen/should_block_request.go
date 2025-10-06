@@ -3,6 +3,7 @@ package zen
 import (
 	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
@@ -21,14 +22,14 @@ func ShouldBlockRequest() *BlockResponse {
 
 	// user-blocking :
 	userID := ctx.GetUserID()
-	if helpers.IsUserBlocked(userID) {
+	if config.IsUserBlocked(userID) {
 		log.Infof("User \"%s\" is blocked!", userID)
 		return &BlockResponse{"blocked", "user", nil}
 	}
 	// rate-limiting :
 	matches := helpers.MatchEndpoints(
 		helpers.RouteMetadata{URL: ctx.URL, Method: ctx.GetMethod(), Route: ctx.Route},
-		helpers.GetEndpoints(),
+		config.GetEndpoints(),
 	)
 
 	for _, endpoint := range matches {

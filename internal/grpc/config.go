@@ -71,9 +71,9 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 		config.CloudConfig.BlockedUserIDs[userId] = true
 	}
 
-	config.CloudConfig.BypassedIps = map[string]bool{}
+	config.CloudConfig.BypassedIPs = map[string]bool{}
 	for _, ip := range cloudConfigFromAgent.BypassedIps {
-		config.CloudConfig.BypassedIps[ip] = true
+		config.CloudConfig.BypassedIPs[ip] = true
 	}
 
 	if cloudConfigFromAgent.Block {
@@ -82,9 +82,9 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 		config.CloudConfig.Block = 0
 	}
 
-	config.CloudConfig.BlockedIps = map[string]config.IPBlockList{}
+	config.CloudConfig.BlockedIPs = map[string]config.IPBlockList{}
 	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIps {
-		config.CloudConfig.BlockedIps[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
+		config.CloudConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
 	}
 
 	if cloudConfigFromAgent.BlockedUserAgents != "" {
