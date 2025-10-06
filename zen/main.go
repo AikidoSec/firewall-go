@@ -22,22 +22,22 @@ type combined struct {
 // Init needs to be called in the user's app to start the background process
 func Init() error {
 	// Logger :
-	config.AikidoConfig.LogLevel = "DEBUG"
+	logLevel := "DEBUG"
 	log.Init()
-	log.SetLogLevel(config.AikidoConfig.LogLevel)
+	log.SetLogLevel(logLevel)
 
 	socket, err := os.CreateTemp("", "aikido-test.sock")
 	if err != nil {
 		return err
 	}
 
-	// gRPC Config :
-	config.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
-
-	socketPath := socket.Name()
 	config.CollectAPISchema = true
 
-	err = initGRPCServer(socketPath, config.CollectAPISchema) // gRPC Server
+	// gRPC Config :
+	token := os.Getenv("AIKIDO_TOKEN")
+	socketPath := socket.Name()
+
+	err = initGRPCServer(socketPath, config.CollectAPISchema, logLevel, token) // gRPC Server
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func Init() error {
 	return nil
 }
 
-func initGRPCServer(socketPath string, collectAPISchema bool) error {
+func initGRPCServer(socketPath string, collectAPISchema bool, logLevel string, token string) error {
 	// gRPC Server :
 	environmentConfig := aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
@@ -59,8 +59,8 @@ func initGRPCServer(socketPath string, collectAPISchema bool) error {
 		Version:         config.Version, // firewall-go version
 	}
 	aikidoConfig := aikido_types.AikidoConfigData{
-		LogLevel:         config.AikidoConfig.LogLevel,
-		Token:            config.AikidoConfig.Token,
+		LogLevel:         logLevel,
+		Token:            token,
 		CollectApiSchema: collectAPISchema,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})

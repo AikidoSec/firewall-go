@@ -4,8 +4,6 @@ import (
 	"sync"
 )
 
-var AikidoConfig AikidoConfigData
-
 var CloudConfig CloudConfigData
 var CloudConfigMutex sync.Mutex
 

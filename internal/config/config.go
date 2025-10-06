@@ -9,14 +9,6 @@ import (
 
 var CollectAPISchema bool
 
-type AikidoConfigData struct {
-	Token                     string `json:"token"`                        // default: ''
-	LogLevel                  string `json:"log_level"`                    // default: 'WARN'
-	Blocking                  bool   `json:"blocking"`                     // default: false
-	TrustProxy                bool   `json:"trust_proxy"`                  // default: true
-	LocalhostAllowedByDefault bool   `json:"localhost_allowed_by_default"` // default: true
-}
-
 type RateLimiting struct {
 	Enabled        bool
 	MaxRequests    int
