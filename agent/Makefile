@@ -1,20 +1,14 @@
 export PATH := $(HOME)/go/bin:$(PATH)
 
 .PHONY: build
-build: go_get
+build:
 	@echo "• Starting build"
 	@protoc --go_out=. --go-grpc_out=. ipc.proto
-	@go get github.com/AikidoSec/zen-internals-agent/ipc/protos
 	@go build -ldflags "-s -w" -buildmode=c-shared -o dist/aikido-agent.so main.go
 	ls -l dist/
 
-.PHONY: go_get
-go_get:
-	go get google.golang.org/grpc
-	go get github.com/stretchr/testify/assert
-
 .PHONY: setup
-setup: install_protoc go_setup go_get
+setup: install_protoc go_setup
 
 .PHONY: go_setup
 go_setup:
