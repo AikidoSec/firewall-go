@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/zen-internals-agent/ipc/protos"
@@ -17,9 +16,9 @@ import (
 var conn *grpc.ClientConn
 var client protos.AikidoClient
 
-func Init() {
+func Init(socketPath string) {
 	conn, err := grpc.Dial(
-		"unix://"+config.EnvironmentConfig.SocketPath,
+		"unix://"+socketPath,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 

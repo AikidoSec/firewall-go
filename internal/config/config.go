@@ -7,13 +7,7 @@ import (
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
-type EnvironmentConfigData struct {
-	SocketPath                string `json:"socket_path"`                  // '/run/aikido-{version}/aikido-{datetime}-{randint}.sock'
-	SAPI                      string `json:"sapi"`                         // '{php-sapi}'
-	TrustProxy                bool   `json:"trust_proxy"`                  // default: true
-	LocalhostAllowedByDefault bool   `json:"localhost_allowed_by_default"` // default: true
-	CollectAPISchema          bool   `json:"collect_api_schema"`           // default: true
-}
+var CollectAPISchema bool
 
 type AikidoConfigData struct {
 	Token                     string `json:"token"`                        // default: ''

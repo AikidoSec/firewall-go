@@ -4,8 +4,6 @@ import (
 	"sync"
 )
 
-var EnvironmentConfig EnvironmentConfigData
-
 var AikidoConfig AikidoConfigData
 
 var CloudConfig CloudConfigData

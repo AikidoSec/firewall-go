@@ -33,20 +33,21 @@ func Init() error {
 
 	// gRPC Config :
 	config.AikidoConfig.Token = os.Getenv("AIKIDO_TOKEN")
-	config.EnvironmentConfig.SocketPath = socket.Name()
-	config.EnvironmentConfig.CollectAPISchema = true
 
-	err = initGRPCServer() // gRPC Server
+	socketPath := socket.Name()
+	config.CollectAPISchema = true
+
+	err = initGRPCServer(socketPath, config.CollectAPISchema) // gRPC Server
 	if err != nil {
 		return err
 	}
 
-	grpc.Init() // gRPC Client
+	grpc.Init(socketPath) // gRPC Client
 
 	return nil
 }
 
-func initGRPCServer() error {
+func initGRPCServer(socketPath string, collectAPISchema bool) error {
 	// gRPC Server :
 	environmentConfig := aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
@@ -54,13 +55,13 @@ func initGRPCServer() error {
 		Library:         "firewall-go",
 		Endpoint:        "https://guard.aikido.dev/",
 		ConfigEndpoint:  "https://runtime.aikido.dev/",
-		SocketPath:      config.EnvironmentConfig.SocketPath,
+		SocketPath:      socketPath,
 		Version:         config.Version, // firewall-go version
 	}
 	aikidoConfig := aikido_types.AikidoConfigData{
 		LogLevel:         config.AikidoConfig.LogLevel,
 		Token:            config.AikidoConfig.Token,
-		CollectApiSchema: config.EnvironmentConfig.CollectAPISchema,
+		CollectApiSchema: collectAPISchema,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
 	if err != nil {
