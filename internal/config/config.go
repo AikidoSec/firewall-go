@@ -44,16 +44,16 @@ type CloudConfigData struct {
 }
 
 func GetCloudConfigUpdatedAt() int64 {
-	CloudConfigMutex.Lock()
-	defer CloudConfigMutex.Unlock()
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
 
 	return CloudConfig.ConfigUpdatedAt
 }
 
 // IsIPBlocked function checks the cloud config mutex for blocked IP addresses.
 func IsIPBlocked(ip string) (bool, string) {
-	CloudConfigMutex.Lock()
-	defer CloudConfigMutex.Unlock()
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
 
 	ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
 	if err != nil {
@@ -73,8 +73,8 @@ func IsIPBlocked(ip string) (bool, string) {
 
 // IsUserAgentBlocked returns true if we block (e.g. bot blocking), and a string with the reason why.
 func IsUserAgentBlocked(userAgent string) (bool, string) {
-	CloudConfigMutex.Lock()
-	defer CloudConfigMutex.Unlock()
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
 
 	if CloudConfig.BlockedUserAgents == nil {
 		return false, ""
@@ -88,22 +88,22 @@ func IsUserAgentBlocked(userAgent string) (bool, string) {
 }
 
 func IsUserBlocked(userID string) bool {
-	CloudConfigMutex.Lock()
-	defer CloudConfigMutex.Unlock()
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
 
 	return keyExists(CloudConfig.BlockedUserIDs, userID)
 }
 
 func IsIPBypassed(ip string) bool {
-	CloudConfigMutex.Lock()
-	defer CloudConfigMutex.Unlock()
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
 
 	return keyExists(CloudConfig.BypassedIPs, ip)
 }
 
 func GetEndpoints() []aikido_types.Endpoint {
-	CloudConfigMutex.Lock()
-	defer CloudConfigMutex.Unlock()
+	CloudConfigMutex.RLock()
+	defer CloudConfigMutex.RUnlock()
 
 	return CloudConfig.Endpoints
 }

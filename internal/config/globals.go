@@ -5,7 +5,7 @@ import (
 )
 
 var CloudConfig CloudConfigData
-var CloudConfigMutex sync.Mutex
+var CloudConfigMutex sync.RWMutex
 
 const (
 	Version = "1.0.0"
