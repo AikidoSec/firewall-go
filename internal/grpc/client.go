@@ -62,7 +62,6 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 	log.Debugf("Request metadata sent via socket (%v %v %v)", method, route, statusCode)
 }
 
-// GetCloudConfig from Aikido Agent
 func GetCloudConfig() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
