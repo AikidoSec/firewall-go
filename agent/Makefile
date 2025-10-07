@@ -1,12 +1,5 @@
 export PATH := $(HOME)/go/bin:$(PATH)
 
-.PHONY: build
-build:
-	@echo "• Starting build"
-	@protoc --go_out=. --go-grpc_out=. ipc.proto
-	@go build -ldflags "-s -w" -buildmode=c-shared -o dist/aikido-agent.so main.go
-	ls -l dist/
-
 .PHONY: setup
 setup: install_protoc go_setup
 

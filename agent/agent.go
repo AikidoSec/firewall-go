@@ -5,22 +5,46 @@ import (
 	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/agent/cloud"
+	"github.com/AikidoSec/firewall-go/agent/config"
 	"github.com/AikidoSec/firewall-go/agent/globals"
 	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/agent/log"
-	"github.com/AikidoSec/firewall-go/agent/zen_go_bindings"
+	"github.com/AikidoSec/firewall-go/agent/machine"
+	"github.com/AikidoSec/firewall-go/agent/rate_limiting"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func AgentInit(initJSON string) (initOk bool) {
-	return zen_go_bindings.AgentInit(initJSON)
+func Init(initJSON string) (initOk bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Warn("Recovered from panic:", r)
+			initOk = false
+		}
+	}()
+
+	log.Init()
+	machine.Init()
+	if !config.Init(initJSON) {
+		return false
+	}
+
+	cloud.Init()
+	rate_limiting.Init()
+
+	log.Infof("Aikido Agent v%s loaded!", globals.EnvironmentConfig.Version)
+	return true
 }
 
 func AgentUninit() {
-	zen_go_bindings.AgentUninit()
+	rate_limiting.Uninit()
+	cloud.Uninit()
+	config.Uninit()
+
+	log.Infof("Aikido Agent v%s unloaded!", globals.EnvironmentConfig.Version)
+	log.Uninit()
 }
 
 func OnDomain(ctx context.Context, req *protos.Domain) (*emptypb.Empty, error) {
