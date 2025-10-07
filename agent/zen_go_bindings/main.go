@@ -4,7 +4,6 @@ import (
 	"github.com/AikidoSec/firewall-go/agent/cloud"
 	"github.com/AikidoSec/firewall-go/agent/config"
 	"github.com/AikidoSec/firewall-go/agent/globals"
-	"github.com/AikidoSec/firewall-go/agent/grpc"
 	"github.com/AikidoSec/firewall-go/agent/log"
 	"github.com/AikidoSec/firewall-go/agent/machine"
 	"github.com/AikidoSec/firewall-go/agent/rate_limiting"
@@ -20,7 +19,7 @@ func AgentInit(initJson string) (initOk bool) {
 
 	log.Init()
 	machine.Init()
-	if !config.Init(initJson) || !grpc.Init() {
+	if !config.Init(initJson) {
 		return false
 	}
 
@@ -34,7 +33,6 @@ func AgentInit(initJson string) (initOk bool) {
 func AgentUninit() {
 	rate_limiting.Uninit()
 	cloud.Uninit()
-	grpc.Uninit()
 	config.Uninit()
 
 	log.Infof("Aikido Agent v%s unloaded!", globals.EnvironmentConfig.Version)
