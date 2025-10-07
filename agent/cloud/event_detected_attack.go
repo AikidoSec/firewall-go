@@ -1,58 +1,11 @@
 package cloud
 
 import (
-	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/globals"
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/agent/log"
 	"github.com/AikidoSec/firewall-go/agent/utils"
 )
-
-func GetHeaders(protoHeaders []*protos.Header) map[string][]string {
-	headers := map[string][]string{}
-
-	for _, header := range protoHeaders {
-		headers[header.Key] = []string{header.Value}
-	}
-	return headers
-}
-
-func GetMetadata(protoMetadata []*protos.Metadata) map[string]string {
-	metas := map[string]string{}
-
-	for _, meta := range protoMetadata {
-		metas[meta.Key] = meta.Value
-	}
-	return metas
-}
-
-func GetRequestInfo(protoRequest *protos.Request) RequestInfo {
-	return RequestInfo{
-		Method:    protoRequest.Method,
-		IPAddress: protoRequest.IpAddress,
-		UserAgent: protoRequest.UserAgent,
-		URL:       protoRequest.Url,
-		Headers:   GetHeaders(protoRequest.Headers),
-		Body:      protoRequest.Body,
-		Source:    protoRequest.Source,
-		Route:     protoRequest.Route,
-	}
-}
-
-func GetAttackDetails(protoAttack *protos.Attack) AttackDetails {
-	return AttackDetails{
-		Kind:      protoAttack.Kind,
-		Operation: protoAttack.Operation,
-		Module:    protoAttack.Module,
-		Blocked:   protoAttack.Blocked,
-		Source:    protoAttack.Source,
-		Path:      protoAttack.Path,
-		Stack:     protoAttack.Stack,
-		Payload:   protoAttack.Payload,
-		Metadata:  GetMetadata(protoAttack.Metadata),
-		User:      utils.GetUserByID(protoAttack.UserId),
-	}
-}
 
 func ShouldSendAttackDetectedEvent() bool {
 	globals.AttackDetectedEventsSentAtMutex.Lock()
@@ -79,15 +32,15 @@ func ShouldSendAttackDetectedEvent() bool {
 	return true
 }
 
-func SendAttackDetectedEvent(req *protos.AttackDetected) {
+func SendAttackDetectedEvent(attack *aikido_types.DetectedAttack) {
 	if !ShouldSendAttackDetectedEvent() {
 		return
 	}
-	detectedAttackEvent := DetectedAttack{
+	detectedAttackEvent := aikido_types.DetectedAttack{
 		Type:    "detected_attack",
 		Agent:   GetAgentInfo(),
-		Request: GetRequestInfo(req.Request),
-		Attack:  GetAttackDetails(req.Attack),
+		Request: attack.Request,
+		Attack:  attack.Attack,
 		Time:    utils.GetTime(),
 	}
 

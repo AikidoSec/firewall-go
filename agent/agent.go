@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/cloud"
 	"github.com/AikidoSec/firewall-go/agent/config"
 	"github.com/AikidoSec/firewall-go/agent/globals"
@@ -84,19 +85,16 @@ func OnUser(ctx context.Context, req *protos.User) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
 
-func OnAttackDetected(ctx context.Context, req *protos.AttackDetected) (*emptypb.Empty, error) {
-	cloud.SendAttackDetectedEvent(req)
-	storeAttackStats(req)
-	return &emptypb.Empty{}, nil
+func OnAttackDetected(attack *aikido_types.DetectedAttack) {
+	cloud.SendAttackDetectedEvent(attack)
+	storeAttackStats(attack.Attack.Blocked)
 }
 
-func OnMonitoredSinkStats(ctx context.Context, req *protos.MonitoredSinkStats) (*emptypb.Empty, error) {
-	storeSinkStats(req)
-	return &emptypb.Empty{}, nil
+func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings) {
+	storeSinkStats(sink, stats)
 }
 
-func OnMiddlewareInstalled(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
+func OnMiddlewareInstalled() {
 	log.Debugf("Received MiddlewareInstalled")
 	atomic.StoreUint32(&globals.MiddlewareInstalled, 1)
-	return &emptypb.Empty{}, nil
 }

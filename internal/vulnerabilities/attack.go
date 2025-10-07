@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"maps"
 
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
@@ -46,40 +47,30 @@ func (i InterceptorResult) ToString() string {
 	return string(json)
 }
 
-// GetMetadataProto converts metadata map to protobuf structure to be sent via gRPC to the Agent
-func GetMetadataProto(metadata map[string]string) []*protos.Metadata {
-	var metadataProto []*protos.Metadata
-	for key, value := range metadata {
-		metadataProto = append(metadataProto, &protos.Metadata{Key: key, Value: value})
-	}
-	return metadataProto
-}
-
-// GetHeadersProto converts headers map to protobuf structure to be sent via gRPC to the Agent
-func GetHeadersProto(context *context.Context) []*protos.Header {
-	var headersProto []*protos.Header
+// getHeaders clones headers map to be sent to the Agent
+func getHeaders(context *context.Context) map[string][]string {
+	headers := make(map[string][]string)
 	for key, value := range context.Headers {
-		// Only report first header :
-		headersProto = append(headersProto, &protos.Header{Key: key, Value: value[0]})
+		headers[key] = append([]string{}, value...)
 	}
-	return headersProto
+	return headers
 }
 
-// GetAttackDetectedProto constructs the AttackDetected protobuf structure to be sent via gRPC to the Agent
-func GetAttackDetectedProto(res InterceptorResult) *protos.AttackDetected {
+// GetAttackDetected constructs the DetectedAttack struct to be to the Agent
+func GetAttackDetected(res InterceptorResult) *aikido_types.DetectedAttack {
 	context := context.Get()
-	return &protos.AttackDetected{
-		Request: &protos.Request{
+	return &aikido_types.DetectedAttack{
+		Request: aikido_types.RequestInfo{
 			Method:    *context.Method,
-			IpAddress: *context.RemoteAddress,
+			IPAddress: *context.RemoteAddress,
 			UserAgent: context.GetUserAgent(),
-			Url:       context.URL,
-			Headers:   GetHeadersProto(context),
+			URL:       context.URL,
+			Headers:   getHeaders(context),
 			Body:      context.GetBodyRaw(),
 			Source:    context.Source,
 			Route:     context.Route,
 		},
-		Attack: &protos.Attack{
+		Attack: aikido_types.AttackDetails{
 			Kind:      string(res.Kind),
 			Operation: res.Operation,
 			Module:    "Module",
@@ -87,8 +78,8 @@ func GetAttackDetectedProto(res InterceptorResult) *protos.AttackDetected {
 			Source:    res.Source,
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
-			Metadata:  GetMetadataProto(res.Metadata),
-			UserId:    context.GetUserID(),
+			Metadata:  maps.Clone(res.Metadata),
+			User:      utils.GetUserByID(context.GetUserID()),
 		},
 	}
 }
@@ -123,6 +114,6 @@ func ReportAttackDetected(res *InterceptorResult) string {
 		return ""
 	}
 
-	go grpc.OnAttackDetected(GetAttackDetectedProto(*res))
+	go grpc.OnAttackDetected(GetAttackDetected(*res))
 	return GetAttackDetectedAction(*res)
 }

@@ -5,10 +5,10 @@ import (
 	"time"
 
 	agent "github.com/AikidoSec/firewall-go/agent"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func Init() {
@@ -89,50 +89,27 @@ func OnUserEvent(id string, username string, ip string) {
 	log.Debugf("User event sent via socket (%v %v %v)", id, username, ip)
 }
 
-func OnAttackDetected(attackDetected *protos.AttackDetected) {
-	log.Debugf("Reporting attack back over gRPC")
+func OnAttackDetected(attackDetected *aikido_types.DetectedAttack) {
+	log.Debugf("Reporting attack")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := agent.OnAttackDetected(ctx, attackDetected)
-	if err != nil {
-		log.Warnf("Could not send attack detected event")
-		return
-	}
-	log.Debugf("Attack detected event sent via socket")
+	agent.OnAttackDetected(attackDetected)
 }
 
-func OnMonitoredSinkStats(sink string, attacksDetected, attacksBlocked, interceptorThrewError, withoutContext, total int32, timings []int64) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
+func OnMonitoredSinkStats(sink string, attacksDetected, attacksBlocked, interceptorThrewError, withoutContext, total int, timings []int64) {
 	log.Debugf("Got stats for sink \"%s\": attacksDetected = %d, attacksBlocked = %d, interceptorThrewError = %d, withoutContext = %d, total = %d", sink, attacksDetected, attacksBlocked, interceptorThrewError, withoutContext, total)
 
-	_, err := agent.OnMonitoredSinkStats(ctx, &protos.MonitoredSinkStats{
-		Sink:                  sink,
-		AttacksDetected:       attacksDetected,
-		AttacksBlocked:        attacksBlocked,
+	agent.OnMonitoredSinkStats(sink, &aikido_types.MonitoredSinkTimings{
+		AttacksDetected: aikido_types.AttacksDetected{
+			Total:   attacksDetected,
+			Blocked: attacksBlocked,
+		},
 		InterceptorThrewError: interceptorThrewError,
 		WithoutContext:        withoutContext,
 		Total:                 total,
 		Timings:               timings,
 	})
-	if err != nil {
-		log.Warnf("Could not send monitored sink stats event")
-		return
-	}
-	log.Debugf("Monitored sink stats for sink \"%s\" sent via socket", sink)
 }
 
 func OnMiddlewareInstalled() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := agent.OnMiddlewareInstalled(ctx, &emptypb.Empty{})
-	if err != nil {
-		log.Warnf("Could not call OnMiddlewareInstalled")
-		return
-	}
-	log.Debugf("OnMiddlewareInstalled sent via socket")
+	agent.OnMiddlewareInstalled()
 }

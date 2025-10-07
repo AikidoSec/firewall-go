@@ -1,7 +1,7 @@
 package agent
 
 import (
-	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/api_discovery"
 	"github.com/AikidoSec/firewall-go/agent/globals"
 	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
@@ -16,32 +16,31 @@ func storeStats() {
 	globals.StatsData.Requests += 1
 }
 
-func storeAttackStats(req *protos.AttackDetected) {
+func storeAttackStats(blocked bool) {
 	globals.StatsData.StatsMutex.Lock()
 	defer globals.StatsData.StatsMutex.Unlock()
 
 	globals.StatsData.Attacks += 1
-	if req.GetAttack().GetBlocked() {
+	if blocked {
 		globals.StatsData.AttacksBlocked += 1
 	}
 }
 
-func storeSinkStats(protoSinkStats *protos.MonitoredSinkStats) {
+func storeSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings) {
 	globals.StatsData.StatsMutex.Lock()
 	defer globals.StatsData.StatsMutex.Unlock()
 
-	sink := protoSinkStats.GetSink()
 	monitoredSinkTimings, found := globals.StatsData.MonitoredSinkTimings[sink]
 	if !found {
-		monitoredSinkTimings = MonitoredSinkTimings{}
+		monitoredSinkTimings = aikido_types.MonitoredSinkTimings{}
 	}
 
-	monitoredSinkTimings.AttacksDetected.Total += int(protoSinkStats.GetAttacksDetected())
-	monitoredSinkTimings.AttacksDetected.Blocked += int(protoSinkStats.GetAttacksBlocked())
-	monitoredSinkTimings.InterceptorThrewError += int(protoSinkStats.GetInterceptorThrewError())
-	monitoredSinkTimings.WithoutContext += int(protoSinkStats.GetWithoutContext())
-	monitoredSinkTimings.Total += int(protoSinkStats.GetTotal())
-	monitoredSinkTimings.Timings = append(monitoredSinkTimings.Timings, protoSinkStats.GetTimings()...)
+	monitoredSinkTimings.AttacksDetected.Total += int(stats.AttacksDetected.Total)
+	monitoredSinkTimings.AttacksDetected.Blocked += int(stats.AttacksDetected.Blocked)
+	monitoredSinkTimings.InterceptorThrewError += int(stats.InterceptorThrewError)
+	monitoredSinkTimings.WithoutContext += int(stats.WithoutContext)
+	monitoredSinkTimings.Total += int(stats.Total)
+	monitoredSinkTimings.Timings = append(monitoredSinkTimings.Timings, stats.Timings...)
 
 	globals.StatsData.MonitoredSinkTimings[sink] = monitoredSinkTimings
 }
@@ -99,11 +98,11 @@ func storeRoute(method string, route string, apiSpec *protos.APISpec) {
 	defer globals.RoutesMutex.Unlock()
 
 	if _, ok := globals.Routes[route]; !ok {
-		globals.Routes[route] = make(map[string]*Route)
+		globals.Routes[route] = make(map[string]*aikido_types.Route)
 	}
 	routeData, ok := globals.Routes[route][method]
 	if !ok {
-		routeData = &Route{Path: route, Method: method}
+		routeData = &aikido_types.Route{Path: route, Method: method}
 		globals.Routes[route][method] = routeData
 	}
 
@@ -111,14 +110,14 @@ func storeRoute(method string, route string, apiSpec *protos.APISpec) {
 	routeData.ApiSpec = getMergedApiSpec(routeData.ApiSpec, apiSpec)
 }
 
-func incrementRateLimitingCounts(m map[string]*RateLimitingCounts, key string) {
+func incrementRateLimitingCounts(m map[string]*aikido_types.RateLimitingCounts, key string) {
 	if key == "" {
 		return
 	}
 
 	rateLimitingData, exists := m[key]
 	if !exists {
-		rateLimitingData = &RateLimitingCounts{}
+		rateLimitingData = &aikido_types.RateLimitingCounts{}
 		m[key] = rateLimitingData
 	}
 
@@ -130,7 +129,7 @@ func updateRateLimitingCounts(method string, route string, user string, ip strin
 	globals.RateLimitingMutex.Lock()
 	defer globals.RateLimitingMutex.Unlock()
 
-	rateLimitingData, exists := globals.RateLimitingMap[RateLimitingKey{Method: method, Route: route}]
+	rateLimitingData, exists := globals.RateLimitingMap[aikido_types.RateLimitingKey{Method: method, Route: route}]
 	if !exists {
 		return
 	}
@@ -139,7 +138,7 @@ func updateRateLimitingCounts(method string, route string, user string, ip strin
 	incrementRateLimitingCounts(rateLimitingData.IpCounts, ip)
 }
 
-func isRateLimitingThresholdExceeded(config *RateLimitingConfig, countsMap map[string]*RateLimitingCounts, key string) bool {
+func isRateLimitingThresholdExceeded(config *aikido_types.RateLimitingConfig, countsMap map[string]*aikido_types.RateLimitingCounts, key string) bool {
 	counts, exists := countsMap[key]
 	if !exists {
 		return false
@@ -152,7 +151,7 @@ func getRateLimitingStatus(method string, route string, user string, ip string) 
 	globals.RateLimitingMutex.RLock()
 	defer globals.RateLimitingMutex.RUnlock()
 
-	rateLimitingDataForRoute, exists := globals.RateLimitingMap[RateLimitingKey{Method: method, Route: route}]
+	rateLimitingDataForRoute, exists := globals.RateLimitingMap[aikido_types.RateLimitingKey{Method: method, Route: route}]
 	if !exists {
 		return &protos.RateLimitingStatus{Block: false}
 	}
@@ -221,7 +220,7 @@ func onUserEvent(id string, username string, ip string) {
 	defer globals.UsersMutex.Unlock()
 
 	if _, exists := globals.Users[id]; exists {
-		globals.Users[id] = User{
+		globals.Users[id] = aikido_types.User{
 			ID:            id,
 			Name:          username,
 			LastIpAddress: ip,
@@ -231,7 +230,7 @@ func onUserEvent(id string, username string, ip string) {
 		return
 	}
 
-	globals.Users[id] = User{
+	globals.Users[id] = aikido_types.User{
 		ID:            id,
 		Name:          username,
 		LastIpAddress: ip,
