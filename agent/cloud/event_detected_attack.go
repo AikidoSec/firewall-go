@@ -50,7 +50,7 @@ func GetAttackDetails(protoAttack *protos.Attack) AttackDetails {
 		Stack:     protoAttack.Stack,
 		Payload:   protoAttack.Payload,
 		Metadata:  GetMetadata(protoAttack.Metadata),
-		User:      utils.GetUserById(protoAttack.UserId),
+		User:      utils.GetUserByID(protoAttack.UserId),
 	}
 }
 

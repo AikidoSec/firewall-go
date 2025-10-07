@@ -1,59 +1,13 @@
 package utils
 
 import (
-	"fmt"
-	"net"
-	"sort"
+	"slices"
 	"time"
 
-	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/config"
 	"github.com/AikidoSec/firewall-go/agent/globals"
 )
-
-func KeyMustExist[K comparable, V any](m map[K]V, key K) {
-	if _, exists := m[key]; !exists {
-		panic(fmt.Sprintf("Key %v does not exist in map!", key))
-	}
-}
-
-func GetFromMap[T any](m map[string]interface{}, key string) *T {
-	value, ok := m[key]
-	if !ok {
-		return nil
-	}
-	result, ok := value.(T)
-	if !ok {
-		return nil
-	}
-	return &result
-}
-
-func MustGetFromMap[T any](m map[string]interface{}, key string) T {
-	value := GetFromMap[T](m, key)
-	if value == nil {
-		panic(fmt.Sprintf("Error parsing JSON: key %s does not exist or it has an incorrect type", key))
-	}
-	return *value
-}
-
-func ArrayContains(array []string, search string) bool {
-	for _, member := range array {
-		if member == search {
-			return true
-		}
-	}
-	return false
-}
-
-func isLocalhost(ip string) bool {
-	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
-		return false
-	}
-
-	return parsedIP.IsLoopback()
-}
 
 func StartPollingRoutine(stopChan chan struct{}, ticker *time.Ticker, pollingFunction func()) {
 	go func() {
@@ -87,15 +41,15 @@ func GetTime() int64 {
 	return time.Now().UnixMilli()
 }
 
-func GetUserById(userId string) *User {
-	if userId == "" {
+func GetUserByID(userID string) *aikido_types.User {
+	if userID == "" {
 		return nil
 	}
 
 	globals.UsersMutex.Lock()
 	defer globals.UsersMutex.Unlock()
 
-	user, exists := globals.Users[userId]
+	user, exists := globals.Users[userID]
 	if !exists {
 		return nil
 	}
@@ -124,7 +78,7 @@ func ComputePercentiles(times []int64) map[string]float64 {
 		}
 	}
 
-	sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
+	slices.Sort(times)
 
 	percentiles := map[string]float64{}
 	percentiles["P50"] = float64(times[len(times)/2]) / 1e6
