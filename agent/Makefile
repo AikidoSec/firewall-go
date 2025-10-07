@@ -1,5 +1,10 @@
 export PATH := $(HOME)/go/bin:$(PATH)
 
+.PHONY: build
+build:
+	@echo "• Starting build"
+	@protoc --go_out=. --go-grpc_out=. ipc.proto
+
 .PHONY: setup
 setup: install_protoc go_setup
 
