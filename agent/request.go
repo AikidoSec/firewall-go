@@ -147,30 +147,30 @@ func isRateLimitingThresholdExceeded(config *aikido_types.RateLimitingConfig, co
 	return counts.TotalNumberOfRequests >= config.MaxRequests
 }
 
-func getRateLimitingStatus(method string, route string, user string, ip string) *protos.RateLimitingStatus {
+func getRateLimitingStatus(method string, route string, user string, ip string) *aikido_types.RateLimitingStatus {
 	globals.RateLimitingMutex.RLock()
 	defer globals.RateLimitingMutex.RUnlock()
 
 	rateLimitingDataForRoute, exists := globals.RateLimitingMap[aikido_types.RateLimitingKey{Method: method, Route: route}]
 	if !exists {
-		return &protos.RateLimitingStatus{Block: false}
+		return &aikido_types.RateLimitingStatus{Block: false}
 	}
 
 	if user != "" {
 		// If the user exists, we only try to rate limit by user
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.UserCounts, user) {
 			log.Infof("Rate limited request for user %s - %s %s - %v", user, method, route, rateLimitingDataForRoute.UserCounts[user])
-			return &protos.RateLimitingStatus{Block: true, Trigger: "user"}
+			return &aikido_types.RateLimitingStatus{Block: true, Trigger: "user"}
 		}
 	} else {
 		// Otherwise, we rate limit by ip
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IpCounts, ip) {
 			log.Infof("Rate limited request for ip %s - %s %s - %v", ip, method, route, rateLimitingDataForRoute.IpCounts[ip])
-			return &protos.RateLimitingStatus{Block: true, Trigger: "ip"}
+			return &aikido_types.RateLimitingStatus{Block: true, Trigger: "ip"}
 		}
 	}
 
-	return &protos.RateLimitingStatus{Block: false}
+	return &aikido_types.RateLimitingStatus{Block: false}
 }
 
 func getCloudConfig(configUpdatedAt int64) *protos.CloudConfig {

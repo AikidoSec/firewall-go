@@ -126,3 +126,8 @@ type DetectedAttack struct {
 	Agent   AgentInfo     `json:"agent"`
 	Time    int64         `json:"time"`
 }
+
+type RateLimitingStatus struct {
+	Block   bool
+	Trigger string
+}

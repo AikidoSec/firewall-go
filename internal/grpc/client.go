@@ -21,31 +21,12 @@ func Uninit() {
 
 // OnDomain sends outgoing domain to Aikido Agent
 func OnDomain(domain string, port uint32) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	_, err := agent.OnDomain(ctx, &protos.Domain{Domain: domain, Port: port})
-	if err != nil {
-		log.Warnf("Could not send domain %v: %v", domain, err)
-		return
-	}
-
-	log.Debugf("Domain sent via socket: %v:%v", domain, port)
+	agent.OnDomain(domain, port)
 }
 
 // GetRateLimitingStatus send request metadata (route & method) to Aikido Agent
-func GetRateLimitingStatus(method string, route string, user string, ip string, timeout time.Duration) *protos.RateLimitingStatus {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	RateLimitingStatus, err := agent.GetRateLimitingStatus(ctx, &protos.RateLimitingInfo{Method: method, Route: route, User: user, Ip: ip})
-	if err != nil {
-		log.Warnf("Cannot get rate limiting status %v %v: %v", method, route, err)
-		return nil
-	}
-
-	log.Debugf("Rate limiting status for (%v %v) sent via socket and got reply (%v)", method, route, RateLimitingStatus)
-	return RateLimitingStatus
+func GetRateLimitingStatus(method string, route string, user string, ip string) *aikido_types.RateLimitingStatus {
+	return agent.GetRateLimitingStatus(method, route, user, ip)
 }
 
 // OnRequestShutdown sends request metadata (route, method & status code) to Aikido Agent
@@ -77,16 +58,7 @@ func GetCloudConfig() {
 }
 
 func OnUserEvent(id string, username string, ip string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := agent.OnUser(ctx, &protos.User{Id: id, Username: username, Ip: ip})
-	if err != nil {
-		log.Warnf("Could not send user event %v %v %v: %v", id, username, ip, err)
-		return
-	}
-
-	log.Debugf("User event sent via socket (%v %v %v)", id, username, ip)
+	agent.OnUser(id, username, ip)
 }
 
 func OnAttackDetected(attackDetected *aikido_types.DetectedAttack) {

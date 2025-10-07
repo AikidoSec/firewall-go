@@ -48,16 +48,15 @@ func AgentUninit() {
 	log.Uninit()
 }
 
-func OnDomain(ctx context.Context, req *protos.Domain) (*emptypb.Empty, error) {
-	log.Debugf("Received domain: %s:%d", req.GetDomain(), req.GetPort())
-	storeDomain(req.GetDomain(), req.GetPort())
-	return &emptypb.Empty{}, nil
+func OnDomain(domain string, port uint32) {
+	log.Debugf("Received domain: %s:%d", domain, port)
+	storeDomain(domain, port)
 }
 
-func GetRateLimitingStatus(ctx context.Context, req *protos.RateLimitingInfo) (*protos.RateLimitingStatus, error) {
-	log.Debugf("Received rate limiting info: %s %s %s %s", req.GetMethod(), req.GetRoute(), req.GetUser(), req.GetIp())
+func GetRateLimitingStatus(method string, route string, user string, ip string) *aikido_types.RateLimitingStatus {
+	log.Debugf("Received rate limiting info: %s %s %s %s", method, route, user, ip)
 
-	return getRateLimitingStatus(req.GetMethod(), req.GetRoute(), req.GetUser(), req.GetIp()), nil
+	return getRateLimitingStatus(method, route, user, ip)
 }
 
 func OnRequestShutdown(ctx context.Context, req *protos.RequestMetadataShutdown) (*emptypb.Empty, error) {
@@ -79,10 +78,9 @@ func GetCloudConfig(ctx context.Context, req *protos.CloudConfigUpdatedAt) (*pro
 	return cloudConfig, nil
 }
 
-func OnUser(ctx context.Context, req *protos.User) (*emptypb.Empty, error) {
-	log.Debugf("Received user event: %s", req.GetId())
-	go onUserEvent(req.GetId(), req.GetUsername(), req.GetIp())
-	return &emptypb.Empty{}, nil
+func OnUser(id string, username string, ip string) {
+	log.Debugf("Received user event: %s", id)
+	onUserEvent(id, username, ip)
 }
 
 func OnAttackDetected(attack *aikido_types.DetectedAttack) {
