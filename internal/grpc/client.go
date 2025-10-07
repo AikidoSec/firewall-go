@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	agent "github.com/AikidoSec/firewall-go/agent/grpc"
+	agent "github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"

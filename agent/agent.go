@@ -1,4 +1,4 @@
-package grpc
+package agent
 
 import (
 	"context"
@@ -8,11 +8,20 @@ import (
 	"github.com/AikidoSec/firewall-go/agent/globals"
 	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/agent/log"
+	"github.com/AikidoSec/firewall-go/agent/zen_go_bindings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func AgentInit(initJSON string) (initOk bool) {
+	return zen_go_bindings.AgentInit(initJSON)
+}
+
+func AgentUninit() {
+	zen_go_bindings.AgentUninit()
+}
 
 func OnDomain(ctx context.Context, req *protos.Domain) (*emptypb.Empty, error) {
 	log.Debugf("Received domain: %s:%d", req.GetDomain(), req.GetPort())

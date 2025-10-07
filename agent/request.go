@@ -1,4 +1,4 @@
-package grpc
+package agent
 
 import (
 	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
@@ -238,5 +238,4 @@ func onUserEvent(id string, username string, ip string) {
 		FirstSeenAt:   utils.GetTime(),
 		LastSeenAt:    utils.GetTime(),
 	}
-
 }
