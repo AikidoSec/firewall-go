@@ -40,7 +40,7 @@ type CloudConfigData struct {
 	BypassedIPs       map[string]bool
 	BlockedIPs        map[string]IPBlockList
 	BlockedUserAgents *regexp.Regexp
-	Block             int
+	Block             bool
 }
 
 func GetCloudConfigUpdatedAt() int64 {

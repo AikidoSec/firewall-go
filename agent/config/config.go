@@ -8,7 +8,7 @@ import (
 	"github.com/AikidoSec/firewall-go/agent/log"
 )
 
-func setConfigFromJson(jsonString []byte) bool {
+func setConfigFromJSON(jsonString []byte) bool {
 	if err := json.Unmarshal(jsonString, &globals.EnvironmentConfig); err != nil {
 		panic(fmt.Sprintf("Failed to unmarshal JSON to EnvironmentConfig: %v", err))
 	}
@@ -37,12 +37,11 @@ func setConfigFromJson(jsonString []byte) bool {
 	return true
 }
 
-func Init(initJson string) bool {
-	return setConfigFromJson([]byte(initJson))
+func Init(initJSON string) bool {
+	return setConfigFromJSON([]byte(initJSON))
 }
 
 func Uninit() {
-
 }
 
 func GetToken() string {

@@ -173,9 +173,7 @@ func getRateLimitingStatus(method string, route string, user string, ip string) 
 	return &aikido_types.RateLimitingStatus{Block: false}
 }
 
-func getCloudConfig(configUpdatedAt int64) *protos.CloudConfig {
-	isBlockingEnabled := utils.IsBlockingEnabled()
-
+func getCloudConfig(configUpdatedAt int64) *aikido_types.CloudConfigData {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
 
@@ -184,29 +182,35 @@ func getCloudConfig(configUpdatedAt int64) *protos.CloudConfig {
 		return nil
 	}
 
-	cloudConfig := &protos.CloudConfig{
-		ConfigUpdatedAt:   globals.CloudConfig.ConfigUpdatedAt,
-		BlockedUserIds:    globals.CloudConfig.BlockedUserIds,
-		BypassedIps:       globals.CloudConfig.BypassedIps,
-		BlockedIps:        map[string]*protos.IpBlockList{},
-		BlockedUserAgents: globals.CloudConfig.BlockedUserAgents,
-		Block:             isBlockingEnabled,
+	var cloudBlockingEnabled *bool
+	if globals.CloudConfig.Block != nil {
+		block := *globals.CloudConfig.Block
+		cloudBlockingEnabled = &block
 	}
 
-	for ipBlocklistSource, ipBlocklist := range globals.CloudConfig.BlockedIpsList {
-		cloudConfig.BlockedIps[ipBlocklistSource] = &protos.IpBlockList{
+	cloudConfig := &aikido_types.CloudConfigData{
+		ConfigUpdatedAt:   globals.CloudConfig.ConfigUpdatedAt,
+		BlockedUserIds:    globals.CloudConfig.BlockedUserIds,
+		BypassedIPs:       globals.CloudConfig.BypassedIPs,
+		BlockedIPsList:    map[string]aikido_types.IPBlocklist{},
+		BlockedUserAgents: globals.CloudConfig.BlockedUserAgents,
+		Block:             cloudBlockingEnabled,
+	}
+
+	for ipBlocklistSource, ipBlocklist := range globals.CloudConfig.BlockedIPsList {
+		cloudConfig.BlockedIPsList[ipBlocklistSource] = aikido_types.IPBlocklist{
 			Description: ipBlocklist.Description,
 			Ips:         ipBlocklist.Ips,
 		}
 	}
 
 	for _, endpoint := range globals.CloudConfig.Endpoints {
-		cloudConfig.Endpoints = append(cloudConfig.Endpoints, &protos.Endpoint{
+		cloudConfig.Endpoints = append(cloudConfig.Endpoints, aikido_types.Endpoint{
 			Method:             endpoint.Method,
 			Route:              endpoint.Route,
 			ForceProtectionOff: endpoint.ForceProtectionOff,
 			AllowedIPAddresses: endpoint.AllowedIPAddresses,
-			RateLimiting: &protos.RateLimiting{
+			RateLimiting: aikido_types.RateLimiting{
 				Enabled: endpoint.RateLimiting.Enabled,
 			},
 		})

@@ -81,7 +81,8 @@ func UpdateRateLimitingConfig() {
 		globals.RateLimitingMap[k] = &RateLimitingValue{
 			Config: RateLimitingConfig{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
-				WindowSizeInMinutes: newEndpointConfig.RateLimiting.WindowSizeInMS / MinRateLimitingIntervalInMs},
+				WindowSizeInMinutes: newEndpointConfig.RateLimiting.WindowSizeInMS / MinRateLimitingIntervalInMs,
+			},
 			UserCounts: make(map[string]*RateLimitingCounts),
 			IpCounts:   make(map[string]*RateLimitingCounts),
 		}
@@ -116,9 +117,9 @@ func UpdateListsConfig() bool {
 		return false
 	}
 
-	CloudConfig.BlockedIpsList = make(map[string]IpBlocklist)
-	for _, blockedIpsGroup := range tempListsConfig.BlockedIpAddresses {
-		CloudConfig.BlockedIpsList[blockedIpsGroup.Source] = IpBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
+	CloudConfig.BlockedIPsList = make(map[string]IPBlocklist)
+	for _, blockedIpsGroup := range tempListsConfig.BlockedIPAddresses {
+		CloudConfig.BlockedIPsList[blockedIpsGroup.Source] = IPBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
 	}
 	CloudConfig.BlockedUserAgents = tempListsConfig.BlockedUserAgents
 	return true
