@@ -4,25 +4,25 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 )
 
 // TestMergeApiAuthTypes tests the mergeApiAuthTypes function.
 func TestMergeApiAuthTypes(t *testing.T) {
 	// Test case 1: Merge two valid arrays
-	result := MergeApiAuthTypes(
-		[]*protos.APIAuthType{
+	result := MergeAPIAuthTypes(
+		[]*aikido_types.APIAuthType{
 			{Type: "http", Scheme: ("bearer")},
 			{Type: "apiKey", In: ("header"), Name: ("x-api-key")},
 		},
-		[]*protos.APIAuthType{
+		[]*aikido_types.APIAuthType{
 			{Type: "http", Scheme: ("bearer")},
 			{Type: "http", Scheme: ("basic")},
 			{Type: "apiKey", In: ("header"), Name: ("x-api-key-v2")},
 		},
 	)
 
-	expected := []*protos.APIAuthType{
+	expected := []*aikido_types.APIAuthType{
 		{Type: "http", Scheme: ("bearer")},
 		{Type: "apiKey", In: ("header"), Name: ("x-api-key")},
 		{Type: "http", Scheme: ("basic")},
@@ -34,20 +34,20 @@ func TestMergeApiAuthTypes(t *testing.T) {
 	}
 
 	// Test case 2: Both arguments are nil, should return nil
-	result = MergeApiAuthTypes(nil, nil)
+	result = MergeAPIAuthTypes(nil, nil)
 	if result != nil {
 		t.Errorf("Expected nil, but got %v", result)
 	}
 
 	// Test case 3: Existing array is provided, newAuth is nil
-	result = MergeApiAuthTypes(
-		[]*protos.APIAuthType{
+	result = MergeAPIAuthTypes(
+		[]*aikido_types.APIAuthType{
 			{Type: "http", Scheme: ("bearer")},
 		},
 		nil,
 	)
 
-	expected = []*protos.APIAuthType{
+	expected = []*aikido_types.APIAuthType{
 		{Type: "http", Scheme: ("bearer")},
 	}
 
@@ -56,14 +56,14 @@ func TestMergeApiAuthTypes(t *testing.T) {
 	}
 
 	// Test case 4: Existing array is nil, newAuth is provided
-	result = MergeApiAuthTypes(
+	result = MergeAPIAuthTypes(
 		nil,
-		[]*protos.APIAuthType{
+		[]*aikido_types.APIAuthType{
 			{Type: "http", Scheme: ("digest")},
 		},
 	)
 
-	expected = []*protos.APIAuthType{
+	expected = []*aikido_types.APIAuthType{
 		{Type: "http", Scheme: ("digest")},
 	}
 

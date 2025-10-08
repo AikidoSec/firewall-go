@@ -3,11 +3,11 @@ package api_discovery
 import (
 	"reflect"
 
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 )
 
-// mergeDataSchemas merges two DataSchema objects.
-func MergeDataSchemas(first *protos.DataSchema, second *protos.DataSchema) *protos.DataSchema {
+// MergeDataSchemas merges two DataSchema objects.
+func MergeDataSchemas(first *aikido_types.DataSchema, second *aikido_types.DataSchema) *aikido_types.DataSchema {
 	if first == nil {
 		return second
 	}
@@ -19,10 +19,10 @@ func MergeDataSchemas(first *protos.DataSchema, second *protos.DataSchema) *prot
 		return mergeTypes(first, second)
 	}
 
-	result := protos.DataSchema{Type: first.Type}
+	result := aikido_types.DataSchema{Type: first.Type}
 
 	if first.Properties != nil && second.Properties != nil {
-		result.Properties = make(map[string]*protos.DataSchema)
+		result.Properties = make(map[string]*aikido_types.DataSchema)
 		for key, value := range first.Properties {
 			result.Properties[key] = value
 		}
@@ -89,7 +89,7 @@ func doTypeArraysMatch(first, second []string) bool {
 }
 
 // mergeTypes merges two DataSchema objects of different types.
-func mergeTypes(first *protos.DataSchema, second *protos.DataSchema) *protos.DataSchema {
+func mergeTypes(first *aikido_types.DataSchema, second *aikido_types.DataSchema) *aikido_types.DataSchema {
 	// Cannot merge arrays and objects or primitives with non-primitives
 	if !onlyContainsPrimitiveTypes(first.Type) || !onlyContainsPrimitiveTypes(second.Type) {
 		// Prefer non-null type
@@ -99,11 +99,11 @@ func mergeTypes(first *protos.DataSchema, second *protos.DataSchema) *protos.Dat
 		return first
 	}
 
-	return &protos.DataSchema{Type: mergeTypeArrays(first.Type, second.Type)}
+	return &aikido_types.DataSchema{Type: mergeTypeArrays(first.Type, second.Type)}
 }
 
 // mergeTypeArrays merges two types into a single array of unique types.
-func mergeTypeArrays(first, second interface{}) []string {
+func mergeTypeArrays(first, second any) []string {
 	var firstArr, secondArr []string
 
 	switch v := first.(type) {

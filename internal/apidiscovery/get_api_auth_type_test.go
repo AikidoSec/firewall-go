@@ -3,7 +3,7 @@ package apidiscovery
 import (
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,21 +15,21 @@ func TestDetectAuthorizationHeader(t *testing.T) {
 		"authorization": {"Bearer token"},
 	}
 	cookies := map[string]string{}
-	assert.Equal([]*protos.APIAuthType{
+	assert.Equal([]*aikido_types.APIAuthType{
 		{Type: "http", Scheme: "bearer"},
 	}, GetApiAuthType(headers, cookies))
 
 	headers = map[string][]string{
 		"authorization": {"Basic base64"},
 	}
-	assert.Equal([]*protos.APIAuthType{
+	assert.Equal([]*aikido_types.APIAuthType{
 		{Type: "http", Scheme: "basic"},
 	}, GetApiAuthType(headers, cookies))
 
 	headers = map[string][]string{
 		"authorization": {"custom"},
 	}
-	assert.Equal([]*protos.APIAuthType{
+	assert.Equal([]*aikido_types.APIAuthType{
 		{Type: "apiKey", In: "header", Name: "Authorization"},
 	}, GetApiAuthType(headers, cookies))
 }
@@ -42,14 +42,14 @@ func TestDetectApiKeys(t *testing.T) {
 		"x_api_key": {"token"},
 	}
 	cookies := map[string]string{}
-	assert.Equal([]*protos.APIAuthType{
+	assert.Equal([]*aikido_types.APIAuthType{
 		{Type: "apiKey", In: ("header"), Name: ("x-api-key")},
 	}, GetApiAuthType(headers, cookies))
 
 	headers = map[string][]string{
 		"api_key": {"token"},
 	}
-	assert.Equal([]*protos.APIAuthType{
+	assert.Equal([]*aikido_types.APIAuthType{
 		{Type: "apiKey", In: ("header"), Name: ("api-key")},
 	}, GetApiAuthType(headers, cookies))
 }
@@ -63,14 +63,14 @@ func TestDetectAuthCookies(t *testing.T) {
 		"api-key": "token",
 	}
 
-	assert.Equal([]*protos.APIAuthType{
+	assert.Equal([]*aikido_types.APIAuthType{
 		{Type: "apiKey", In: ("cookie"), Name: ("api-key")},
 	}, GetApiAuthType(headers, cookies))
 
 	cookies = map[string]string{
 		"session": "test",
 	}
-	assert.Equal([]*protos.APIAuthType{
+	assert.Equal([]*aikido_types.APIAuthType{
 		{Type: "apiKey", In: ("cookie"), Name: ("session")},
 	}, GetApiAuthType(headers, cookies))
 }

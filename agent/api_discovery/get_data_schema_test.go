@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 )
 
 // Helper function for comparing two DataSchema structs
-func compareSchemas(t *testing.T, got, expected *protos.DataSchema) {
+func compareSchemas(t *testing.T, got, expected *aikido_types.DataSchema) {
 	gotJson, _ := json.Marshal(got)
 	expectedJson, _ := json.Marshal(expected)
 
@@ -21,31 +21,31 @@ func compareSchemas(t *testing.T, got, expected *protos.DataSchema) {
 
 func TestGetDataSchema(t *testing.T) {
 	t.Run("it works", func(t *testing.T) {
-		compareSchemas(t, GetDataSchema("test", 0), &protos.DataSchema{
+		compareSchemas(t, GetDataSchema("test", 0), &aikido_types.DataSchema{
 			Type: []string{"string"},
 		})
 
-		compareSchemas(t, GetDataSchema([]string{"test"}, 0), &protos.DataSchema{
+		compareSchemas(t, GetDataSchema([]string{"test"}, 0), &aikido_types.DataSchema{
 			Type: []string{"array"},
-			Items: &protos.DataSchema{
+			Items: &aikido_types.DataSchema{
 				Type: []string{"string"},
 			},
 		})
 
-		compareSchemas(t, GetDataSchema(map[string]interface{}{"test": "abc"}, 0), &protos.DataSchema{
+		compareSchemas(t, GetDataSchema(map[string]interface{}{"test": "abc"}, 0), &aikido_types.DataSchema{
 			Type: []string{"object"},
-			Properties: map[string]*protos.DataSchema{
+			Properties: map[string]*aikido_types.DataSchema{
 				"test": {Type: []string{"string"}},
 			},
 		})
 
-		compareSchemas(t, GetDataSchema(map[string]interface{}{"test": 123, "arr": []int{1, 2, 3}}, 0), &protos.DataSchema{
+		compareSchemas(t, GetDataSchema(map[string]interface{}{"test": 123, "arr": []int{1, 2, 3}}, 0), &aikido_types.DataSchema{
 			Type: []string{"object"},
-			Properties: map[string]*protos.DataSchema{
+			Properties: map[string]*aikido_types.DataSchema{
 				"test": {Type: []string{"number"}},
 				"arr": {
 					Type: []string{"array"},
-					Items: &protos.DataSchema{
+					Items: &aikido_types.DataSchema{
 						Type: []string{"number"},
 					},
 				},
@@ -56,15 +56,15 @@ func TestGetDataSchema(t *testing.T) {
 			"test": 123,
 			"arr":  []interface{}{map[string]interface{}{"sub": true}},
 			"x":    nil,
-		}, 0), &protos.DataSchema{
+		}, 0), &aikido_types.DataSchema{
 			Type: []string{"object"},
-			Properties: map[string]*protos.DataSchema{
+			Properties: map[string]*aikido_types.DataSchema{
 				"test": {Type: []string{"number"}},
 				"arr": {
 					Type: []string{"array"},
-					Items: &protos.DataSchema{
+					Items: &aikido_types.DataSchema{
 						Type: []string{"object"},
-						Properties: map[string]*protos.DataSchema{
+						Properties: map[string]*aikido_types.DataSchema{
 							"sub": {Type: []string{"boolean"}},
 						},
 					},
@@ -82,18 +82,18 @@ func TestGetDataSchema(t *testing.T) {
 				},
 			},
 			"arr": []interface{}{},
-		}, 0), &protos.DataSchema{
+		}, 0), &aikido_types.DataSchema{
 			Type: []string{"object"},
-			Properties: map[string]*protos.DataSchema{
+			Properties: map[string]*aikido_types.DataSchema{
 				"test": {
 					Type: []string{"object"},
-					Properties: map[string]*protos.DataSchema{
+					Properties: map[string]*aikido_types.DataSchema{
 						"x": {
 							Type: []string{"object"},
-							Properties: map[string]*protos.DataSchema{
+							Properties: map[string]*aikido_types.DataSchema{
 								"y": {
 									Type: []string{"object"},
-									Properties: map[string]*protos.DataSchema{
+									Properties: map[string]*aikido_types.DataSchema{
 										"z": {Type: []string{"number"}},
 									},
 								},

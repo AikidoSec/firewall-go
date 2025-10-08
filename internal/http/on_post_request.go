@@ -1,7 +1,7 @@
 package http
 
 import (
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/apidiscovery"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
@@ -9,7 +9,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
-func OnRequestShutdownReporting(method string, route string, statusCode int, user string, ip string, apiSpec *protos.APISpec) {
+func OnRequestShutdownReporting(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
 	if method == "" || route == "" || statusCode == 0 {
 		return
 	}

@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"context"
 	"errors"
 	"sync/atomic"
 
@@ -9,12 +8,9 @@ import (
 	"github.com/AikidoSec/firewall-go/agent/cloud"
 	"github.com/AikidoSec/firewall-go/agent/config"
 	"github.com/AikidoSec/firewall-go/agent/globals"
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/agent/log"
 	"github.com/AikidoSec/firewall-go/agent/machine"
 	"github.com/AikidoSec/firewall-go/agent/rate_limiting"
-
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
@@ -60,15 +56,14 @@ func GetRateLimitingStatus(method string, route string, user string, ip string) 
 	return getRateLimitingStatus(method, route, user, ip)
 }
 
-func OnRequestShutdown(ctx context.Context, req *protos.RequestMetadataShutdown) (*emptypb.Empty, error) {
-	log.Debugf("Received request metadata: %s %s %d %s %s %v", req.GetMethod(), req.GetRoute(), req.GetStatusCode(), req.GetUser(), req.GetIp(), req.GetApiSpec())
+func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
+	log.Debugf("Received request metadata: %s %s %d %s %s %v", method, route, statusCode, user, ip, apiSpec)
 
 	go storeStats()
-	go storeRoute(req.GetMethod(), req.GetRoute(), req.GetApiSpec())
-	go updateRateLimitingCounts(req.GetMethod(), req.GetRoute(), req.GetUser(), req.GetIp())
+	go storeRoute(method, route, apiSpec)
+	go updateRateLimitingCounts(method, route, user, ip)
 
 	atomic.StoreUint32(&globals.GotTraffic, 1)
-	return &emptypb.Empty{}, nil
 }
 
 func GetCloudConfig(configUpdatedAt int64) (*aikido_types.CloudConfigData, error) {

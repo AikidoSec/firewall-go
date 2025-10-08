@@ -3,19 +3,19 @@ package apidiscovery
 import (
 	"reflect"
 
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
-func GetAPIInfo(ctx context.Context) *protos.APISpec {
+func GetAPIInfo(ctx context.Context) *aikido_types.APISpec {
 	if !config.CollectAPISchema {
 		log.Debug("Collection of API Discovery was disabled.")
 		return nil
 	}
-	var bodyInfo *protos.APIBodyInfo
-	var queryInfo *protos.DataSchema
+	var bodyInfo *aikido_types.APIBodyInfo
+	var queryInfo *aikido_types.DataSchema
 
 	body := ctx.Body
 	query := ctx.Query
@@ -28,7 +28,7 @@ func GetAPIInfo(ctx context.Context) *protos.APISpec {
 		}
 		bodySchema := GetDataSchema(body, 0)
 
-		bodyInfo = &protos.APIBodyInfo{
+		bodyInfo = &aikido_types.APIBodyInfo{
 			Type:   string(bodyType),
 			Schema: bodySchema,
 		}
@@ -47,7 +47,7 @@ func GetAPIInfo(ctx context.Context) *protos.APISpec {
 		return nil
 	}
 
-	return &protos.APISpec{
+	return &aikido_types.APISpec{
 		Body:  bodyInfo,
 		Query: queryInfo,
 		Auth:  authInfo,
