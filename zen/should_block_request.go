@@ -1,8 +1,6 @@
 package zen
 
 import (
-	"time"
-
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
@@ -35,7 +33,7 @@ func ShouldBlockRequest() *BlockResponse {
 	for _, endpoint := range matches {
 		if endpoint.RateLimiting.Enabled {
 			rateLimitingStatus := grpc.GetRateLimitingStatus(
-				endpoint.Method, endpoint.Route, ctx.GetUserID(), ctx.GetIP(), 10*time.Millisecond,
+				endpoint.Method, endpoint.Route, ctx.GetUserID(), ctx.GetIP(),
 			)
 			if rateLimitingStatus != nil && rateLimitingStatus.Block {
 				log.Infof("Request made from IP \"%s\" is rate-limited by \"%s\"!", ctx.GetIP(), rateLimitingStatus.Trigger)

@@ -1,4 +1,4 @@
-package grpc
+package agent
 
 import (
 	"github.com/AikidoSec/firewall-go/agent/globals"

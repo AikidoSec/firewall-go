@@ -7,8 +7,8 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/zen_go_bindings"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -61,6 +61,6 @@ func initAgent(collectAPISchema bool, logLevel string, token string) error {
 		return err
 	}
 
-	go zen_go_bindings.AgentInit(string(jsonBytes))
+	go agent.Init(string(jsonBytes))
 	return nil
 }
