@@ -1,7 +1,6 @@
 package gingonic
 
 import (
-	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/gin-gonic/gin"
@@ -14,7 +13,7 @@ func GetMiddleware() gin.HandlerFunc {
 		if c == nil {
 			return // Don't investigate empty requests.
 		}
-		internal.Init()
+
 		ip := c.ClientIP()
 
 		reqCtx := request.SetContext(c.Request.Context(), c.Request, c.FullPath(), "gin", &ip, tryExtractBody(c))
