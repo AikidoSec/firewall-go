@@ -4,7 +4,6 @@ import (
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/api_discovery"
 	"github.com/AikidoSec/firewall-go/agent/globals"
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/agent/log"
 	"github.com/AikidoSec/firewall-go/agent/utils"
 )
