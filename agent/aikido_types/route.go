@@ -1,11 +1,9 @@
 package aikido_types
 
-import "github.com/AikidoSec/firewall-go/agent/ipc/protos"
-
 type RouteData struct {
 	Method  string
 	Path    string
-	APISpec protos.APISpec
+	APISpec APISpec
 }
 
 // BodyDataType represents the type of the body data.

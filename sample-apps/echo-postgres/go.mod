@@ -11,7 +11,6 @@ require (
 )
 
 require (
-	github.com/AikidoSec/zen-internals-agent v0.0.0-00010101000000-000000000000 // indirect
 	github.com/DataDog/appsec-internal-go v1.14.0 // indirect
 	github.com/DataDog/datadog-agent/comp/core/tagger/origindetection v0.71.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.71.0 // indirect
@@ -160,5 +159,3 @@ require (
 replace github.com/AikidoSec/firewall-go => ../../
 
 replace github.com/AikidoSec/firewall-go/instrumentation => ../../instrumentation
-
-replace github.com/AikidoSec/zen-internals-agent => ../../agent/
