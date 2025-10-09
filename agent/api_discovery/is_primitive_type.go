@@ -1,6 +1,6 @@
 package api_discovery
 
-func onlyContainsPrimitiveTypes(types interface{}) bool {
+func onlyContainsPrimitiveTypes(types any) bool {
 	switch t := types.(type) {
 	case string:
 		return isPrimitiveType(t)

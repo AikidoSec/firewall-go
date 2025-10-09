@@ -1,12 +1,8 @@
 package grpc
 
 import (
-	"context"
-	"time"
-
 	agent "github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
@@ -30,17 +26,8 @@ func GetRateLimitingStatus(method string, route string, user string, ip string) 
 }
 
 // OnRequestShutdown sends request metadata (route, method & status code) to Aikido Agent
-func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *protos.APISpec) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	_, err := agent.OnRequestShutdown(ctx, &protos.RequestMetadataShutdown{Method: method, Route: route, StatusCode: int32(statusCode), User: user, Ip: ip, ApiSpec: apiSpec})
-	if err != nil {
-		log.Warnf("Could not send request metadata %v %v %v: %v", method, route, statusCode, err)
-		return
-	}
-
-	log.Debugf("Request metadata sent via socket (%v %v %v)", method, route, statusCode)
+func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
+	agent.OnRequestShutdown(method, route, statusCode, user, ip, apiSpec)
 }
 
 func GetCloudConfig() {

@@ -1,7 +1,5 @@
 package aikido_types
 
-import "github.com/AikidoSec/firewall-go/agent/ipc/protos"
-
 type OsInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
@@ -19,10 +17,10 @@ type Hostname struct {
 }
 
 type Route struct {
-	Path    string          `json:"path"`
-	Method  string          `json:"method"`
-	Hits    int64           `json:"hits"`
-	ApiSpec *protos.APISpec `json:"apispec"`
+	Path    string   `json:"path"`
+	Method  string   `json:"method"`
+	Hits    int64    `json:"hits"`
+	APISpec *APISpec `json:"apispec"`
 }
 
 type User struct {

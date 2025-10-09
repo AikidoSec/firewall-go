@@ -1,25 +1,8 @@
 package apidiscovery
 
 import (
-	"strings"
 	"testing"
 )
-
-func determineType(contentType string) string {
-	contentType = strings.ToLower(contentType)
-	switch {
-	case strings.Contains(contentType, "json"):
-		return "json"
-	case contentType == "application/x-www-form-urlencoded":
-		return "form-urlencoded"
-	case contentType == "multipart/form-data":
-		return "form-data"
-	case strings.HasPrefix(contentType, "text/xml"):
-		return "xml"
-	default:
-		return ""
-	}
-}
 
 func TestGetBodyDataType(t *testing.T) {
 	tests := []struct {

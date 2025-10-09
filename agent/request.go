@@ -4,7 +4,6 @@ import (
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/api_discovery"
 	"github.com/AikidoSec/firewall-go/agent/globals"
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
 	"github.com/AikidoSec/firewall-go/agent/log"
 	"github.com/AikidoSec/firewall-go/agent/utils"
 )
@@ -45,13 +44,13 @@ func storeSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings) {
 	globals.StatsData.MonitoredSinkTimings[sink] = monitoredSinkTimings
 }
 
-func getApiSpecData(apiSpec *protos.APISpec) (*protos.DataSchema, string, *protos.DataSchema, []*protos.APIAuthType) {
+func getAPISpecData(apiSpec *aikido_types.APISpec) (*aikido_types.DataSchema, string, *aikido_types.DataSchema, []*aikido_types.APIAuthType) {
 	if apiSpec == nil {
 		return nil, "", nil, nil
 	}
 
-	var bodyDataSchema *protos.DataSchema = nil
-	var bodyType string = ""
+	var bodyDataSchema *aikido_types.DataSchema = nil
+	bodyType := ""
 	if apiSpec.Body != nil {
 		bodyDataSchema = apiSpec.Body.Schema
 		bodyType = apiSpec.Body.Type
@@ -60,20 +59,20 @@ func getApiSpecData(apiSpec *protos.APISpec) (*protos.DataSchema, string, *proto
 	return bodyDataSchema, bodyType, apiSpec.Query, apiSpec.Auth
 }
 
-func getMergedApiSpec(currentApiSpec *protos.APISpec, newApiSpec *protos.APISpec) *protos.APISpec {
-	if newApiSpec == nil {
-		return currentApiSpec
+func getMergedAPISpec(currentAPISpec *aikido_types.APISpec, newAPISpec *aikido_types.APISpec) *aikido_types.APISpec {
+	if newAPISpec == nil {
+		return currentAPISpec
 	}
-	if currentApiSpec == nil {
-		return newApiSpec
+	if currentAPISpec == nil {
+		return newAPISpec
 	}
 
-	currentBodySchema, currentBodyType, currentQuerySchema, currentAuth := getApiSpecData(currentApiSpec)
-	newBodySchema, newBodyType, newQuerySchema, newAuth := getApiSpecData(newApiSpec)
+	currentBodySchema, currentBodyType, currentQuerySchema, currentAuth := getAPISpecData(currentAPISpec)
+	newBodySchema, newBodyType, newQuerySchema, newAuth := getAPISpecData(newAPISpec)
 
 	mergedBodySchema := api_discovery.MergeDataSchemas(currentBodySchema, newBodySchema)
 	mergedQuerySchema := api_discovery.MergeDataSchemas(currentQuerySchema, newQuerySchema)
-	mergedAuth := api_discovery.MergeApiAuthTypes(currentAuth, newAuth)
+	mergedAuth := api_discovery.MergeAPIAuthTypes(currentAuth, newAuth)
 	if mergedBodySchema == nil && mergedQuerySchema == nil && mergedAuth == nil {
 		return nil
 	}
@@ -83,8 +82,8 @@ func getMergedApiSpec(currentApiSpec *protos.APISpec, newApiSpec *protos.APISpec
 		mergedBodyType = currentBodyType
 	}
 
-	return &protos.APISpec{
-		Body: &protos.APIBodyInfo{
+	return &aikido_types.APISpec{
+		Body: &aikido_types.APIBodyInfo{
 			Type:   mergedBodyType,
 			Schema: mergedBodySchema,
 		},
@@ -93,7 +92,7 @@ func getMergedApiSpec(currentApiSpec *protos.APISpec, newApiSpec *protos.APISpec
 	}
 }
 
-func storeRoute(method string, route string, apiSpec *protos.APISpec) {
+func storeRoute(method string, route string, apiSpec *aikido_types.APISpec) {
 	globals.RoutesMutex.Lock()
 	defer globals.RoutesMutex.Unlock()
 
@@ -107,7 +106,7 @@ func storeRoute(method string, route string, apiSpec *protos.APISpec) {
 	}
 
 	routeData.Hits++
-	routeData.ApiSpec = getMergedApiSpec(routeData.ApiSpec, apiSpec)
+	routeData.APISpec = getMergedAPISpec(routeData.APISpec, apiSpec)
 }
 
 func incrementRateLimitingCounts(m map[string]*aikido_types.RateLimitingCounts, key string) {

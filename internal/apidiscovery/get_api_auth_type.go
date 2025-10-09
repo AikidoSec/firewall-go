@@ -3,7 +3,7 @@ package apidiscovery
 import (
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 )
 
 // Common API key header and cookie names
@@ -29,8 +29,8 @@ var commonAuthCookieNames = append([]string{
 
 // GetApiAuthType returns the authentication type of the API request.
 // Returns nil if the authentication type could not be determined.
-func GetApiAuthType(headers map[string][]string, cookies map[string]string) []*protos.APIAuthType {
-	var result []*protos.APIAuthType
+func GetApiAuthType(headers map[string][]string, cookies map[string]string) []*aikido_types.APIAuthType {
+	var result []*aikido_types.APIAuthType
 
 	// Check the Authorization header
 	if _, exists := headers["authorization"]; exists && len(headers["authorization"]) > 0 {
@@ -45,7 +45,7 @@ func GetApiAuthType(headers map[string][]string, cookies map[string]string) []*p
 }
 
 // getAuthorizationHeaderType returns the authentication type from the Authorization header.
-func getAuthorizationHeaderType(authHeader string) *protos.APIAuthType {
+func getAuthorizationHeaderType(authHeader string) *aikido_types.APIAuthType {
 	if len(authHeader) == 0 {
 		return nil
 	}
@@ -55,7 +55,7 @@ func getAuthorizationHeaderType(authHeader string) *protos.APIAuthType {
 			authType := parts[0]
 			if isHTTPAuthScheme(authType) {
 				scheme := strings.ToLower(authType)
-				return &protos.APIAuthType{
+				return &aikido_types.APIAuthType{
 					Type:   "http",
 					Scheme: scheme,
 				}
@@ -65,7 +65,7 @@ func getAuthorizationHeaderType(authHeader string) *protos.APIAuthType {
 
 	// Default to apiKey if the auth type is not recognized
 	name := "Authorization"
-	return &protos.APIAuthType{
+	return &aikido_types.APIAuthType{
 		Type: "apiKey",
 		In:   "header",
 		Name: name,
@@ -77,12 +77,12 @@ func getPhpHttpHeaderEquivalent(apiKey string) string {
 }
 
 // findApiKeys searches for API keys in headers and cookies.
-func findApiKeys(headers map[string][]string, cookies map[string]string) []*protos.APIAuthType {
-	var result []*protos.APIAuthType
+func findApiKeys(headers map[string][]string, cookies map[string]string) []*aikido_types.APIAuthType {
+	var result []*aikido_types.APIAuthType
 
 	for headerIndex, header := range commonApiKeyHeaderNames {
 		if value, exists := headers[getPhpHttpHeaderEquivalent(header)]; exists && len(value) > 0 && value[0] != "" {
-			result = append(result, &protos.APIAuthType{
+			result = append(result, &aikido_types.APIAuthType{
 				Type: "apiKey",
 				In:   "header",
 				Name: commonApiKeyHeaderNames[headerIndex],
@@ -94,7 +94,7 @@ func findApiKeys(headers map[string][]string, cookies map[string]string) []*prot
 		for cookieName := range cookies {
 			lowerCookieName := strings.ToLower(cookieName)
 			if contains(commonAuthCookieNames, lowerCookieName) {
-				result = append(result, &protos.APIAuthType{
+				result = append(result, &aikido_types.APIAuthType{
 					Type: "apiKey",
 					In:   "cookie",
 					Name: cookieName,
