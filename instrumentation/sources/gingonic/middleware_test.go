@@ -31,3 +31,19 @@ func TestMiddlewareAddsContext(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 }
+
+func BenchmarkMiddleware(b *testing.B) {
+	router := gin.New()
+	router.ContextWithFallback = true
+	router.Use(GetMiddleware())
+
+	router.GET("/route", func(c *gin.Context) {})
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			r := httptest.NewRequest("GET", "/route", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+		}
+	})
+}
