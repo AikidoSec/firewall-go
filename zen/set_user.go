@@ -3,7 +3,7 @@ package zen
 import (
 	"context"
 
-	"github.com/AikidoSec/firewall-go/internal/grpc"
+	"github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -23,7 +23,7 @@ func SetUser(ctx context.Context, id string, name string) context.Context {
 	}
 
 	reqCtx.User = &request.User{ID: id, Name: name}
-	go grpc.OnUserEvent(id, name, reqCtx.GetIP())
+	go agent.OnUser(id, name, reqCtx.GetIP())
 
 	return ctx
 }

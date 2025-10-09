@@ -80,6 +80,7 @@ func OnUser(id string, username string, ip string) {
 }
 
 func OnAttackDetected(attack *aikido_types.DetectedAttack) {
+	log.Debugf("Reporting attack")
 	cloud.SendAttackDetectedEvent(attack)
 	storeAttackStats(attack.Attack.Blocked)
 }

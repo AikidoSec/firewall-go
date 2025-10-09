@@ -3,9 +3,9 @@ package http
 import (
 	"context"
 
+	"github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/apidiscovery"
-	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -23,7 +23,7 @@ func OnRequestShutdownReporting(method string, route string, statusCode int, use
 	}
 
 	log.Info("[RSHUTDOWN] Got API spec: ", apiSpec)
-	grpc.OnRequestShutdown(method, route, statusCode, user, ip, apiSpec)
+	agent.OnRequestShutdown(method, route, statusCode, user, ip, apiSpec)
 }
 
 // OnPostRequest gets called after a response is ready to be sent out.

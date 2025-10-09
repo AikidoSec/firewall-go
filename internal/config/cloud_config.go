@@ -1,12 +1,12 @@
-package grpc
+package config
 
 import (
 	"regexp"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	agentConfig "github.com/AikidoSec/firewall-go/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
@@ -16,8 +16,16 @@ var (
 	cloudConfigTicker = time.NewTicker(1 * time.Minute)
 )
 
-func buildIPBlocklist(name, description string, ipsList []string) config.IPBlockList {
-	ipBlocklist := config.IPBlockList{
+func Init() {
+	startCloudConfigRoutine()
+}
+
+func Uninit() {
+	stopCloudConfigRoutine()
+}
+
+func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
+	ipBlocklist := IPBlockList{
 		Description: description,
 		TrieV4:      &ipaddr.IPv4AddressTrie{},
 		TrieV6:      &ipaddr.IPv6AddressTrie{},
@@ -47,10 +55,10 @@ func setCloudConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 		return
 	}
 
-	config.CloudConfigMutex.Lock()
-	defer config.CloudConfigMutex.Unlock()
+	CloudConfigMutex.Lock()
+	defer CloudConfigMutex.Unlock()
 
-	config.CloudConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
+	CloudConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
 
 	var endpoints []aikido_types.Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
@@ -64,33 +72,33 @@ func setCloudConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 			},
 		})
 	}
-	config.CloudConfig.Endpoints = endpoints
+	CloudConfig.Endpoints = endpoints
 
-	config.CloudConfig.BlockedUserIDs = map[string]bool{}
+	CloudConfig.BlockedUserIDs = map[string]bool{}
 	for _, userID := range cloudConfigFromAgent.BlockedUserIds {
-		config.CloudConfig.BlockedUserIDs[userID] = true
+		CloudConfig.BlockedUserIDs[userID] = true
 	}
 
-	config.CloudConfig.BypassedIPs = map[string]bool{}
+	CloudConfig.BypassedIPs = map[string]bool{}
 	for _, ip := range cloudConfigFromAgent.BypassedIPs {
-		config.CloudConfig.BypassedIPs[ip] = true
+		CloudConfig.BypassedIPs[ip] = true
 	}
 
 	if cloudConfigFromAgent.Block == nil {
-		config.CloudConfig.Block = agentConfig.GetBlocking()
+		CloudConfig.Block = agentConfig.GetBlocking()
 	} else {
-		config.CloudConfig.Block = *cloudConfigFromAgent.Block
+		CloudConfig.Block = *cloudConfigFromAgent.Block
 	}
 
-	config.CloudConfig.BlockedIPs = map[string]config.IPBlockList{}
+	CloudConfig.BlockedIPs = map[string]IPBlockList{}
 	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIPsList {
-		config.CloudConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
+		CloudConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
 	}
 
 	if cloudConfigFromAgent.BlockedUserAgents != "" {
-		config.CloudConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
+		CloudConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
 	} else {
-		config.CloudConfig.BlockedUserAgents = nil
+		CloudConfig.BlockedUserAgents = nil
 	}
 }
 
@@ -116,4 +124,15 @@ func stopCloudConfigRoutine() {
 	if stopChan != nil {
 		close(stopChan)
 	}
+}
+
+func GetCloudConfig() {
+	cloudConfig, err := agent.GetCloudConfig(GetCloudConfigUpdatedAt())
+	if err != nil {
+		log.Infof("Could not get cloud config: %v", err)
+		return
+	}
+
+	log.Debugf("Got cloud config: %v", cloudConfig)
+	setCloudConfig(cloudConfig)
 }
