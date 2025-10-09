@@ -5,11 +5,11 @@ import (
 
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/config"
-	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
-func GetAPIInfo(ctx context.Context) *aikido_types.APISpec {
+func GetAPIInfo(ctx *request.Context) *aikido_types.APISpec {
 	if !config.CollectAPISchema {
 		log.Debug("Collection of API Discovery was disabled.")
 		return nil

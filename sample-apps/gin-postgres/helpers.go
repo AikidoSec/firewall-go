@@ -3,8 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"os/exec"
 )
 
@@ -29,7 +30,7 @@ func makeHttpRequest(url string) string {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Sprintf("Error: %s", err.Error())
 	}
@@ -38,7 +39,7 @@ func makeHttpRequest(url string) string {
 
 // readFile reads the content of a file and returns it as a string.
 func readFile(filePath string) string {
-	content, err := ioutil.ReadFile("content/blogs/" + filePath)
+	content, err := os.ReadFile("content/blogs/" + filePath)
 	if err != nil {
 		return fmt.Sprintf("Error: %s", err.Error())
 	}

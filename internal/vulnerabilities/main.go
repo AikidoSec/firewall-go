@@ -1,11 +1,12 @@
 package vulnerabilities
 
 import (
+	"context"
 	"errors"
 
 	"github.com/AikidoSec/firewall-go/agent/log"
-	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
+	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
 type ScanResult struct {
@@ -22,26 +23,31 @@ type Attack struct {
 }
 
 func Scan(ctx context.Context, operation string, vulnerability Vulnerability, args []string) error {
-	err := ScanSource("query", ctx.Query, operation, vulnerability, args)
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil {
+		return nil
+	}
+
+	err := ScanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
-	err = ScanSource("headers", ctx.Headers, operation, vulnerability, args)
+	err = ScanSource(ctx, "headers", reqCtx.Headers, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
-	err = ScanSource("cookies", ctx.Cookies, operation, vulnerability, args)
+	err = ScanSource(ctx, "cookies", reqCtx.Cookies, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
-	err = ScanSource("body", ctx.Body, operation, vulnerability, args)
+	err = ScanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func ScanSource(source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
+func ScanSource(ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
 	userInputMap := helpers.ExtractStringsFromUserInput(sourceData, []helpers.PathPart{})
 
 	for userInput, path := range userInputMap {
@@ -57,7 +63,7 @@ func ScanSource(source string, sourceData any, operation string, vulnerability V
 				Payload:       userInput,
 			}
 			log.Debugf("Attack: %s", attack.ToString())
-			ReportAttackDetected(attack)
+			ReportAttackDetected(ctx, attack)
 
 			return errors.New("Aikido: " + vulnerability.Error)
 		}

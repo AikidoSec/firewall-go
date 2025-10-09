@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/labstack/echo/v4"
-	"net/http"
 )
 
 var db *DatabaseHelper
@@ -19,14 +20,14 @@ func main() {
 			userHeader := c.Request().Header.Get("user")
 			fmt.Println("userHeader:", userHeader)
 			if userHeader != "" {
-				zen.SetUser(userHeader, "Bob example")
+				zen.SetUser(c.Request().Context(), userHeader, "Bob example")
 			}
 			return next(c)
 		}
 	})
 	e.Use(AikidoMiddleware())
 	defineStaticRoutes(e)
-	defineApiRoutes(e, db)
+	defineAPIRoutes(e, db)
 
 	// Start the server
 	e.Start(":8082")
@@ -35,7 +36,7 @@ func main() {
 func AikidoMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			blockResult := zen.ShouldBlockRequest()
+			blockResult := zen.ShouldBlockRequest(c.Request().Context())
 
 			if blockResult != nil {
 				if blockResult.Type == "rate-limited" {

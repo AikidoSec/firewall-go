@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 type CreateRequest struct {
@@ -18,9 +19,9 @@ type RequestRequest struct {
 	URL string `json:"url"`
 }
 
-func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
+func defineAPIRoutes(e *echo.Echo, db *DatabaseHelper) {
 	e.GET("/api/pets/", func(c echo.Context) error {
-		pets, err := db.GetAllPets() // Assuming GetAllPets returns an error
+		pets, err := db.GetAllPets(c.Request().Context()) // Assuming GetAllPets returns an error
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
@@ -32,7 +33,7 @@ func defineApiRoutes(e *echo.Echo, db *DatabaseHelper) {
 		if err := c.Bind(req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
-		rowsCreated, _ := db.CreatePetByName(req.Name)
+		rowsCreated, _ := db.CreatePetByName(c.Request().Context(), req.Name)
 		return c.String(http.StatusOK, string(rowsCreated))
 	})
 

@@ -1,7 +1,8 @@
 package internal
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/context"
+	"context"
+
 	"github.com/AikidoSec/firewall-go/internal/transits"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/pathtraversal"
@@ -17,12 +18,10 @@ func DefineTransits() {
 }
 
 func OSExamine(path string) error {
-	ctx := context.Get()
 	operation := "os.OpenFile"
-	if ctx == nil {
-		return nil
-	}
-	return vulnerabilities.Scan(*ctx, operation, pathtraversal.PathTraversalVulnerability, []string{
+
+	// @todo doesn't have access to the request context
+	return vulnerabilities.Scan(context.TODO(), operation, pathtraversal.PathTraversalVulnerability, []string{
 		path /* checkPathStart */, "1",
 	})
 }

@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/AikidoSec/firewall-go/internal"
-	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/http"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/labstack/echo/v4"
 )
 
@@ -22,12 +22,11 @@ func GetMiddleware() echo.MiddlewareFunc {
 			internal.Init()
 
 			ip := c.RealIP()
-			echoContext := context.GetContext(httpRequest, c.Path(), "echo")
-			echoContext.RemoteAddress = &ip      // use real ip function, which checks x-forwarded-for.
-			echoContext.Body = tryExtractBody(c) // Extract body from Echo req
+			reqCtx := request.SetContext(httpRequest.Context(), httpRequest, c.Path(), "echo", &ip, tryExtractBody(c))
+			c.SetRequest(httpRequest.WithContext(reqCtx))
 
 			// Write a possible response (i.e. geo-blocking bot blocking)
-			res := http.OnInitRequest(echoContext)
+			res := http.OnInitRequest(c.Request().Context())
 			if res != nil {
 				return c.String(res.StatusCode, res.Message)
 			}
@@ -41,7 +40,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			if errors.As(err, &httpErr) {
 				status = httpErr.Code
 			}
-			http.OnPostRequest(status) // Run post-request logic (should discover route, api spec,...)
+			http.OnPostRequest(c.Request().Context(), status) // Run post-request logic (should discover route, api spec,...)
 
 			return err
 		}

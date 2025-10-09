@@ -1,6 +1,7 @@
 package vulnerabilities
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -8,8 +9,8 @@ import (
 
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/utils"
-	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
+	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
 type AttackKind string
@@ -48,7 +49,7 @@ func (i InterceptorResult) ToString() string {
 }
 
 // getHeaders clones headers map to be sent to the Agent
-func getHeaders(context *context.Context) map[string][]string {
+func getHeaders(context *request.Context) map[string][]string {
 	headers := make(map[string][]string)
 	for key, value := range context.Headers {
 		headers[key] = append([]string{}, value...)
@@ -57,18 +58,22 @@ func getHeaders(context *context.Context) map[string][]string {
 }
 
 // GetAttackDetected constructs the DetectedAttack struct to be to the Agent
-func GetAttackDetected(res InterceptorResult) *aikido_types.DetectedAttack {
-	context := context.Get()
+func GetAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types.DetectedAttack {
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil {
+		return nil
+	}
+
 	return &aikido_types.DetectedAttack{
 		Request: aikido_types.RequestInfo{
-			Method:    *context.Method,
-			IPAddress: *context.RemoteAddress,
-			UserAgent: context.GetUserAgent(),
-			URL:       context.URL,
-			Headers:   getHeaders(context),
-			Body:      context.GetBodyRaw(),
-			Source:    context.Source,
-			Route:     context.Route,
+			Method:    *reqCtx.Method,
+			IPAddress: *reqCtx.RemoteAddress,
+			UserAgent: reqCtx.GetUserAgent(),
+			URL:       reqCtx.URL,
+			Headers:   getHeaders(reqCtx),
+			Body:      reqCtx.GetBodyRaw(),
+			Source:    reqCtx.Source,
+			Route:     reqCtx.Route,
 		},
 		Attack: aikido_types.AttackDetails{
 			Kind:      string(res.Kind),
@@ -79,7 +84,7 @@ func GetAttackDetected(res InterceptorResult) *aikido_types.DetectedAttack {
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  maps.Clone(res.Metadata),
-			User:      utils.GetUserByID(context.GetUserID()),
+			User:      utils.GetUserByID(reqCtx.GetUserID()),
 		},
 	}
 }
@@ -109,11 +114,11 @@ func GetAttackDetectedAction(result InterceptorResult) string {
 	return GetThrowAction(BuildAttackDetectedMessage(result), -1)
 }
 
-func ReportAttackDetected(res *InterceptorResult) string {
+func ReportAttackDetected(ctx context.Context, res *InterceptorResult) string {
 	if res == nil {
 		return ""
 	}
 
-	go grpc.OnAttackDetected(GetAttackDetected(*res))
+	go grpc.OnAttackDetected(GetAttackDetected(ctx, *res))
 	return GetAttackDetectedAction(*res)
 }
