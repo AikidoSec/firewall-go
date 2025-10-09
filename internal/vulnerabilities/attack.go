@@ -7,9 +7,9 @@ import (
 	"html"
 	"maps"
 
+	"github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/agent/utils"
-	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -119,6 +119,6 @@ func ReportAttackDetected(ctx context.Context, res *InterceptorResult) string {
 		return ""
 	}
 
-	go grpc.OnAttackDetected(GetAttackDetected(ctx, *res))
+	go agent.OnAttackDetected(GetAttackDetected(ctx, *res))
 	return GetAttackDetectedAction(*res)
 }

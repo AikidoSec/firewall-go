@@ -10,7 +10,6 @@ import (
 	"github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/config"
-	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
@@ -31,18 +30,17 @@ func Init() error {
 	// Agent Config :
 	token := os.Getenv("AIKIDO_TOKEN")
 
-	err := initAgent(config.CollectAPISchema, logLevel, token) // gRPC Server
+	err := initAgent(config.CollectAPISchema, logLevel, token)
 	if err != nil {
 		return err
 	}
 
-	grpc.Init()
+	config.Init()
 
 	return nil
 }
 
 func initAgent(collectAPISchema bool, logLevel string, token string) error {
-	// gRPC Server :
 	environmentConfig := aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
 		PlatformVersion: runtime.Version(),

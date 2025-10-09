@@ -3,8 +3,8 @@ package zen
 import (
 	"context"
 
+	"github.com/AikidoSec/firewall-go/agent"
 	"github.com/AikidoSec/firewall-go/internal/config"
-	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -16,7 +16,7 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 		return nil // Do not run middleware twice.
 	}
 
-	go grpc.OnMiddlewareInstalled() // Report middleware as installed, handy for dashboard.
+	go agent.OnMiddlewareInstalled() // Report middleware as installed, handy for dashboard.
 	reqCtx.ExecutedMiddleware = true
 
 	// user-blocking :
@@ -33,7 +33,7 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 
 	for _, endpoint := range matches {
 		if endpoint.RateLimiting.Enabled {
-			rateLimitingStatus := grpc.GetRateLimitingStatus(
+			rateLimitingStatus := agent.GetRateLimitingStatus(
 				endpoint.Method, endpoint.Route, reqCtx.GetUserID(), reqCtx.GetIP(),
 			)
 			if rateLimitingStatus != nil && rateLimitingStatus.Block {
