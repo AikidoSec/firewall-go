@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
-	_ "github.com/jackc/pgx/v4/stdlib"
 	"log"
+
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 // Pet represents a pet entity
@@ -26,9 +28,9 @@ func NewDatabaseHelper() *DatabaseHelper {
 }
 
 // GetAllPets retrieves all pets from the database
-func (dh *DatabaseHelper) GetAllPets() ([]Pet, error) {
+func (dh *DatabaseHelper) GetAllPets(ctx context.Context) ([]Pet, error) {
 	var pets []Pet
-	rows, err := dh.db.Query("SELECT pet_id, pet_name, owner FROM pets")
+	rows, err := dh.db.QueryContext(ctx, "SELECT pet_id, pet_name, owner FROM pets")
 	if err != nil {
 		return nil, err
 	}
@@ -45,9 +47,9 @@ func (dh *DatabaseHelper) GetAllPets() ([]Pet, error) {
 }
 
 // GetPetByID retrieves a pet by its ID
-func (dh *DatabaseHelper) GetPetByID(id int) (Pet, error) {
+func (dh *DatabaseHelper) GetPetByID(ctx context.Context, id int) (Pet, error) {
 	var pet Pet
-	err := dh.db.QueryRow("SELECT pet_id, pet_name, owner FROM pets WHERE pet_id = $1", id).Scan(&pet.ID, &pet.Name, &pet.Owner)
+	err := dh.db.QueryRowContext(ctx, "SELECT pet_id, pet_name, owner FROM pets WHERE pet_id = $1", id).Scan(&pet.ID, &pet.Name, &pet.Owner)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Pet{ID: 0, Name: "Unknown", Owner: "Unknown"}, nil
@@ -58,11 +60,11 @@ func (dh *DatabaseHelper) GetPetByID(id int) (Pet, error) {
 }
 
 // CreatePetByName inserts a new pet into the database
-func (dh *DatabaseHelper) CreatePetByName(petName string) (int64, error) {
+func (dh *DatabaseHelper) CreatePetByName(ctx context.Context, petName string) (int64, error) {
 	// Intentionally vulnerable to SQL injection
 	sqlStatement := "INSERT INTO pets (pet_name, owner) VALUES ('" + petName + "', 'Aikido Security') RETURNING pet_id"
 	var petID int64
-	err := dh.db.QueryRow(sqlStatement).Scan(&petID)
+	err := dh.db.QueryRowContext(ctx, sqlStatement).Scan(&petID)
 	if err != nil {
 		return 0, err // Return 0 and the error if something goes wrong
 	}
@@ -73,6 +75,7 @@ func (dh *DatabaseHelper) CreatePetByName(petName string) (int64, error) {
 func (dh *DatabaseHelper) Close() error {
 	return dh.db.Close()
 }
+
 func connectToDb() *sql.DB {
 	var err error
 	var db *sql.DB

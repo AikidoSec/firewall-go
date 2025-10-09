@@ -5,23 +5,23 @@ meta:
     Protection from SQL Injection.
 
 aspects:
-  - id: database/sql.DB.Query
+  - id: database/sql.DB.QueryContext
     join-point:
       one-of:
         - function-body:
             function:
-              - receiver: '*database/sql.DB'
-              - name: Query
+              - receiver: "*database/sql.DB"
+              - name: QueryContext
         - function-body:
             function:
-              - receiver: '*database/sql.DB'
-              - name: QueryRow
+              - receiver: "*database/sql.DB"
+              - name: QueryRowContext
     advice:
       - prepend-statements:
           imports:
             sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
           template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Query(Row)")
+            _aikido_block := sink.Examine({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.Query(Row)")
             if _aikido_block != nil {
               panic(_aikido_block)
             }

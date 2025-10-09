@@ -1,9 +1,10 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 var db *DatabaseHelper
@@ -13,15 +14,19 @@ func main() {
 	db = NewDatabaseHelper()
 	// Set up Gin router
 	r := gin.Default()
+
+	// Must be enabled to ensure Gin properly respects request contexts
+	r.ContextWithFallback = true
+
 	r.Use(func(c *gin.Context) {
 		if c.GetHeader("user") != "" {
-			zen.SetUser(c.GetHeader("user"), "John Doe")
+			zen.SetUser(c, c.GetHeader("user"), "John Doe")
 		}
 	})
 	r.Use(RateLimitMiddleware())
 
 	defineStaticRoutes(r)
-	defineApiRoutes(r, db)
+	defineAPIRoutes(r, db)
 
 	// Start the server
 	r.Run(":8080")
@@ -29,7 +34,7 @@ func main() {
 
 func RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		blockResult := zen.ShouldBlockRequest()
+		blockResult := zen.ShouldBlockRequest(c)
 
 		if blockResult != nil {
 			if blockResult.Type == "rate-limited" {

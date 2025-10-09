@@ -1,12 +1,14 @@
 package http
 
 import (
+	"context"
+
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/apidiscovery"
-	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
 func OnRequestShutdownReporting(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
@@ -25,17 +27,15 @@ func OnRequestShutdownReporting(method string, route string, statusCode int, use
 }
 
 // OnPostRequest gets called after a response is ready to be sent out.
-func OnPostRequest(statusCode int) {
-	ctx := context.Get()
-	if ctx == nil {
+func OnPostRequest(ctx context.Context, statusCode int) {
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil {
 		return
 	}
 
-	apiSpec := apidiscovery.GetAPIInfo(*ctx)
+	apiSpec := apidiscovery.GetAPIInfo(reqCtx)
 
 	go OnRequestShutdownReporting(
-		ctx.GetMethod(), ctx.Route, statusCode, ctx.GetUserID(), ctx.GetIP(), apiSpec,
+		reqCtx.GetMethod(), reqCtx.Route, statusCode, reqCtx.GetUserID(), reqCtx.GetIP(), apiSpec,
 	)
-
-	context.Clear()
 }

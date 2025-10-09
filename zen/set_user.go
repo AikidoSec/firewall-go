@@ -1,29 +1,29 @@
 package zen
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/context"
+	"context"
+
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
-func SetUser(id string, name string) {
+func SetUser(ctx context.Context, id string, name string) context.Context {
 	// Validate :
 	if len(id) == 0 || len(name) == 0 {
 		log.Info("User ID or name cannot be empty.")
-		return
+		return ctx
 	}
 
 	// Get context :
-	ctx := context.Get()
-	if ctx == nil {
-		return
-	}
-	if ctx.ExecutedMiddleware {
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil || reqCtx.ExecutedMiddleware {
 		log.Info("zen.SetUser(...) must be called before the Zen middleware is executed.")
+		return ctx
 	}
 
-	// Set :
-	ctx.User = &context.User{ID: id, Name: name}
-	context.Set(*ctx)
-	go grpc.OnUserEvent(id, name, ctx.GetIP())
+	reqCtx.User = &request.User{ID: id, Name: name}
+	go grpc.OnUserEvent(id, name, reqCtx.GetIP())
+
+	return ctx
 }

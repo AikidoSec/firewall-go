@@ -2,8 +2,8 @@ package gingonic
 
 import (
 	"github.com/AikidoSec/firewall-go/internal"
-	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/http"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,13 +17,11 @@ func GetMiddleware() gin.HandlerFunc {
 		internal.Init()
 		ip := c.ClientIP()
 
-		ginContext := context.GetContext(c.Request, c.FullPath(), "gin")
-		ginContext.RemoteAddress = &ip // Use ClientIP() which parses X-Forwarded-For for us.
-		ginContext.Body = tryExtractBody(c)
-		context.Set(ginContext)
+		reqCtx := request.SetContext(c.Request.Context(), c.Request, c.FullPath(), "gin", &ip, tryExtractBody(c))
+		c.Request = c.Request.WithContext(reqCtx)
 
 		// Write a response using Gin :
-		res := http.OnInitRequest(ginContext)
+		res := http.OnInitRequest(c)
 		if res != nil {
 			c.String(res.StatusCode, res.Message)
 			c.Abort()
@@ -33,6 +31,6 @@ func GetMiddleware() gin.HandlerFunc {
 		c.Next() // serve the request to the next middleware
 
 		statusCode := c.Writer.Status()
-		http.OnPostRequest(statusCode) // Run post-request logic (should discover route, api spec,...)
+		http.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
 	}
 }

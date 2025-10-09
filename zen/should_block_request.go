@@ -1,45 +1,46 @@
 package zen
 
 import (
+	"context"
+
 	"github.com/AikidoSec/firewall-go/internal/config"
-	"github.com/AikidoSec/firewall-go/internal/context"
 	"github.com/AikidoSec/firewall-go/internal/grpc"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
-func ShouldBlockRequest() *BlockResponse {
-	ctx := context.Get()
-	if ctx == nil || ctx.ExecutedMiddleware {
+func ShouldBlockRequest(ctx context.Context) *BlockResponse {
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil || reqCtx.ExecutedMiddleware {
 		return nil // Do not run middleware twice.
 	}
 
 	go grpc.OnMiddlewareInstalled() // Report middleware as installed, handy for dashboard.
-	ctx.ExecutedMiddleware = true
-	context.Set(*ctx) // Store the change.
+	reqCtx.ExecutedMiddleware = true
 
 	// user-blocking :
-	userID := ctx.GetUserID()
+	userID := reqCtx.GetUserID()
 	if config.IsUserBlocked(userID) {
 		log.Infof("User \"%s\" is blocked!", userID)
 		return &BlockResponse{"blocked", "user", nil}
 	}
 	// rate-limiting :
 	matches := helpers.MatchEndpoints(
-		helpers.RouteMetadata{URL: ctx.URL, Method: ctx.GetMethod(), Route: ctx.Route},
+		helpers.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.GetMethod(), Route: reqCtx.Route},
 		config.GetEndpoints(),
 	)
 
 	for _, endpoint := range matches {
 		if endpoint.RateLimiting.Enabled {
 			rateLimitingStatus := grpc.GetRateLimitingStatus(
-				endpoint.Method, endpoint.Route, ctx.GetUserID(), ctx.GetIP(),
+				endpoint.Method, endpoint.Route, reqCtx.GetUserID(), reqCtx.GetIP(),
 			)
 			if rateLimitingStatus != nil && rateLimitingStatus.Block {
-				log.Infof("Request made from IP \"%s\" is rate-limited by \"%s\"!", ctx.GetIP(), rateLimitingStatus.Trigger)
+				log.Infof("Request made from IP \"%s\" is rate-limited by \"%s\"!", reqCtx.GetIP(), rateLimitingStatus.Trigger)
 				if rateLimitingStatus.Trigger == "ip" {
 					return &BlockResponse{
-						"rate-limited", rateLimitingStatus.Trigger, ctx.RemoteAddress,
+						"rate-limited", rateLimitingStatus.Trigger, reqCtx.RemoteAddress,
 					}
 				}
 				return &BlockResponse{
