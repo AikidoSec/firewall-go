@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
@@ -13,10 +14,10 @@ import (
 	"github.com/AikidoSec/firewall-go/agent/machine"
 	"github.com/AikidoSec/firewall-go/agent/rate_limiting"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
 
 func Init(initJSON string) (initOk bool) {
 	defer func() {
@@ -70,10 +71,10 @@ func OnRequestShutdown(ctx context.Context, req *protos.RequestMetadataShutdown)
 	return &emptypb.Empty{}, nil
 }
 
-func GetCloudConfig(ctx context.Context, req *protos.CloudConfigUpdatedAt) (*protos.CloudConfig, error) {
-	cloudConfig := getCloudConfig(req.GetConfigUpdatedAt())
+func GetCloudConfig(configUpdatedAt int64) (*aikido_types.CloudConfigData, error) {
+	cloudConfig := getCloudConfig(configUpdatedAt)
 	if cloudConfig == nil {
-		return nil, status.Errorf(codes.Canceled, "CloudConfig was not updated")
+		return nil, ErrCloudConfigNotUpdated
 	}
 	return cloudConfig, nil
 }

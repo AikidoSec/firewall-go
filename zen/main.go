@@ -54,7 +54,7 @@ func initAgent(collectAPISchema bool, logLevel string, token string) error {
 	aikidoConfig := aikido_types.AikidoConfigData{
 		LogLevel:         logLevel,
 		Token:            token,
-		CollectApiSchema: collectAPISchema,
+		CollectAPISchema: collectAPISchema,
 	}
 	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
 	if err != nil {

@@ -26,7 +26,7 @@ type AikidoConfigData struct {
 	LogLevel                  string `json:"log_level,omitempty"`                    // default: 'INFO'
 	Blocking                  bool   `json:"blocking,omitempty"`                     // default: false
 	LocalhostAllowedByDefault bool   `json:"localhost_allowed_by_default,omitempty"` // default: true
-	CollectApiSchema          bool   `json:"collect_api_schema,omitempty"`           // default: true
+	CollectAPISchema          bool   `json:"collect_api_schema,omitempty"`           // default: true
 }
 
 type RateLimiting struct {
@@ -39,27 +39,27 @@ type Endpoint struct {
 	Method             string       `json:"method"`
 	Route              string       `json:"route"`
 	ForceProtectionOff bool         `json:"forceProtectionOff"`
-	Graphql            interface{}  `json:"graphql"`
+	Graphql            any          `json:"graphql"`
 	AllowedIPAddresses []string     `json:"allowedIPAddresses"`
 	RateLimiting       RateLimiting `json:"rateLimiting"`
 }
 
-type IpBlocklist struct {
+type IPBlocklist struct {
 	Description string
 	Ips         []string
 }
 
 type CloudConfigData struct {
 	Success               bool       `json:"success"`
-	ServiceId             int        `json:"serviceId"`
+	ServiceID             int        `json:"serviceId"`
 	ConfigUpdatedAt       int64      `json:"configUpdatedAt"`
 	HeartbeatIntervalInMS int        `json:"heartbeatIntervalInMS"`
 	Endpoints             []Endpoint `json:"endpoints"`
 	BlockedUserIds        []string   `json:"blockedUserIds"`
-	BypassedIps           []string   `json:"allowedIPAddresses"`
+	BypassedIPs           []string   `json:"allowedIPAddresses"`
 	ReceivedAnyStats      bool       `json:"receivedAnyStats"`
 	Block                 *bool      `json:"block,omitempty"`
-	BlockedIpsList        map[string]IpBlocklist
+	BlockedIPsList        map[string]IPBlocklist
 	BlockedUserAgents     string
 }
 
@@ -71,12 +71,12 @@ type BlockedIpsData struct {
 
 type ListsConfigData struct {
 	Success            bool             `json:"success"`
-	ServiceId          int              `json:"serviceId"`
-	BlockedIpAddresses []BlockedIpsData `json:"blockedIPAddresses"`
+	ServiceID          int              `json:"serviceId"`
+	BlockedIPAddresses []BlockedIpsData `json:"blockedIPAddresses"`
 	BlockedUserAgents  string           `json:"blockedUserAgents"`
 }
 
 type CloudConfigUpdatedAt struct {
-	ServiceId       int   `json:"serviceId"`
+	ServiceID       int   `json:"serviceId"`
 	ConfigUpdatedAt int64 `json:"configUpdatedAt"`
 }

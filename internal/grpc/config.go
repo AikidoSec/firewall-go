@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/ipc/protos"
+	agentConfig "github.com/AikidoSec/firewall-go/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
@@ -42,7 +42,7 @@ func buildIPBlocklist(name, description string, ipsList []string) config.IPBlock
 	return ipBlocklist
 }
 
-func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
+func setCloudConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 	if cloudConfigFromAgent == nil {
 		return
 	}
@@ -67,23 +67,23 @@ func setCloudConfig(cloudConfigFromAgent *protos.CloudConfig) {
 	config.CloudConfig.Endpoints = endpoints
 
 	config.CloudConfig.BlockedUserIDs = map[string]bool{}
-	for _, userId := range cloudConfigFromAgent.BlockedUserIds {
-		config.CloudConfig.BlockedUserIDs[userId] = true
+	for _, userID := range cloudConfigFromAgent.BlockedUserIds {
+		config.CloudConfig.BlockedUserIDs[userID] = true
 	}
 
 	config.CloudConfig.BypassedIPs = map[string]bool{}
-	for _, ip := range cloudConfigFromAgent.BypassedIps {
+	for _, ip := range cloudConfigFromAgent.BypassedIPs {
 		config.CloudConfig.BypassedIPs[ip] = true
 	}
 
-	if cloudConfigFromAgent.Block {
-		config.CloudConfig.Block = 1
+	if cloudConfigFromAgent.Block == nil {
+		config.CloudConfig.Block = agentConfig.GetBlocking()
 	} else {
-		config.CloudConfig.Block = 0
+		config.CloudConfig.Block = *cloudConfigFromAgent.Block
 	}
 
 	config.CloudConfig.BlockedIPs = map[string]config.IPBlockList{}
-	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIps {
+	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIPsList {
 		config.CloudConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
 	}
 
