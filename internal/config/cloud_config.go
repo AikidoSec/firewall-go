@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/agent"
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
-	agentConfig "github.com/AikidoSec/firewall-go/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	agentConfig "github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )

@@ -1,9 +1,9 @@
 package cloud
 
 import (
-	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/globals"
-	"github.com/AikidoSec/firewall-go/agent/utils"
+	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
+	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
 func SendStartEvent() {

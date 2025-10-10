@@ -3,7 +3,7 @@ package globals
 import (
 	"sync"
 
-	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
+	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
 // Local config that contains info about socket path, platform, library version...
