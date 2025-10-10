@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
 // TestMergeApiAuthTypes tests the mergeApiAuthTypes function.

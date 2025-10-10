@@ -3,8 +3,8 @@ package cloud
 import (
 	"encoding/json"
 
-	. "github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/globals"
+	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 )
 
 func CheckConfigUpdatedAt() {

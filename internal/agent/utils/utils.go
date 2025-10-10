@@ -4,9 +4,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/config"
-	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 )
 
 func StartPollingRoutine(stopChan chan struct{}, ticker *time.Ticker, pollingFunction func()) {

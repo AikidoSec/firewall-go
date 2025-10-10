@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"github.com/AikidoSec/firewall-go/agent/globals"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 )
 
 func storeDomain(domain string, port uint32) {

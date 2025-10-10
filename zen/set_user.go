@@ -3,7 +3,7 @@ package zen
 import (
 	"context"
 
-	"github.com/AikidoSec/firewall-go/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )

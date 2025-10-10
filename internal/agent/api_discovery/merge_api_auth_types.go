@@ -1,7 +1,7 @@
 package api_discovery
 
 import (
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
 // MergeAPIAuthTypes slices into one without duplicates.

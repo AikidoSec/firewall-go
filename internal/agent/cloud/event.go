@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/AikidoSec/firewall-go/agent/config"
-	"github.com/AikidoSec/firewall-go/agent/log"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/log"
 )
 
 func SendCloudRequest(endpoint string, route string, method string, payload interface{}) ([]byte, error) {

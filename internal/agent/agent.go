@@ -4,13 +4,13 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/cloud"
-	"github.com/AikidoSec/firewall-go/agent/config"
-	"github.com/AikidoSec/firewall-go/agent/globals"
-	"github.com/AikidoSec/firewall-go/agent/log"
-	"github.com/AikidoSec/firewall-go/agent/machine"
-	"github.com/AikidoSec/firewall-go/agent/rate_limiting"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
+	"github.com/AikidoSec/firewall-go/internal/agent/log"
+	"github.com/AikidoSec/firewall-go/internal/agent/machine"
+	"github.com/AikidoSec/firewall-go/internal/agent/rate_limiting"
 )
 
 var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")

@@ -3,7 +3,7 @@ package apidiscovery
 import (
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
 // Common API key header and cookie names

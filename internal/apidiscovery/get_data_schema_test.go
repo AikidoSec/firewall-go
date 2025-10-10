@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
 // Helper function for comparing two DataSchema structs

@@ -7,9 +7,9 @@ import (
 	"html"
 	"maps"
 
-	"github.com/AikidoSec/firewall-go/agent"
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/agent/utils"
+	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 

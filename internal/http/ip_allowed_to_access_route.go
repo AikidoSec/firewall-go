@@ -4,7 +4,7 @@ import (
 	"net"
 	"slices"
 
-	"github.com/AikidoSec/firewall-go/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
 // ipAllowedToAccessRoute checks if the IP address is allowed to access the route.
