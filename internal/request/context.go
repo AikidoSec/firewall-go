@@ -18,7 +18,7 @@ type Context struct {
 	Source             string
 	Route              string
 	Subdomains         []string
-	ExecutedMiddleware bool
+	executedMiddleware bool
 	user               *User
 
 	mu sync.RWMutex
@@ -54,6 +54,27 @@ func (ctx *Context) GetUserID() string {
 		return ctx.user.ID
 	}
 	return "" // Empty ID
+}
+
+// MarkMiddlewareExecuted marks the middleware as executed.
+// Returns true if the middleware was not already executed, false otherwise.
+func (ctx *Context) MarkMiddlewareExecuted() bool {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	if ctx.executedMiddleware {
+		return false
+	}
+
+	ctx.executedMiddleware = true
+	return true
+}
+
+func (ctx *Context) HasMiddlewareExecuted() bool {
+	ctx.mu.RLock()
+	defer ctx.mu.RUnlock()
+
+	return ctx.executedMiddleware
 }
 
 func (ctx *Context) GetMethod() string {

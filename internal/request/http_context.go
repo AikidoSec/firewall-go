@@ -28,7 +28,7 @@ func SetContext(ctx context.Context, r *http.Request, route string, source strin
 		Source:             source,
 		Route:              route,
 		Subdomains:         []string{},
-		ExecutedMiddleware: false, // We start with no middleware executed.
+		executedMiddleware: false, // We start with no middleware executed.
 	}
 	return context.WithValue(ctx, reqCtxKey, c)
 }

@@ -17,7 +17,7 @@ func SetUser(ctx context.Context, id string, name string) context.Context {
 
 	// Get context :
 	reqCtx := request.GetContext(ctx)
-	if reqCtx == nil || reqCtx.ExecutedMiddleware {
+	if reqCtx == nil || reqCtx.HasMiddlewareExecuted() {
 		log.Info("zen.SetUser(...) must be called before the Zen middleware is executed.")
 		return ctx
 	}
