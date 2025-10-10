@@ -1,22 +1,27 @@
 package request
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"sync"
+)
 
 type Context struct {
-	URL                string              `json:"url,omitempty"`
-	Method             *string             `json:"method,omitempty"`
-	Query              map[string][]string `json:"query"`
-	Headers            map[string][]string `json:"headers"`
-	RouteParams        map[string]string   `json:"routeParams,omitempty"`
-	RemoteAddress      *string             `json:"remoteAddress,omitempty"`
-	Body               any                 `json:"body"`
-	Cookies            map[string]string   `json:"cookies"`
-	AttackDetected     *bool               `json:"attackDetected,omitempty"`
-	Source             string              `json:"source"`
-	Route              string              `json:"route,omitempty"`
-	Subdomains         []string            `json:"subdomains,omitempty"`
-	ExecutedMiddleware bool                `json:"executedMiddleware"`
-	User               *User               `json:"user,omitempty"`
+	URL                string
+	Method             *string
+	Query              map[string][]string
+	Headers            map[string][]string
+	RouteParams        map[string]string
+	RemoteAddress      *string
+	Body               any
+	Cookies            map[string]string
+	AttackDetected     *bool
+	Source             string
+	Route              string
+	Subdomains         []string
+	ExecutedMiddleware bool
+	user               *User
+
+	mu sync.RWMutex
 }
 
 func (ctx *Context) GetUserAgent() string {
@@ -34,9 +39,19 @@ func (ctx *Context) GetBodyRaw() string {
 	return string(data)
 }
 
+func (ctx *Context) SetUser(user *User) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	ctx.user = user
+}
+
 func (ctx *Context) GetUserID() string {
-	if ctx.User != nil {
-		return ctx.User.ID
+	ctx.mu.RLock()
+	defer ctx.mu.RUnlock()
+
+	if ctx.user != nil {
+		return ctx.user.ID
 	}
 	return "" // Empty ID
 }

@@ -22,7 +22,7 @@ func SetUser(ctx context.Context, id string, name string) context.Context {
 		return ctx
 	}
 
-	reqCtx.User = &request.User{ID: id, Name: name}
+	reqCtx.SetUser(&request.User{ID: id, Name: name})
 	go agent.OnUser(id, name, reqCtx.GetIP())
 
 	return ctx
