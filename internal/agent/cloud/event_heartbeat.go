@@ -130,5 +130,5 @@ func SendHeartbeatEvent() {
 		LogCloudRequestError("Error in sending heartbeat event: ", err)
 		return
 	}
-	StoreCloudConfig(response)
+	storeCloudConfig(response)
 }

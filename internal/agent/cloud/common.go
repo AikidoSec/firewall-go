@@ -32,23 +32,23 @@ func GetAgentInfo() aikido_types.AgentInfo {
 	}
 }
 
-func ResetHeartbeatTicker() {
-	if !globals.CloudConfig.ReceivedAnyStats {
+func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
+	if !receivedAnyStats {
 		log.Info("Resetting HeartBeatTicker to 1m!")
 		HeartBeatTicker.Reset(1 * time.Minute)
 	} else {
-		if globals.CloudConfig.HeartbeatIntervalInMS >= globals.MinHeartbeatIntervalInMS {
-			log.Infof("Resetting HeartBeatTicker to %dms!", globals.CloudConfig.HeartbeatIntervalInMS)
-			HeartBeatTicker.Reset(time.Duration(globals.CloudConfig.HeartbeatIntervalInMS) * time.Millisecond)
+		if heartbeatIntervalInMS >= globals.MinHeartbeatIntervalInMS {
+			log.Infof("Resetting HeartBeatTicker to %dms!", heartbeatIntervalInMS)
+			HeartBeatTicker.Reset(time.Duration(heartbeatIntervalInMS) * time.Millisecond)
 		}
 	}
 }
 
-func UpdateRateLimitingConfig() {
+func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
 	// Convert cloud config endpoints to ratelimiting format
-	endpoints := make([]ratelimiting.EndpointConfig, len(globals.CloudConfig.Endpoints))
-	for i, endpoint := range globals.CloudConfig.Endpoints {
-		endpoints[i] = ratelimiting.EndpointConfig{
+	endpointConfigs := make([]ratelimiting.EndpointConfig, len(endpoints))
+	for i, endpoint := range endpoints {
+		endpointConfigs[i] = ratelimiting.EndpointConfig{
 			Method: endpoint.Method,
 			Route:  endpoint.Route,
 			RateLimiting: struct {
@@ -62,16 +62,16 @@ func UpdateRateLimitingConfig() {
 			},
 		}
 	}
-	ratelimiting.UpdateConfig(endpoints)
+	ratelimiting.UpdateConfig(endpointConfigs)
 }
 
-func ApplyCloudConfig() {
-	log.Infof("Applying new cloud config: %v", globals.CloudConfig)
-	ResetHeartbeatTicker()
-	UpdateRateLimitingConfig()
+func applyCloudConfig(cloudConfig *aikido_types.CloudConfigData) {
+	log.Infof("Applying new cloud config: %v", cloudConfig)
+	resetHeartbeatTicker(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
+	updateRateLimitingConfig(cloudConfig.Endpoints)
 }
 
-func UpdateListsConfig() bool {
+func updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
 	response, err := SendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ListsAPI, globals.ListsAPIMethod, nil)
 	if err != nil {
 		LogCloudRequestError("Error in sending lists request: ", err)
@@ -85,19 +85,19 @@ func UpdateListsConfig() bool {
 		return false
 	}
 
-	globals.CloudConfig.BlockedIPsList = make(map[string]aikido_types.IPBlocklist)
+	cloudConfig.BlockedIPsList = make(map[string]aikido_types.IPBlocklist)
 	for _, blockedIpsGroup := range tempListsConfig.BlockedIPAddresses {
-		globals.CloudConfig.BlockedIPsList[blockedIpsGroup.Source] = aikido_types.IPBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
+		cloudConfig.BlockedIPsList[blockedIpsGroup.Source] = aikido_types.IPBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
 	}
-	globals.CloudConfig.BlockedUserAgents = tempListsConfig.BlockedUserAgents
+	cloudConfig.BlockedUserAgents = tempListsConfig.BlockedUserAgents
 	return true
 }
 
-func StoreCloudConfig(configReponse []byte) bool {
+func storeCloudConfig(configReponse []byte) bool {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
 
-	tempCloudConfig := aikido_types.CloudConfigData{}
+	tempCloudConfig := &aikido_types.CloudConfigData{}
 	err := json.Unmarshal(configReponse, &tempCloudConfig)
 	if err != nil {
 		log.Warnf("Failed to unmarshal cloud config!")
@@ -107,9 +107,11 @@ func StoreCloudConfig(configReponse []byte) bool {
 		log.Debugf("ConfigUpdatedAt is the same!")
 		return true
 	}
+
+	updateListsConfig(tempCloudConfig)
 	globals.CloudConfig = tempCloudConfig
-	UpdateListsConfig()
-	ApplyCloudConfig()
+
+	applyCloudConfig(tempCloudConfig)
 	return true
 }
 

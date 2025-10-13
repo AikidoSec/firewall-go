@@ -30,5 +30,5 @@ func CheckConfigUpdatedAt() {
 		return
 	}
 
-	StoreCloudConfig(configResponse)
+	storeCloudConfig(configResponse)
 }
