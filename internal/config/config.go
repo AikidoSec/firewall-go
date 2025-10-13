@@ -33,7 +33,7 @@ type IPBlockList struct {
 	TrieV6      *ipaddr.IPv6AddressTrie
 }
 
-type CloudConfigData struct {
+type ServiceConfigData struct {
 	ConfigUpdatedAt   int64
 	Endpoints         []aikido_types.Endpoint
 	BlockedUserIDs    map[string]bool
@@ -44,16 +44,16 @@ type CloudConfigData struct {
 }
 
 func GetCloudConfigUpdatedAt() int64 {
-	CloudConfigMutex.RLock()
-	defer CloudConfigMutex.RUnlock()
+	ServiceConfigMutex.RLock()
+	defer ServiceConfigMutex.RUnlock()
 
-	return CloudConfig.ConfigUpdatedAt
+	return ServiceConfig.ConfigUpdatedAt
 }
 
 // IsIPBlocked function checks the cloud config mutex for blocked IP addresses.
 func IsIPBlocked(ip string) (bool, string) {
-	CloudConfigMutex.RLock()
-	defer CloudConfigMutex.RUnlock()
+	ServiceConfigMutex.RLock()
+	defer ServiceConfigMutex.RUnlock()
 
 	ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
 	if err != nil {
@@ -61,7 +61,7 @@ func IsIPBlocked(ip string) (bool, string) {
 		return false, ""
 	}
 
-	for _, ipBlocklist := range CloudConfig.BlockedIPs {
+	for _, ipBlocklist := range ServiceConfig.BlockedIPs {
 		if (ipAddress.IsIPv4() && ipBlocklist.TrieV4.ElementContains(ipAddress.ToIPv4())) ||
 			(ipAddress.IsIPv6() && ipBlocklist.TrieV6.ElementContains(ipAddress.ToIPv6())) {
 			return true, ipBlocklist.Description
@@ -73,14 +73,14 @@ func IsIPBlocked(ip string) (bool, string) {
 
 // IsUserAgentBlocked returns true if we block (e.g. bot blocking), and a string with the reason why.
 func IsUserAgentBlocked(userAgent string) (bool, string) {
-	CloudConfigMutex.RLock()
-	defer CloudConfigMutex.RUnlock()
+	ServiceConfigMutex.RLock()
+	defer ServiceConfigMutex.RUnlock()
 
-	if CloudConfig.BlockedUserAgents == nil {
+	if ServiceConfig.BlockedUserAgents == nil {
 		return false, ""
 	}
 
-	if CloudConfig.BlockedUserAgents.MatchString(userAgent) {
+	if ServiceConfig.BlockedUserAgents.MatchString(userAgent) {
 		return true, "bot detection"
 	}
 
@@ -88,24 +88,24 @@ func IsUserAgentBlocked(userAgent string) (bool, string) {
 }
 
 func IsUserBlocked(userID string) bool {
-	CloudConfigMutex.RLock()
-	defer CloudConfigMutex.RUnlock()
+	ServiceConfigMutex.RLock()
+	defer ServiceConfigMutex.RUnlock()
 
-	return keyExists(CloudConfig.BlockedUserIDs, userID)
+	return keyExists(ServiceConfig.BlockedUserIDs, userID)
 }
 
 func IsIPBypassed(ip string) bool {
-	CloudConfigMutex.RLock()
-	defer CloudConfigMutex.RUnlock()
+	ServiceConfigMutex.RLock()
+	defer ServiceConfigMutex.RUnlock()
 
-	return keyExists(CloudConfig.BypassedIPs, ip)
+	return keyExists(ServiceConfig.BypassedIPs, ip)
 }
 
 func GetEndpoints() []aikido_types.Endpoint {
-	CloudConfigMutex.RLock()
-	defer CloudConfigMutex.RUnlock()
+	ServiceConfigMutex.RLock()
+	defer ServiceConfigMutex.RUnlock()
 
-	return CloudConfig.Endpoints
+	return ServiceConfig.Endpoints
 }
 
 func keyExists[K comparable, V any](m map[K]V, key K) bool {

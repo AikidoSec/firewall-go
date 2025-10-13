@@ -12,16 +12,16 @@ import (
 )
 
 var (
-	stopChan          chan struct{}
-	cloudConfigTicker = time.NewTicker(1 * time.Minute)
+	stopChan            chan struct{}
+	serviceConfigTicker = time.NewTicker(1 * time.Minute)
 )
 
 func Init() {
-	startCloudConfigRoutine()
+	startServiceConfigRoutine()
 }
 
 func Uninit() {
-	stopCloudConfigRoutine()
+	stopServiceConfigRoutine()
 }
 
 func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
@@ -50,15 +50,15 @@ func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
 	return ipBlocklist
 }
 
-func setCloudConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
+func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 	if cloudConfigFromAgent == nil {
 		return
 	}
 
-	CloudConfigMutex.Lock()
-	defer CloudConfigMutex.Unlock()
+	ServiceConfigMutex.Lock()
+	defer ServiceConfigMutex.Unlock()
 
-	CloudConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
+	ServiceConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
 
 	var endpoints []aikido_types.Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
@@ -72,37 +72,37 @@ func setCloudConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 			},
 		})
 	}
-	CloudConfig.Endpoints = endpoints
+	ServiceConfig.Endpoints = endpoints
 
-	CloudConfig.BlockedUserIDs = map[string]bool{}
+	ServiceConfig.BlockedUserIDs = map[string]bool{}
 	for _, userID := range cloudConfigFromAgent.BlockedUserIds {
-		CloudConfig.BlockedUserIDs[userID] = true
+		ServiceConfig.BlockedUserIDs[userID] = true
 	}
 
-	CloudConfig.BypassedIPs = map[string]bool{}
+	ServiceConfig.BypassedIPs = map[string]bool{}
 	for _, ip := range cloudConfigFromAgent.BypassedIPs {
-		CloudConfig.BypassedIPs[ip] = true
+		ServiceConfig.BypassedIPs[ip] = true
 	}
 
 	if cloudConfigFromAgent.Block == nil {
-		CloudConfig.Block = agentConfig.GetBlocking()
+		ServiceConfig.Block = agentConfig.GetBlocking()
 	} else {
-		CloudConfig.Block = *cloudConfigFromAgent.Block
+		ServiceConfig.Block = *cloudConfigFromAgent.Block
 	}
 
-	CloudConfig.BlockedIPs = map[string]IPBlockList{}
+	ServiceConfig.BlockedIPs = map[string]IPBlockList{}
 	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIPsList {
-		CloudConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
+		ServiceConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
 	}
 
 	if cloudConfigFromAgent.BlockedUserAgents != "" {
-		CloudConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
+		ServiceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
 	} else {
-		CloudConfig.BlockedUserAgents = nil
+		ServiceConfig.BlockedUserAgents = nil
 	}
 }
 
-func startCloudConfigRoutine() {
+func startServiceConfigRoutine() {
 	GetCloudConfig()
 
 	stopChan = make(chan struct{})
@@ -110,17 +110,17 @@ func startCloudConfigRoutine() {
 	go func() {
 		for {
 			select {
-			case <-cloudConfigTicker.C:
+			case <-serviceConfigTicker.C:
 				GetCloudConfig()
 			case <-stopChan:
-				cloudConfigTicker.Stop()
+				serviceConfigTicker.Stop()
 				return
 			}
 		}
 	}()
 }
 
-func stopCloudConfigRoutine() {
+func stopServiceConfigRoutine() {
 	if stopChan != nil {
 		close(stopChan)
 	}
@@ -134,5 +134,5 @@ func GetCloudConfig() {
 	}
 
 	log.Debugf("Got cloud config: %v", cloudConfig)
-	setCloudConfig(cloudConfig)
+	setServiceConfig(cloudConfig)
 }

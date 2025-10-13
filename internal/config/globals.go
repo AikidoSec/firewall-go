@@ -4,8 +4,8 @@ import (
 	"sync"
 )
 
-var CloudConfig CloudConfigData
-var CloudConfigMutex sync.RWMutex
+var ServiceConfig ServiceConfigData
+var ServiceConfigMutex sync.RWMutex
 
 const (
 	Version = "1.0.0"
