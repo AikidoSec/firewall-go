@@ -3,7 +3,7 @@ package cloud
 import (
 	"encoding/json"
 
-	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 )
 
@@ -14,7 +14,7 @@ func CheckConfigUpdatedAt() {
 		return
 	}
 
-	cloudConfigUpdatedAt := CloudConfigUpdatedAt{}
+	cloudConfigUpdatedAt := aikido_types.CloudConfigUpdatedAt{}
 	err = json.Unmarshal(response, &cloudConfigUpdatedAt)
 	if err != nil {
 		return

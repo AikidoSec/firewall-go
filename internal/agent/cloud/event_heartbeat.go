@@ -3,19 +3,19 @@ package cloud
 import (
 	"sync/atomic"
 
-	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
-func GetHostnamesAndClear() []Hostname {
+func GetHostnamesAndClear() []aikido_types.Hostname {
 	globals.HostnamesMutex.Lock()
 	defer globals.HostnamesMutex.Unlock()
 
-	var hostnames []Hostname
+	var hostnames []aikido_types.Hostname
 	for domain := range globals.Hostnames {
 		for port := range globals.Hostnames[domain] {
-			hostnames = append(hostnames, Hostname{URL: domain, Port: port, Hits: globals.Hostnames[domain][port]})
+			hostnames = append(hostnames, aikido_types.Hostname{URL: domain, Port: port, Hits: globals.Hostnames[domain][port]})
 		}
 	}
 
@@ -23,11 +23,11 @@ func GetHostnamesAndClear() []Hostname {
 	return hostnames
 }
 
-func GetRoutesAndClear() []Route {
+func GetRoutesAndClear() []aikido_types.Route {
 	globals.RoutesMutex.Lock()
 	defer globals.RoutesMutex.Unlock()
 
-	var routes []Route
+	var routes []aikido_types.Route
 	for _, methodsMap := range globals.Routes {
 		for _, routeData := range methodsMap {
 			if routeData.Hits == 0 {
@@ -39,36 +39,36 @@ func GetRoutesAndClear() []Route {
 	}
 
 	// Clear routes data
-	globals.Routes = make(map[string]map[string]*Route)
+	globals.Routes = make(map[string]map[string]*aikido_types.Route)
 	return routes
 }
 
-func GetUsersAndClear() []User {
+func GetUsersAndClear() []aikido_types.User {
 	globals.UsersMutex.Lock()
 	defer globals.UsersMutex.Unlock()
 
-	var users []User
+	var users []aikido_types.User
 	for _, user := range globals.Users {
 		users = append(users, user)
 	}
 
-	globals.Users = make(map[string]User)
+	globals.Users = make(map[string]aikido_types.User)
 	return users
 }
 
-func GetMonitoredSinkStatsAndClear() map[string]MonitoredSinkStats {
-	monitoredSinkStats := make(map[string]MonitoredSinkStats)
+func GetMonitoredSinkStatsAndClear() map[string]aikido_types.MonitoredSinkStats {
+	monitoredSinkStats := make(map[string]aikido_types.MonitoredSinkStats)
 	for sink, stats := range globals.StatsData.MonitoredSinkTimings {
 		if stats.Total <= globals.MinStatsCollectedForRelevantMetrics {
 			continue
 		}
 
-		monitoredSinkStats[sink] = MonitoredSinkStats{
+		monitoredSinkStats[sink] = aikido_types.MonitoredSinkStats{
 			AttacksDetected:       stats.AttacksDetected,
 			InterceptorThrewError: stats.InterceptorThrewError,
 			WithoutContext:        stats.WithoutContext,
 			Total:                 stats.Total,
-			CompressedTimings: []CompressedTiming{
+			CompressedTimings: []aikido_types.CompressedTiming{
 				{
 					AverageInMS:  utils.ComputeAverage(stats.Timings),
 					Percentiles:  utils.ComputePercentiles(stats.Timings),
@@ -82,18 +82,18 @@ func GetMonitoredSinkStatsAndClear() map[string]MonitoredSinkStats {
 	return monitoredSinkStats
 }
 
-func GetStatsAndClear() Stats {
+func GetStatsAndClear() aikido_types.Stats {
 	globals.StatsData.StatsMutex.Lock()
 	defer globals.StatsData.StatsMutex.Unlock()
 
-	stats := Stats{
+	stats := aikido_types.Stats{
 		Sinks:     GetMonitoredSinkStatsAndClear(),
 		StartedAt: globals.StatsData.StartedAt,
 		EndedAt:   utils.GetTime(),
-		Requests: Requests{
+		Requests: aikido_types.Requests{
 			Total:   globals.StatsData.Requests,
 			Aborted: globals.StatsData.RequestsAborted,
-			AttacksDetected: AttacksDetected{
+			AttacksDetected: aikido_types.AttacksDetected{
 				Total:   globals.StatsData.Attacks,
 				Blocked: globals.StatsData.AttacksBlocked,
 			},
@@ -114,7 +114,7 @@ func GetMiddlewareInstalled() bool {
 }
 
 func SendHeartbeatEvent() {
-	heartbeatEvent := Heartbeat{
+	heartbeatEvent := aikido_types.Heartbeat{
 		Type:                "heartbeat",
 		Agent:               GetAgentInfo(),
 		Time:                utils.GetTime(),
