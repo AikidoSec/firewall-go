@@ -37,12 +37,6 @@ var RoutesMutex sync.Mutex
 // Global stats data, including mutex used to sync access to stats data across the go routines
 var StatsData StatsDataType
 
-// Rate limiting map, which holds the current rate limiting state for each configured route
-var RateLimitingMap = make(map[RateLimitingKey]*RateLimitingValue)
-
-// Rate limiting mutex used to sync access across the go routines
-var RateLimitingMutex sync.RWMutex
-
 // Users map, which holds the current users and their data
 var Users = make(map[string]User)
 

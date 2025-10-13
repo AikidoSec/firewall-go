@@ -1,4 +1,4 @@
-package aikido_types
+package ratelimiting
 
 type Queue struct {
 	items []int

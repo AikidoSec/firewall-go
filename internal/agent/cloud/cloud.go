@@ -3,7 +3,7 @@ package cloud
 import (
 	"time"
 
-	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
@@ -21,7 +21,7 @@ func Init() {
 	utils.StartPollingRoutine(ConfigPollingRoutineChannel, ConfigPollingTicker, CheckConfigUpdatedAt)
 
 	globals.StatsData.StartedAt = utils.GetTime()
-	globals.StatsData.MonitoredSinkTimings = make(map[string]MonitoredSinkTimings)
+	globals.StatsData.MonitoredSinkTimings = make(map[string]aikido_types.MonitoredSinkTimings)
 }
 
 func Uninit() {

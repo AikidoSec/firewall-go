@@ -5,30 +5,30 @@ import (
 	"sync/atomic"
 	"time"
 
-	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
-	. "github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
+	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
-func GetAgentInfo() AgentInfo {
-	return AgentInfo{
+func GetAgentInfo() aikido_types.AgentInfo {
+	return aikido_types.AgentInfo{
 		DryMode:   !utils.IsBlockingEnabled(),
-		Hostname:  Machine.HostName,
-		Version:   EnvironmentConfig.Version,
-		IPAddress: Machine.IPAddress,
-		OS: OsInfo{
-			Name:    Machine.OS,
-			Version: Machine.OSVersion,
+		Hostname:  globals.Machine.HostName,
+		Version:   globals.EnvironmentConfig.Version,
+		IPAddress: globals.Machine.IPAddress,
+		OS: aikido_types.OsInfo{
+			Name:    globals.Machine.OS,
+			Version: globals.Machine.OSVersion,
 		},
-		Platform: PlatformInfo{
-			Name:    EnvironmentConfig.PlatformName,
-			Version: EnvironmentConfig.PlatformVersion,
+		Platform: aikido_types.PlatformInfo{
+			Name:    globals.EnvironmentConfig.PlatformName,
+			Version: globals.EnvironmentConfig.PlatformVersion,
 		},
 		Packages: make(map[string]string, 0),
 		NodeEnv:  "",
-		Library:  EnvironmentConfig.Library,
+		Library:  globals.EnvironmentConfig.Library,
 	}
 }
 
@@ -44,26 +44,31 @@ func ResetHeartbeatTicker() {
 	}
 }
 
-func UpdateRateLimitingConfig() {
-	globals.RateLimitingMutex.Lock()
-	defer globals.RateLimitingMutex.Unlock()
+func millisecondsToMinutes(ms int) int {
+	duration := time.Duration(ms) * time.Millisecond
+	return int(duration.Minutes())
+}
 
-	UpdatedEndpoints := map[RateLimitingKey]bool{}
+func UpdateRateLimitingConfig() {
+	ratelimiting.Mutex.Lock()
+	defer ratelimiting.Mutex.Unlock()
+
+	UpdatedEndpoints := map[ratelimiting.Key]bool{}
 
 	for _, newEndpointConfig := range globals.CloudConfig.Endpoints {
-		k := RateLimitingKey{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
+		k := ratelimiting.Key{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
 		UpdatedEndpoints[k] = true
 
-		rateLimitingData, exists := globals.RateLimitingMap[k]
+		rateLimitingData, exists := ratelimiting.Map[k]
 		if exists {
 			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
-				rateLimitingData.Config.WindowSizeInMinutes == newEndpointConfig.RateLimiting.WindowSizeInMS*MinRateLimitingIntervalInMs {
+				rateLimitingData.Config.WindowSizeInMinutes == millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS) {
 				log.Debugf("New rate limiting endpoint config is the same: %v", newEndpointConfig)
 				continue
 			}
 
 			log.Infof("Rate limiting endpoint config has changed: %v", newEndpointConfig)
-			delete(globals.RateLimitingMap, k)
+			delete(ratelimiting.Map, k)
 		}
 
 		if !newEndpointConfig.RateLimiting.Enabled {
@@ -71,28 +76,28 @@ func UpdateRateLimitingConfig() {
 			continue
 		}
 
-		if newEndpointConfig.RateLimiting.WindowSizeInMS < MinRateLimitingIntervalInMs ||
-			newEndpointConfig.RateLimiting.WindowSizeInMS > MaxRateLimitingIntervalInMs {
+		if newEndpointConfig.RateLimiting.WindowSizeInMS < ratelimiting.MinRateLimitingIntervalInMs ||
+			newEndpointConfig.RateLimiting.WindowSizeInMS > ratelimiting.MaxRateLimitingIntervalInMs {
 			log.Warnf("Got new rate limiting endpoint config, but WindowSizeInMS is invalid: %v", newEndpointConfig)
 			continue
 		}
 
 		log.Infof("Got new rate limiting endpoint config and storing to map: %v", newEndpointConfig)
-		globals.RateLimitingMap[k] = &RateLimitingValue{
-			Config: RateLimitingConfig{
+		ratelimiting.Map[k] = &ratelimiting.Value{
+			Config: ratelimiting.Config{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
-				WindowSizeInMinutes: newEndpointConfig.RateLimiting.WindowSizeInMS / MinRateLimitingIntervalInMs,
+				WindowSizeInMinutes: millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS),
 			},
-			UserCounts: make(map[string]*RateLimitingCounts),
-			IpCounts:   make(map[string]*RateLimitingCounts),
+			UserCounts: make(map[string]*ratelimiting.Counts),
+			IpCounts:   make(map[string]*ratelimiting.Counts),
 		}
 	}
 
-	for k := range globals.RateLimitingMap {
+	for k := range ratelimiting.Map {
 		_, exists := UpdatedEndpoints[k]
 		if !exists {
 			log.Infof("Removed rate limiting entry as it is no longer part of the config: %v", k)
-			delete(globals.RateLimitingMap, k)
+			delete(ratelimiting.Map, k)
 		}
 	}
 }
@@ -110,18 +115,18 @@ func UpdateListsConfig() bool {
 		return false
 	}
 
-	tempListsConfig := ListsConfigData{}
+	tempListsConfig := aikido_types.ListsConfigData{}
 	err = json.Unmarshal(response, &tempListsConfig)
 	if err != nil {
 		log.Warnf("Failed to unmarshal lists config!")
 		return false
 	}
 
-	CloudConfig.BlockedIPsList = make(map[string]IPBlocklist)
+	globals.CloudConfig.BlockedIPsList = make(map[string]aikido_types.IPBlocklist)
 	for _, blockedIpsGroup := range tempListsConfig.BlockedIPAddresses {
-		CloudConfig.BlockedIPsList[blockedIpsGroup.Source] = IPBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
+		globals.CloudConfig.BlockedIPsList[blockedIpsGroup.Source] = aikido_types.IPBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
 	}
-	CloudConfig.BlockedUserAgents = tempListsConfig.BlockedUserAgents
+	globals.CloudConfig.BlockedUserAgents = tempListsConfig.BlockedUserAgents
 	return true
 }
 
@@ -129,7 +134,7 @@ func StoreCloudConfig(configReponse []byte) bool {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
 
-	tempCloudConfig := CloudConfigData{}
+	tempCloudConfig := aikido_types.CloudConfigData{}
 	err := json.Unmarshal(configReponse, &tempCloudConfig)
 	if err != nil {
 		log.Warnf("Failed to unmarshal cloud config!")
