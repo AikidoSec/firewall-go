@@ -3,7 +3,6 @@ package zen
 // This is the main module users will interact with : SetUser, ShouldBlockRequest, middleware, ...
 
 import (
-	"encoding/json"
 	"os"
 	"runtime"
 
@@ -13,11 +12,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
-
-type combined struct {
-	aikido_types.EnvironmentConfigData
-	aikido_types.AikidoConfigData
-}
 
 // Init needs to be called in the user's app to start the background process
 func Init() error {
@@ -44,7 +38,7 @@ func Init() error {
 }
 
 func initAgent(collectAPISchema bool, logLevel string, token string) error {
-	environmentConfig := aikido_types.EnvironmentConfigData{
+	environmentConfig := &aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
 		PlatformVersion: runtime.Version(),
 		Library:         "firewall-go",
@@ -52,16 +46,12 @@ func initAgent(collectAPISchema bool, logLevel string, token string) error {
 		ConfigEndpoint:  "https://runtime.aikido.dev/",
 		Version:         config.Version, // firewall-go version
 	}
-	aikidoConfig := aikido_types.AikidoConfigData{
+	aikidoConfig := &aikido_types.AikidoConfigData{
 		LogLevel:         logLevel,
 		Token:            token,
 		CollectAPISchema: collectAPISchema,
 	}
-	jsonBytes, err := json.Marshal(combined{environmentConfig, aikidoConfig})
-	if err != nil {
-		return err
-	}
 
-	go agent.Init(string(jsonBytes))
+	go agent.Init(environmentConfig, aikidoConfig)
 	return nil
 }

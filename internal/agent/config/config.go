@@ -1,21 +1,16 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
 )
 
-func setConfigFromJSON(jsonString []byte) bool {
-	if err := json.Unmarshal(jsonString, &globals.EnvironmentConfig); err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal JSON to EnvironmentConfig: %v", err))
-	}
-
-	if err := json.Unmarshal(jsonString, &globals.AikidoConfig); err != nil {
-		panic(fmt.Sprintf("Failed to unmarshal JSON to AikidoConfig: %v", err))
-	}
+func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) bool {
+	globals.EnvironmentConfig = environmentConfig
+	globals.AikidoConfig = aikidoConfig
 
 	if globals.AikidoConfig.LogLevel != "" {
 		if err := log.SetLogLevel(globals.AikidoConfig.LogLevel); err != nil {
@@ -25,20 +20,11 @@ func setConfigFromJSON(jsonString []byte) bool {
 
 	log.Infof("Loaded local config: %+v", globals.EnvironmentConfig)
 
-	if globals.EnvironmentConfig.SocketPath == "" {
-		log.Errorf("No socket path set! Aikido agent will not load!")
-		return false
-	}
-
 	if globals.AikidoConfig.Token == "" {
-		log.Infof("No token set! Aikido agent will load and wait for the token to be passed via gRPC!")
+		log.Infof("No token set!")
 	}
 
 	return true
-}
-
-func Init(initJSON string) bool {
-	return setConfigFromJSON([]byte(initJSON))
 }
 
 func Uninit() {
