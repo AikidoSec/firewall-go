@@ -3,15 +3,13 @@ package rate_limiting
 import (
 	"time"
 
-	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
 var (
 	RateLimitingChannel = make(chan struct{})
-	RateLimitingTicker  = time.NewTicker(globals.MinRateLimitingIntervalInMs * time.Millisecond)
+	RateLimitingTicker  = time.NewTicker(MinRateLimitingIntervalInMs * time.Millisecond)
 )
 
 func advanceRateLimitingQueuesForMap(config *RateLimitingConfig, countsMap map[string]*RateLimitingCounts) {
@@ -39,10 +37,10 @@ func advanceRateLimitingQueuesForMap(config *RateLimitingConfig, countsMap map[s
 }
 
 func AdvanceRateLimitingQueues() {
-	globals.RateLimitingMutex.Lock()
-	defer globals.RateLimitingMutex.Unlock()
+	RateLimitingMutex.Lock()
+	defer RateLimitingMutex.Unlock()
 
-	for _, endpoint := range globals.RateLimitingMap {
+	for _, endpoint := range RateLimitingMap {
 		advanceRateLimitingQueuesForMap(&endpoint.Config, endpoint.UserCounts)
 		advanceRateLimitingQueuesForMap(&endpoint.Config, endpoint.IpCounts)
 	}
