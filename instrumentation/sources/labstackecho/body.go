@@ -1,21 +1,18 @@
 package labstackecho
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
-	"strings"
 
+	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/labstack/echo/v4"
 )
 
 func tryExtractBody(c echo.Context) any {
 	// Try extracting JSON from the raw request :
-	bodyFromJSON := tryExtractJSON(c)
+	bodyFromJSON := zenhttp.TryExtractJSON(c.Request())
 	if bodyFromJSON != nil {
 		return bodyFromJSON
 	}
@@ -26,26 +23,6 @@ func tryExtractBody(c echo.Context) any {
 	}
 
 	// No use-able data found, returning nil :
-	return nil
-}
-
-func tryExtractJSON(c echo.Context) any {
-	// Read the raw body
-	body, err := io.ReadAll(c.Request().Body)
-	// Restore body after read
-	c.Request().Body = io.NopCloser(bytes.NewBuffer(body))
-	if err == nil && len(body) > 0 {
-		trimmedBody := strings.TrimSpace(string(body))
-		if !strings.HasPrefix(trimmedBody, "{") && !strings.HasPrefix(trimmedBody, "[") {
-			return nil
-		}
-		// Parse :
-		var data any
-		err = json.Unmarshal(body, &data)
-		if err == nil {
-			return data
-		}
-	}
 	return nil
 }
 
