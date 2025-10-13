@@ -50,7 +50,7 @@ func OnDomain(domain string, port uint32) {
 	storeDomain(domain, port)
 }
 
-func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.RateLimitingStatus {
+func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.Status {
 	log.Debugf("Received rate limiting info: %s %s %s %s", method, route, user, ip)
 
 	return getRateLimitingStatus(method, route, user, ip)

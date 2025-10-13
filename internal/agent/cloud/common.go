@@ -45,16 +45,16 @@ func ResetHeartbeatTicker() {
 }
 
 func UpdateRateLimitingConfig() {
-	ratelimiting.RateLimitingMutex.Lock()
-	defer ratelimiting.RateLimitingMutex.Unlock()
+	ratelimiting.Mutex.Lock()
+	defer ratelimiting.Mutex.Unlock()
 
-	UpdatedEndpoints := map[ratelimiting.RateLimitingKey]bool{}
+	UpdatedEndpoints := map[ratelimiting.Key]bool{}
 
 	for _, newEndpointConfig := range globals.CloudConfig.Endpoints {
-		k := ratelimiting.RateLimitingKey{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
+		k := ratelimiting.Key{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
 		UpdatedEndpoints[k] = true
 
-		rateLimitingData, exists := ratelimiting.RateLimitingMap[k]
+		rateLimitingData, exists := ratelimiting.Map[k]
 		if exists {
 			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
 				rateLimitingData.Config.WindowSizeInMinutes == newEndpointConfig.RateLimiting.WindowSizeInMS/ratelimiting.MinRateLimitingIntervalInMs {
@@ -63,7 +63,7 @@ func UpdateRateLimitingConfig() {
 			}
 
 			log.Infof("Rate limiting endpoint config has changed: %v", newEndpointConfig)
-			delete(ratelimiting.RateLimitingMap, k)
+			delete(ratelimiting.Map, k)
 		}
 
 		if !newEndpointConfig.RateLimiting.Enabled {
@@ -78,21 +78,21 @@ func UpdateRateLimitingConfig() {
 		}
 
 		log.Infof("Got new rate limiting endpoint config and storing to map: %v", newEndpointConfig)
-		ratelimiting.RateLimitingMap[k] = &ratelimiting.RateLimitingValue{
-			Config: ratelimiting.RateLimitingConfig{
+		ratelimiting.Map[k] = &ratelimiting.Value{
+			Config: ratelimiting.Config{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
 				WindowSizeInMinutes: newEndpointConfig.RateLimiting.WindowSizeInMS / ratelimiting.MinRateLimitingIntervalInMs,
 			},
-			UserCounts: make(map[string]*ratelimiting.RateLimitingCounts),
-			IpCounts:   make(map[string]*ratelimiting.RateLimitingCounts),
+			UserCounts: make(map[string]*ratelimiting.Counts),
+			IpCounts:   make(map[string]*ratelimiting.Counts),
 		}
 	}
 
-	for k := range ratelimiting.RateLimitingMap {
+	for k := range ratelimiting.Map {
 		_, exists := UpdatedEndpoints[k]
 		if !exists {
 			log.Infof("Removed rate limiting entry as it is no longer part of the config: %v", k)
-			delete(ratelimiting.RateLimitingMap, k)
+			delete(ratelimiting.Map, k)
 		}
 	}
 }

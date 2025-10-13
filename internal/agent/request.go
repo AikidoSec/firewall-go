@@ -110,14 +110,14 @@ func storeRoute(method string, route string, apiSpec *aikido_types.APISpec) {
 	routeData.APISpec = getMergedAPISpec(routeData.APISpec, apiSpec)
 }
 
-func incrementRateLimitingCounts(m map[string]*ratelimiting.RateLimitingCounts, key string) {
+func incrementRateLimitingCounts(m map[string]*ratelimiting.Counts, key string) {
 	if key == "" {
 		return
 	}
 
 	rateLimitingData, exists := m[key]
 	if !exists {
-		rateLimitingData = &ratelimiting.RateLimitingCounts{}
+		rateLimitingData = &ratelimiting.Counts{}
 		m[key] = rateLimitingData
 	}
 
@@ -126,10 +126,10 @@ func incrementRateLimitingCounts(m map[string]*ratelimiting.RateLimitingCounts, 
 }
 
 func updateRateLimitingCounts(method string, route string, user string, ip string) {
-	ratelimiting.RateLimitingMutex.Lock()
-	defer ratelimiting.RateLimitingMutex.Unlock()
+	ratelimiting.Mutex.Lock()
+	defer ratelimiting.Mutex.Unlock()
 
-	rateLimitingData, exists := ratelimiting.RateLimitingMap[ratelimiting.RateLimitingKey{Method: method, Route: route}]
+	rateLimitingData, exists := ratelimiting.Map[ratelimiting.Key{Method: method, Route: route}]
 	if !exists {
 		return
 	}
@@ -138,7 +138,7 @@ func updateRateLimitingCounts(method string, route string, user string, ip strin
 	incrementRateLimitingCounts(rateLimitingData.IpCounts, ip)
 }
 
-func isRateLimitingThresholdExceeded(config *ratelimiting.RateLimitingConfig, countsMap map[string]*ratelimiting.RateLimitingCounts, key string) bool {
+func isRateLimitingThresholdExceeded(config *ratelimiting.Config, countsMap map[string]*ratelimiting.Counts, key string) bool {
 	counts, exists := countsMap[key]
 	if !exists {
 		return false
@@ -147,30 +147,30 @@ func isRateLimitingThresholdExceeded(config *ratelimiting.RateLimitingConfig, co
 	return counts.TotalNumberOfRequests >= config.MaxRequests
 }
 
-func getRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.RateLimitingStatus {
-	ratelimiting.RateLimitingMutex.RLock()
-	defer ratelimiting.RateLimitingMutex.RUnlock()
+func getRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.Status {
+	ratelimiting.Mutex.RLock()
+	defer ratelimiting.Mutex.RUnlock()
 
-	rateLimitingDataForRoute, exists := ratelimiting.RateLimitingMap[ratelimiting.RateLimitingKey{Method: method, Route: route}]
+	rateLimitingDataForRoute, exists := ratelimiting.Map[ratelimiting.Key{Method: method, Route: route}]
 	if !exists {
-		return &ratelimiting.RateLimitingStatus{Block: false}
+		return &ratelimiting.Status{Block: false}
 	}
 
 	if user != "" {
 		// If the user exists, we only try to rate limit by user
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.UserCounts, user) {
 			log.Infof("Rate limited request for user %s - %s %s - %v", user, method, route, rateLimitingDataForRoute.UserCounts[user])
-			return &ratelimiting.RateLimitingStatus{Block: true, Trigger: "user"}
+			return &ratelimiting.Status{Block: true, Trigger: "user"}
 		}
 	} else {
 		// Otherwise, we rate limit by ip
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IpCounts, ip) {
 			log.Infof("Rate limited request for ip %s - %s %s - %v", ip, method, route, rateLimitingDataForRoute.IpCounts[ip])
-			return &ratelimiting.RateLimitingStatus{Block: true, Trigger: "ip"}
+			return &ratelimiting.Status{Block: true, Trigger: "ip"}
 		}
 	}
 
-	return &ratelimiting.RateLimitingStatus{Block: false}
+	return &ratelimiting.Status{Block: false}
 }
 
 func getCloudConfig(configUpdatedAt int64) *aikido_types.CloudConfigData {
