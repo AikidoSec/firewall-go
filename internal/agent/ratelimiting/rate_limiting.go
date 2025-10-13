@@ -79,8 +79,8 @@ func advanceQueuesForMap(config *Config, countsMap map[string]*Counts) {
 	}
 }
 
-// AdvanceQueues moves the sliding window forward by one time unit
-func AdvanceQueues() {
+// advanceQueues moves the sliding window forward by one time unit
+func advanceQueues() {
 	Mutex.Lock()
 	defer Mutex.Unlock()
 
@@ -92,8 +92,8 @@ func AdvanceQueues() {
 
 // Init initializes the rate limiting subsystem
 func Init() {
-	AdvanceQueues()
-	utils.StartPollingRoutine(channel, ticker, AdvanceQueues)
+	advanceQueues()
+	utils.StartPollingRoutine(channel, ticker, advanceQueues)
 }
 
 // Uninit shuts down the rate limiting subsystem
