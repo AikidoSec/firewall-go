@@ -100,3 +100,68 @@ func Init() {
 func Uninit() {
 	utils.StopPollingRoutine(channel)
 }
+
+func incrementRateLimitingCounts(m map[string]*Counts, key string) {
+	if key == "" {
+		return
+	}
+
+	rateLimitingData, exists := m[key]
+	if !exists {
+		rateLimitingData = &Counts{}
+		m[key] = rateLimitingData
+	}
+
+	rateLimitingData.TotalNumberOfRequests += 1
+	rateLimitingData.NumberOfRequestsPerWindow.IncrementLast()
+}
+
+// UpdateCounts updates the rate limiting counts for a given route, user, and IP
+func UpdateCounts(method string, route string, user string, ip string) {
+	Mutex.Lock()
+	defer Mutex.Unlock()
+
+	rateLimitingData, exists := Map[Key{Method: method, Route: route}]
+	if !exists {
+		return
+	}
+
+	incrementRateLimitingCounts(rateLimitingData.UserCounts, user)
+	incrementRateLimitingCounts(rateLimitingData.IpCounts, ip)
+}
+
+func isRateLimitingThresholdExceeded(config *Config, countsMap map[string]*Counts, key string) bool {
+	counts, exists := countsMap[key]
+	if !exists {
+		return false
+	}
+
+	return counts.TotalNumberOfRequests >= config.MaxRequests
+}
+
+// GetStatus checks if a request should be rate limited based on user or IP
+func GetStatus(method string, route string, user string, ip string) *Status {
+	Mutex.RLock()
+	defer Mutex.RUnlock()
+
+	rateLimitingDataForRoute, exists := Map[Key{Method: method, Route: route}]
+	if !exists {
+		return &Status{Block: false}
+	}
+
+	if user != "" {
+		// If the user exists, we only try to rate limit by user
+		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.UserCounts, user) {
+			log.Infof("Rate limited request for user %s - %s %s - %v", user, method, route, rateLimitingDataForRoute.UserCounts[user])
+			return &Status{Block: true, Trigger: "user"}
+		}
+	} else {
+		// Otherwise, we rate limit by ip
+		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IpCounts, ip) {
+			log.Infof("Rate limited request for ip %s - %s %s - %v", ip, method, route, rateLimitingDataForRoute.IpCounts[ip])
+			return &Status{Block: true, Trigger: "ip"}
+		}
+	}
+
+	return &Status{Block: false}
+}

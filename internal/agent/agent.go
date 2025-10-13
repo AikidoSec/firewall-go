@@ -53,7 +53,7 @@ func OnDomain(domain string, port uint32) {
 func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.Status {
 	log.Debugf("Received rate limiting info: %s %s %s %s", method, route, user, ip)
 
-	return getRateLimitingStatus(method, route, user, ip)
+	return ratelimiting.GetStatus(method, route, user, ip)
 }
 
 func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
@@ -61,7 +61,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 	go storeStats()
 	go storeRoute(method, route, apiSpec)
-	go updateRateLimitingCounts(method, route, user, ip)
+	go ratelimiting.UpdateCounts(method, route, user, ip)
 
 	atomic.StoreUint32(&globals.GotTraffic, 1)
 }
