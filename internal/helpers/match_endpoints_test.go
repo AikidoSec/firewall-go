@@ -3,7 +3,7 @@ package helpers
 import (
 	"testing"
 
-	. "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,11 +47,11 @@ func TestMatchEndpoints(t *testing.T) {
 	})
 
 	t.Run("testItReturnsEndpointBasedOnRoute", func(t *testing.T) {
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/:number",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
@@ -65,11 +65,11 @@ func TestMatchEndpoints(t *testing.T) {
 	})
 
 	t.Run("testItReturnsEndpointBasedOnRelativeUrl", func(t *testing.T) {
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/:number",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
@@ -83,11 +83,11 @@ func TestMatchEndpoints(t *testing.T) {
 	})
 
 	t.Run("testItReturnsEndpointBasedOnWildcard", func(t *testing.T) {
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
@@ -101,11 +101,11 @@ func TestMatchEndpoints(t *testing.T) {
 	})
 
 	t.Run("testItReturnsEndpointBasedOnWildcardWithRelativeUrl", func(t *testing.T) {
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
@@ -119,11 +119,11 @@ func TestMatchEndpoints(t *testing.T) {
 	})
 
 	t.Run("testItFavorsMoreSpecificWildcard", func(t *testing.T) {
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
@@ -134,7 +134,7 @@ func TestMatchEndpoints(t *testing.T) {
 			{
 				Method: "*",
 				Route:  "/posts/*/comments/*",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
@@ -144,7 +144,7 @@ func TestMatchEndpoints(t *testing.T) {
 			},
 		}
 
-		expected := []Endpoint{
+		expected := []aikido_types.Endpoint{
 			endpoints[1],
 			endpoints[0],
 		}
@@ -153,11 +153,11 @@ func TestMatchEndpoints(t *testing.T) {
 	})
 
 	t.Run("testItMatchesWildcardRouteWithSpecificMethod", func(t *testing.T) {
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/*/comments/*",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
@@ -171,11 +171,11 @@ func TestMatchEndpoints(t *testing.T) {
 	})
 
 	t.Run("testItPrefersSpecificRouteOverWildcard", func(t *testing.T) {
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/api/*",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    20,
 					WindowSizeInMS: 60000,
@@ -186,7 +186,7 @@ func TestMatchEndpoints(t *testing.T) {
 			{
 				Method: "POST",
 				Route:  "/api/coach",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    100,
 					WindowSizeInMS: 60000,
@@ -196,7 +196,7 @@ func TestMatchEndpoints(t *testing.T) {
 			},
 		}
 
-		expected := []Endpoint{
+		expected := []aikido_types.Endpoint{
 			endpoints[1],
 			endpoints[0],
 		}
@@ -210,11 +210,11 @@ func TestMatchEndpoints(t *testing.T) {
 			"http://localhost:4000/api/test", "POST", "/api/test",
 		)
 
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/api/test",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    20,
 					WindowSizeInMS: 60000,
@@ -225,7 +225,7 @@ func TestMatchEndpoints(t *testing.T) {
 			{
 				Method: "POST",
 				Route:  "/api/test",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    100,
 					WindowSizeInMS: 60000,
@@ -235,7 +235,7 @@ func TestMatchEndpoints(t *testing.T) {
 			},
 		}
 
-		expected := []Endpoint{
+		expected := []aikido_types.Endpoint{
 			endpoints[1],
 			endpoints[0],
 		}
@@ -248,11 +248,11 @@ func TestMatchEndpoints(t *testing.T) {
 			"http://localhost:4000/api/test", "POST", "/api/test",
 		)
 
-		endpoints := []Endpoint{
+		endpoints := []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/api/test",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    100,
 					WindowSizeInMS: 60000,
@@ -263,7 +263,7 @@ func TestMatchEndpoints(t *testing.T) {
 			{
 				Method: "*",
 				Route:  "/api/test",
-				RateLimiting: RateLimiting{
+				RateLimiting: aikido_types.RateLimiting{
 					Enabled:        true,
 					MaxRequests:    20,
 					WindowSizeInMS: 60000,
@@ -273,7 +273,7 @@ func TestMatchEndpoints(t *testing.T) {
 			},
 		}
 
-		expected := []Endpoint{
+		expected := []aikido_types.Endpoint{
 			endpoints[0],
 			endpoints[1],
 		}
