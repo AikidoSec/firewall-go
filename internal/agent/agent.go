@@ -15,7 +15,7 @@ import (
 
 var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
 
-func Init(initJSON string) (initOk bool) {
+func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) (initOk bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Warn("Recovered from panic:", r)
@@ -25,7 +25,7 @@ func Init(initJSON string) (initOk bool) {
 
 	log.Init()
 	machine.Init()
-	if !config.Init(initJSON) {
+	if !config.Init(environmentConfig, aikidoConfig) {
 		return false
 	}
 

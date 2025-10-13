@@ -7,10 +7,10 @@ import (
 )
 
 // Local config that contains info about socket path, platform, library version...
-var EnvironmentConfig EnvironmentConfigData
+var EnvironmentConfig *EnvironmentConfigData
 
 // Aikido config that contains info about endpoint, log_level, token, ...
-var AikidoConfig AikidoConfigData
+var AikidoConfig *AikidoConfigData
 
 // Cloud config that is obtain as a result from sending events to cloud or pulling the config when it changes
 var CloudConfig CloudConfigData
