@@ -10,7 +10,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/machine"
-	"github.com/AikidoSec/firewall-go/internal/agent/rate_limiting"
+	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 )
 
 var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
@@ -30,14 +30,14 @@ func Init(initJSON string) (initOk bool) {
 	}
 
 	cloud.Init()
-	rate_limiting.Init()
+	ratelimiting.Init()
 
 	log.Infof("Aikido Agent v%s loaded!", globals.EnvironmentConfig.Version)
 	return true
 }
 
 func AgentUninit() {
-	rate_limiting.Uninit()
+	ratelimiting.Uninit()
 	cloud.Uninit()
 	config.Uninit()
 
@@ -50,7 +50,7 @@ func OnDomain(domain string, port uint32) {
 	storeDomain(domain, port)
 }
 
-func GetRateLimitingStatus(method string, route string, user string, ip string) *rate_limiting.RateLimitingStatus {
+func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.RateLimitingStatus {
 	log.Debugf("Received rate limiting info: %s %s %s %s", method, route, user, ip)
 
 	return getRateLimitingStatus(method, route, user, ip)

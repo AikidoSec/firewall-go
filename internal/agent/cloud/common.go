@@ -8,7 +8,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
-	"github.com/AikidoSec/firewall-go/internal/agent/rate_limiting"
+	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
@@ -45,25 +45,25 @@ func ResetHeartbeatTicker() {
 }
 
 func UpdateRateLimitingConfig() {
-	rate_limiting.RateLimitingMutex.Lock()
-	defer rate_limiting.RateLimitingMutex.Unlock()
+	ratelimiting.RateLimitingMutex.Lock()
+	defer ratelimiting.RateLimitingMutex.Unlock()
 
-	UpdatedEndpoints := map[rate_limiting.RateLimitingKey]bool{}
+	UpdatedEndpoints := map[ratelimiting.RateLimitingKey]bool{}
 
 	for _, newEndpointConfig := range globals.CloudConfig.Endpoints {
-		k := rate_limiting.RateLimitingKey{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
+		k := ratelimiting.RateLimitingKey{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
 		UpdatedEndpoints[k] = true
 
-		rateLimitingData, exists := rate_limiting.RateLimitingMap[k]
+		rateLimitingData, exists := ratelimiting.RateLimitingMap[k]
 		if exists {
 			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
-				rateLimitingData.Config.WindowSizeInMinutes == newEndpointConfig.RateLimiting.WindowSizeInMS/rate_limiting.MinRateLimitingIntervalInMs {
+				rateLimitingData.Config.WindowSizeInMinutes == newEndpointConfig.RateLimiting.WindowSizeInMS/ratelimiting.MinRateLimitingIntervalInMs {
 				log.Debugf("New rate limiting endpoint config is the same: %v", newEndpointConfig)
 				continue
 			}
 
 			log.Infof("Rate limiting endpoint config has changed: %v", newEndpointConfig)
-			delete(rate_limiting.RateLimitingMap, k)
+			delete(ratelimiting.RateLimitingMap, k)
 		}
 
 		if !newEndpointConfig.RateLimiting.Enabled {
@@ -71,28 +71,28 @@ func UpdateRateLimitingConfig() {
 			continue
 		}
 
-		if newEndpointConfig.RateLimiting.WindowSizeInMS < rate_limiting.MinRateLimitingIntervalInMs ||
-			newEndpointConfig.RateLimiting.WindowSizeInMS > rate_limiting.MaxRateLimitingIntervalInMs {
+		if newEndpointConfig.RateLimiting.WindowSizeInMS < ratelimiting.MinRateLimitingIntervalInMs ||
+			newEndpointConfig.RateLimiting.WindowSizeInMS > ratelimiting.MaxRateLimitingIntervalInMs {
 			log.Warnf("Got new rate limiting endpoint config, but WindowSizeInMS is invalid: %v", newEndpointConfig)
 			continue
 		}
 
 		log.Infof("Got new rate limiting endpoint config and storing to map: %v", newEndpointConfig)
-		rate_limiting.RateLimitingMap[k] = &rate_limiting.RateLimitingValue{
-			Config: rate_limiting.RateLimitingConfig{
+		ratelimiting.RateLimitingMap[k] = &ratelimiting.RateLimitingValue{
+			Config: ratelimiting.RateLimitingConfig{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
-				WindowSizeInMinutes: newEndpointConfig.RateLimiting.WindowSizeInMS / rate_limiting.MinRateLimitingIntervalInMs,
+				WindowSizeInMinutes: newEndpointConfig.RateLimiting.WindowSizeInMS / ratelimiting.MinRateLimitingIntervalInMs,
 			},
-			UserCounts: make(map[string]*rate_limiting.RateLimitingCounts),
-			IpCounts:   make(map[string]*rate_limiting.RateLimitingCounts),
+			UserCounts: make(map[string]*ratelimiting.RateLimitingCounts),
+			IpCounts:   make(map[string]*ratelimiting.RateLimitingCounts),
 		}
 	}
 
-	for k := range rate_limiting.RateLimitingMap {
+	for k := range ratelimiting.RateLimitingMap {
 		_, exists := UpdatedEndpoints[k]
 		if !exists {
 			log.Infof("Removed rate limiting entry as it is no longer part of the config: %v", k)
-			delete(rate_limiting.RateLimitingMap, k)
+			delete(ratelimiting.RateLimitingMap, k)
 		}
 	}
 }

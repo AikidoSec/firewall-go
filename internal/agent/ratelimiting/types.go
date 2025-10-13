@@ -1,4 +1,4 @@
-package rate_limiting
+package ratelimiting
 
 type RateLimitingConfig struct {
 	MaxRequests         int

@@ -1,4 +1,4 @@
-package rate_limiting
+package ratelimiting
 
 const (
 	MinRateLimitingIntervalInMs = 60000   // 1 minute
