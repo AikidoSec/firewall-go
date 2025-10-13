@@ -44,62 +44,25 @@ func ResetHeartbeatTicker() {
 	}
 }
 
-func millisecondsToMinutes(ms int) int {
-	duration := time.Duration(ms) * time.Millisecond
-	return int(duration.Minutes())
-}
-
 func UpdateRateLimitingConfig() {
-	ratelimiting.Mutex.Lock()
-	defer ratelimiting.Mutex.Unlock()
-
-	UpdatedEndpoints := map[ratelimiting.Key]bool{}
-
-	for _, newEndpointConfig := range globals.CloudConfig.Endpoints {
-		k := ratelimiting.Key{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
-		UpdatedEndpoints[k] = true
-
-		rateLimitingData, exists := ratelimiting.Map[k]
-		if exists {
-			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
-				rateLimitingData.Config.WindowSizeInMinutes == millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS) {
-				log.Debugf("New rate limiting endpoint config is the same: %v", newEndpointConfig)
-				continue
-			}
-
-			log.Infof("Rate limiting endpoint config has changed: %v", newEndpointConfig)
-			delete(ratelimiting.Map, k)
-		}
-
-		if !newEndpointConfig.RateLimiting.Enabled {
-			log.Infof("Got new rate limiting endpoint config, but is disabled: %v", newEndpointConfig)
-			continue
-		}
-
-		if newEndpointConfig.RateLimiting.WindowSizeInMS < ratelimiting.MinRateLimitingIntervalInMs ||
-			newEndpointConfig.RateLimiting.WindowSizeInMS > ratelimiting.MaxRateLimitingIntervalInMs {
-			log.Warnf("Got new rate limiting endpoint config, but WindowSizeInMS is invalid: %v", newEndpointConfig)
-			continue
-		}
-
-		log.Infof("Got new rate limiting endpoint config and storing to map: %v", newEndpointConfig)
-		ratelimiting.Map[k] = &ratelimiting.Value{
-			Config: ratelimiting.Config{
-				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
-				WindowSizeInMinutes: millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS),
+	// Convert cloud config endpoints to ratelimiting format
+	endpoints := make([]ratelimiting.EndpointConfig, len(globals.CloudConfig.Endpoints))
+	for i, endpoint := range globals.CloudConfig.Endpoints {
+		endpoints[i] = ratelimiting.EndpointConfig{
+			Method: endpoint.Method,
+			Route:  endpoint.Route,
+			RateLimiting: struct {
+				Enabled        bool
+				MaxRequests    int
+				WindowSizeInMS int
+			}{
+				Enabled:        endpoint.RateLimiting.Enabled,
+				MaxRequests:    endpoint.RateLimiting.MaxRequests,
+				WindowSizeInMS: endpoint.RateLimiting.WindowSizeInMS,
 			},
-			UserCounts: make(map[string]*ratelimiting.Counts),
-			IpCounts:   make(map[string]*ratelimiting.Counts),
 		}
 	}
-
-	for k := range ratelimiting.Map {
-		_, exists := UpdatedEndpoints[k]
-		if !exists {
-			log.Infof("Removed rate limiting entry as it is no longer part of the config: %v", k)
-			delete(ratelimiting.Map, k)
-		}
-	}
+	ratelimiting.UpdateConfig(endpoints)
 }
 
 func ApplyCloudConfig() {
