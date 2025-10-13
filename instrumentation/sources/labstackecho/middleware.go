@@ -3,7 +3,6 @@ package labstackecho
 import (
 	"errors"
 
-	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/labstack/echo/v4"
@@ -18,8 +17,6 @@ func GetMiddleware() echo.MiddlewareFunc {
 			if httpRequest == nil {
 				return next(c) // Do not continue.
 			}
-
-			internal.Init()
 
 			ip := c.RealIP()
 			reqCtx := request.SetContext(httpRequest.Context(), httpRequest, c.Path(), "echo", &ip, tryExtractBody(c))
