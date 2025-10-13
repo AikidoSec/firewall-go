@@ -44,6 +44,11 @@ func ResetHeartbeatTicker() {
 	}
 }
 
+func millisecondsToMinutes(ms int) int {
+	duration := time.Duration(ms) * time.Millisecond
+	return int(duration.Minutes())
+}
+
 func UpdateRateLimitingConfig() {
 	ratelimiting.Mutex.Lock()
 	defer ratelimiting.Mutex.Unlock()
@@ -57,7 +62,7 @@ func UpdateRateLimitingConfig() {
 		rateLimitingData, exists := ratelimiting.Map[k]
 		if exists {
 			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
-				rateLimitingData.Config.WindowSizeInMinutes == newEndpointConfig.RateLimiting.WindowSizeInMS/ratelimiting.MinRateLimitingIntervalInMs {
+				rateLimitingData.Config.WindowSizeInMinutes == millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS) {
 				log.Debugf("New rate limiting endpoint config is the same: %v", newEndpointConfig)
 				continue
 			}
@@ -81,7 +86,7 @@ func UpdateRateLimitingConfig() {
 		ratelimiting.Map[k] = &ratelimiting.Value{
 			Config: ratelimiting.Config{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
-				WindowSizeInMinutes: newEndpointConfig.RateLimiting.WindowSizeInMS / ratelimiting.MinRateLimitingIntervalInMs,
+				WindowSizeInMinutes: millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS),
 			},
 			UserCounts: make(map[string]*ratelimiting.Counts),
 			IpCounts:   make(map[string]*ratelimiting.Counts),
