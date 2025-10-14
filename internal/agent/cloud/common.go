@@ -65,12 +65,6 @@ func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
 	ratelimiting.UpdateConfig(endpointConfigs)
 }
 
-func applyCloudConfig(cloudConfig *aikido_types.CloudConfigData) {
-	log.Infof("Applying new cloud config: %v", cloudConfig)
-	resetHeartbeatTicker(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
-	updateRateLimitingConfig(cloudConfig.Endpoints)
-}
-
 func updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
 	response, err := SendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ListsAPI, globals.ListsAPIMethod, nil)
 	if err != nil {
@@ -94,21 +88,22 @@ func updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
 }
 
 func storeCloudConfig(configReponse []byte) bool {
-	tempCloudConfig := &aikido_types.CloudConfigData{}
-	err := json.Unmarshal(configReponse, &tempCloudConfig)
+	cloudConfig := &aikido_types.CloudConfigData{}
+	err := json.Unmarshal(configReponse, &cloudConfig)
 	if err != nil {
 		log.Warnf("Failed to unmarshal cloud config!")
 		return false
 	}
-	if tempCloudConfig.ConfigUpdatedAt <= config.GetCloudConfigUpdatedAt() {
+	if cloudConfig.ConfigUpdatedAt <= config.GetCloudConfigUpdatedAt() {
 		log.Debugf("ConfigUpdatedAt is the same!")
 		return true
 	}
 
-	updateListsConfig(tempCloudConfig)
-	applyCloudConfig(tempCloudConfig)
+	updateListsConfig(cloudConfig)
+	resetHeartbeatTicker(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
+	updateRateLimitingConfig(cloudConfig.Endpoints)
 
-	config.UpdateServiceConfig(tempCloudConfig)
+	config.UpdateServiceConfig(cloudConfig)
 	return true
 }
 
