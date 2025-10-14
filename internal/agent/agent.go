@@ -66,14 +66,6 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 	atomic.StoreUint32(&globals.GotTraffic, 1)
 }
 
-func GetCloudConfig(configUpdatedAt int64) (*aikido_types.CloudConfigData, error) {
-	cloudConfig := getCloudConfig(configUpdatedAt)
-	if cloudConfig == nil {
-		return nil, ErrCloudConfigNotUpdated
-	}
-	return cloudConfig, nil
-}
-
 func OnUser(id string, username string, ip string) {
 	log.Debugf("Received user event: %s", id)
 	onUserEvent(id, username, ip)

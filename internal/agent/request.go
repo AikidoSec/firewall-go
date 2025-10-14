@@ -4,7 +4,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/api_discovery"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
-	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
@@ -107,56 +106,6 @@ func storeRoute(method string, route string, apiSpec *aikido_types.APISpec) {
 
 	routeData.Hits++
 	routeData.APISpec = getMergedAPISpec(routeData.APISpec, apiSpec)
-}
-
-func getCloudConfig(configUpdatedAt int64) *aikido_types.CloudConfigData {
-	globals.CloudConfigMutex.Lock()
-	defer globals.CloudConfigMutex.Unlock()
-
-	if globals.CloudConfig == nil {
-		return nil
-	}
-
-	if globals.CloudConfig.ConfigUpdatedAt <= configUpdatedAt {
-		log.Debugf("CloudConfig.ConfigUpdatedAt was not updated... Returning nil!")
-		return nil
-	}
-
-	var cloudBlockingEnabled *bool
-	if globals.CloudConfig.Block != nil {
-		block := *globals.CloudConfig.Block
-		cloudBlockingEnabled = &block
-	}
-
-	cloudConfig := &aikido_types.CloudConfigData{
-		ConfigUpdatedAt:   globals.CloudConfig.ConfigUpdatedAt,
-		BlockedUserIds:    globals.CloudConfig.BlockedUserIds,
-		BypassedIPs:       globals.CloudConfig.BypassedIPs,
-		BlockedIPsList:    map[string]aikido_types.IPBlocklist{},
-		BlockedUserAgents: globals.CloudConfig.BlockedUserAgents,
-		Block:             cloudBlockingEnabled,
-	}
-
-	for ipBlocklistSource, ipBlocklist := range globals.CloudConfig.BlockedIPsList {
-		cloudConfig.BlockedIPsList[ipBlocklistSource] = aikido_types.IPBlocklist{
-			Description: ipBlocklist.Description,
-			Ips:         ipBlocklist.Ips,
-		}
-	}
-
-	for _, endpoint := range globals.CloudConfig.Endpoints {
-		cloudConfig.Endpoints = append(cloudConfig.Endpoints, aikido_types.Endpoint{
-			Method:             endpoint.Method,
-			Route:              endpoint.Route,
-			ForceProtectionOff: endpoint.ForceProtectionOff,
-			AllowedIPAddresses: endpoint.AllowedIPAddresses,
-			RateLimiting: aikido_types.RateLimiting{
-				Enabled: endpoint.RateLimiting.Enabled,
-			},
-		})
-	}
-
-	return cloudConfig
 }
 
 func onUserEvent(id string, username string, ip string) {
