@@ -1,4 +1,4 @@
-package apidiscovery
+package api_discovery
 
 import (
 	"testing"

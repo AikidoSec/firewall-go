@@ -5,7 +5,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/apidiscovery"
+	"github.com/AikidoSec/firewall-go/internal/agent/api_discovery"
 	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -33,7 +33,7 @@ func OnPostRequest(ctx context.Context, statusCode int) {
 		return
 	}
 
-	apiSpec := apidiscovery.GetAPIInfo(reqCtx)
+	apiSpec := api_discovery.GetAPIInfo(reqCtx)
 
 	go OnRequestShutdownReporting(
 		reqCtx.GetMethod(), reqCtx.Route, statusCode, reqCtx.GetUserID(), reqCtx.GetIP(), apiSpec,

@@ -1,10 +1,9 @@
-package apidiscovery
+package api_discovery
 
 import (
 	"reflect"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/api_discovery"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -27,7 +26,7 @@ func GetAPIInfo(ctx *request.Context) *aikido_types.APISpec {
 			log.Debug("Body type is undefined -> no API schema!")
 			return nil
 		}
-		bodySchema := api_discovery.GetDataSchema(body, 0)
+		bodySchema := GetDataSchema(body, 0)
 
 		bodyInfo = &aikido_types.APIBodyInfo{
 			Type:   string(bodyType),
@@ -37,7 +36,7 @@ func GetAPIInfo(ctx *request.Context) *aikido_types.APISpec {
 
 	// Check query data
 	if query != nil && isObject(query) && len(query) > 0 {
-		queryInfo = api_discovery.GetDataSchema(query, 0)
+		queryInfo = GetDataSchema(query, 0)
 	}
 
 	// Get Auth Info
