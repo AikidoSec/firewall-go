@@ -27,6 +27,9 @@ jobs:
       - name: Install binaries
         run: make prepare
 
+      - name: Install tools
+        run: make install-tools
+
       - name: Run tests
         run: make test
 
