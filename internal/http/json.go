@@ -15,7 +15,8 @@ func TryExtractJSON(r *http.Request) any {
 	err := json.NewDecoder(tee).Decode(&data)
 
 	// Drain any remaining bytes to ensure full body is available in request
-	io.Copy(io.Discard, tee)
+	// Ignore error - we still need to restore the request body
+	_, _ = io.Copy(io.Discard, tee)
 
 	r.Body = io.NopCloser(&buf)
 
