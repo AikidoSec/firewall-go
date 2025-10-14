@@ -52,7 +52,11 @@ func SendCloudRequest(endpoint string, route string, method string, payload any)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Warnf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("received non-OK response: %s", resp.Status)
