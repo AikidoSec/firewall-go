@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
