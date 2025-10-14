@@ -104,7 +104,7 @@ func storeCloudConfig(configReponse []byte) bool {
 		log.Warnf("Failed to unmarshal cloud config!")
 		return false
 	}
-	if tempCloudConfig.ConfigUpdatedAt <= globals.CloudConfig.ConfigUpdatedAt {
+	if globals.CloudConfig != nil && tempCloudConfig.ConfigUpdatedAt <= globals.CloudConfig.ConfigUpdatedAt {
 		log.Debugf("ConfigUpdatedAt is the same!")
 		return true
 	}

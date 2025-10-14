@@ -31,7 +31,7 @@ func IsBlockingEnabled() bool {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
 
-	if globals.CloudConfig.Block == nil {
+	if globals.CloudConfig == nil || globals.CloudConfig.Block == nil {
 		return config.GetBlocking()
 	}
 	return *globals.CloudConfig.Block
