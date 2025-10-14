@@ -10,6 +10,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
+	"github.com/AikidoSec/firewall-go/internal/config"
 )
 
 func GetAgentInfo() aikido_types.AgentInfo {
@@ -112,6 +113,8 @@ func storeCloudConfig(configReponse []byte) bool {
 	globals.CloudConfig = tempCloudConfig
 
 	applyCloudConfig(tempCloudConfig)
+
+	config.UpdateServiceConfig(tempCloudConfig)
 	return true
 }
 

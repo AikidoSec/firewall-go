@@ -30,8 +30,6 @@ func Init() error {
 		return err
 	}
 
-	config.Init()
-
 	internal.Init()
 
 	return nil
