@@ -10,6 +10,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
+	"github.com/AikidoSec/firewall-go/internal/config"
 )
 
 func GetAgentInfo() aikido_types.AgentInfo {
@@ -103,7 +104,7 @@ func storeCloudConfig(configReponse []byte) bool {
 		log.Warnf("Failed to unmarshal cloud config!")
 		return false
 	}
-	if tempCloudConfig.ConfigUpdatedAt <= globals.CloudConfig.ConfigUpdatedAt {
+	if globals.CloudConfig != nil && tempCloudConfig.ConfigUpdatedAt <= globals.CloudConfig.ConfigUpdatedAt {
 		log.Debugf("ConfigUpdatedAt is the same!")
 		return true
 	}
@@ -112,6 +113,8 @@ func storeCloudConfig(configReponse []byte) bool {
 	globals.CloudConfig = tempCloudConfig
 
 	applyCloudConfig(tempCloudConfig)
+
+	config.UpdateServiceConfig(tempCloudConfig)
 	return true
 }
 

@@ -113,6 +113,10 @@ func getCloudConfig(configUpdatedAt int64) *aikido_types.CloudConfigData {
 	globals.CloudConfigMutex.Lock()
 	defer globals.CloudConfigMutex.Unlock()
 
+	if globals.CloudConfig == nil {
+		return nil
+	}
+
 	if globals.CloudConfig.ConfigUpdatedAt <= configUpdatedAt {
 		log.Debugf("CloudConfig.ConfigUpdatedAt was not updated... Returning nil!")
 		return nil

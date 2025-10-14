@@ -2,27 +2,12 @@ package config
 
 import (
 	"regexp"
-	"time"
 
-	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	agentConfig "github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
-
-var (
-	stopChan            chan struct{}
-	serviceConfigTicker = time.NewTicker(1 * time.Minute)
-)
-
-func Init() {
-	startServiceConfigRoutine()
-}
-
-func Uninit() {
-	stopServiceConfigRoutine()
-}
 
 func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
 	ipBlocklist := IPBlockList{
@@ -85,7 +70,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 	}
 
 	if cloudConfigFromAgent.Block == nil {
-		ServiceConfig.Block = agentConfig.GetBlocking()
+		ServiceConfig.Block = config.GetBlocking()
 	} else {
 		ServiceConfig.Block = *cloudConfigFromAgent.Block
 	}
@@ -102,37 +87,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 	}
 }
 
-func startServiceConfigRoutine() {
-	GetCloudConfig()
-
-	stopChan = make(chan struct{})
-
-	go func() {
-		for {
-			select {
-			case <-serviceConfigTicker.C:
-				GetCloudConfig()
-			case <-stopChan:
-				serviceConfigTicker.Stop()
-				return
-			}
-		}
-	}()
-}
-
-func stopServiceConfigRoutine() {
-	if stopChan != nil {
-		close(stopChan)
-	}
-}
-
-func GetCloudConfig() {
-	cloudConfig, err := agent.GetCloudConfig(GetCloudConfigUpdatedAt())
-	if err != nil {
-		log.Infof("Could not get cloud config: %v", err)
-		return
-	}
-
+func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData) {
 	log.Debugf("Got cloud config: %v", cloudConfig)
 	setServiceConfig(cloudConfig)
 }
