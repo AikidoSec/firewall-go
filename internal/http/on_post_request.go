@@ -6,7 +6,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/apidiscovery"
-	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -18,7 +17,7 @@ func OnRequestShutdownReporting(method string, route string, statusCode int, use
 
 	log.Info("[RSHUTDOWN] Got request metadata: ", method, " ", route, " ", statusCode)
 
-	if !helpers.ShouldDiscoverRoute(statusCode, route, method) {
+	if !shouldDiscoverRoute(statusCode, route, method) {
 		return // Route is not to be discovered, e.g. status code might be 500.
 	}
 
