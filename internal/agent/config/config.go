@@ -27,8 +27,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	return true
 }
 
-func Uninit() {
-}
+func Uninit() {}
 
 func GetToken() string {
 	globals.AikidoConfig.ConfigMutex.Lock()
@@ -37,9 +36,9 @@ func GetToken() string {
 	return globals.AikidoConfig.Token
 }
 
-func GetBlocking() bool {
-	globals.AikidoConfig.ConfigMutex.Lock()
-	defer globals.AikidoConfig.ConfigMutex.Unlock()
+func IsBlockingEnabled() bool {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
 
-	return globals.AikidoConfig.Blocking
+	return serviceConfig.Block
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -79,7 +80,7 @@ func GetAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types
 			Kind:      string(res.Kind),
 			Operation: res.Operation,
 			Module:    "Module",
-			Blocked:   utils.IsBlockingEnabled(),
+			Blocked:   config.IsBlockingEnabled(),
 			Source:    res.Source,
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,

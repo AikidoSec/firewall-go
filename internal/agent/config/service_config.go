@@ -5,12 +5,13 @@ import (
 	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
-var ServiceConfig ServiceConfigData
-var ServiceConfigMutex sync.RWMutex
+var serviceConfig ServiceConfigData
+var serviceConfigMutex sync.RWMutex
 
 type RateLimiting struct {
 	Enabled        bool
@@ -76,10 +77,10 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 		return
 	}
 
-	ServiceConfigMutex.Lock()
-	defer ServiceConfigMutex.Unlock()
+	serviceConfigMutex.Lock()
+	defer serviceConfigMutex.Unlock()
 
-	ServiceConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
+	serviceConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
 
 	var endpoints []aikido_types.Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
@@ -93,33 +94,35 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 			},
 		})
 	}
-	ServiceConfig.Endpoints = endpoints
+	serviceConfig.Endpoints = endpoints
 
-	ServiceConfig.BlockedUserIDs = map[string]bool{}
+	serviceConfig.BlockedUserIDs = map[string]bool{}
 	for _, userID := range cloudConfigFromAgent.BlockedUserIds {
-		ServiceConfig.BlockedUserIDs[userID] = true
+		serviceConfig.BlockedUserIDs[userID] = true
 	}
 
-	ServiceConfig.BypassedIPs = map[string]bool{}
+	serviceConfig.BypassedIPs = map[string]bool{}
 	for _, ip := range cloudConfigFromAgent.BypassedIPs {
-		ServiceConfig.BypassedIPs[ip] = true
+		serviceConfig.BypassedIPs[ip] = true
 	}
 
 	if cloudConfigFromAgent.Block == nil {
-		ServiceConfig.Block = GetBlocking()
+		globals.AikidoConfig.ConfigMutex.Lock()
+		serviceConfig.Block = globals.AikidoConfig.Blocking
+		globals.AikidoConfig.ConfigMutex.Unlock()
 	} else {
-		ServiceConfig.Block = *cloudConfigFromAgent.Block
+		serviceConfig.Block = *cloudConfigFromAgent.Block
 	}
 
-	ServiceConfig.BlockedIPs = map[string]IPBlockList{}
+	serviceConfig.BlockedIPs = map[string]IPBlockList{}
 	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIPsList {
-		ServiceConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
+		serviceConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
 	}
 
 	if cloudConfigFromAgent.BlockedUserAgents != "" {
-		ServiceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
+		serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
 	} else {
-		ServiceConfig.BlockedUserAgents = nil
+		serviceConfig.BlockedUserAgents = nil
 	}
 }
 
@@ -131,16 +134,16 @@ func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData) {
 var CollectAPISchema bool
 
 func GetCloudConfigUpdatedAt() int64 {
-	ServiceConfigMutex.RLock()
-	defer ServiceConfigMutex.RUnlock()
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
 
-	return ServiceConfig.ConfigUpdatedAt
+	return serviceConfig.ConfigUpdatedAt
 }
 
 // IsIPBlocked function checks the cloud config mutex for blocked IP addresses.
 func IsIPBlocked(ip string) (bool, string) {
-	ServiceConfigMutex.RLock()
-	defer ServiceConfigMutex.RUnlock()
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
 
 	ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
 	if err != nil {
@@ -148,7 +151,7 @@ func IsIPBlocked(ip string) (bool, string) {
 		return false, ""
 	}
 
-	for _, ipBlocklist := range ServiceConfig.BlockedIPs {
+	for _, ipBlocklist := range serviceConfig.BlockedIPs {
 		if (ipAddress.IsIPv4() && ipBlocklist.TrieV4.ElementContains(ipAddress.ToIPv4())) ||
 			(ipAddress.IsIPv6() && ipBlocklist.TrieV6.ElementContains(ipAddress.ToIPv6())) {
 			return true, ipBlocklist.Description
@@ -160,14 +163,14 @@ func IsIPBlocked(ip string) (bool, string) {
 
 // IsUserAgentBlocked returns true if we block (e.g. bot blocking), and a string with the reason why.
 func IsUserAgentBlocked(userAgent string) (bool, string) {
-	ServiceConfigMutex.RLock()
-	defer ServiceConfigMutex.RUnlock()
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
 
-	if ServiceConfig.BlockedUserAgents == nil {
+	if serviceConfig.BlockedUserAgents == nil {
 		return false, ""
 	}
 
-	if ServiceConfig.BlockedUserAgents.MatchString(userAgent) {
+	if serviceConfig.BlockedUserAgents.MatchString(userAgent) {
 		return true, "bot detection"
 	}
 
@@ -175,24 +178,24 @@ func IsUserAgentBlocked(userAgent string) (bool, string) {
 }
 
 func IsUserBlocked(userID string) bool {
-	ServiceConfigMutex.RLock()
-	defer ServiceConfigMutex.RUnlock()
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
 
-	return keyExists(ServiceConfig.BlockedUserIDs, userID)
+	return keyExists(serviceConfig.BlockedUserIDs, userID)
 }
 
 func IsIPBypassed(ip string) bool {
-	ServiceConfigMutex.RLock()
-	defer ServiceConfigMutex.RUnlock()
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
 
-	return keyExists(ServiceConfig.BypassedIPs, ip)
+	return keyExists(serviceConfig.BypassedIPs, ip)
 }
 
 func GetEndpoints() []aikido_types.Endpoint {
-	ServiceConfigMutex.RLock()
-	defer ServiceConfigMutex.RUnlock()
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
 
-	return ServiceConfig.Endpoints
+	return serviceConfig.Endpoints
 }
 
 func keyExists[K comparable, V any](m map[K]V, key K) bool {

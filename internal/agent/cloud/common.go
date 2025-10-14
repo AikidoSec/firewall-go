@@ -10,12 +10,11 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
 func GetAgentInfo() aikido_types.AgentInfo {
 	return aikido_types.AgentInfo{
-		DryMode:   !utils.IsBlockingEnabled(),
+		DryMode:   !config.IsBlockingEnabled(),
 		Hostname:  globals.Machine.HostName,
 		Version:   globals.EnvironmentConfig.Version,
 		IPAddress: globals.Machine.IPAddress,
@@ -95,23 +94,18 @@ func updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
 }
 
 func storeCloudConfig(configReponse []byte) bool {
-	globals.CloudConfigMutex.Lock()
-	defer globals.CloudConfigMutex.Unlock()
-
 	tempCloudConfig := &aikido_types.CloudConfigData{}
 	err := json.Unmarshal(configReponse, &tempCloudConfig)
 	if err != nil {
 		log.Warnf("Failed to unmarshal cloud config!")
 		return false
 	}
-	if globals.CloudConfig != nil && tempCloudConfig.ConfigUpdatedAt <= globals.CloudConfig.ConfigUpdatedAt {
+	if tempCloudConfig.ConfigUpdatedAt <= config.GetCloudConfigUpdatedAt() {
 		log.Debugf("ConfigUpdatedAt is the same!")
 		return true
 	}
 
 	updateListsConfig(tempCloudConfig)
-	globals.CloudConfig = tempCloudConfig
-
 	applyCloudConfig(tempCloudConfig)
 
 	config.UpdateServiceConfig(tempCloudConfig)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 )
 
@@ -20,7 +21,7 @@ func CheckConfigUpdatedAt() {
 		return
 	}
 
-	if cloudConfigUpdatedAt.ConfigUpdatedAt <= globals.CloudConfig.ConfigUpdatedAt {
+	if cloudConfigUpdatedAt.ConfigUpdatedAt <= config.GetCloudConfigUpdatedAt() {
 		return
 	}
 
