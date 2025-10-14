@@ -1,4 +1,4 @@
-package api_discovery
+package apidiscovery
 
 import (
 	"reflect"
