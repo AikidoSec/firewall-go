@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 )
 
@@ -25,16 +24,6 @@ func StartPollingRoutine(stopChan chan struct{}, ticker *time.Ticker, pollingFun
 
 func StopPollingRoutine(stopChan chan struct{}) {
 	close(stopChan)
-}
-
-func IsBlockingEnabled() bool {
-	globals.CloudConfigMutex.Lock()
-	defer globals.CloudConfigMutex.Unlock()
-
-	if globals.CloudConfig == nil || globals.CloudConfig.Block == nil {
-		return config.GetBlocking()
-	}
-	return *globals.CloudConfig.Block
 }
 
 func GetTime() int64 {

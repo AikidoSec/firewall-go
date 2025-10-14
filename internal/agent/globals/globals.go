@@ -12,12 +12,6 @@ var EnvironmentConfig *aikido_types.EnvironmentConfigData
 // Aikido config that contains info about endpoint, log_level, token, ...
 var AikidoConfig *aikido_types.AikidoConfigData
 
-// Cloud config that is obtain as a result from sending events to cloud or pulling the config when it changes
-var CloudConfig *aikido_types.CloudConfigData
-
-// Config mutex used to sync access to configuration data across the multiple go routines that we run in parallel
-var CloudConfigMutex sync.Mutex
-
 // Data about the current machine, computed at init
 var Machine aikido_types.MachineData
 
