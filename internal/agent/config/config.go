@@ -8,6 +8,11 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
 )
 
+const (
+	DefaultEndpoint       = "https://guard.aikido.dev/"
+	DefaultConfigEndpoint = "https://runtime.aikido.dev/"
+)
+
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) bool {
 	globals.EnvironmentConfig = environmentConfig
 	globals.AikidoConfig = aikidoConfig
@@ -16,6 +21,14 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		if err := log.SetLogLevel(globals.AikidoConfig.LogLevel); err != nil {
 			panic(fmt.Sprintf("Error setting log level: %s", err))
 		}
+	}
+
+	if globals.EnvironmentConfig.Endpoint == "" {
+		globals.EnvironmentConfig.Endpoint = DefaultEndpoint
+	}
+
+	if globals.EnvironmentConfig.ConfigEndpoint == "" {
+		globals.EnvironmentConfig.ConfigEndpoint = DefaultConfigEndpoint
 	}
 
 	log.Infof("Loaded local config: %+v", globals.EnvironmentConfig)
