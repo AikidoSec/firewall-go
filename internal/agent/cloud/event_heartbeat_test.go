@@ -115,4 +115,15 @@ func TestComputePercentiles(t *testing.T) {
 		// P99 should be around 99ms
 		assert.InDelta(t, 99.0, result["P99"], 1.0)
 	})
+
+	t.Run("does not mutate input slice", func(t *testing.T) {
+		times := []int64{5000000, 1000000, 3000000, 2000000, 4000000}
+		original := make([]int64, len(times))
+		copy(original, times)
+
+		computePercentiles(times)
+
+		// Verify the input slice remains unchanged
+		assert.Equal(t, original, times)
+	})
 }

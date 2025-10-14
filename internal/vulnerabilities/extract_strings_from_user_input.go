@@ -12,7 +12,6 @@ type pathPart struct {
 	Index int
 }
 
-// buildPathToPayload builds the path to the payload
 func buildPathToPayload(pathToPayload []pathPart) string {
 	if len(pathToPayload) == 0 {
 		return "."

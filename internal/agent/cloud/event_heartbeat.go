@@ -156,13 +156,16 @@ func computePercentiles(times []int64) map[string]float64 {
 		}
 	}
 
-	slices.Sort(times)
+	// Make a copy to avoid mutating the input slice
+	sorted := make([]int64, len(times))
+	copy(sorted, times)
+	slices.Sort(sorted)
 
 	percentiles := map[string]float64{}
-	percentiles["P50"] = float64(times[len(times)/2]) / 1e6
-	percentiles["P90"] = float64(times[int(0.9*float64(len(times)))]) / 1e6
-	percentiles["P95"] = float64(times[int(0.95*float64(len(times)))]) / 1e6
-	percentiles["P99"] = float64(times[int(0.99*float64(len(times)))]) / 1e6
+	percentiles["P50"] = float64(sorted[len(sorted)/2]) / 1e6
+	percentiles["P90"] = float64(sorted[int(0.9*float64(len(sorted)))]) / 1e6
+	percentiles["P95"] = float64(sorted[int(0.95*float64(len(sorted)))]) / 1e6
+	percentiles["P99"] = float64(sorted[int(0.99*float64(len(sorted)))]) / 1e6
 
 	return percentiles
 }
