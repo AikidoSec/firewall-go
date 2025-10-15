@@ -2,7 +2,9 @@ package request
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -116,6 +118,58 @@ func TestGetContext(t *testing.T) {
 				assert.NotNil(t, result)
 				assert.Equal(t, "test", result.Source)
 			}
+		})
+	}
+}
+
+func TestFullURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		host     string
+		hasTLS   bool
+		expected string
+	}{
+		{
+			name:     "HTTP request",
+			url:      "http://example.com/path",
+			host:     "example.com",
+			hasTLS:   false,
+			expected: "http://example.com/path",
+		},
+		{
+			name:     "HTTPS request",
+			url:      "https://example.com/path",
+			host:     "example.com",
+			hasTLS:   true,
+			expected: "https://example.com/path",
+		},
+		{
+			name:     "HTTP with query",
+			url:      "http://example.com/path?param=value",
+			host:     "example.com",
+			hasTLS:   false,
+			expected: "http://example.com/path?param=value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsedURL, err := url.Parse(tt.url)
+			assert.NoError(t, err)
+
+			req := &http.Request{
+				Method: "GET",
+				URL:    parsedURL,
+				Host:   tt.host,
+			}
+
+			if tt.hasTLS {
+				req.TLS = &tls.ConnectionState{}
+			}
+
+			result := fullURL(req)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

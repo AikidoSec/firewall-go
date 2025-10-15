@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -62,21 +63,9 @@ func cookiesToMap(cookies []*http.Cookie) map[string]string {
 }
 
 func fullURL(r *http.Request) string {
-	// Scheme
-	scheme := "http://"
+	scheme := "http"
 	if r.TLS != nil {
-		scheme = "https://"
+		scheme = "https"
 	}
-	// Query
-	query := ""
-	if len(r.URL.RawQuery) > 0 {
-		query = "?" + r.URL.RawQuery
-	}
-	// Fragment
-	fragment := ""
-	if len(r.URL.Fragment) > 0 {
-		fragment = "#" + r.URL.Fragment
-	}
-
-	return scheme + r.Host + r.URL.Path + query + fragment
+	return fmt.Sprintf("%s://%s%s", scheme, r.Host, r.URL.RequestURI())
 }
