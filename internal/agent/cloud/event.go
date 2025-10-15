@@ -14,7 +14,7 @@ import (
 )
 
 var httpClient = &http.Client{
-	Timeout: 5 * time.Second,
+	Timeout: 30 * time.Second,
 }
 
 func SendCloudRequest(endpoint string, route string, method string, payload any) ([]byte, error) {
