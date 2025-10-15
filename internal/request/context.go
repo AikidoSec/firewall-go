@@ -14,10 +14,8 @@ type Context struct {
 	RemoteAddress      *string
 	Body               any
 	Cookies            map[string]string
-	AttackDetected     *bool
 	Source             string
 	Route              string
-	Subdomains         []string
 	executedMiddleware bool
 	user               *User
 

@@ -25,10 +25,8 @@ func SetContext(ctx context.Context, r *http.Request, route string, source strin
 		RemoteAddress:      remoteAddress,
 		Body:               body,
 		Cookies:            cookiesToMap(r.Cookies()),
-		AttackDetected:     nil,
 		Source:             source,
 		Route:              route,
-		Subdomains:         []string{},
 		executedMiddleware: false, // We start with no middleware executed.
 	}
 	return context.WithValue(ctx, reqCtxKey, c)
