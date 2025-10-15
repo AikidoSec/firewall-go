@@ -1,6 +1,7 @@
 package labstackecho
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -27,6 +28,26 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	})
 
 	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+}
+
+func TestMiddlewareGLSFallback(t *testing.T) {
+	router := echo.New()
+	router.Use(GetMiddleware())
+
+	router.GET("/route", func(e echo.Context) error {
+		// Test that we can get context using context.Background() (should fallback to GLS)
+		ctx := request.GetContext(context.Background())
+		require.NotNil(t, ctx, "request context should be set via GLS fallback")
+
+		assert.Equal(t, "echo", ctx.Source)
+		assert.Equal(t, "/route", ctx.Route)
+		return nil
+	})
+
+	r := httptest.NewRequest("GET", "/route", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
