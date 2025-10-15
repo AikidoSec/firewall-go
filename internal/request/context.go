@@ -7,17 +7,15 @@ import (
 
 type Context struct {
 	URL                string
-	Method             *string
+	Method             string
 	Query              map[string][]string
 	Headers            map[string][]string
 	RouteParams        map[string]string
 	RemoteAddress      *string
 	Body               any
 	Cookies            map[string]string
-	AttackDetected     *bool
 	Source             string
 	Route              string
-	Subdomains         []string
 	executedMiddleware bool
 	user               *User
 
@@ -75,13 +73,6 @@ func (ctx *Context) HasMiddlewareExecuted() bool {
 	defer ctx.mu.RUnlock()
 
 	return ctx.executedMiddleware
-}
-
-func (ctx *Context) GetMethod() string {
-	if ctx.Method != nil {
-		return *ctx.Method
-	}
-	return "*"
 }
 
 func (ctx *Context) GetIP() string {

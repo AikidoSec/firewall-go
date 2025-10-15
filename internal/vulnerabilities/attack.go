@@ -67,7 +67,7 @@ func GetAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types
 
 	return &aikido_types.DetectedAttack{
 		Request: aikido_types.RequestInfo{
-			Method:    *reqCtx.Method,
+			Method:    reqCtx.Method,
 			IPAddress: *reqCtx.RemoteAddress,
 			UserAgent: reqCtx.GetUserAgent(),
 			URL:       reqCtx.URL,

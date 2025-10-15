@@ -37,7 +37,7 @@ func OnInitRequest(ctx context.Context) *Response {
 	}
 
 	matches := MatchEndpoints(
-		RouteMetadata{URL: reqCtx.URL, Method: reqCtx.GetMethod(), Route: reqCtx.Route},
+		RouteMetadata{URL: reqCtx.URL, Method: reqCtx.Method, Route: reqCtx.Route},
 		config.GetEndpoints(),
 	)
 	// IP Allowlists per route
