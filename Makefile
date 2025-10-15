@@ -13,7 +13,7 @@ install-tools:
 .PHONY: test
 test: prepare
 	@echo "Running tests with gotestsum"
-	@gotestsum --format pkgname -- -coverprofile=coverage.out -covermode=atomic ./...
+	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./...
 	@echo "✅ Tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
