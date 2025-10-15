@@ -39,9 +39,8 @@ func SendCloudRequest(endpoint string, route string, method string, payload any)
 		body = bytes.NewBuffer(jsonData)
 	}
 
-	log.Infof("Sending %s request to %s", method, apiEndpoint)
+	log.Debugf("Sending %s request to %s", method, apiEndpoint)
 	req, err = http.NewRequest(method, apiEndpoint, body)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
