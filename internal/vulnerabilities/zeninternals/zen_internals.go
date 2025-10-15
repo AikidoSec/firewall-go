@@ -13,9 +13,9 @@ import "C"
 
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 
-	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
@@ -27,7 +27,7 @@ var (
 func Init() bool {
 	zenInternalsLibPath := C.CString(fmt.Sprintf(
 		"/opt/aikido/lib/libzen_internals_%s-unknown-linux-gnu.so",
-		helpers.GetArch(),
+		getArch(),
 	))
 	defer C.free(unsafe.Pointer(zenInternalsLibPath))
 
@@ -76,4 +76,14 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 	result := int(C.call_detect_sql_injection(detectSQLInjection, cQuery, cUserInput, C.int(dialect)))
 	log.Debugf("DetectSqlInjection(%s, %s, %d) -> %d", query, userInput, dialect, result)
 	return result
+}
+
+func getArch() string {
+	switch runtime.GOARCH {
+	case "amd64":
+		return "x86_64"
+	case "arm64":
+		return "aarch64"
+	}
+	panic(fmt.Sprintf("Running on unsupported architecture \"%s\"!", runtime.GOARCH))
 }

@@ -1,4 +1,4 @@
-package helpers
+package vulnerabilities
 
 import (
 	"fmt"
@@ -6,14 +6,13 @@ import (
 	"strings"
 )
 
-type PathPart struct {
+type pathPart struct {
 	Type  string
 	Key   string
 	Index int
 }
 
-// buildPathToPayload builds the path to the payload
-func buildPathToPayload(pathToPayload []PathPart) string {
+func buildPathToPayload(pathToPayload []pathPart) string {
 	if len(pathToPayload) == 0 {
 		return "."
 	}
@@ -33,7 +32,7 @@ func buildPathToPayload(pathToPayload []PathPart) string {
 }
 
 // extractStringsFromUserInput recursively extracts strings from user input
-func ExtractStringsFromUserInput(obj interface{}, pathToPayload []PathPart) map[string]string {
+func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[string]string {
 	results := make(map[string]string)
 
 	val := reflect.ValueOf(obj)
@@ -42,14 +41,14 @@ func ExtractStringsFromUserInput(obj interface{}, pathToPayload []PathPart) map[
 		for _, key := range val.MapKeys() {
 			keyStr := fmt.Sprintf("%v", key.Interface())
 			results[keyStr] = buildPathToPayload(pathToPayload)
-			nestedResults := ExtractStringsFromUserInput(val.MapIndex(key).Interface(), append(pathToPayload, PathPart{Type: "object", Key: keyStr}))
+			nestedResults := extractStringsFromUserInput(val.MapIndex(key).Interface(), append(pathToPayload, pathPart{Type: "object", Key: keyStr}))
 			for k, v := range nestedResults {
 				results[k] = v
 			}
 		}
 	case reflect.Slice, reflect.Array:
 		for i := 0; i < val.Len(); i++ {
-			nestedResults := ExtractStringsFromUserInput(val.Index(i).Interface(), append(pathToPayload, PathPart{Type: "array", Index: i}))
+			nestedResults := extractStringsFromUserInput(val.Index(i).Interface(), append(pathToPayload, pathPart{Type: "array", Index: i}))
 			for k, v := range nestedResults {
 				results[k] = v
 			}
@@ -72,7 +71,7 @@ func ExtractStringsFromUserInput(obj interface{}, pathToPayload []PathPart) map[
 		results[str] = buildPathToPayload(pathToPayload)
 		jwt := tryDecodeAsJWT(str)
 		if jwt.JWT {
-			for k, v := range ExtractStringsFromUserInput(jwt.Object, append(pathToPayload, PathPart{Type: "jwt"})) {
+			for k, v := range extractStringsFromUserInput(jwt.Object, append(pathToPayload, pathPart{Type: "jwt"})) {
 				if k == "iss" || strings.HasSuffix(v, "<jwt>.iss") {
 					continue
 				}

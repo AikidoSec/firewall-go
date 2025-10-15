@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/log"
-	"github.com/AikidoSec/firewall-go/internal/helpers"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -48,7 +47,7 @@ func Scan(ctx context.Context, operation string, vulnerability Vulnerability, ar
 }
 
 func ScanSource(ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
-	userInputMap := helpers.ExtractStringsFromUserInput(sourceData, []helpers.PathPart{})
+	userInputMap := extractStringsFromUserInput(sourceData, []pathPart{})
 
 	for userInput, path := range userInputMap {
 		results := vulnerability.ScanFunction(userInput, args)

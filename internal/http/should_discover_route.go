@@ -1,17 +1,17 @@
-package helpers
+package http
 
 import (
 	"path/filepath"
 	"strings"
 )
 
-var ExcludedMethods = []string{"OPTIONS", "HEAD"}
-var IgnoreExtensions = []string{"properties", "asp", "aspx", "jsp", "config"}
-var AllowExtensions = []string{"html", "php"}
-var IgnoreStrings = []string{"cgi-bin"}
+var excludedMethods = []string{"OPTIONS", "HEAD"}
+var ignoreExtensions = []string{"properties", "asp", "aspx", "jsp", "config"}
+var allowExtensions = []string{"html", "php"}
+var ignoreStrings = []string{"cgi-bin"}
 
-func ShouldDiscoverRoute(statusCode int, route, method string) bool {
-	if containsStr(ExcludedMethods, method) {
+func shouldDiscoverRoute(statusCode int, route, method string) bool {
+	if containsStr(excludedMethods, method) {
 		return false
 	}
 
@@ -45,7 +45,7 @@ func isAllowedExtension(segment string) bool {
 	if extension != "" && strings.HasPrefix(extension, ".") {
 		extension = extension[1:]
 
-		if containsStr(AllowExtensions, extension) {
+		if containsStr(allowExtensions, extension) {
 			return true
 		}
 
@@ -53,7 +53,7 @@ func isAllowedExtension(segment string) bool {
 			return false
 		}
 
-		if containsStr(IgnoreExtensions, extension) {
+		if containsStr(ignoreExtensions, extension) {
 			return false
 		}
 	}
@@ -70,7 +70,7 @@ func isDotFile(segment string) bool {
 }
 
 func containsIgnoredString(segment string) bool {
-	for _, str := range IgnoreStrings {
+	for _, str := range ignoreStrings {
 		if strings.Contains(segment, str) {
 			return true
 		}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/helpers"
+	"github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -25,8 +25,8 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 		return &BlockResponse{"blocked", "user", nil}
 	}
 	// rate-limiting :
-	matches := helpers.MatchEndpoints(
-		helpers.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.GetMethod(), Route: reqCtx.Route},
+	matches := http.MatchEndpoints(
+		http.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.GetMethod(), Route: reqCtx.Route},
 		config.GetEndpoints(),
 	)
 
