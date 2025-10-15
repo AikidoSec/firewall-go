@@ -84,6 +84,11 @@ func TestContext_GetBodyRaw(t *testing.T) {
 			body:     42,
 			expected: "42",
 		},
+		{
+			name:     "invalid body",
+			body:     func() {},
+			expected: "",
+		},
 	}
 
 	for _, tt := range tests {
