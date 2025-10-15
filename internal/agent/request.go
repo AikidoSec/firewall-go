@@ -2,7 +2,7 @@ package agent
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/api_discovery"
+	"github.com/AikidoSec/firewall-go/internal/agent/apidiscovery"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
@@ -69,9 +69,9 @@ func getMergedAPISpec(currentAPISpec *aikido_types.APISpec, newAPISpec *aikido_t
 	currentBodySchema, currentBodyType, currentQuerySchema, currentAuth := getAPISpecData(currentAPISpec)
 	newBodySchema, newBodyType, newQuerySchema, newAuth := getAPISpecData(newAPISpec)
 
-	mergedBodySchema := api_discovery.MergeDataSchemas(currentBodySchema, newBodySchema)
-	mergedQuerySchema := api_discovery.MergeDataSchemas(currentQuerySchema, newQuerySchema)
-	mergedAuth := api_discovery.MergeAPIAuthTypes(currentAuth, newAuth)
+	mergedBodySchema := apidiscovery.MergeDataSchemas(currentBodySchema, newBodySchema)
+	mergedQuerySchema := apidiscovery.MergeDataSchemas(currentQuerySchema, newQuerySchema)
+	mergedAuth := apidiscovery.MergeAPIAuthTypes(currentAuth, newAuth)
 	if mergedBodySchema == nil && mergedQuerySchema == nil && mergedAuth == nil {
 		return nil
 	}

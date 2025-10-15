@@ -24,8 +24,10 @@ func Init() error {
 
 	// Agent Config :
 	token := os.Getenv("AIKIDO_TOKEN")
+	endpoint := os.Getenv("AIKIDO_ENDPOINT")
+	configEndpoint := os.Getenv("AIKIDO_REALTIME_ENDPOINT")
 
-	err := initAgent(config.CollectAPISchema, logLevel, token)
+	err := initAgent(config.CollectAPISchema, logLevel, token, endpoint, configEndpoint)
 	if err != nil {
 		return err
 	}
@@ -35,13 +37,13 @@ func Init() error {
 	return nil
 }
 
-func initAgent(collectAPISchema bool, logLevel string, token string) error {
+func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, configEndpoint string) error {
 	environmentConfig := &aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
 		PlatformVersion: runtime.Version(),
 		Library:         "firewall-go",
-		Endpoint:        "https://guard.aikido.dev/",
-		ConfigEndpoint:  "https://runtime.aikido.dev/",
+		Endpoint:        endpoint,
+		ConfigEndpoint:  configEndpoint,
 		Version:         config.Version, // firewall-go version
 	}
 	aikidoConfig := &aikido_types.AikidoConfigData{

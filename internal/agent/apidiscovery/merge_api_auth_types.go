@@ -1,4 +1,4 @@
-package api_discovery
+package apidiscovery
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
