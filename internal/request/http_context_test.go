@@ -78,7 +78,7 @@ func TestSetContext(t *testing.T) {
 			// Verify basic request data is captured
 			assert.NotEmpty(t, reqCtx.URL, "URL should not be empty")
 			assert.NotNil(t, reqCtx.Method, "Method should not be nil")
-			assert.Equal(t, "POST", *reqCtx.Method, "Method should be POST")
+			assert.Equal(t, "POST", reqCtx.Method, "Method should be POST")
 			// Note: Body comparison removed as it can contain uncomparable types like maps
 			assert.Equal(t, tt.remoteAddress, reqCtx.RemoteAddress)
 		})

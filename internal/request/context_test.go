@@ -140,27 +140,22 @@ func TestContext_HasMiddlewareExecuted(t *testing.T) {
 func TestContext_GetMethod(t *testing.T) {
 	tests := []struct {
 		name     string
-		method   *string
+		method   string
 		expected string
 	}{
 		{
-			name:     "nil method",
-			method:   nil,
-			expected: "*",
-		},
-		{
 			name:     "GET method",
-			method:   stringPtr("GET"),
+			method:   "GET",
 			expected: "GET",
 		},
 		{
 			name:     "POST method",
-			method:   stringPtr("POST"),
+			method:   "POST",
 			expected: "POST",
 		},
 		{
 			name:     "empty method",
-			method:   stringPtr(""),
+			method:   "",
 			expected: "",
 		},
 	}
@@ -168,7 +163,7 @@ func TestContext_GetMethod(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := &Context{Method: tt.method}
-			result := ctx.GetMethod()
+			result := ctx.Method
 			assert.Equal(t, tt.expected, result)
 		})
 	}

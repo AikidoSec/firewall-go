@@ -18,7 +18,7 @@ func SetContext(ctx context.Context, r *http.Request, route string, source strin
 
 	c := &Context{
 		URL:                fullURL(r),
-		Method:             &r.Method,
+		Method:             r.Method,
 		Query:              r.URL.Query(),
 		Headers:            headersToMap(r.Header),
 		RouteParams:        nil,

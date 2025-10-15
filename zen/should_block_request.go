@@ -26,7 +26,7 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 	}
 	// rate-limiting :
 	matches := http.MatchEndpoints(
-		http.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.GetMethod(), Route: reqCtx.Route},
+		http.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.Method, Route: reqCtx.Route},
 		config.GetEndpoints(),
 	)
 
