@@ -36,13 +36,17 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	return true
 }
 
-func AgentUninit() {
+func AgentUninit() error {
 	ratelimiting.Uninit()
 	cloud.Uninit()
 	config.Uninit()
 
 	log.Infof("Aikido Agent v%s unloaded!", globals.EnvironmentConfig.Version)
-	log.Uninit()
+	if err := log.Uninit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func OnDomain(domain string, port uint32) {
