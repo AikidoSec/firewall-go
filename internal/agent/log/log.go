@@ -49,7 +49,7 @@ func (f *AikidoFormatter) Format(level int32, message string) string {
 	return logMessage
 }
 
-func logMessage(level int32, args ...interface{}) {
+func logMessage(level int32, args ...any) {
 	if level >= atomic.LoadInt32(&currentLogLevel) {
 		formatter := &AikidoFormatter{}
 		message := fmt.Sprint(args...)
@@ -58,7 +58,7 @@ func logMessage(level int32, args ...interface{}) {
 	}
 }
 
-func logMessagef(level int32, format string, args ...interface{}) {
+func logMessagef(level int32, format string, args ...any) {
 	if level >= atomic.LoadInt32(&currentLogLevel) {
 		formatter := &AikidoFormatter{}
 		message := fmt.Sprintf(format, args...)
@@ -67,41 +67,40 @@ func logMessagef(level int32, format string, args ...interface{}) {
 	}
 }
 
-func Debug(args ...interface{}) {
+func Debug(args ...any) {
 	logMessage(DebugLevel, args...)
 }
 
-func Info(args ...interface{}) {
+func Info(args ...any) {
 	logMessage(InfoLevel, args...)
 }
 
-func Warn(args ...interface{}) {
+func Warn(args ...any) {
 	logMessage(WarnLevel, args...)
 }
 
-func Error(args ...interface{}) {
+func Error(args ...any) {
 	logMessage(ErrorLevel, args...)
 }
 
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	logMessagef(DebugLevel, format, args...)
 }
 
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	logMessagef(InfoLevel, format, args...)
 }
 
-func Warnf(format string, args ...interface{}) {
+func Warnf(format string, args ...any) {
 	logMessagef(WarnLevel, format, args...)
 }
 
-func Errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...any) {
 	logMessagef(ErrorLevel, format, args...)
-
 }
 
 func SetLogLevel(level string) error {
-	levelInt := ErrorLevel
+	var levelInt int32
 	switch level {
 	case "DEBUG":
 		levelInt = DebugLevel
@@ -125,7 +124,7 @@ func Init() {
 		"/var/log/aikido-%s/aikido-agent-%s-%d.log",
 		globals.EnvironmentConfig.Version, timeStr, os.Getpid())
 
-	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY, 0666)
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY, 0o666)
 	if err != nil {
 		// /var/log directory is optional except for firewall-php :
 		if globals.EnvironmentConfig.Library == "firewall-php" {
@@ -138,7 +137,12 @@ func Init() {
 	}
 }
 
-func Uninit() {
+func Uninit() error {
 	logger.SetOutput(os.Stdout)
-	logFile.Close()
+
+	if err := logFile.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }

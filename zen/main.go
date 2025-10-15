@@ -18,7 +18,10 @@ func Init() error {
 	// Logger :
 	logLevel := "DEBUG"
 	log.Init()
-	log.SetLogLevel(logLevel)
+
+	if err := log.SetLogLevel(logLevel); err != nil {
+		return err
+	}
 
 	config.CollectAPISchema = true
 
