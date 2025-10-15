@@ -33,12 +33,15 @@ func SetContext(ctx context.Context, r *http.Request, route string, source strin
 }
 
 func GetContext(ctx context.Context) *Context {
-	c := ctx.Value(reqCtxKey)
-	if c == nil {
-		return nil
+	// First, try to get context from the provided context
+	if ctx != nil {
+		if c := ctx.Value(reqCtxKey); c != nil {
+			return c.(*Context)
+		}
 	}
 
-	return c.(*Context)
+	// Fallback to GLS if not found in context
+	return getLocalContext()
 }
 
 func headersToMap(headers http.Header) map[string][]string {

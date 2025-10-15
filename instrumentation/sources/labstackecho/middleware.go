@@ -28,7 +28,10 @@ func GetMiddleware() echo.MiddlewareFunc {
 				return c.String(res.StatusCode, res.Message)
 			}
 
-			err := next(c) // serve the request to the next middleware
+			var err error
+			request.WrapWithGLS(reqCtx, func() {
+				err = next(c) // serve the request to the next middleware
+			})
 
 			// Report after call with status code :
 			status := c.Response().Status

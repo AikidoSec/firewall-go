@@ -27,7 +27,9 @@ func GetMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Next() // serve the request to the next middleware
+		request.WrapWithGLS(reqCtx, func() {
+			c.Next() // serve the request to the next middleware
+		})
 
 		statusCode := c.Writer.Status()
 		http.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
