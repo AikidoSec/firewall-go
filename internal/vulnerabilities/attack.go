@@ -17,9 +17,10 @@ import (
 type AttackKind string
 
 const (
-	KindSQLInjection  AttackKind = "sql_injection"
-	KindPathTraversal AttackKind = "path_traversal"
-	KindSSRF          AttackKind = "ssrf"
+	KindSQLInjection   AttackKind = "sql_injection"
+	KindPathTraversal  AttackKind = "path_traversal"
+	KindShellInjection AttackKind = "shell_injection"
+	KindSSRF           AttackKind = "ssrf"
 )
 
 func GetDisplayNameForAttackKind(kind AttackKind) string {
@@ -28,6 +29,8 @@ func GetDisplayNameForAttackKind(kind AttackKind) string {
 		return "an SQL injection"
 	case KindPathTraversal:
 		return "a path traversal attack"
+	case KindShellInjection:
+		return "a shell injection"
 	case KindSSRF:
 		return "a server-side request forgery"
 	default:
