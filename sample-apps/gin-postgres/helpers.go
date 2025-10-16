@@ -22,8 +22,8 @@ func executeShellCommand(command string) string {
 	return output.String()
 }
 
-// makeHttpRequest makes a simple HTTP GET request and returns the response.
-func makeHttpRequest(url string) string {
+// makeHTTPRequest makes a simple HTTP GET request and returns the response.
+func makeHTTPRequest(url string) string {
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Sprintf("Error: %s", err.Error())

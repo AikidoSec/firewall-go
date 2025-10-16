@@ -62,7 +62,7 @@ func defineAPIRoutes(r *gin.Engine, db *DatabaseHelper) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		response := makeHttpRequest(req.URL)
+		response := makeHTTPRequest(req.URL)
 		c.String(http.StatusOK, response)
 	})
 

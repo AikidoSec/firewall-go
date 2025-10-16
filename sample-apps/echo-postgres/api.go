@@ -66,7 +66,7 @@ func defineAPIRoutes(e *echo.Echo, db *DatabaseHelper) {
 		if err := c.Bind(req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
-		response, err := makeHttpRequest(req.URL)
+		response, err := makeHTTPRequest(req.URL)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
