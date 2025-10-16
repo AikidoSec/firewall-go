@@ -2,15 +2,18 @@ package databasesql
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/sqlinjection"
 )
 
-func Examine(ctx context.Context, query string, op string) error {
-	fmt.Println("Examining query:", query)
+// Examine checks for SQL injection without a context (uses context.Background())
+func Examine(query string, op string) error {
+	return ExamineContext(context.Background(), query, op)
+}
 
+// ExamineContext checks for SQL injection with the provided context
+func ExamineContext(ctx context.Context, query string, op string) error {
 	return vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, []string{
 		query /* dialect */, "default",
 	})
