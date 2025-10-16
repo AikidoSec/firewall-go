@@ -2,8 +2,9 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"os/exec"
 )
 
@@ -20,15 +21,15 @@ func executeShellCommand(command string) (string, error) {
 	return output.String(), nil
 }
 
-// makeHttpRequest makes a simple HTTP GET request and returns the response.
-func makeHttpRequest(url string) (string, error) {
+// makeHTTPRequest makes a simple HTTP GET request and returns the response.
+func makeHTTPRequest(url string) (string, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -37,9 +38,8 @@ func makeHttpRequest(url string) (string, error) {
 
 // readFile reads the content of a file and returns it as a string.
 func readFile(filePath string) (string, error) {
-	content, err := ioutil.ReadFile("content/blogs/" + filePath)
+	content, err := os.ReadFile("content/blogs/" + filePath)
 	if err != nil {
-
 		return "", err
 	}
 	return string(content), nil
