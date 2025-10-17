@@ -3,6 +3,7 @@ package cloud
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,7 +21,7 @@ var httpClient = &http.Client{
 func SendCloudRequest(endpoint string, route string, method string, payload any) ([]byte, error) {
 	token := config.GetToken()
 	if token == "" {
-		return nil, fmt.Errorf("no token set")
+		return nil, errors.New("no token set")
 	}
 
 	apiEndpoint, err := url.JoinPath(endpoint, route)

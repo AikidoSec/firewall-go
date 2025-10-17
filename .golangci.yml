@@ -12,6 +12,17 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+    - bodyclose
+    - gocritic
+    - gosimple
+    - gosec
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    gocritic:
+      enable-all: true
 
 formatters:
   enable:
