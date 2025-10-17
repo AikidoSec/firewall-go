@@ -11,6 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type testContextKey struct{}
+
+var testCtxKey = testContextKey{}
+
 func TestSetContext(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -98,7 +102,7 @@ func TestGetContext(t *testing.T) {
 		},
 		{
 			name:      "context with different value",
-			ctx:       context.WithValue(context.Background(), "other-key", "other-value"),
+			ctx:       context.WithValue(context.Background(), testCtxKey, "other-value"),
 			expectNil: true,
 		},
 		{

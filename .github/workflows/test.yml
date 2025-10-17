@@ -1,5 +1,4 @@
-name: Go Unit Tests
-
+name: 🧪 Tests
 on:
   push:
     branches:

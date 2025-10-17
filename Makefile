@@ -8,6 +8,9 @@ install-tools:
 	@echo "Installing gotestsum"
 	@go install gotest.tools/gotestsum
 	@echo "✅ gotestsum installed successfully"
+	@echo "Installing golangci-lint"
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
+	@echo "✅ golangci-lint installed successfully"
 
 
 .PHONY: test
@@ -26,8 +29,15 @@ test-coverage-html: test
 
 .PHONY: lint
 lint:
-	@echo "Linting code"
-	@gofmt -w .
+	@echo "Linting code with golangci-lint"
+	@golangci-lint run ./...
+	@echo "✅ Linting completed successfully"
+
+.PHONY: lint-fix
+lint-fix:
+	@echo "Linting and fixing code with golangci-lint"
+	@golangci-lint run --fix ./...
+	@echo "✅ Linting and fixing completed successfully"
 
 
 BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/v0.1.37
