@@ -36,12 +36,11 @@ func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
 	if !receivedAnyStats {
 		log.Info("Resetting HeartBeatTicker to 1m!")
 		HeartBeatTicker.Reset(1 * time.Minute)
-	} else {
-		if heartbeatIntervalInMS >= globals.MinHeartbeatIntervalInMS {
-			log.Infof("Resetting HeartBeatTicker to %dms!", heartbeatIntervalInMS)
-			HeartBeatTicker.Reset(time.Duration(heartbeatIntervalInMS) * time.Millisecond)
-		}
+	} else if heartbeatIntervalInMS >= globals.MinHeartbeatIntervalInMS {
+		log.Infof("Resetting HeartBeatTicker to %dms!", heartbeatIntervalInMS)
+		HeartBeatTicker.Reset(time.Duration(heartbeatIntervalInMS) * time.Millisecond)
 	}
+
 }
 
 func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
