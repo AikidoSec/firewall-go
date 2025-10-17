@@ -24,7 +24,7 @@ test: prepare
 .PHONY: test-instrumentation
 test-instrumentation: prepare
 	@echo "Running instrumentation tests with orchestrion"
-	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -work -covermode=atomic -toolexec="orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
+	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
 	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
