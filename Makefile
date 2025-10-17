@@ -11,6 +11,9 @@ install-tools:
 	@echo "Installing golangci-lint"
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
 	@echo "✅ golangci-lint installed successfully"
+	@echo "Installing orchestrion"
+	@go install github.com/DataDog/orchestrion
+	@echo "✅ tools installed successfully"
 
 
 .PHONY: test
