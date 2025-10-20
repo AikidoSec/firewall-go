@@ -46,7 +46,7 @@ func (f *AikidoFormatter) Format(level LogLevel, message string) string {
 	return fmt.Sprintf("[AIKIDO][%s][%s] %s\n", levelStr, time.Now().Format("15:04:05"), message)
 }
 
-func logMessage(level LogLevel, args ...interface{}) {
+func logMessage(level LogLevel, args ...any) {
 	if level >= currentLogLevel {
 		formatter := &AikidoFormatter{}
 		message := fmt.Sprint(args...)
@@ -55,7 +55,7 @@ func logMessage(level LogLevel, args ...interface{}) {
 	}
 }
 
-func logMessagef(level LogLevel, format string, args ...interface{}) {
+func logMessagef(level LogLevel, format string, args ...any) {
 	if level >= currentLogLevel {
 		formatter := &AikidoFormatter{}
 		message := fmt.Sprintf(format, args...)
@@ -64,35 +64,35 @@ func logMessagef(level LogLevel, format string, args ...interface{}) {
 	}
 }
 
-func Debug(args ...interface{}) {
+func Debug(args ...any) {
 	logMessage(DebugLevel, args...)
 }
 
-func Info(args ...interface{}) {
+func Info(args ...any) {
 	logMessage(InfoLevel, args...)
 }
 
-func Warn(args ...interface{}) {
+func Warn(args ...any) {
 	logMessage(WarnLevel, args...)
 }
 
-func Error(args ...interface{}) {
+func Error(args ...any) {
 	logMessage(ErrorLevel, args...)
 }
 
-func Debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...any) {
 	logMessagef(DebugLevel, format, args...)
 }
 
-func Infof(format string, args ...interface{}) {
+func Infof(format string, args ...any) {
 	logMessagef(InfoLevel, format, args...)
 }
 
-func Warnf(format string, args ...interface{}) {
+func Warnf(format string, args ...any) {
 	logMessagef(WarnLevel, format, args...)
 }
 
-func Errorf(format string, args ...interface{}) {
+func Errorf(format string, args ...any) {
 	logMessagef(ErrorLevel, format, args...)
 }
 
