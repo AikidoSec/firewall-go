@@ -29,11 +29,9 @@ func TestWrapWithGLS(t *testing.T) {
 			wantNil: false,
 		},
 		{
-			name: "context without request context",
-			setupCtx: func() context.Context {
-				return context.Background()
-			},
-			wantNil: true,
+			name:     "context without request context",
+			setupCtx: context.Background,
+			wantNil:  true,
 		},
 		{
 			name: "nil context",
@@ -69,7 +67,7 @@ func TestWrapWithGLS(t *testing.T) {
 				assert.Equal(t, originalCtx.URL, capturedCtx.URL, "URL should match")
 				assert.Equal(t, originalCtx.Source, capturedCtx.Source, "Source should match")
 				assert.Equal(t, originalCtx.Route, capturedCtx.Route, "Route should match")
-				assert.Equal(t, originalCtx.GetMethod(), capturedCtx.GetMethod(), "Method should match")
+				assert.Equal(t, originalCtx.Method, capturedCtx.Method, "Method should match")
 			}
 		})
 	}
@@ -124,6 +122,6 @@ func TestWrapWithGLS_ConcurrentAccess(t *testing.T) {
 		assert.Equal(t, expectedURL, ctx.URL, "URL should match for goroutine %d", i)
 		assert.Equal(t, expectedSource, ctx.Source, "Source should match for goroutine %d", i)
 		assert.Equal(t, expectedRoute, ctx.Route, "Route should match for goroutine %d", i)
-		assert.Equal(t, "GET", ctx.GetMethod(), "Method should be GET")
+		assert.Equal(t, "GET", ctx.Method, "Method should be GET")
 	}
 }
