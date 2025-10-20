@@ -28,7 +28,7 @@ func GetMiddleware() gin.HandlerFunc {
 		}
 
 		request.WrapWithGLS(reqCtx, func() {
-			c.Next() // serve the request to the next middleware
+			c.Next()
 		})
 
 		statusCode := c.Writer.Status()
