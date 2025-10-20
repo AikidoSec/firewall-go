@@ -58,16 +58,16 @@ func ProtectWithConfig(cfg *Config) error {
 // with sync.Once while preserving readability.
 func doProtect(cfg *Config) {
 	// Fallback to environment variables for empty config fields
-	cfg = populateConfigFromEnv(cfg)
+	mergedCfg := populateConfigFromEnv(cfg)
 
 	// Logger configuration
-	logLevel := cfg.LogLevel
+	logLevel := mergedCfg.LogLevel
 	if logLevel == "" {
 		logLevel = "INFO" // fallback to default
 	}
 
 	// Debug takes precedence over LogLevel
-	if cfg.Debug {
+	if mergedCfg.Debug {
 		logLevel = "DEBUG"
 	}
 
@@ -76,8 +76,8 @@ func doProtect(cfg *Config) {
 		return
 	}
 
-	if cfg.LogFormat != "" {
-		if err := log.SetFormat(cfg.LogFormat); err != nil {
+	if mergedCfg.LogFormat != "" {
+		if err := log.SetFormat(mergedCfg.LogFormat); err != nil {
 			protectErr = err
 			return
 		}
@@ -85,7 +85,7 @@ func doProtect(cfg *Config) {
 
 	config.CollectAPISchema = true
 
-	err := initAgent(config.CollectAPISchema, logLevel, cfg.Token, cfg.Endpoint, cfg.ConfigEndpoint)
+	err := initAgent(config.CollectAPISchema, logLevel, mergedCfg.Token, mergedCfg.Endpoint, mergedCfg.ConfigEndpoint)
 	if err != nil {
 		protectErr = err
 		return
@@ -115,12 +115,11 @@ func initAgent(collectAPISchema bool, logLevel string, token string, endpoint st
 
 // populateConfigFromEnv fills empty config fields with environment variable values
 func populateConfigFromEnv(cfg *Config) *Config {
-	if cfg == nil {
-		cfg = &Config{}
+	// Start with empty config if nil, otherwise copy the input
+	result := Config{}
+	if cfg != nil {
+		result = *cfg
 	}
-
-	// Create a copy to avoid modifying the original
-	result := *cfg
 
 	if result.LogLevel == "" {
 		result.LogLevel = os.Getenv("AIKIDO_LOG_LEVEL")
