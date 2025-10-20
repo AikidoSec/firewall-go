@@ -40,6 +40,8 @@ func GetContext(ctx context.Context) *Context {
 	}
 
 	// Fallback to GLS if not found in context
+	// This is used when we are protecting a method that doesn't take a context
+	// such as `os.OpenFile`.
 	return getLocalContext()
 }
 
