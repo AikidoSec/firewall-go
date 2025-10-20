@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/log"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
