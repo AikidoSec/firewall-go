@@ -17,8 +17,6 @@ import (
 func Init() error {
 	// Logger :
 	logLevel := "DEBUG"
-	log.Init()
-
 	if err := log.SetLogLevel(logLevel); err != nil {
 		return err
 	}
