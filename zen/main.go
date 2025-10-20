@@ -36,6 +36,12 @@ func doProtect() {
 	if logLevel == "" {
 		logLevel = "INFO" // fallback to existing default
 	}
+
+	// AIKIDO_DEBUG takes precedence over AIKIDO_LOG_LEVEL
+	if os.Getenv("AIKIDO_DEBUG") == "true" {
+		logLevel = "DEBUG"
+	}
+
 	if err := log.SetLogLevel(logLevel); err != nil {
 		protectErr = err
 		return
