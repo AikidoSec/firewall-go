@@ -15,6 +15,8 @@ func init() {
 	glsManager = gls.NewContextManager()
 }
 
+// getLocalContext attempts to retrieve the request context for the current goroutine
+// This should return the context if it is called within the same callstack as WrapWithGLS
 func getLocalContext() *Context {
 	if ctx, ok := glsManager.GetValue(glsCtxKey); ok && ctx != nil {
 		return ctx.(*Context)
