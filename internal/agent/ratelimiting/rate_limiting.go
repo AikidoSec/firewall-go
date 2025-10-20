@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
+	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
-	"github.com/AikidoSec/firewall-go/internal/agent/log"
+	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 func getHostName() string {

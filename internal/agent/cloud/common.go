@@ -8,8 +8,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
-	"github.com/AikidoSec/firewall-go/internal/agent/log"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
+	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 func GetAgentInfo() aikido_types.AgentInfo {
@@ -40,7 +40,6 @@ func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
 		log.Infof("Resetting HeartBeatTicker to %dms!", heartbeatIntervalInMS)
 		HeartBeatTicker.Reset(time.Duration(heartbeatIntervalInMS) * time.Millisecond)
 	}
-
 }
 
 func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
