@@ -20,8 +20,7 @@ func DefineTransits() {
 func OSExamine(path string) error {
 	operation := "os.OpenFile"
 
-	// @todo doesn't have access to the request context
-	return vulnerabilities.Scan(context.TODO(), operation, pathtraversal.PathTraversalVulnerability, []string{
+	return vulnerabilities.Scan(context.Background(), operation, pathtraversal.PathTraversalVulnerability, []string{
 		path /* checkPathStart */, "1",
 	})
 }
