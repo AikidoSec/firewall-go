@@ -30,8 +30,8 @@ aspects:
             os: os
             transits: github.com/AikidoSec/firewall-go/internal/transits
           template: |-
-            if transits.OSSinkFunction != nil {
-              _aikido_block := transits.OSSinkFunction({{ .Function.Argument 0 }})
+            if transits.GetOSSinkFunction() != nil {
+              _aikido_block := transits.GetOSSinkFunction()({{ .Function.Argument 0 }})
               if _aikido_block != nil {
                 return nil, _aikido_block
               }

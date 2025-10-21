@@ -12,8 +12,8 @@ import (
 // because then the compiler crashes. This is due to the fact that our code gets inserted on compile of e.g. `os`.
 // Our code then uses the `os` module resulting in a stuck compile loop.
 func DefineTransits() {
-	if transits.OSSinkFunction == nil {
-		transits.OSSinkFunction = OSExamine
+	if transits.GetOSSinkFunction() == nil {
+		transits.SetOSSinkFunction(OSExamine)
 	}
 }
 
