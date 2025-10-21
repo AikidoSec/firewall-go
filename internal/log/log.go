@@ -1,11 +1,12 @@
 package log
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
-	"time"
+	"strings"
 )
 
 type LogLevel int
@@ -18,50 +19,38 @@ const (
 )
 
 var (
-	currentLogLevel = ErrorLevel
-	Logger          = log.New(os.Stdout, "", 0)
-	cliLogging      = true
+	levelVar  slog.LevelVar
+	logger    *slog.Logger
+	logWriter = os.Stdout
+	logFormat = "text" // "text" or "json"
 )
 
-type AikidoFormatter struct{}
-
-func (f *AikidoFormatter) Format(level LogLevel, message string) string {
-	var levelStr string
-	switch level {
-	case DebugLevel:
-		levelStr = "DEBUG"
-	case InfoLevel:
-		levelStr = "INFO"
-	case WarnLevel:
-		levelStr = "WARN"
-	case ErrorLevel:
-		levelStr = "ERROR"
-	default:
-		return "invalid log level"
+func rebuildLogger() {
+	var handler slog.Handler
+	if logFormat == "json" {
+		handler = slog.NewJSONHandler(logWriter, &slog.HandlerOptions{Level: &levelVar})
+	} else {
+		handler = slog.NewTextHandler(logWriter, &slog.HandlerOptions{Level: &levelVar})
 	}
 
-	if cliLogging {
-		return fmt.Sprintf("[AIKIDO][%s] %s\n", levelStr, message)
-	}
-	return fmt.Sprintf("[AIKIDO][%s][%s] %s\n", levelStr, time.Now().Format("15:04:05"), message)
+	SetLogger(slog.New(handler))
+}
+
+func init() {
+	levelVar.Set(slog.LevelInfo)
+	rebuildLogger()
 }
 
 func logMessage(level LogLevel, args ...any) {
-	if level >= currentLogLevel {
-		formatter := &AikidoFormatter{}
-		message := fmt.Sprint(args...)
-		formattedMessage := formatter.Format(level, message)
-		Logger.Print(formattedMessage)
-	}
+	message := fmt.Sprint(args...)
+	slogLevel := toSlogLevel(level)
+	logger.Log(context.Background(), slogLevel, message)
 }
 
 func logMessagef(level LogLevel, format string, args ...any) {
-	if level >= currentLogLevel {
-		formatter := &AikidoFormatter{}
-		message := fmt.Sprintf(format, args...)
-		formattedMessage := formatter.Format(level, message)
-		Logger.Print(formattedMessage)
-	}
+	message := fmt.Sprintf(format, args...)
+	slogLevel := toSlogLevel(level)
+	logger.Log(context.Background(), slogLevel, message)
 }
 
 func Debug(args ...any) {
@@ -97,17 +86,58 @@ func Errorf(format string, args ...any) {
 }
 
 func SetLogLevel(level string) error {
-	switch level {
+	normalized := strings.ToUpper(strings.TrimSpace(level))
+	switch normalized {
 	case "DEBUG":
-		currentLogLevel = DebugLevel
+		levelVar.Set(slog.LevelDebug)
 	case "INFO":
-		currentLogLevel = InfoLevel
-	case "WARN":
-		currentLogLevel = WarnLevel
-	case "ERROR":
-		currentLogLevel = ErrorLevel
+		levelVar.Set(slog.LevelInfo)
+	case "WARN", "WARNING":
+		levelVar.Set(slog.LevelWarn)
+	case "ERROR", "ERR":
+		levelVar.Set(slog.LevelError)
 	default:
 		return errors.New("invalid log level")
 	}
 	return nil
+}
+
+// SetLogger allows consumers to supply their own slog.Logger. When provided,
+// the internal logger will use it as-is (including its handler, writer, level).
+// SetLogLevel will still update levelVar for the default logger, but will not
+// override a custom logger's handler configuration.
+func SetLogger(l *slog.Logger) {
+	if l == nil {
+		return
+	}
+	logger = l.With(slog.String("lib", "aikido"))
+}
+
+func SetFormat(format string) error {
+	f := strings.ToLower(strings.TrimSpace(format))
+	switch f {
+	case "text", "console":
+		logFormat = "text"
+	case "json":
+		logFormat = "json"
+	default:
+		return errors.New("invalid log format")
+	}
+	rebuildLogger()
+	return nil
+}
+
+func toSlogLevel(level LogLevel) slog.Level {
+	switch level {
+	case DebugLevel:
+		return slog.LevelDebug
+	case InfoLevel:
+		return slog.LevelInfo
+	case WarnLevel:
+		return slog.LevelWarn
+	case ErrorLevel:
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
