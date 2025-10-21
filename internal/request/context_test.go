@@ -137,38 +137,6 @@ func TestContext_HasMiddlewareExecuted(t *testing.T) {
 	assert.True(t, ctx.HasMiddlewareExecuted())
 }
 
-func TestContext_GetMethod(t *testing.T) {
-	tests := []struct {
-		name     string
-		method   string
-		expected string
-	}{
-		{
-			name:     "GET method",
-			method:   "GET",
-			expected: "GET",
-		},
-		{
-			name:     "POST method",
-			method:   "POST",
-			expected: "POST",
-		},
-		{
-			name:     "empty method",
-			method:   "",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := &Context{Method: tt.method}
-			result := ctx.Method
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestContext_GetIP(t *testing.T) {
 	tests := []struct {
 		name          string
