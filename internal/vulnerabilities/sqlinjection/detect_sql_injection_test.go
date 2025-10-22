@@ -175,13 +175,25 @@ func getBenchmarkTests() []struct {
 	}
 }
 
-func BenchmarkDetectSQLInjection(b *testing.B) {
+func BenchmarkDetectSQLInjectionDylib(b *testing.B) {
 	tests := getBenchmarkTests()
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			for _, tt := range tests {
 				detectSQLInjection(tt.query, tt.input, 0)
+			}
+		}
+	})
+}
+
+func BenchmarkDetectSQLInjectionWASM(b *testing.B) {
+	tests := getBenchmarkTests()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			for _, tt := range tests {
+				detectSQLInjectionWASM(tt.query, tt.input, 0)
 			}
 		}
 	})

@@ -12,21 +12,31 @@ package zeninternals
 import "C"
 
 import (
+	"context"
+	_ "embed"
 	"fmt"
 	"runtime"
 	"unsafe"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 )
+
+//go:embed zen_internals.wasm
+var wasmBin []byte
 
 var (
 	handle             unsafe.Pointer
 	detectSQLInjection C.detect_sql_injection_func
+
+	wasmRuntime  wazero.Runtime
+	compiledWasm wazero.CompiledModule
 )
 
 func Init() bool {
 	zenInternalsLibPath := C.CString(fmt.Sprintf(
-		"/opt/aikido/lib/libzen_internals_%s-unknown-linux-gnu.so",
+		"/opt/aikido/lib/libzen_internals_%s-apple-darwin.dylib",
 		getArch(),
 	))
 	defer C.free(unsafe.Pointer(zenInternalsLibPath))
@@ -48,6 +58,15 @@ func Init() bool {
 
 	detectSQLInjection = (C.detect_sql_injection_func)(vDetectSQLInjection)
 	log.Debugf("Loaded zen-internals library!")
+
+	// Compile WASM version
+	wasmRuntime = wazero.NewRuntime(context.Background())
+	var err error
+	compiledWasm, err = wasmRuntime.CompileModule(context.Background(), wasmBin)
+	if err != nil {
+		log.Error(err)
+	}
+
 	return true
 }
 
@@ -90,4 +109,80 @@ func getArch() string {
 		return "aarch64"
 	}
 	panic(fmt.Sprintf("Running on unsupported architecture \"%s\"!", runtime.GOARCH))
+}
+
+func DetectSQLInjectionWASM(query string, userInput string, dialect int) int {
+	ctx := context.Background()
+
+	mod, err := wasmRuntime.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig())
+	if err != nil {
+		panic(err)
+	}
+	defer mod.Close(ctx)
+
+	// Get the exported functions
+	alloc := mod.ExportedFunction("wasm_alloc")
+	free := mod.ExportedFunction("wasm_free")
+	detectSQL := mod.ExportedFunction("detect_sql_injection")
+	memory := mod.Memory()
+
+	// Call the detection function
+	result, err := callDetectSQL(ctx, memory, alloc, free, detectSQL, query, userInput, dialect)
+	if err != nil {
+		panic(err)
+	}
+
+	return int(result)
+}
+
+func callDetectSQL(
+	ctx context.Context,
+	memory api.Memory,
+	alloc, free, detectSQL api.Function,
+	query, userInput string,
+	dialect int,
+) (int32, error) {
+	// Convert strings to bytes
+	queryBytes := []byte(query)
+	userInputBytes := []byte(userInput)
+
+	// Allocate memory for query
+	results, err := alloc.Call(ctx, uint64(len(queryBytes)))
+	if err != nil {
+		return 0, err
+	}
+	queryPtr := uint32(results[0])
+	defer free.Call(ctx, uint64(queryPtr), uint64(len(queryBytes)))
+
+	// Write query to WASM memory
+	if !memory.Write(queryPtr, queryBytes) {
+		return 0, fmt.Errorf("failed to write query to memory")
+	}
+
+	// Allocate memory for user input
+	results, err = alloc.Call(ctx, uint64(len(userInputBytes)))
+	if err != nil {
+		return 0, err
+	}
+	userInputPtr := uint32(results[0])
+	defer free.Call(ctx, uint64(userInputPtr), uint64(len(userInputBytes)))
+
+	// Write user input to WASM memory
+	if !memory.Write(userInputPtr, userInputBytes) {
+		return 0, fmt.Errorf("failed to write user input to memory")
+	}
+
+	// Call detect_sql_injection(query_ptr, query_len, userinput_ptr, userinput_len, dialect)
+	results, err = detectSQL.Call(ctx,
+		uint64(queryPtr),
+		uint64(len(queryBytes)),
+		uint64(userInputPtr),
+		uint64(len(userInputBytes)),
+		uint64(dialect),
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return int32(results[0]), nil
 }

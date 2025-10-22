@@ -20,6 +20,19 @@ func detectSQLInjection(query string, userInput string, dialect int) bool {
 	return zeninternals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect) == 1
 }
 
+func detectSQLInjectionWASM(query string, userInput string, dialect int) bool {
+	// Lowercase versions of query and user input
+	queryLowercase := strings.ToLower(query)
+	userInputLowercase := strings.ToLower(userInput)
+
+	if shouldReturnEarly(queryLowercase, userInputLowercase) {
+		return false
+	}
+
+	// Executing our final check with zen_internals
+	return zeninternals.DetectSQLInjectionWASM(queryLowercase, userInputLowercase, dialect) == 1
+}
+
 var isAlphanumeric = regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString
 
 func shouldReturnEarly(query, userInput string) bool {
