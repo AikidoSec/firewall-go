@@ -24,7 +24,7 @@ import (
 	"github.com/tetratelabs/wazero/api"
 )
 
-//go:embed zen_internals.wasm
+//go:embed libzen_internals.wasm
 var wasmBin []byte
 
 var (
