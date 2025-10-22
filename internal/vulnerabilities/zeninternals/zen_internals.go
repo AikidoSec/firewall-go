@@ -16,6 +16,7 @@ import (
 	_ "embed"
 	"fmt"
 	"runtime"
+	"sync"
 	"unsafe"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -32,6 +33,7 @@ var (
 
 	wasmRuntime  wazero.Runtime
 	compiledWasm wazero.CompiledModule
+	wasmPool     sync.Pool
 )
 
 func Init() bool {
@@ -65,6 +67,16 @@ func Init() bool {
 	compiledWasm, err = wasmRuntime.CompileModule(context.Background(), wasmBin)
 	if err != nil {
 		log.Error(err)
+	}
+
+	wasmPool = sync.Pool{
+		New: func() any {
+			mod, err := wasmRuntime.InstantiateModule(context.Background(), compiledWasm, wazero.NewModuleConfig())
+			if err != nil {
+				panic(fmt.Sprintf("failed to instantiate module: %v", err))
+			}
+			return mod
+		},
 	}
 
 	return true
@@ -114,11 +126,8 @@ func getArch() string {
 func DetectSQLInjectionWASM(query string, userInput string, dialect int) int {
 	ctx := context.Background()
 
-	mod, err := wasmRuntime.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig())
-	if err != nil {
-		panic(err)
-	}
-	defer mod.Close(ctx)
+	mod := wasmPool.Get().(api.Module)
+	defer wasmPool.Put(mod)
 
 	// Get the exported functions
 	alloc := mod.ExportedFunction("wasm_alloc")
