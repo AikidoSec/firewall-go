@@ -36,6 +36,14 @@ var (
 	wasmPool     sync.Pool
 )
 
+type wasmInstance struct {
+	mod       api.Module
+	alloc     api.Function
+	free      api.Function
+	detectSQL api.Function
+	memory    api.Memory
+}
+
 func Init() bool {
 	zenInternalsLibPath := C.CString(fmt.Sprintf(
 		"/opt/aikido/lib/libzen_internals_%s-apple-darwin.dylib",
@@ -62,7 +70,7 @@ func Init() bool {
 	log.Debugf("Loaded zen-internals library!")
 
 	// Compile WASM version
-	wasmRuntime = wazero.NewRuntime(context.Background())
+	wasmRuntime = wazero.NewRuntimeWithConfig(context.Background(), wazero.NewRuntimeConfigCompiler())
 	var err error
 	compiledWasm, err = wasmRuntime.CompileModule(context.Background(), wasmBin)
 	if err != nil {
@@ -75,7 +83,13 @@ func Init() bool {
 			if err != nil {
 				panic(fmt.Sprintf("failed to instantiate module: %v", err))
 			}
-			return mod
+			return &wasmInstance{
+				mod:       mod,
+				alloc:     mod.ExportedFunction("wasm_alloc"),
+				free:      mod.ExportedFunction("wasm_free"),
+				detectSQL: mod.ExportedFunction("detect_sql_injection"),
+				memory:    mod.Memory(),
+			}
 		},
 	}
 
@@ -126,17 +140,11 @@ func getArch() string {
 func DetectSQLInjectionWASM(query string, userInput string, dialect int) int {
 	ctx := context.Background()
 
-	mod := wasmPool.Get().(api.Module)
-	defer wasmPool.Put(mod)
-
-	// Get the exported functions
-	alloc := mod.ExportedFunction("wasm_alloc")
-	free := mod.ExportedFunction("wasm_free")
-	detectSQL := mod.ExportedFunction("detect_sql_injection")
-	memory := mod.Memory()
+	inst := wasmPool.Get().(*wasmInstance)
+	defer wasmPool.Put(inst)
 
 	// Call the detection function
-	result, err := callDetectSQL(ctx, memory, alloc, free, detectSQL, query, userInput, dialect)
+	result, err := callDetectSQL(ctx, inst.memory, inst.alloc, inst.free, inst.detectSQL, query, userInput, dialect)
 	if err != nil {
 		panic(err)
 	}
