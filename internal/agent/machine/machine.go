@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"log/slog"
 	"net"
 	"os"
 	"os/exec"
@@ -66,5 +67,5 @@ func Init() {
 		IPAddress:  getIPAddress(),
 	}
 
-	log.Infof("Machine info: %+v", globals.Machine)
+	log.Info("Machine info", slog.Any("machine", globals.Machine))
 }

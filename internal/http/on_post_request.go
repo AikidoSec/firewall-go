@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -15,13 +16,12 @@ func OnRequestShutdownReporting(method string, route string, statusCode int, use
 		return
 	}
 
-	log.Info("[RSHUTDOWN] Got request metadata: ", method, " ", route, " ", statusCode)
+	log.Info("[RSHUTDOWN] Got request metadata", slog.String("method", method), slog.String("route", route), slog.Int("statusCode", statusCode))
 
 	if !shouldDiscoverRoute(statusCode, route, method) {
 		return // Route is not to be discovered, e.g. status code might be 500.
 	}
 
-	log.Info("[RSHUTDOWN] Got API spec: ", apiSpec)
 	agent.OnRequestShutdown(method, route, statusCode, user, ip, apiSpec)
 }
 

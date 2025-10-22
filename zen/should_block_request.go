@@ -2,6 +2,7 @@ package zen
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
@@ -21,7 +22,7 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 	// user-blocking :
 	userID := reqCtx.GetUserID()
 	if config.IsUserBlocked(userID) {
-		log.Infof("User \"%s\" is blocked!", userID)
+		log.Info("User is blocked!", slog.String("user", userID))
 		return &BlockResponse{"blocked", "user", nil}
 	}
 	// rate-limiting :
@@ -36,7 +37,9 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 				endpoint.Method, endpoint.Route, reqCtx.GetUserID(), reqCtx.GetIP(),
 			)
 			if rateLimitingStatus != nil && rateLimitingStatus.Block {
-				log.Infof("Request made from IP \"%s\" is rate-limited by \"%s\"!", reqCtx.GetIP(), rateLimitingStatus.Trigger)
+				log.Info("Request is rate-limited",
+					slog.String("ip", reqCtx.GetIP()), slog.String("trigger", rateLimitingStatus.Trigger))
+
 				if rateLimitingStatus.Trigger == "ip" {
 					return &BlockResponse{
 						"rate-limited", rateLimitingStatus.Trigger, reqCtx.RemoteAddress,

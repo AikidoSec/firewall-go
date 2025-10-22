@@ -3,7 +3,6 @@ package log
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -41,48 +40,25 @@ func init() {
 	rebuildLogger()
 }
 
-func logMessage(level LogLevel, args ...any) {
-	message := fmt.Sprint(args...)
+func logMessage(level LogLevel, msg string, args ...any) {
 	slogLevel := toSlogLevel(level)
-	logger.Log(context.Background(), slogLevel, message)
+	logger.Log(context.Background(), slogLevel, msg, args...)
 }
 
-func logMessagef(level LogLevel, format string, args ...any) {
-	message := fmt.Sprintf(format, args...)
-	slogLevel := toSlogLevel(level)
-	logger.Log(context.Background(), slogLevel, message)
+func Debug(msg string, args ...any) {
+	logMessage(DebugLevel, msg, args...)
 }
 
-func Debug(args ...any) {
-	logMessage(DebugLevel, args...)
+func Info(msg string, args ...any) {
+	logMessage(InfoLevel, msg, args...)
 }
 
-func Info(args ...any) {
-	logMessage(InfoLevel, args...)
+func Warn(msg string, args ...any) {
+	logMessage(WarnLevel, msg, args...)
 }
 
-func Warn(args ...any) {
-	logMessage(WarnLevel, args...)
-}
-
-func Error(args ...any) {
-	logMessage(ErrorLevel, args...)
-}
-
-func Debugf(format string, args ...any) {
-	logMessagef(DebugLevel, format, args...)
-}
-
-func Infof(format string, args ...any) {
-	logMessagef(InfoLevel, format, args...)
-}
-
-func Warnf(format string, args ...any) {
-	logMessagef(WarnLevel, format, args...)
-}
-
-func Errorf(format string, args ...any) {
-	logMessagef(ErrorLevel, format, args...)
+func Error(msg string, args ...any) {
+	logMessage(ErrorLevel, msg, args...)
 }
 
 func SetLogLevel(level string) error {
