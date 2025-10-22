@@ -18,7 +18,6 @@ func detectSQLInjection(query string, userInput string, dialect int) bool {
 
 	// Executing our final check with zen_internals
 	return zeninternals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect) == 1
-
 }
 
 var isAlphanumeric = regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString
