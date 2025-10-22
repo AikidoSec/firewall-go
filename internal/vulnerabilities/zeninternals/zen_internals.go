@@ -46,7 +46,7 @@ type wasmInstance struct {
 
 func Init() bool {
 	zenInternalsLibPath := C.CString(fmt.Sprintf(
-		"/opt/aikido/lib/libzen_internals_%s-apple-darwin.dylib",
+		"/opt/aikido/lib/libzen_internals_%s-unknown-linux-gnu.so",
 		getArch(),
 	))
 	defer C.free(unsafe.Pointer(zenInternalsLibPath))
