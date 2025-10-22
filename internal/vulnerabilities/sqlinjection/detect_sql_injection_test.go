@@ -239,6 +239,17 @@ func TestShouldReturnEarly(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+
+func BenchmarkDetectSQLInjection(b *testing.B) {
+	tests := getBenchmarkTests()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			for _, tt := range tests {
+				detectSQLInjection(tt.query, tt.input, 0)
+			}
+		}
+	})
 }
 
 func getBenchmarkTests() []struct {
@@ -282,16 +293,4 @@ func getBenchmarkTests() []struct {
 			   last_name
 		FROM users WHERE email_lowercase = '' or 1=1 -- a',`, "' OR 1=1 -- a"},
 	}
-}
-
-func BenchmarkDetectSQLInjection(b *testing.B) {
-	tests := getBenchmarkTests()
-
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			for _, tt := range tests {
-				detectSQLInjection(tt.query, tt.input, 0)
-			}
-		}
-	})
 }

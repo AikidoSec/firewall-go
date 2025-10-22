@@ -9,6 +9,7 @@ require (
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/seancfoley/ipaddress-go v1.7.0
 	github.com/stretchr/testify v1.11.1
+	github.com/tetratelabs/wazero v1.9.0
 	gotest.tools/gotestsum v1.13.0
 )
 
