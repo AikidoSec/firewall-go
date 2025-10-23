@@ -18,14 +18,7 @@ var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
 
 var cloudClient *cloud.Client
 
-func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) (initOk bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Warn("Recovered from panic", slog.Any("error", r))
-			initOk = false
-		}
-	}()
-
+func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) bool {
 	machine.Init()
 	if !config.Init(environmentConfig, aikidoConfig) {
 		return false

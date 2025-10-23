@@ -120,7 +120,8 @@ func initAgent(collectAPISchema bool, logLevel string, token string, endpoint st
 		CollectAPISchema: collectAPISchema,
 	}
 
-	go agent.Init(environmentConfig, aikidoConfig)
+	agent.Init(environmentConfig, aikidoConfig)
+
 	return nil
 }
 

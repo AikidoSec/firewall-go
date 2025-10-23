@@ -17,7 +17,7 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 		return nil // Do not run middleware twice.
 	}
 
-	go agent.OnMiddlewareInstalled() // Report middleware as installed, handy for dashboard.
+	agent.OnMiddlewareInstalled() // Report middleware as installed, handy for dashboard.
 
 	// user-blocking :
 	userID := reqCtx.GetUserID()
