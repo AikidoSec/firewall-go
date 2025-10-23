@@ -11,6 +11,9 @@ install-tools:
 	@echo "Installing golangci-lint"
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
 	@echo "✅ golangci-lint installed successfully"
+	@echo "Installing orchestrion"
+	@go install github.com/DataDog/orchestrion
+	@echo "✅ tools installed successfully"
 
 
 .PHONY: test
@@ -18,6 +21,14 @@ test: prepare
 	@echo "Running tests with gotestsum"
 	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./...
 	@echo "✅ Tests completed successfully"
+	@echo "Coverage report saved to coverage.out"
+	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
+
+.PHONY: test-instrumentation
+test-instrumentation: prepare
+	@echo "Running instrumentation tests with orchestrion"
+	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
+	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
 
