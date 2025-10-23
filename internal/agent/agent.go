@@ -14,14 +14,16 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
-var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
+var (
+	ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
+	cloudClient              *cloud.Client
+)
 
-var cloudClient *cloud.Client
-
-func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) bool {
+func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
 	machine.Init()
-	if !config.Init(environmentConfig, aikidoConfig) {
-		return false
+
+	if err := config.Init(environmentConfig, aikidoConfig); err != nil {
+		return err
 	}
 
 	cloudClient = cloud.NewClient(&cloud.ClientConfig{})
@@ -32,7 +34,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	ratelimiting.Init()
 
 	log.Info("Aikido Agent loaded!", slog.String("version", globals.EnvironmentConfig.Version))
-	return true
+	return nil
 }
 
 func AgentUninit() error {
