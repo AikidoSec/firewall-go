@@ -96,8 +96,10 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 	return int(result)
 }
 
-// callDetectSQL performs SQL injection detection using WASM.
-// Returns 1 if SQL injection detected, 0 otherwise, or error if allocation/call fails.
+// callDetectSQL performs SQL injection detection with safe memory management.
+// Handles string allocation, pointer validation, and cleanup to safely interface
+// with the underlying detection library. Returns 1 if SQL injection detected,
+// 0 otherwise, or error if allocation/call fails.
 func callDetectSQL(
 	ctx context.Context,
 	memory api.Memory,
