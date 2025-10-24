@@ -1,7 +1,4 @@
-.PHONY: prepare
-prepare: check_binaries
-	mkdir -p /opt/aikido/lib
-	cp .cache/binaries/* /opt/aikido/lib/
+ZEN_INTERNALS_VERSION=v0.1.53
 
 .PHONY: install-tools
 install-tools:
@@ -17,7 +14,7 @@ install-tools:
 
 
 .PHONY: test
-test: prepare
+test:
 	@echo "Running tests with gotestsum"
 	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./...
 	@echo "✅ Tests completed successfully"
@@ -25,7 +22,7 @@ test: prepare
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
 
 .PHONY: test-instrumentation
-test-instrumentation: prepare
+test-instrumentation:
 	@echo "Running instrumentation tests with orchestrion"
 	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
 	@echo "✅ Instrumentation tests completed successfully"
@@ -51,32 +48,19 @@ lint-fix:
 	@echo "✅ Linting and fixing completed successfully"
 
 
-BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/v0.1.52
+BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/$(ZEN_INTERNALS_VERSION)
 FILES = \
-    libzen_internals_aarch64-apple-darwin.dylib \
-    libzen_internals_aarch64-apple-darwin.dylib.sha256sum \
-    libzen_internals_aarch64-unknown-linux-gnu.so \
-    libzen_internals_aarch64-unknown-linux-gnu.so.sha256sum \
-    libzen_internals_x86_64-apple-darwin.dylib \
-    libzen_internals_x86_64-apple-darwin.dylib.sha256sum \
-    libzen_internals_x86_64-pc-windows-gnu.dll \
-    libzen_internals_x86_64-pc-windows-gnu.dll.sha256sum \
-    libzen_internals_x86_64-unknown-linux-gnu.so \
-    libzen_internals_x86_64-unknown-linux-gnu.so.sha256sum
+		libzen_internals.wasm \
+		libzen_internals.wasm.sha256sum
 
-binaries: binaries_make_dir $(addprefix .cache/binaries/, $(FILES))
-binaries_make_dir:
-	rm -rf .cache/binaries
-	mkdir -p .cache/binaries/
-.cache/binaries/%:
+.PHONY: binaries
+binaries: clean-binaries download-binaries
+
+clean-binaries:
+	rm -f $(addprefix internal/vulnerabilities/zeninternals/, $(FILES))
+
+download-binaries: $(addprefix internal/vulnerabilities/zeninternals/, $(FILES))
+
+internal/vulnerabilities/zeninternals/%:
 	@echo "Downloading $*..."
 	curl -L -o $@ $(BASE_URL)/$*
-
-.PHONY: check_binaries
-check_binaries:
-	@if [ -d ".cache/binaries" ]; then \
-			echo "Cache directory exists."; \
-	else \
-			echo "Cache directory is empty. Running 'make binaries'..."; \
-			$(MAKE) binaries; \
-	fi

@@ -2,10 +2,13 @@ package zeninternals
 
 import (
 	"context"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -15,6 +18,9 @@ import (
 
 //go:embed libzen_internals.wasm
 var wasmBin []byte
+
+//go:embed libzen_internals.wasm.sha256sum
+var checksumFile string
 
 var (
 	wasmRuntime  wazero.Runtime
@@ -30,13 +36,19 @@ type wasmInstance struct {
 	memory    api.Memory
 }
 
-func Init() bool {
+func Init() error {
+	err := verifySHA256()
+	if err != nil {
+		return fmt.Errorf("failed to verify zen-internals: %w", err)
+	}
+
 	wasmRuntime = wazero.NewRuntimeWithConfig(context.Background(), wazero.NewRuntimeConfigCompiler())
-	var err error
+
 	compiledWasm, err = wasmRuntime.CompileModule(context.Background(), wasmBin)
 	if err != nil {
 		log.Error("Failed to load zen-internals library",
 			slog.Any("error", err))
+		return fmt.Errorf("failed to load zen-internals library: %w", err)
 	}
 
 	wasmPool = sync.Pool{
@@ -45,7 +57,7 @@ func Init() bool {
 
 	log.Debug("Loaded zen-internals library!")
 
-	return true
+	return nil
 }
 
 func newWasmInstance() any {
@@ -178,4 +190,22 @@ func allocateAndWriteString(ctx context.Context, memory api.Memory, alloc, free 
 	}
 
 	return ptr, dataLen, cleanup, nil
+}
+
+func verifySHA256() error {
+	parts := strings.Fields(checksumFile)
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid checksum file format")
+	}
+
+	expectedHash := parts[0]
+
+	hash := sha256.Sum256(wasmBin)
+	actualHash := hex.EncodeToString(hash[:])
+
+	if actualHash != expectedHash {
+		return fmt.Errorf("sha256 mismatch: expected %s, got %s", expectedHash, actualHash)
+	}
+
+	return nil
 }

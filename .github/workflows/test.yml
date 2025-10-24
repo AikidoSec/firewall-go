@@ -25,9 +25,6 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Install binaries
-        run: make prepare
-
       - name: Install tools
         run: make install-tools
 
@@ -50,9 +47,6 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go-version }}
-
-      - name: Install binaries
-        run: make prepare
 
       - name: Install tools
         run: make install-tools

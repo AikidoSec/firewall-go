@@ -98,7 +98,11 @@ func doProtect(cfg *Config) {
 		return
 	}
 
-	internal.Init()
+	err = internal.Init()
+	if err != nil {
+		protectErr = err
+		return
+	}
 }
 
 func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, configEndpoint string) error {
