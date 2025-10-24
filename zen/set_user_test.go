@@ -1,11 +1,13 @@
-package zen
+package zen_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +21,7 @@ func TestSetUser(t *testing.T) {
 		ctx = request.SetContext(ctx, req, "/test", "test", &remoteAddr, nil)
 
 		// Execute
-		resultCtx := SetUser(ctx, "user123", "John Doe")
+		resultCtx := zen.SetUser(ctx, "user123", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
@@ -39,7 +41,7 @@ func TestSetUser(t *testing.T) {
 		ctx = request.SetContext(ctx, req, "/test", "test", &remoteAddr, nil)
 
 		// Execute
-		resultCtx := SetUser(ctx, "", "John Doe")
+		resultCtx := zen.SetUser(ctx, "", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
@@ -59,7 +61,7 @@ func TestSetUser(t *testing.T) {
 		ctx = request.SetContext(ctx, req, "/test", "test", &remoteAddr, nil)
 
 		// Execute
-		resultCtx := SetUser(ctx, "user123", "")
+		resultCtx := zen.SetUser(ctx, "user123", "")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
@@ -76,7 +78,7 @@ func TestSetUser(t *testing.T) {
 		ctx := context.Background()
 
 		// Execute
-		resultCtx := SetUser(ctx, "user123", "John Doe")
+		resultCtx := zen.SetUser(ctx, "user123", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
@@ -98,7 +100,7 @@ func TestSetUser(t *testing.T) {
 		reqCtx.MarkMiddlewareExecuted()
 
 		// Execute
-		resultCtx := SetUser(ctx, "user123", "John Doe")
+		resultCtx := zen.SetUser(ctx, "user123", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
@@ -107,4 +109,23 @@ func TestSetUser(t *testing.T) {
 		userID := reqCtx.GetUserID()
 		assert.Empty(t, userID, "Expected user ID to be empty when middleware already executed")
 	})
+}
+
+// ExampleSetUser demonstrates how to use SetUser to associate a user with a request context.
+func ExampleSetUser() {
+	zen.Protect()
+
+	// Create a test request
+	req, _ := http.NewRequest("GET", "/test", nil)
+	ctx := context.Background()
+
+	// Set user in context
+	ctx = zen.SetUser(ctx, "user123", "John Doe")
+
+	// Use the updated context with your request
+	_ = req.WithContext(ctx)
+
+	// The user is now associated with this request context
+	fmt.Println("User set in context")
+	// Output: User set in context
 }

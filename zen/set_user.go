@@ -8,6 +8,9 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
+// SetUser associates a user with the current request context for user-based
+// blocking and rate limiting. This function must be called before the Zen
+// middleware is executed.
 func SetUser(ctx context.Context, id string, name string) context.Context {
 	// Validate :
 	if len(id) == 0 || len(name) == 0 {
