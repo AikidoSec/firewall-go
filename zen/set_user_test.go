@@ -3,6 +3,7 @@ package zen_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"testing"
 
@@ -113,7 +114,10 @@ func TestSetUser(t *testing.T) {
 
 // ExampleSetUser demonstrates how to use SetUser to associate a user with a request context.
 func ExampleSetUser() {
-	zen.Protect()
+	err := zen.Protect()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a test request
 	req, _ := http.NewRequest("GET", "/test", nil)

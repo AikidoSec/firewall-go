@@ -3,6 +3,7 @@ package zen_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,7 +23,10 @@ func TestShouldBlockRequest(t *testing.T) {
 
 // ExampleShouldBlockRequest demonstrates the complete middleware pattern with auth and Zen middleware.
 func ExampleShouldBlockRequest() {
-	zen.Protect()
+	err := zen.Protect()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Auth middleware that sets user
 	authMiddleware := func(next http.Handler) http.Handler {
