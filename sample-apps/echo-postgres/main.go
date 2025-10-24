@@ -11,7 +11,7 @@ import (
 var db *DatabaseHelper
 
 func main() {
-	zen.Init()
+	zen.Protect()
 	db = NewDatabaseHelper()
 	// Set up Echo router
 	e := echo.New()

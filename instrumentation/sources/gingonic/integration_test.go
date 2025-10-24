@@ -14,7 +14,7 @@ import (
 )
 
 func TestGinIsAutomaticallyInstrumented(t *testing.T) {
-	zen.Init()
+	zen.Protect()
 
 	router := gin.New()
 	router.ContextWithFallback = true
