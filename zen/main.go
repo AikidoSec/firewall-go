@@ -1,6 +1,6 @@
+// Package zen provides the main API for firewall-go, including user management,
+// request blocking, and middleware integration for Go applications.
 package zen
-
-// This is the main module users will interact with : SetUser, ShouldBlockRequest, middleware, ...
 
 import (
 	"os"
@@ -13,9 +13,10 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
-// Init needs to be called in the user's app to start the background process
-func Init() error {
-	// Logger :
+// Protect initializes and starts the firewall background process.
+// This function must be called early in the application lifecycle to enable
+// request monitoring and protection features.
+func Protect() error {
 	logLevel := "DEBUG"
 	if err := log.SetLogLevel(logLevel); err != nil {
 		return err
@@ -23,7 +24,6 @@ func Init() error {
 
 	config.CollectAPISchema = true
 
-	// Agent Config :
 	token := os.Getenv("AIKIDO_TOKEN")
 	endpoint := os.Getenv("AIKIDO_ENDPOINT")
 	configEndpoint := os.Getenv("AIKIDO_REALTIME_ENDPOINT")
