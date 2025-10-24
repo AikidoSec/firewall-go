@@ -36,6 +36,8 @@ type wasmInstance struct {
 	memory    api.Memory
 }
 
+// Init initializes the zen-internals library by verifying the WASM binary checksum,
+// compiling the WASM module, and setting up the instance pool for concurrent access.
 func Init() error {
 	err := verifySHA256()
 	if err != nil {
