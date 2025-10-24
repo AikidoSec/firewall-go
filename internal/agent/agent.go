@@ -2,6 +2,7 @@ package agent
 
 import (
 	"errors"
+	"log/slog"
 	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -18,7 +19,7 @@ var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) (initOk bool) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Warn("Recovered from panic:", r)
+			log.Warn("Recovered from panic", slog.Any("error", r))
 			initOk = false
 		}
 	}()
@@ -31,7 +32,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	cloud.Init()
 	ratelimiting.Init()
 
-	log.Infof("Aikido Agent v%s loaded!", globals.EnvironmentConfig.Version)
+	log.Info("Aikido Agent loaded!", slog.String("version", globals.EnvironmentConfig.Version))
 	return true
 }
 
@@ -40,24 +41,33 @@ func AgentUninit() error {
 	cloud.Uninit()
 	config.Uninit()
 
-	log.Infof("Aikido Agent v%s unloaded!", globals.EnvironmentConfig.Version)
+	log.Info("Aikido Agent unloaded!", slog.String("version", globals.EnvironmentConfig.Version))
 
 	return nil
 }
 
 func OnDomain(domain string, port uint32) {
-	log.Debugf("Received domain: %s:%d", domain, port)
+	log.Debug("Received domain", slog.String("domain", domain), slog.Uint64("port", uint64(port)))
 	storeDomain(domain, port)
 }
 
 func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.Status {
-	log.Debugf("Received rate limiting info: %s %s %s %s", method, route, user, ip)
+	log.Debug("Received rate limiting info",
+		slog.String("method", method),
+		slog.String("route", route),
+		slog.String("user", user),
+		slog.String("ip", ip))
 
 	return ratelimiting.GetStatus(method, route, user, ip)
 }
 
 func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
-	log.Debugf("Received request metadata: %s %s %d %s %s %v", method, route, statusCode, user, ip, apiSpec)
+	log.Debug("Received request metadata",
+		slog.String("method", method),
+		slog.String("route", route),
+		slog.Int("statusCode", statusCode),
+		slog.String("user", user),
+		slog.String("ip", ip))
 
 	go storeStats()
 	go storeRoute(method, route, apiSpec)
@@ -67,12 +77,12 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 }
 
 func OnUser(id string, username string, ip string) {
-	log.Debugf("Received user event: %s", id)
+	log.Debug("Received user event", slog.String("id", id))
 	onUserEvent(id, username, ip)
 }
 
 func OnAttackDetected(attack *aikido_types.DetectedAttack) {
-	log.Debugf("Reporting attack")
+	log.Debug("Reporting attack")
 	cloud.SendAttackDetectedEvent(attack)
 	storeAttackStats(attack.Attack.Blocked)
 }
@@ -82,6 +92,6 @@ func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings)
 }
 
 func OnMiddlewareInstalled() {
-	log.Debugf("Received MiddlewareInstalled")
+	log.Debug("Received MiddlewareInstalled")
 	atomic.StoreUint32(&globals.MiddlewareInstalled, 1)
 }

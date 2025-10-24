@@ -1,6 +1,8 @@
 package cloud
 
 import (
+	"log/slog"
+
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
@@ -23,8 +25,11 @@ func ShouldSendAttackDetectedEvent() bool {
 	globals.AttackDetectedEventsSentAt = filteredEvents
 
 	if len(globals.AttackDetectedEventsSentAt) >= globals.MaxAttackDetectedEventsPerInterval {
-		log.Warnf("Maximum (%d) number of \"detected_attack\" events exceeded for timeframe: %d / %d ms",
-			globals.MaxAttackDetectedEventsPerInterval, len(globals.AttackDetectedEventsSentAt), globals.AttackDetectedEventsIntervalInMs)
+		log.Warn("Maximum number of \"detected_attack\" events exceeded for timeframe",
+			slog.Int("max", globals.MaxAttackDetectedEventsPerInterval),
+			slog.Int("count", len(globals.AttackDetectedEventsSentAt)),
+			slog.Int("interval_ms", globals.AttackDetectedEventsIntervalInMs))
+
 		return false
 	}
 

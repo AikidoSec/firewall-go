@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -40,7 +41,7 @@ func SendCloudRequest(endpoint string, route string, method string, payload any)
 		body = bytes.NewBuffer(jsonData)
 	}
 
-	log.Debugf("Sending %s request to %s", method, apiEndpoint)
+	log.Debug("Sending request", slog.String("method", method), slog.String("endpoint", apiEndpoint))
 	req, err = http.NewRequest(method, apiEndpoint, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
@@ -54,7 +55,7 @@ func SendCloudRequest(endpoint string, route string, method string, payload any)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Warnf("failed to close response body: %v", err)
+			log.Warn("failed to close response body", slog.Any("error", err))
 		}
 	}()
 

@@ -2,6 +2,7 @@ package gingonic
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -29,7 +30,7 @@ func tryExtractBody(c *gin.Context) any {
 func tryExtractFormBody(c *gin.Context) url.Values {
 	if _, err := c.MultipartForm(); err != nil {
 		if !errors.Is(err, http.ErrNotMultipart) {
-			log.Debugf("(gin) error on parse multipart form array: %v", err)
+			log.Debug("(gin) error on parse multipart form array", slog.Any("error", err))
 			return nil
 		}
 	}

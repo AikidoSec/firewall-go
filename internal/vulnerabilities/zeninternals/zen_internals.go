@@ -13,6 +13,7 @@ import "C"
 
 import (
 	"fmt"
+	"log/slog"
 	"runtime"
 	"unsafe"
 
@@ -33,7 +34,9 @@ func Init() bool {
 
 	handle := C.dlopen(zenInternalsLibPath, C.RTLD_LAZY)
 	if handle == nil {
-		log.Errorf("Failed to load zen-internals library from '%s' with error %s!", C.GoString(zenInternalsLibPath), C.GoString(C.dlerror()))
+		log.Error("Failed to load zen-internals library",
+			slog.String("path", C.GoString(zenInternalsLibPath)),
+			slog.String("error", C.GoString(C.dlerror())))
 		return false
 	}
 
@@ -47,7 +50,7 @@ func Init() bool {
 	}
 
 	detectSQLInjection = (C.detect_sql_injection_func)(vDetectSQLInjection)
-	log.Debugf("Loaded zen-internals library!")
+	log.Debug("Loaded zen-internals library!")
 	return true
 }
 
@@ -78,7 +81,11 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 
 	// Call the detect_sql_injection function
 	result := int(C.call_detect_sql_injection(detectSQLInjection, cQuery, queryLen, cUserInput, userInputLen, C.int(dialect)))
-	log.Debugf("DetectSqlInjection(%s, %s, %d) -> %d", query, userInput, dialect, result)
+	log.Debug("DetectSqlInjection",
+		slog.String("query", query),
+		slog.String("userInput", userInput),
+		slog.Int("dialect", dialect),
+		slog.Int("result", result))
 	return result
 }
 

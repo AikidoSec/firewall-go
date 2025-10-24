@@ -3,6 +3,7 @@ package vulnerabilities
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -61,7 +62,7 @@ func ScanSource(ctx context.Context, source string, sourceData any, operation st
 				Metadata:      results.Metadata,
 				Payload:       userInput,
 			}
-			log.Debugf("Attack: %s", attack.ToString())
+			log.Debug("Attack", slog.String("attack", attack.ToString()))
 			ReportAttackDetected(ctx, attack)
 
 			return errors.New("Aikido: " + vulnerability.Error)

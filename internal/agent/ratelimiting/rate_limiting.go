@@ -1,6 +1,7 @@
 package ratelimiting
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 
@@ -66,8 +67,9 @@ func advanceQueuesForMap(config *Config, countsMap map[string]*Counts) {
 			numberOfRequestToSubstract := counts.NumberOfRequestsPerWindow.Pop()
 			if counts.TotalNumberOfRequests < numberOfRequestToSubstract {
 				// This should never happen, but better to have a check in place
-				log.Warnf("More requests to substract (%d) than total number of requests (%d)!",
-					numberOfRequestToSubstract, counts.TotalNumberOfRequests)
+				log.Warn("More requests to subtract than total number of requests",
+					slog.Int("to_subtract", numberOfRequestToSubstract),
+					slog.Int("total", counts.TotalNumberOfRequests))
 			} else {
 				// Remove the number of requests for the entry that just dropped out of the sliding window from total
 				counts.TotalNumberOfRequests -= numberOfRequestToSubstract
@@ -152,13 +154,21 @@ func GetStatus(method string, route string, user string, ip string) *Status {
 	if user != "" {
 		// If the user exists, we only try to rate limit by user
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.UserCounts, user) {
-			log.Infof("Rate limited request for user %s - %s %s - %v", user, method, route, rateLimitingDataForRoute.UserCounts[user])
+			log.Info("Rate limited request for user",
+				slog.String("user", user),
+				slog.String("method", method),
+				slog.String("route", route),
+				slog.Any("counts", rateLimitingDataForRoute.UserCounts[user]))
 			return &Status{Block: true, Trigger: "user"}
 		}
 	} else {
 		// Otherwise, we rate limit by ip
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IpCounts, ip) {
-			log.Infof("Rate limited request for ip %s - %s %s - %v", ip, method, route, rateLimitingDataForRoute.IpCounts[ip])
+			log.Info("Rate limited request for ip",
+				slog.String("ip", ip),
+				slog.String("method", method),
+				slog.String("route", route),
+				slog.Any("counts", rateLimitingDataForRoute.IpCounts[ip]))
 			return &Status{Block: true, Trigger: "ip"}
 		}
 	}
@@ -197,26 +207,26 @@ func UpdateConfig(endpoints []EndpointConfig) {
 		if exists {
 			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
 				rateLimitingData.Config.WindowSizeInMinutes == millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS) {
-				log.Debugf("New rate limiting endpoint config is the same: %v", newEndpointConfig)
+				log.Debug("New rate limiting endpoint config is the same", slog.Any("config", newEndpointConfig))
 				continue
 			}
 
-			log.Infof("Rate limiting endpoint config has changed: %v", newEndpointConfig)
+			log.Info("Rate limiting endpoint config has changed", slog.Any("config", newEndpointConfig))
 			delete(rateLimitingMap, k)
 		}
 
 		if !newEndpointConfig.RateLimiting.Enabled {
-			log.Infof("Got new rate limiting endpoint config, but is disabled: %v", newEndpointConfig)
+			log.Info("Got new rate limiting endpoint config, but is disabled", slog.Any("config", newEndpointConfig))
 			continue
 		}
 
 		if newEndpointConfig.RateLimiting.WindowSizeInMS < MinRateLimitingIntervalInMs ||
 			newEndpointConfig.RateLimiting.WindowSizeInMS > MaxRateLimitingIntervalInMs {
-			log.Warnf("Got new rate limiting endpoint config, but WindowSizeInMS is invalid: %v", newEndpointConfig)
+			log.Warn("Got new rate limiting endpoint config, but WindowSizeInMS is invalid", slog.Any("config", newEndpointConfig))
 			continue
 		}
 
-		log.Infof("Got new rate limiting endpoint config and storing to map: %v", newEndpointConfig)
+		log.Info("Got new rate limiting endpoint config and storing to map", slog.Any("config", newEndpointConfig))
 		rateLimitingMap[k] = &Value{
 			Config: Config{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
@@ -230,7 +240,7 @@ func UpdateConfig(endpoints []EndpointConfig) {
 	for k := range rateLimitingMap {
 		_, exists := updatedEndpoints[k]
 		if !exists {
-			log.Infof("Removed rate limiting entry as it is no longer part of the config: %v", k)
+			log.Info("Removed rate limiting entry as it is no longer part of the config", slog.Any("endpoint", k))
 			delete(rateLimitingMap, k)
 		}
 	}

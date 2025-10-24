@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"regexp"
 	"sync"
 
@@ -10,8 +11,10 @@ import (
 	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
-var serviceConfig ServiceConfigData
-var serviceConfigMutex sync.RWMutex
+var (
+	serviceConfig      ServiceConfigData
+	serviceConfigMutex sync.RWMutex
+)
 
 type RateLimiting struct {
 	Enabled        bool
@@ -56,7 +59,7 @@ func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
 	for _, ip := range ipsList {
 		ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
 		if err != nil {
-			log.Infof("Invalid address for %s: %s\n", name, ip)
+			log.Info("Invalid address", slog.String("name", name), slog.String("ip", ip))
 			continue
 		}
 
@@ -67,8 +70,6 @@ func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
 		}
 	}
 
-	log.Debugf("%s (v4): %v", name, ipBlocklist.TrieV4)
-	log.Debugf("%s (v6): %v", name, ipBlocklist.TrieV6)
 	return ipBlocklist
 }
 
@@ -127,7 +128,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 }
 
 func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData) {
-	log.Debugf("Got cloud config: %v", cloudConfig)
+	log.Debug("Got cloud config", slog.Any("config", cloudConfig))
 	setServiceConfig(cloudConfig)
 }
 
@@ -147,7 +148,7 @@ func IsIPBlocked(ip string) (bool, string) {
 
 	ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
 	if err != nil {
-		log.Infof("Invalid ip address: %s\n", ip)
+		log.Info("Invalid ip address", slog.String("ip", ip))
 		return false, ""
 	}
 
