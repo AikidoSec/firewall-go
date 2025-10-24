@@ -70,9 +70,6 @@ func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
 		}
 	}
 
-	log.Debug("IP blocklist (v4)", slog.String("name", name), slog.Any("trie", ipBlocklist.TrieV4))
-	log.Debug("IP blocklist (v6)", slog.String("name", name), slog.Any("trie", ipBlocklist.TrieV6))
-
 	return ipBlocklist
 }
 
