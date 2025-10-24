@@ -32,10 +32,20 @@ func Protect() error {
 // the agent. This is separated from Protect to maintain thread-safety
 // with sync.Once while preserving readability.
 func doProtect() {
-	logLevel := "DEBUG"
+	logLevel := os.Getenv("AIKIDO_LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "INFO" // fallback to existing default
+	}
 	if err := log.SetLogLevel(logLevel); err != nil {
 		protectErr = err
 		return
+	}
+
+	logFormat := os.Getenv("AIKIDO_LOG_FORMAT")
+	if logFormat != "" {
+		if err := log.SetFormat(logFormat); err != nil {
+			return err
+		}
 	}
 
 	config.CollectAPISchema = true
