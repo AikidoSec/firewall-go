@@ -5,10 +5,12 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsNotSQLInjection(t *testing.T) {
-	internal.Init()
+	require.NoError(t, internal.Init())
+
 	tests := []struct {
 		query string
 		input string
@@ -78,7 +80,8 @@ func TestIsNotSQLInjection(t *testing.T) {
 }
 
 func TestIsSQLInjection(t *testing.T) {
-	internal.Init()
+	require.NoError(t, internal.Init())
+
 	tests := []struct {
 		query string
 		input string
@@ -239,6 +242,7 @@ func TestShouldReturnEarly(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
 
 func BenchmarkDetectSQLInjection(b *testing.B) {
 	tests := getBenchmarkTests()
