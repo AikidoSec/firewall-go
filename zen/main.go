@@ -35,8 +35,8 @@ type Config struct {
 	Token string
 	// Endpoint is the Aikido API endpoint
 	Endpoint string
-	// ConfigEndpoint is the Aikido real-time config endpoint
-	ConfigEndpoint string
+	// RealtimeEndpoint is the Aikido real-time config endpoint
+	RealtimeEndpoint string
 	// Block will block any requests with suspected attacks
 	// Once cloud config is retrieved, Zen will use the configured mode from the dashboard.
 	Block bool
@@ -96,7 +96,7 @@ func doProtect(cfg *Config) {
 
 	config.CollectAPISchema = true
 
-	err := initAgent(config.CollectAPISchema, logLevel, mergedCfg.Token, mergedCfg.Endpoint, mergedCfg.ConfigEndpoint, mergedCfg.Block)
+	err := initAgent(config.CollectAPISchema, logLevel, mergedCfg.Token, mergedCfg.Endpoint, mergedCfg.RealtimeEndpoint, mergedCfg.Block)
 	if err != nil {
 		protectErr = err
 		return
@@ -109,14 +109,14 @@ func doProtect(cfg *Config) {
 	}
 }
 
-func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, configEndpoint string, block bool) error {
+func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, realtimeEndpoint string, block bool) error {
 	environmentConfig := &aikido_types.EnvironmentConfigData{
-		PlatformName:    "golang",
-		PlatformVersion: runtime.Version(),
-		Library:         "firewall-go",
-		Endpoint:        endpoint,
-		ConfigEndpoint:  configEndpoint,
-		Version:         config.Version, // firewall-go version
+		PlatformName:     "golang",
+		PlatformVersion:  runtime.Version(),
+		Library:          "firewall-go",
+		Endpoint:         endpoint,
+		RealtimeEndpoint: realtimeEndpoint,
+		Version:          config.Version, // firewall-go version
 	}
 	aikidoConfig := &aikido_types.AikidoConfigData{
 		LogLevel:         logLevel,
@@ -155,8 +155,8 @@ func populateConfigFromEnv(cfg *Config) *Config {
 	if result.Endpoint == "" {
 		result.Endpoint = os.Getenv("AIKIDO_ENDPOINT")
 	}
-	if result.ConfigEndpoint == "" {
-		result.ConfigEndpoint = os.Getenv("AIKIDO_REALTIME_ENDPOINT")
+	if result.RealtimeEndpoint == "" {
+		result.RealtimeEndpoint = os.Getenv("AIKIDO_REALTIME_ENDPOINT")
 	}
 
 	return &result

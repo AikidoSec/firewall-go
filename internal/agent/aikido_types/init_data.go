@@ -3,12 +3,12 @@ package aikido_types
 import "sync"
 
 type EnvironmentConfigData struct {
-	PlatformName    string `json:"platform_name"`             // Platform name (fpm-fcgi, cli-server, ...)
-	PlatformVersion string `json:"platform_version"`          // Language version
-	Endpoint        string `json:"endpoint,omitempty"`        // default: 'https://guard.aikido.dev/'
-	ConfigEndpoint  string `json:"config_endpoint,omitempty"` // default: 'https://runtime.aikido.dev/'
-	Library         string `json:"library,omitempty"`         // default: 'firewall-php'
-	Version         string `json:"version,omitempty"`         // Version of the agent
+	PlatformName     string `json:"platform_name"`               // Platform name (fpm-fcgi, cli-server, ...)
+	PlatformVersion  string `json:"platform_version"`            // Language version
+	Endpoint         string `json:"endpoint,omitempty"`          // default: 'https://guard.aikido.dev/'
+	RealtimeEndpoint string `json:"realtime_endpoint,omitempty"` // default: 'https://runtime.aikido.dev/'
+	Library          string `json:"library,omitempty"`           // default: 'firewall-php'
+	Version          string `json:"version,omitempty"`           // Version of the agent
 }
 
 type AikidoConfigData struct {
