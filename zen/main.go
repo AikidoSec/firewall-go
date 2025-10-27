@@ -113,6 +113,8 @@ func initAgent(collectAPISchema bool, logLevel string, token string, endpoint st
 	return nil
 }
 
+// populateConfigFromEnv fills zero-value config fields from environment variables.
+// Config values take precedence over env vars. Returns a new Config without modifying the input.
 func populateConfigFromEnv(cfg *Config) *Config {
 	// Start with empty config if nil, otherwise copy the input
 	result := Config{}
