@@ -5,6 +5,7 @@ package zen
 import (
 	"os"
 	"runtime"
+	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/agent"
@@ -13,13 +14,28 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
+var (
+	protectOnce sync.Once
+	protectErr  error
+)
+
 // Protect initializes and starts the firewall background process.
 // This function must be called early in the application lifecycle to enable
 // request monitoring and protection features.
 func Protect() error {
+	protectOnce.Do(doProtect)
+	return protectErr
+}
+
+// doProtect performs the actual initialization work for Protect.
+// It configures logging, loads environment variables, and initializes
+// the agent. This is separated from Protect to maintain thread-safety
+// with sync.Once while preserving readability.
+func doProtect() {
 	logLevel := "DEBUG"
 	if err := log.SetLogLevel(logLevel); err != nil {
-		return err
+		protectErr = err
+		return
 	}
 
 	config.CollectAPISchema = true
@@ -30,12 +46,11 @@ func Protect() error {
 
 	err := initAgent(config.CollectAPISchema, logLevel, token, endpoint, configEndpoint)
 	if err != nil {
-		return err
+		protectErr = err
+		return
 	}
 
 	internal.Init()
-
-	return nil
 }
 
 func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, configEndpoint string) error {
