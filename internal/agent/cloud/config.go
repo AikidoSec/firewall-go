@@ -8,10 +8,10 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 )
 
-func CheckConfigUpdatedAt() {
-	response, err := SendCloudRequest(globals.EnvironmentConfig.ConfigEndpoint, globals.ConfigUpdatedAtAPI, globals.ConfigUpdatedAtMethod, nil)
+func (c *Client) CheckConfigUpdatedAt() {
+	response, err := c.sendCloudRequest(globals.EnvironmentConfig.ConfigEndpoint, globals.ConfigUpdatedAtAPI, globals.ConfigUpdatedAtMethod, nil)
 	if err != nil {
-		LogCloudRequestError("Error in sending polling config request: ", err)
+		logCloudRequestError("Error in sending polling config request: ", err)
 		return
 	}
 
@@ -25,11 +25,11 @@ func CheckConfigUpdatedAt() {
 		return
 	}
 
-	configResponse, err := SendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ConfigAPI, globals.ConfigAPIMethod, nil)
+	configResponse, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ConfigAPI, globals.ConfigAPIMethod, nil)
 	if err != nil {
-		LogCloudRequestError("Error in sending config request: ", err)
+		logCloudRequestError("Error in sending config request: ", err)
 		return
 	}
 
-	storeCloudConfig(configResponse)
+	c.storeCloudConfig(configResponse)
 }

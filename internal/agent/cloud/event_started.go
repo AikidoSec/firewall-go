@@ -6,17 +6,17 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
-func SendStartEvent() {
+func (c *Client) SendStartEvent() {
 	startedEvent := aikido_types.Started{
 		Type:  "started",
-		Agent: GetAgentInfo(),
+		Agent: getAgentInfo(),
 		Time:  utils.GetTime(),
 	}
 
-	response, err := SendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, startedEvent)
+	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, startedEvent)
 	if err != nil {
-		LogCloudRequestError("Error in sending start event: ", err)
+		logCloudRequestError("Error in sending start event: ", err)
 		return
 	}
-	storeCloudConfig(response)
+	c.storeCloudConfig(response)
 }
