@@ -1,6 +1,7 @@
 package shellinjection
 
 import (
+	"slices"
 	"strings"
 )
 
@@ -28,13 +29,7 @@ func isSafelyEncapsulated(command, userInput string) bool {
 		}
 
 		// Check if the character before the user input is an escape character
-		isEscapeChar := false
-		for _, char := range escapeChars {
-			if char == charBeforeUserInput {
-				isEscapeChar = true
-				break
-			}
-		}
+		isEscapeChar := slices.Contains(escapeChars, charBeforeUserInput)
 
 		if !isEscapeChar {
 			return false
