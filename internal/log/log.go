@@ -89,6 +89,12 @@ func SetLogger(l *slog.Logger) {
 	logger = l.With(slog.String("lib", "aikido"))
 }
 
+// Logger returns the currently in-use instance of *slog.Logger
+// This can be used in tests to get the default loggers to later restore on cleanup.
+func Logger() *slog.Logger {
+	return logger
+}
+
 func SetFormat(format string) error {
 	f := strings.ToLower(strings.TrimSpace(format))
 	switch f {
