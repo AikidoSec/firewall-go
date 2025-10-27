@@ -13,6 +13,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
+var loggedTokenError atomic.Bool
+
 func getAgentInfo() aikido_types.AgentInfo {
 	return aikido_types.AgentInfo{
 		DryMode:   !config.IsBlockingEnabled(),
@@ -108,11 +110,9 @@ func (c *Client) storeCloudConfig(configReponse []byte) bool {
 
 func logCloudRequestError(text string, err error) {
 	if err.Error() == "no token set" {
-		if atomic.LoadUint32(&globals.LoggedTokenError) != 0 {
-			// Only report the "no token set" once, so we don't pollute the logs
+		if !loggedTokenError.CompareAndSwap(false, true) {
 			return
 		}
-		atomic.StoreUint32(&globals.LoggedTokenError, 1)
 	}
 	log.Warn(text, slog.Any("error", err))
 }

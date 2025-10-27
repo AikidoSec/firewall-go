@@ -39,6 +39,3 @@ var UsersMutex sync.Mutex
 
 // MiddlewareInstalled boolean value to be reported on heartbeat events
 var MiddlewareInstalled uint32
-
-// Did we log a token error?
-var LoggedTokenError uint32
