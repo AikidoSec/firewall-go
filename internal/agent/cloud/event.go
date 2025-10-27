@@ -14,10 +14,12 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
+var ErrNoTokenSet = errors.New("no token set")
+
 func (c *Client) sendCloudRequest(endpoint string, route string, method string, payload any) ([]byte, error) {
 	token := config.GetToken()
 	if token == "" {
-		return nil, errors.New("no token set")
+		return nil, ErrNoTokenSet
 	}
 
 	apiEndpoint, err := url.JoinPath(endpoint, route)

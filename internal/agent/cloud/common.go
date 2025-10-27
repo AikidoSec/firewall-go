@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -109,7 +110,7 @@ func (c *Client) storeCloudConfig(configReponse []byte) bool {
 }
 
 func logCloudRequestError(text string, err error) {
-	if err.Error() == "no token set" {
+	if errors.Is(err, ErrNoTokenSet) {
 		if !loggedTokenError.CompareAndSwap(false, true) {
 			return
 		}
