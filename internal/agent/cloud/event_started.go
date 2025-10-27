@@ -13,7 +13,7 @@ func (c *Client) SendStartEvent() {
 		Time:  utils.GetTime(),
 	}
 
-	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, startedEvent)
+	response, err := c.sendCloudRequest(c.apiEndpoint, globals.EventsAPI, globals.EventsAPIMethod, startedEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending start event: ", err)
 		return
