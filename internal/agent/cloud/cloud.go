@@ -9,22 +9,21 @@ import (
 )
 
 var (
-	HeartbeatRoutineChannel     = make(chan struct{})
-	HeartBeatTicker             = time.NewTicker(10 * time.Minute)
-	ConfigPollingRoutineChannel = make(chan struct{})
-	ConfigPollingTicker         = time.NewTicker(1 * time.Minute)
+	heartbeatRoutineChannel     = make(chan struct{})
+	heartBeatTicker             = time.NewTicker(10 * time.Minute)
+	configPollingRoutineChannel = make(chan struct{})
+	configPollingTicker         = time.NewTicker(1 * time.Minute)
 )
 
-func Init() {
-	SendStartEvent()
-	utils.StartPollingRoutine(HeartbeatRoutineChannel, HeartBeatTicker, SendHeartbeatEvent)
-	utils.StartPollingRoutine(ConfigPollingRoutineChannel, ConfigPollingTicker, CheckConfigUpdatedAt)
+func StartPolling(client *Client) {
+	utils.StartPollingRoutine(heartbeatRoutineChannel, heartBeatTicker, client.SendHeartbeatEvent)
+	utils.StartPollingRoutine(configPollingRoutineChannel, configPollingTicker, client.CheckConfigUpdatedAt)
 
 	globals.StatsData.StartedAt = utils.GetTime()
 	globals.StatsData.MonitoredSinkTimings = make(map[string]aikido_types.MonitoredSinkTimings)
 }
 
-func Uninit() {
-	utils.StopPollingRoutine(HeartbeatRoutineChannel)
-	utils.StopPollingRoutine(ConfigPollingRoutineChannel)
+func StopPolling() {
+	utils.StopPollingRoutine(heartbeatRoutineChannel)
+	utils.StopPollingRoutine(configPollingRoutineChannel)
 }

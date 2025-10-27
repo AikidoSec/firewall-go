@@ -13,7 +13,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
-func GetAgentInfo() aikido_types.AgentInfo {
+func getAgentInfo() aikido_types.AgentInfo {
 	return aikido_types.AgentInfo{
 		DryMode:   !config.IsBlockingEnabled(),
 		Hostname:  globals.Machine.HostName,
@@ -36,10 +36,10 @@ func GetAgentInfo() aikido_types.AgentInfo {
 func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
 	if !receivedAnyStats {
 		log.Info("Resetting HeartBeatTicker to 1m!")
-		HeartBeatTicker.Reset(1 * time.Minute)
+		heartBeatTicker.Reset(1 * time.Minute)
 	} else if heartbeatIntervalInMS >= globals.MinHeartbeatIntervalInMS {
 		log.Info("Resetting HeartBeatTicker!", slog.Int("interval", heartbeatIntervalInMS))
-		HeartBeatTicker.Reset(time.Duration(heartbeatIntervalInMS) * time.Millisecond)
+		heartBeatTicker.Reset(time.Duration(heartbeatIntervalInMS) * time.Millisecond)
 	}
 }
 
@@ -64,10 +64,10 @@ func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
 	ratelimiting.UpdateConfig(endpointConfigs)
 }
 
-func updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
-	response, err := SendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ListsAPI, globals.ListsAPIMethod, nil)
+func (c *Client) updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
+	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ListsAPI, globals.ListsAPIMethod, nil)
 	if err != nil {
-		LogCloudRequestError("Error in sending lists request: ", err)
+		logCloudRequestError("Error in sending lists request: ", err)
 		return false
 	}
 
@@ -86,7 +86,7 @@ func updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
 	return true
 }
 
-func storeCloudConfig(configReponse []byte) bool {
+func (c *Client) storeCloudConfig(configReponse []byte) bool {
 	cloudConfig := &aikido_types.CloudConfigData{}
 	err := json.Unmarshal(configReponse, &cloudConfig)
 	if err != nil {
@@ -98,7 +98,7 @@ func storeCloudConfig(configReponse []byte) bool {
 		return true
 	}
 
-	updateListsConfig(cloudConfig)
+	c.updateListsConfig(cloudConfig)
 	resetHeartbeatTicker(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
 	updateRateLimitingConfig(cloudConfig.Endpoints)
 
@@ -106,7 +106,7 @@ func storeCloudConfig(configReponse []byte) bool {
 	return true
 }
 
-func LogCloudRequestError(text string, err error) {
+func logCloudRequestError(text string, err error) {
 	if err.Error() == "no token set" {
 		if atomic.LoadUint32(&globals.LoggedTokenError) != 0 {
 			// Only report the "no token set" once, so we don't pollute the logs

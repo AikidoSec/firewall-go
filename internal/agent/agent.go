@@ -16,6 +16,8 @@ import (
 
 var ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
 
+var cloudClient *cloud.Client
+
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) (initOk bool) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -29,7 +31,11 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		return false
 	}
 
-	cloud.Init()
+	cloudClient = cloud.NewClient(&cloud.ClientConfig{})
+	cloudClient.SendStartEvent()
+
+	cloud.StartPolling(cloudClient)
+
 	ratelimiting.Init()
 
 	log.Info("Aikido Agent loaded!", slog.String("version", globals.EnvironmentConfig.Version))
@@ -38,7 +44,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 
 func AgentUninit() error {
 	ratelimiting.Uninit()
-	cloud.Uninit()
+	cloud.StopPolling()
 	config.Uninit()
 
 	log.Info("Aikido Agent unloaded!", slog.String("version", globals.EnvironmentConfig.Version))
@@ -81,7 +87,7 @@ func OnUser(id string, username string, ip string) {
 
 func OnAttackDetected(attack *aikido_types.DetectedAttack) {
 	log.Debug("Reporting attack")
-	cloud.SendAttackDetectedEvent(attack)
+	cloudClient.SendAttackDetectedEvent(attack)
 	storeAttackStats(attack.Attack.Blocked)
 }
 

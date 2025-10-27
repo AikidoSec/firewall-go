@@ -17,7 +17,7 @@ var (
 	attackDetectedEventsSentAtMutex sync.Mutex
 )
 
-func ShouldSendAttackDetectedEvent() bool {
+func shouldSendAttackDetectedEvent() bool {
 	attackDetectedEventsSentAtMutex.Lock()
 	defer attackDetectedEventsSentAtMutex.Unlock()
 
@@ -45,21 +45,21 @@ func ShouldSendAttackDetectedEvent() bool {
 	return true
 }
 
-func SendAttackDetectedEvent(attack *aikido_types.DetectedAttack) {
-	if !ShouldSendAttackDetectedEvent() {
+func (c *Client) SendAttackDetectedEvent(attack *aikido_types.DetectedAttack) {
+	if !shouldSendAttackDetectedEvent() {
 		return
 	}
 	detectedAttackEvent := aikido_types.DetectedAttack{
 		Type:    "detected_attack",
-		Agent:   GetAgentInfo(),
+		Agent:   getAgentInfo(),
 		Request: attack.Request,
 		Attack:  attack.Attack,
 		Time:    utils.GetTime(),
 	}
 
-	_, err := SendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, detectedAttackEvent)
+	_, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, detectedAttackEvent)
 	if err != nil {
-		LogCloudRequestError("Error in sending detected attack event: ", err)
+		logCloudRequestError("Error in sending detected attack event: ", err)
 		return
 	}
 }

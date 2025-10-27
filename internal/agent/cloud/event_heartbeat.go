@@ -114,10 +114,10 @@ func GetMiddlewareInstalled() bool {
 	return atomic.LoadUint32(&globals.MiddlewareInstalled) == 1
 }
 
-func SendHeartbeatEvent() {
+func (c *Client) SendHeartbeatEvent() {
 	heartbeatEvent := aikido_types.Heartbeat{
 		Type:                "heartbeat",
-		Agent:               GetAgentInfo(),
+		Agent:               getAgentInfo(),
 		Time:                utils.GetTime(),
 		Stats:               GetStatsAndClear(),
 		Hostnames:           GetHostnamesAndClear(),
@@ -126,12 +126,12 @@ func SendHeartbeatEvent() {
 		MiddlewareInstalled: GetMiddlewareInstalled(),
 	}
 
-	response, err := SendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, heartbeatEvent)
+	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, heartbeatEvent)
 	if err != nil {
-		LogCloudRequestError("Error in sending heartbeat event: ", err)
+		logCloudRequestError("Error in sending heartbeat event: ", err)
 		return
 	}
-	storeCloudConfig(response)
+	c.storeCloudConfig(response)
 }
 
 func computeAverage(times []int64) float64 {
