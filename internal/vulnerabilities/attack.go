@@ -61,7 +61,6 @@ func getHeaders(context *request.Context) map[string][]string {
 	return headers
 }
 
-// getAttackDetected constructs the DetectedAttack struct to be to the Agent
 func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types.DetectedAttack {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
