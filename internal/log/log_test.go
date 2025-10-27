@@ -29,22 +29,6 @@ func TestSetLogLevelMapping(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestSetLoggerAddsLibAttribute(t *testing.T) {
-	original := logger
-	t.Cleanup(func() { logger = original })
-
-	var buf bytes.Buffer
-	h := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
-	SetLogger(slog.New(h))
-
-	Info("hello")
-
-	out := buf.String()
-	require.NotEmpty(t, out)
-	assert.Contains(t, out, "lib=aikido")
-	assert.Contains(t, out, "hello")
-}
-
 func TestLevelFilteringWithSlog(t *testing.T) {
 	original := logger
 	t.Cleanup(func() { logger = original })
@@ -61,4 +45,31 @@ func TestLevelFilteringWithSlog(t *testing.T) {
 	Info("yes")
 	out := buf.String()
 	assert.Contains(t, out, "yes")
+}
+
+func TestSetLogger(t *testing.T) {
+	original := Logger()
+	defer SetLogger(original)
+
+	t.Run("adds lib attribute", func(t *testing.T) {
+		original := logger
+		t.Cleanup(func() { logger = original })
+
+		var buf bytes.Buffer
+		h := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
+		SetLogger(slog.New(h))
+
+		Info("hello")
+
+		out := buf.String()
+		require.NotEmpty(t, out)
+		assert.Contains(t, out, "lib=aikido")
+		assert.Contains(t, out, "hello")
+	})
+
+	t.Run("ignores nil logger", func(t *testing.T) {
+		before := Logger()
+		SetLogger(nil)
+		require.Equal(t, before, Logger(), "logger should not change when SetLogger receives nil")
+	})
 }
