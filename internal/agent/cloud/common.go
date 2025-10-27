@@ -107,11 +107,6 @@ func storeCloudConfig(configReponse []byte) bool {
 }
 
 func LogCloudRequestError(text string, err error) {
-	if atomic.LoadUint32(&globals.GotTraffic) == 0 {
-		// Wait for at least one request before we start logging any cloud request errors, including "no token set"
-		// We need to do that because the token can be passed later via gRPC and the first request.
-		return
-	}
 	if err.Error() == "no token set" {
 		if atomic.LoadUint32(&globals.LoggedTokenError) != 0 {
 			// Only report the "no token set" once, so we don't pollute the logs

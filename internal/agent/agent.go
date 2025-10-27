@@ -72,8 +72,6 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 	go storeStats()
 	go storeRoute(method, route, apiSpec)
 	go ratelimiting.UpdateCounts(method, route, user, ip)
-
-	atomic.StoreUint32(&globals.GotTraffic, 1)
 }
 
 func OnUser(id string, username string, ip string) {
