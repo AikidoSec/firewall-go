@@ -88,13 +88,6 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 
 func Uninit() {}
 
-func GetToken() string {
-	globals.AikidoConfig.ConfigMutex.Lock()
-	defer globals.AikidoConfig.ConfigMutex.Unlock()
-
-	return globals.AikidoConfig.Token
-}
-
 func IsBlockingEnabled() bool {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()

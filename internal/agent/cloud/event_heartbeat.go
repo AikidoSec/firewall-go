@@ -126,7 +126,7 @@ func (c *Client) SendHeartbeatEvent() {
 		MiddlewareInstalled: GetMiddlewareInstalled(),
 	}
 
-	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, heartbeatEvent)
+	response, err := c.sendCloudRequest(c.apiEndpoint, globals.EventsAPI, globals.EventsAPIMethod, heartbeatEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending heartbeat event: ", err)
 		return

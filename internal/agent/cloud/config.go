@@ -9,7 +9,7 @@ import (
 )
 
 func (c *Client) CheckConfigUpdatedAt() {
-	response, err := c.sendCloudRequest(globals.EnvironmentConfig.ConfigEndpoint, globals.ConfigUpdatedAtAPI, globals.ConfigUpdatedAtMethod, nil)
+	response, err := c.sendCloudRequest(c.configEndpoint, globals.ConfigUpdatedAtAPI, globals.ConfigUpdatedAtMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending polling config request: ", err)
 		return
@@ -25,7 +25,7 @@ func (c *Client) CheckConfigUpdatedAt() {
 		return
 	}
 
-	configResponse, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ConfigAPI, globals.ConfigAPIMethod, nil)
+	configResponse, err := c.sendCloudRequest(c.apiEndpoint, globals.ConfigAPI, globals.ConfigAPIMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending config request: ", err)
 		return

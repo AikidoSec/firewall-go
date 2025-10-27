@@ -26,7 +26,11 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		return err
 	}
 
-	cloudClient = cloud.NewClient(&cloud.ClientConfig{})
+	cloudClient = cloud.NewClient(&cloud.ClientConfig{
+		Token:          aikidoConfig.Token,
+		APIEndpoint:    globals.EnvironmentConfig.Endpoint,
+		ConfigEndpoint: globals.EnvironmentConfig.ConfigEndpoint,
+	})
 	go cloudClient.SendStartEvent()
 
 	cloud.StartPolling(cloudClient)

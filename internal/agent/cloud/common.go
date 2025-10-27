@@ -69,7 +69,7 @@ func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
 }
 
 func (c *Client) updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
-	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.ListsAPI, globals.ListsAPIMethod, nil)
+	response, err := c.sendCloudRequest(c.apiEndpoint, globals.ListsAPI, globals.ListsAPIMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending lists request: ", err)
 		return false

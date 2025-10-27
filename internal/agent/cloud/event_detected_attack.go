@@ -57,7 +57,7 @@ func (c *Client) SendAttackDetectedEvent(attack *aikido_types.DetectedAttack) {
 		Time:    utils.GetTime(),
 	}
 
-	_, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, detectedAttackEvent)
+	_, err := c.sendCloudRequest(c.apiEndpoint, globals.EventsAPI, globals.EventsAPIMethod, detectedAttackEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending detected attack event: ", err)
 		return
