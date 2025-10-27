@@ -42,9 +42,3 @@ var MiddlewareInstalled uint32
 
 // Did we log a token error?
 var LoggedTokenError uint32
-
-// Users map, which holds the current users and their data
-var AttackDetectedEventsSentAt []int64
-
-// Users mutex used to sync access across the go routines
-var AttackDetectedEventsSentAtMutex sync.Mutex

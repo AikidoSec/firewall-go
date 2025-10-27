@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
@@ -9,31 +10,38 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
+var (
+	// Holds times at which attacks were reported
+	// This allows us to limit the maximum number of attacks reported within a window of time
+	attackDetectedEventsSentAt      []int64
+	attackDetectedEventsSentAtMutex sync.Mutex
+)
+
 func ShouldSendAttackDetectedEvent() bool {
-	globals.AttackDetectedEventsSentAtMutex.Lock()
-	defer globals.AttackDetectedEventsSentAtMutex.Unlock()
+	attackDetectedEventsSentAtMutex.Lock()
+	defer attackDetectedEventsSentAtMutex.Unlock()
 
 	currentTime := utils.GetTime()
 
 	// Filter out events that are outside the current interval
 	var filteredEvents []int64
-	for _, eventTime := range globals.AttackDetectedEventsSentAt {
+	for _, eventTime := range attackDetectedEventsSentAt {
 		if eventTime > currentTime-globals.AttackDetectedEventsIntervalInMs {
 			filteredEvents = append(filteredEvents, eventTime)
 		}
 	}
-	globals.AttackDetectedEventsSentAt = filteredEvents
+	attackDetectedEventsSentAt = filteredEvents
 
-	if len(globals.AttackDetectedEventsSentAt) >= globals.MaxAttackDetectedEventsPerInterval {
+	if len(attackDetectedEventsSentAt) >= globals.MaxAttackDetectedEventsPerInterval {
 		log.Warn("Maximum number of \"detected_attack\" events exceeded for timeframe",
 			slog.Int("max", globals.MaxAttackDetectedEventsPerInterval),
-			slog.Int("count", len(globals.AttackDetectedEventsSentAt)),
+			slog.Int("count", len(attackDetectedEventsSentAt)),
 			slog.Int("interval_ms", globals.AttackDetectedEventsIntervalInMs))
 
 		return false
 	}
 
-	globals.AttackDetectedEventsSentAt = append(globals.AttackDetectedEventsSentAt, currentTime)
+	attackDetectedEventsSentAt = append(attackDetectedEventsSentAt, currentTime)
 	return true
 }
 
