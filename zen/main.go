@@ -3,6 +3,7 @@
 package zen
 
 import (
+	"log/slog"
 	"os"
 	"runtime"
 	"sync"
@@ -25,6 +26,8 @@ type Config struct {
 	LogLevel string
 	// LogFormat sets the logging format (text, json)
 	LogFormat string
+	// Logger provides a custom slog instance that overrrides LogLevel and LogFormat
+	Logger *slog.Logger
 	// Debug enables debug logging (overrides LogLevel)
 	Debug bool
 	// Token is the Aikido API token
@@ -81,6 +84,10 @@ func doProtect(cfg *Config) {
 			protectErr = err
 			return
 		}
+	}
+
+	if mergedCfg.Logger != nil {
+		log.SetLogger(mergedCfg.Logger)
 	}
 
 	config.CollectAPISchema = true
