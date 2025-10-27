@@ -15,6 +15,11 @@ import (
 
 var ErrNoTokenSet = errors.New("no token set")
 
+const (
+	eventsAPIMethod = "POST"
+	eventsAPIRoute  = "/api/runtime/events"
+)
+
 func (c *Client) sendCloudRequest(endpoint string, route string, method string, payload any) ([]byte, error) {
 	if c.token == "" {
 		return nil, ErrNoTokenSet
