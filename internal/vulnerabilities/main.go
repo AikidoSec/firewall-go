@@ -29,30 +29,29 @@ func Scan(ctx context.Context, operation string, vulnerability Vulnerability, ar
 		return nil
 	}
 
-	detectedAttack, err := scanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args)
-	if detectedAttack || err != nil {
+	err := scanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args)
+	if err != nil {
 		return err
 	}
 
-	detectedAttack, err = scanSource(ctx, "headers", reqCtx.Headers, operation, vulnerability, args)
-	if detectedAttack || err != nil {
+	err = scanSource(ctx, "headers", reqCtx.Headers, operation, vulnerability, args)
+	if err != nil {
 		return err
 	}
 
-	detectedAttack, err = scanSource(ctx, "cookies", reqCtx.Cookies, operation, vulnerability, args)
-	if detectedAttack || err != nil {
+	err = scanSource(ctx, "cookies", reqCtx.Cookies, operation, vulnerability, args)
+	if err != nil {
 		return err
 	}
 
-	detectedAttack, err = scanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args)
-	if detectedAttack || err != nil {
+	err = scanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args)
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// scanSource returns a boolean if an attack was detected and an error to be returned to the sink if the attack should be blocked
-func scanSource(ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability, args []string) (bool, error) {
+func scanSource(ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
 	userInputMap := extractStringsFromUserInput(sourceData, []pathPart{})
 
 	for userInput, path := range userInputMap {
@@ -69,9 +68,9 @@ func scanSource(ctx context.Context, source string, sourceData any, operation st
 			}
 			log.Debug("Attack", slog.String("attack", attack.ToString()))
 
-			return true, onInterceptorResult(ctx, attack)
+			return onInterceptorResult(ctx, attack)
 		}
 	}
 
-	return false, nil
+	return nil
 }
