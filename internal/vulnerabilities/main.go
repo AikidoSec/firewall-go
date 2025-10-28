@@ -2,7 +2,6 @@ package vulnerabilities
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -13,11 +12,13 @@ type ScanResult struct {
 	DetectedAttack bool
 	Metadata       map[string]string
 }
+
 type Vulnerability struct {
 	ScanFunction func(string, []string) *ScanResult
 	Kind         AttackKind
 	Error        string
 }
+
 type Attack struct {
 	Kind string
 }
@@ -28,26 +29,29 @@ func Scan(ctx context.Context, operation string, vulnerability Vulnerability, ar
 		return nil
 	}
 
-	err := ScanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args)
+	err := scanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
-	err = ScanSource(ctx, "headers", reqCtx.Headers, operation, vulnerability, args)
+
+	err = scanSource(ctx, "headers", reqCtx.Headers, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
-	err = ScanSource(ctx, "cookies", reqCtx.Cookies, operation, vulnerability, args)
+
+	err = scanSource(ctx, "cookies", reqCtx.Cookies, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
-	err = ScanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args)
+
+	err = scanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func ScanSource(ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
+func scanSource(ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
 	userInputMap := extractStringsFromUserInput(sourceData, []pathPart{})
 
 	for userInput, path := range userInputMap {
@@ -63,9 +67,8 @@ func ScanSource(ctx context.Context, source string, sourceData any, operation st
 				Payload:       userInput,
 			}
 			log.Debug("Attack", slog.String("attack", attack.ToString()))
-			ReportAttackDetected(ctx, attack)
 
-			return errors.New("Aikido: " + vulnerability.Error)
+			return onInterceptorResult(ctx, attack)
 		}
 	}
 

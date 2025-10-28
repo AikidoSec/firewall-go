@@ -23,7 +23,7 @@ const (
 	KindSSRF           AttackKind = "ssrf"
 )
 
-func GetDisplayNameForAttackKind(kind AttackKind) string {
+func getDisplayNameForAttackKind(kind AttackKind) string {
 	switch kind {
 	case KindSQLInjection:
 		return "an SQL injection"
@@ -61,8 +61,7 @@ func getHeaders(context *request.Context) map[string][]string {
 	return headers
 }
 
-// GetAttackDetected constructs the DetectedAttack struct to be to the Agent
-func GetAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types.DetectedAttack {
+func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types.DetectedAttack {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
@@ -93,36 +92,28 @@ func GetAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types
 	}
 }
 
-func BuildAttackDetectedMessage(result InterceptorResult) string {
-	return fmt.Sprintf("Aikido firewall has blocked %s: %s(...) originating from %s%s",
-		GetDisplayNameForAttackKind(result.Kind),
+func buildAttackDetectedError(result InterceptorResult) error {
+	return fmt.Errorf("aikido firewall has blocked %s: %s(...) originating from %s%s",
+		getDisplayNameForAttackKind(result.Kind),
 		result.Operation,
 		result.Source,
 		html.EscapeString(result.PathToPayload))
 }
 
-func GetThrowAction(message string, code int) string {
-	actionMap := map[string]any{
-		"action":  "throw",
-		"message": message,
-		"code":    code,
-	}
-	actionJSON, err := json.Marshal(actionMap)
-	if err != nil {
-		return ""
-	}
-	return string(actionJSON)
-}
-
-func GetAttackDetectedAction(result InterceptorResult) string {
-	return GetThrowAction(BuildAttackDetectedMessage(result), -1)
-}
-
-func ReportAttackDetected(ctx context.Context, res *InterceptorResult) string {
+// onInterceptorResult sends the detected attack to the cloud
+// Returns an error indicating the request should be blocked if blocking is enabled.
+func onInterceptorResult(ctx context.Context, res *InterceptorResult) error {
 	if res == nil {
-		return ""
+		return nil
 	}
 
-	go agent.OnAttackDetected(GetAttackDetected(ctx, *res))
-	return GetAttackDetectedAction(*res)
+	attack := getAttackDetected(ctx, *res)
+	go agent.OnAttackDetected(attack)
+
+	// If blocking is disabled, continue as normal after reporting the attack.
+	if attack == nil || !attack.Attack.Blocked {
+		return nil
+	}
+
+	return buildAttackDetectedError(*res)
 }
