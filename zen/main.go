@@ -34,7 +34,7 @@ type Config struct {
 	Token string
 	// Endpoint is the Aikido API endpoint
 	Endpoint string
-	// RealtimeEndpoint is the Aikido real-time config endpoint
+	// RealtimeEndpoint is the Aikido real-time config endpoint (default: https://runtime.aikido.dev/)
 	RealtimeEndpoint string
 }
 
