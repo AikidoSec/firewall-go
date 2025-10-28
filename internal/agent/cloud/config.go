@@ -48,6 +48,7 @@ func (c *Client) CheckConfigUpdatedAt() {
 	c.storeCloudConfig(configResponse)
 }
 
+// updateListsConfig fetches firewall blocklists to keep local security rules synchronized with cloud configuration.
 func (c *Client) updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
 	response, err := c.sendCloudRequest(c.apiEndpoint, listsAPIRoute, listsAPIMethod, nil)
 	if err != nil {
@@ -70,9 +71,9 @@ func (c *Client) updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bo
 	return true
 }
 
-func (c *Client) storeCloudConfig(configReponse []byte) bool {
+func (c *Client) storeCloudConfig(configResponse []byte) bool {
 	cloudConfig := &aikido_types.CloudConfigData{}
-	err := json.Unmarshal(configReponse, &cloudConfig)
+	err := json.Unmarshal(configResponse, &cloudConfig)
 	if err != nil {
 		log.Warn("Failed to unmarshal cloud config!")
 		return false
@@ -101,7 +102,6 @@ func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
 }
 
 func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
-	// Convert cloud config endpoints to ratelimiting format
 	endpointConfigs := make([]ratelimiting.EndpointConfig, len(endpoints))
 	for i, endpoint := range endpoints {
 		endpointConfigs[i] = ratelimiting.EndpointConfig{
