@@ -107,11 +107,11 @@ func onInterceptorResult(ctx context.Context, res *InterceptorResult) error {
 		return nil
 	}
 
-	atk := getAttackDetected(ctx, *res)
-	go agent.OnAttackDetected(atk)
+	attack := getAttackDetected(ctx, *res)
+	go agent.OnAttackDetected(attack)
 
-	// If blocking is enabled, continue as normal after reporting the attack.
-	if atk == nil || !atk.Attack.Blocked {
+	// If blocking is disabled, continue as normal after reporting the attack.
+	if attack == nil || !attack.Attack.Blocked {
 		return nil
 	}
 
