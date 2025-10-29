@@ -75,11 +75,10 @@ func (c *Client) storeCloudConfig(configResponse []byte) bool {
 	cloudConfig := &aikido_types.CloudConfigData{}
 	err := json.Unmarshal(configResponse, &cloudConfig)
 	if err != nil {
-		log.Warn("Failed to unmarshal cloud config!")
+		log.Warn("Failed to unmarshal cloud config!", slog.Any("error", err))
 		return false
 	}
 	if cloudConfig.ConfigUpdatedAt <= config.GetCloudConfigUpdatedAt() {
-		log.Debug("ConfigUpdatedAt is the same!")
 		return true
 	}
 
@@ -93,7 +92,6 @@ func (c *Client) storeCloudConfig(configResponse []byte) bool {
 
 func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
 	if !receivedAnyStats {
-		log.Info("Resetting HeartBeatTicker to 1m!")
 		heartBeatTicker.Reset(1 * time.Minute)
 	} else if heartbeatIntervalInMS >= minHeartbeatIntervalInMS {
 		log.Info("Resetting HeartBeatTicker!", slog.Int("interval", heartbeatIntervalInMS))
