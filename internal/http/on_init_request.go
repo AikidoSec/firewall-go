@@ -19,7 +19,7 @@ func OnInitRequest(ctx context.Context) *Response {
 	}
 
 	if config.IsIPBypassed(reqCtx.GetIP()) {
-		return nil // Return early, not setting a context object.
+		return nil
 	}
 
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)

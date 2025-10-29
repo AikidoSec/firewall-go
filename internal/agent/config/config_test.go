@@ -5,6 +5,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
+	"github.com/stretchr/testify/require"
 )
 
 // TestExtractRegionFromToken tests the extractRegionFromToken function.
@@ -181,7 +182,8 @@ func TestInitWithEmptyEndpoints(t *testing.T) {
 				CollectAPISchema: true,
 			}
 
-			Init(environmentConfig, aikidoConfig)
+			err := Init(environmentConfig, aikidoConfig)
+			require.NoError(t, err)
 
 			// Verify correct endpoint was applied based on token region
 			if globals.EnvironmentConfig.Endpoint != tt.expectedEndpoint {
@@ -218,7 +220,8 @@ func TestInitWithProvidedEndpoints(t *testing.T) {
 		CollectAPISchema: true,
 	}
 
-	Init(environmentConfig, aikidoConfig)
+	err := Init(environmentConfig, aikidoConfig)
+	require.NoError(t, err)
 
 	// Verify custom values were preserved (not the US endpoint)
 	if globals.EnvironmentConfig.Endpoint != customEndpoint {
@@ -228,4 +231,12 @@ func TestInitWithProvidedEndpoints(t *testing.T) {
 	if globals.EnvironmentConfig.ConfigEndpoint != customConfigEndpoint {
 		t.Errorf("Expected ConfigEndpoint to be %q, but got %q", customConfigEndpoint, globals.EnvironmentConfig.ConfigEndpoint)
 	}
+}
+
+func TestInitReturnsErrorForInvalidConfig(t *testing.T) {
+	err := Init(nil, &aikido_types.AikidoConfigData{
+		LogLevel: "INVALID",
+	})
+
+	require.Error(t, err)
 }

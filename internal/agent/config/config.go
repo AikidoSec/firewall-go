@@ -51,13 +51,15 @@ func getEndpointURL(token string) string {
 	}
 }
 
-func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) bool {
+// Init initializes the configuration system, extracting region from token to determine default endpoint URL if not set.
+// Returns an error if setting the log level fails.
+func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
 	globals.EnvironmentConfig = environmentConfig
 	globals.AikidoConfig = aikidoConfig
 
 	if globals.AikidoConfig.LogLevel != "" {
 		if err := log.SetLogLevel(globals.AikidoConfig.LogLevel); err != nil {
-			panic(fmt.Sprintf("Error setting log level: %s", err))
+			return fmt.Errorf("error setting log level: %w", err)
 		}
 	}
 
@@ -75,7 +77,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		log.Info("No token set!")
 	}
 
-	return true
+	return nil
 }
 
 func Uninit() {}
