@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -14,6 +15,7 @@ import (
 
 // Machine holds data about the current machine, computed at init
 var Machine aikido_types.MachineData
+var initOnce sync.Once
 
 func getHostName() string {
 	hostname, err := os.Hostname()
@@ -77,7 +79,8 @@ func getMachineData() aikido_types.MachineData {
 }
 
 func Init() {
-	Machine = getMachineData()
-
-	log.Info("Machine info", slog.Any("machine", Machine))
+	initOnce.Do(func() {
+		Machine = getMachineData()
+		log.Debug("Machine data", slog.Any("machine", Machine))
+	})
 }
