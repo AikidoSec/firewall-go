@@ -51,6 +51,8 @@ func getEndpointURL(token string) string {
 	}
 }
 
+// Init initializes the configuration system, extracting region from token to determine default endpoint URL if not set.
+// Returns an error if setting the log level fails.
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
 	globals.EnvironmentConfig = environmentConfig
 	globals.AikidoConfig = aikidoConfig
