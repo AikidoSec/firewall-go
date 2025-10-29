@@ -4,10 +4,10 @@
 If you want to use user-blocking, know which user performed an attack and rate-limit on a user basis, you have to set  a user using the following function : 
 ```go
 // Setting a user : 
-zen.SetUser(id, name)
+zen.SetUser(ctx, id, name)
 
 // So an example for Bob with id 1 :
-zen.SetUser("1", "Bob")
+zen.SetUser(ctx, "1", "Bob")
 ```
 It's advised to do this in your authentication middleware, and before you add the Aikido Middleware (used for rate-limiting and user blocking, [See here](#middleware))
 
@@ -20,7 +20,7 @@ r.Use(AikidoMiddleware())
 // ... 
 func AikidoMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		blockResult := zen.ShouldBlockRequest()
+		blockResult := zen.ShouldBlockRequest(c)
 
 		if blockResult != nil {
 			if blockResult.Type == "rate-limited" {
