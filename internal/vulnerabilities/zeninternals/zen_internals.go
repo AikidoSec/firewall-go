@@ -185,7 +185,7 @@ func allocateAndWriteString(ctx context.Context, memory api.Memory, alloc, free 
 		return 0, 0, nil, fmt.Errorf("failed to write %s to memory", name)
 	}
 
-	// Create cleanup function
+	// Create cleanup function to free the mmemory we manually allocated in WASM
 	cleanup := func() {
 		if _, freeErr := free.Call(ctx, uint64(ptr), dataLen); freeErr != nil {
 			// Log error but don't fail the main operation
