@@ -87,12 +87,18 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 		log.Error("Failed to get WASM instance from pool")
 		return 0
 	}
-	defer wasmPool.Put(inst)
 
-	result, err := callDetectSQL(ctx, inst.memory, inst.alloc, inst.free, inst.detectSQL, query, userInput, dialect)
+	result, cleanupSucceeded, err := callDetectSQL(ctx, inst.memory, inst.alloc, inst.free, inst.detectSQL, query, userInput, dialect)
 	if err != nil {
 		log.Error("Failed to call detect_sql_injection", slog.Any("error", err))
+		// Don't return instance to pool if there was an error
 		return 0
+	}
+
+	// Only return instance to pool if cleanup succeeded
+	// If cleanup failed, let the instance be garbage collected
+	if cleanupSucceeded {
+		wasmPool.Put(inst)
 	}
 
 	return int(result)
@@ -100,36 +106,47 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 
 // callDetectSQL performs SQL injection detection with safe memory management.
 // Handles string allocation, pointer validation, and cleanup to safely interface
-// with the underlying detection library. Returns 1 if SQL injection detected,
-// 0 otherwise, or error if allocation/call fails.
+// with the underlying detection library. Returns the result (1 if SQL injection detected,
+// 0 otherwise), a boolean indicating if cleanup succeeded, or error if allocation/call fails.
 func callDetectSQL(
 	ctx context.Context,
 	memory api.Memory,
 	alloc, free, detectSQL api.Function,
 	query, userInput string,
 	dialect int,
-) (int32, error) {
+) (int32, bool, error) {
 	if dialect < 0 || dialect > int(SQLite) {
-		return 0, fmt.Errorf("invalid dialect: %d, must be between 0 and %d", dialect, int(SQLite))
+		return 0, false, fmt.Errorf("invalid dialect: %d, must be between 0 and %d", dialect, int(SQLite))
 	}
 
 	// Convert strings to bytes
 	queryBytes := []byte(query)
 	userInputBytes := []byte(userInput)
 
+	// Track if cleanup succeeds
+	cleanupSucceeded := true
+
 	// Allocate and write query to WASM memory
 	queryPtr, queryLen, freeQuery, err := allocateAndWriteString(ctx, memory, alloc, free, queryBytes, "query")
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	defer freeQuery()
+	defer func() {
+		if !freeQuery() {
+			cleanupSucceeded = false
+		}
+	}()
 
 	// Allocate and write user input to WASM memory
 	userInputPtr, userInputLen, freeUserInput, err := allocateAndWriteString(ctx, memory, alloc, free, userInputBytes, "user input")
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	defer freeUserInput()
+	defer func() {
+		if !freeUserInput() {
+			cleanupSucceeded = false
+		}
+	}()
 
 	// Call detect_sql_injection(query_ptr, query_len, userinput_ptr, userinput_len, dialect)
 	results, err := detectSQL.Call(ctx,
@@ -140,23 +157,24 @@ func callDetectSQL(
 		uint64(dialect),
 	)
 	if err != nil {
-		return 0, fmt.Errorf("failed to call detect_sql_injection: %w", err)
+		return 0, false, fmt.Errorf("failed to call detect_sql_injection: %w", err)
 	}
 	if len(results) == 0 {
-		return 0, fmt.Errorf("detect_sql_injection returned no results")
+		return 0, false, fmt.Errorf("detect_sql_injection returned no results")
 	}
 
 	// Safely convert result to int32, checking for overflow
 	result := results[0]
 	if result > uint64(math.MaxInt32) {
-		return 0, fmt.Errorf("detect_sql_injection returned value too large: %d", result)
+		return 0, false, fmt.Errorf("detect_sql_injection returned value too large: %d", result)
 	}
-	return int32(result), nil
+	return int32(result), cleanupSucceeded, nil
 }
 
 // allocateAndWriteString allocates memory for a string, writes it to WASM memory, and returns the pointer and length
 // The caller is responsible for freeing the memory using the returned free function
-func allocateAndWriteString(ctx context.Context, memory api.Memory, alloc, free api.Function, data []byte, name string) (uint32, uint64, func(), error) {
+// The cleanup function returns true if freeing succeeded, false otherwise
+func allocateAndWriteString(ctx context.Context, memory api.Memory, alloc, free api.Function, data []byte, name string) (uint32, uint64, func() bool, error) {
 	// Check for potential overflow in string length
 	const maxStringLen = 1 << 30 // 1GB limit to prevent overflow
 	if len(data) > maxStringLen {
@@ -186,11 +204,14 @@ func allocateAndWriteString(ctx context.Context, memory api.Memory, alloc, free 
 	}
 
 	// Create cleanup function to free the mmemory we manually allocated in WASM
-	cleanup := func() {
+	// Returns true if freeing succeeded, false otherwise
+	cleanup := func() bool {
 		if _, freeErr := free.Call(ctx, uint64(ptr), dataLen); freeErr != nil {
 			// Log error but don't fail the main operation
-			log.Error("Failed to free memory", slog.String("name", name), slog.Any("error", freeErr))
+			log.Warn("Failed to free memory", slog.String("name", name), slog.Any("error", freeErr))
+			return false
 		}
+		return true
 	}
 
 	return ptr, dataLen, cleanup, nil
