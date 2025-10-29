@@ -30,10 +30,13 @@ jobs:
 
       - name: Run tests
         run: make test
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
+          fail_ci_if_error: true
+          files: ./coverage.out
           token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
 
   test-instrumentation:
     runs-on: ubuntu-latest
