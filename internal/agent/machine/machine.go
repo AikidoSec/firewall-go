@@ -24,15 +24,21 @@ func getHostName() string {
 }
 
 func getDomainName() string {
-	var domainName string
-
-	cmd := exec.Command("hostname", "--domain")
+	cmd := exec.Command("hostname", "-f")
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
 	}
-	domainName = strings.TrimSpace(string(output))
-	return domainName
+
+	fqdn := strings.TrimSpace(string(output))
+
+	// Extract domain by removing the first part (hostname)
+	parts := strings.SplitN(fqdn, ".", 2)
+	if len(parts) == 2 {
+		return parts[1]
+	}
+
+	return ""
 }
 
 func getOSVersion() string {
@@ -60,14 +66,18 @@ func getIPAddress() string {
 	return ""
 }
 
-func Init() {
-	Machine = aikido_types.MachineData{
+func getMachineData() aikido_types.MachineData {
+	return aikido_types.MachineData{
 		HostName:   getHostName(),
 		DomainName: getDomainName(),
 		OS:         runtime.GOOS,
 		OSVersion:  getOSVersion(),
 		IPAddress:  getIPAddress(),
 	}
+}
+
+func Init() {
+	Machine = getMachineData()
 
 	log.Info("Machine info", slog.Any("machine", Machine))
 }
