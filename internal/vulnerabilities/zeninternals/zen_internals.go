@@ -28,6 +28,18 @@ var (
 	wasmPool     sync.Pool
 )
 
+// memoryWriter is a minimal interface for writing to memory.
+// This allows for testability as wazero has unexported methods within api.Memory.
+type memoryWriter interface {
+	Write(offset uint32, data []byte) bool
+}
+
+// functionCaller is a minimal interface for calling functions.
+// This allows for testability as wazero has unexported methods within api.Function.
+type functionCaller interface {
+	Call(ctx context.Context, params ...uint64) ([]uint64, error)
+}
+
 type wasmInstance struct {
 	mod       api.Module
 	alloc     api.Function
@@ -88,7 +100,12 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 		return 0
 	}
 
-	result, cleanupSucceeded, err := callDetectSQL(ctx, inst.memory, inst.alloc, inst.free, inst.detectSQL, query, userInput, dialect)
+	result, cleanupSucceeded, err := callDetectSQL(ctx,
+		inst.memory,
+		inst.alloc,
+		inst.free,
+		inst.detectSQL,
+		query, userInput, dialect)
 	if err != nil {
 		log.Error("Failed to call detect_sql_injection", slog.Any("error", err))
 		// Don't return instance to pool if there was an error
@@ -110,8 +127,8 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 // 0 otherwise), a boolean indicating if cleanup succeeded, or error if allocation/call fails.
 func callDetectSQL(
 	ctx context.Context,
-	memory api.Memory,
-	alloc, free, detectSQL api.Function,
+	memory memoryWriter,
+	alloc, free, detectSQL functionCaller,
 	query, userInput string,
 	dialect int,
 ) (int32, bool, error) {
@@ -174,7 +191,7 @@ func callDetectSQL(
 // allocateAndWriteString allocates memory for a string, writes it to WASM memory, and returns the pointer and length
 // The caller is responsible for freeing the memory using the returned free function
 // The cleanup function returns true if freeing succeeded, false otherwise
-func allocateAndWriteString(ctx context.Context, memory api.Memory, alloc, free api.Function, data []byte, name string) (uint32, uint64, func() bool, error) {
+func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, free functionCaller, data []byte, name string) (uint32, uint64, func() bool, error) {
 	// Check for potential overflow in string length
 	const maxStringLen = 1 << 30 // 1GB limit to prevent overflow
 	if len(data) > maxStringLen {
