@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIsNotSqlInjection(t *testing.T) {
+func TestIsNotSQLInjection(t *testing.T) {
 	internal.Init()
 	tests := []struct {
 		query string
@@ -77,7 +77,7 @@ func TestIsNotSqlInjection(t *testing.T) {
 	}
 }
 
-func TestIsSqlInjection(t *testing.T) {
+func TestIsSQLInjection(t *testing.T) {
 	internal.Init()
 	tests := []struct {
 		query string
@@ -128,6 +128,115 @@ func TestIsSqlInjection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
 			assert.True(t, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection detected")
+		})
+	}
+}
+
+func TestShouldReturnEarly(t *testing.T) {
+	tests := []struct {
+		name      string
+		query     string
+		userInput string
+		want      bool
+	}{
+		// Test cases where the function should return True
+		{
+			name:      "user input is empty",
+			query:     "SELECT * FROM users",
+			userInput: "",
+			want:      true,
+		},
+		{
+			name:      "user input is a single character",
+			query:     "SELECT * FROM users",
+			userInput: "a",
+			want:      true,
+		},
+		{
+			name:      "user input is larger than query",
+			query:     "SELECT * FROM users",
+			userInput: "SELECT * FROM users WHERE id = 1",
+			want:      true,
+		},
+		{
+			name:      "user input not in query",
+			query:     "SELECT * FROM users",
+			userInput: "DELETE",
+			want:      true,
+		},
+		{
+			name:      "user input is alphanumerical - users123",
+			query:     "SELECT * FROM users123",
+			userInput: "users123",
+			want:      true,
+		},
+		{
+			name:      "user input is alphanumerical - users_123",
+			query:     "SELECT * FROM users_123",
+			userInput: "users_123",
+			want:      true,
+		},
+		{
+			name:      "user input is alphanumerical - __1",
+			query:     "SELECT __1 FROM users_123",
+			userInput: "__1",
+			want:      true,
+		},
+		{
+			name:      "user input is alphanumerical - long table name",
+			query:     "SELECT * FROM table_name_is_fun_12",
+			userInput: "table_name_is_fun_12",
+			want:      true,
+		},
+		{
+			name:      "user input is a valid comma-separated number list",
+			query:     "SELECT * FROM users",
+			userInput: "1,2,3",
+			want:      true,
+		},
+		{
+			name:      "user input is a valid number",
+			query:     "SELECT * FROM users",
+			userInput: "123",
+			want:      true,
+		},
+		{
+			name:      "user input is a valid number with spaces",
+			query:     "SELECT * FROM users",
+			userInput: "  123  ",
+			want:      true,
+		},
+		{
+			name:      "user input is a valid number with commas and spaces",
+			query:     "SELECT * FROM users",
+			userInput: "1, 2, 3",
+			want:      true,
+		},
+		// Test cases where the function should return False
+		{
+			name:      "user input is in query",
+			query:     "SELECT * FROM users",
+			userInput: " users",
+			want:      false,
+		},
+		{
+			name:      "user input is a valid string in query",
+			query:     "SELECT * FROM users",
+			userInput: "SELECT ",
+			want:      false,
+		},
+		{
+			name:      "user input is a valid string in query with special characters",
+			query:     "SELECT * FROM users; DROP TABLE",
+			userInput: "users; DROP TABLE",
+			want:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldReturnEarly(tt.query, tt.userInput)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
