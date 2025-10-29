@@ -10,6 +10,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
+	"github.com/AikidoSec/firewall-go/internal/agent/machine"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
@@ -19,12 +20,12 @@ var loggedTokenError atomic.Bool
 func getAgentInfo() aikido_types.AgentInfo {
 	return aikido_types.AgentInfo{
 		DryMode:   !config.IsBlockingEnabled(),
-		Hostname:  globals.Machine.HostName,
+		Hostname:  machine.Machine.HostName,
 		Version:   globals.EnvironmentConfig.Version,
-		IPAddress: globals.Machine.IPAddress,
+		IPAddress: machine.Machine.IPAddress,
 		OS: aikido_types.OsInfo{
-			Name:    globals.Machine.OS,
-			Version: globals.Machine.OSVersion,
+			Name:    machine.Machine.OS,
+			Version: machine.Machine.OSVersion,
 		},
 		Platform: aikido_types.PlatformInfo{
 			Name:    globals.EnvironmentConfig.PlatformName,

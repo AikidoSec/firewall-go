@@ -9,9 +9,11 @@ import (
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
+
+// Machine holds data about the current machine, computed at init
+var Machine aikido_types.MachineData
 
 func getHostName() string {
 	hostname, err := os.Hostname()
@@ -59,7 +61,7 @@ func getIPAddress() string {
 }
 
 func Init() {
-	globals.Machine = aikido_types.MachineData{
+	Machine = aikido_types.MachineData{
 		HostName:   getHostName(),
 		DomainName: getDomainName(),
 		OS:         runtime.GOOS,
@@ -67,5 +69,5 @@ func Init() {
 		IPAddress:  getIPAddress(),
 	}
 
-	log.Info("Machine info", slog.Any("machine", globals.Machine))
+	log.Info("Machine info", slog.Any("machine", Machine))
 }
