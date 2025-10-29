@@ -21,8 +21,10 @@ type MachineData struct {
 }
 
 // Machine holds data about the current machine, computed at init
-var Machine MachineData
-var initOnce sync.Once
+var (
+	Machine  MachineData
+	initOnce sync.Once
+)
 
 func getHostName() string {
 	hostname, err := os.Hostname()
@@ -33,6 +35,7 @@ func getHostName() string {
 }
 
 func getDomainName() string {
+	// We're using `hostname -f` instead of `hostname --domain` for darwin support
 	cmd := exec.Command("hostname", "-f")
 	output, err := cmd.Output()
 	if err != nil {
