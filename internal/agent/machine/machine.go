@@ -9,12 +9,19 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
+type MachineData struct {
+	HostName   string
+	DomainName string
+	OS         string
+	OSVersion  string
+	IPAddress  string
+}
+
 // Machine holds data about the current machine, computed at init
-var Machine aikido_types.MachineData
+var Machine MachineData
 var initOnce sync.Once
 
 func getHostName() string {
@@ -68,8 +75,8 @@ func getIPAddress() string {
 	return ""
 }
 
-func getMachineData() aikido_types.MachineData {
-	return aikido_types.MachineData{
+func getMachineData() MachineData {
+	return MachineData{
 		HostName:   getHostName(),
 		DomainName: getDomainName(),
 		OS:         runtime.GOOS,
