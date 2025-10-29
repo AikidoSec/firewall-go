@@ -72,4 +72,20 @@ func TestPopulateConfigFromEnv(t *testing.T) {
 		require.Equal(t, "https://test.example.com", result.Endpoint)
 		require.Equal(t, "https://runtime.test.example.com", result.ConfigEndpoint)
 	})
+
+	t.Run("empty config2", func(t *testing.T) {
+		original := &Config{}
+		result := populateConfigFromEnv(original)
+
+		// Original should not be modified
+		require.Equal(t, "", original.LogLevel)
+
+		// Result should have env var values
+		require.Equal(t, "DEBUG", result.LogLevel)
+		require.Equal(t, "json", result.LogFormat)
+		require.True(t, result.Debug)
+		require.Equal(t, "test-token", result.Token)
+		require.Equal(t, "https://test.example.com", result.Endpoint)
+		require.Equal(t, "https://runtime.test.example.com", result.ConfigEndpoint)
+	})
 }

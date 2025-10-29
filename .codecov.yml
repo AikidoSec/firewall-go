@@ -1,0 +1,6 @@
+comment: false
+ignore:
+  - "*_test.go"
+  - "sample-apps/"
+  - "end2end/"
+  - "benchmarks/"
