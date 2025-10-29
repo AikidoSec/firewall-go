@@ -15,6 +15,8 @@ jobs:
         os:
           - runner: ubuntu-latest
             name: ubuntu-x86_64
+          - runner: ubuntu-24.04-arm
+            name: ubuntu-arm64
           - runner: macos-14
             name: macos-arm64
           - runner: macos-15-intel
