@@ -47,6 +47,8 @@ func getDomainName(ctx context.Context) string {
 	fqdn := strings.TrimSpace(string(output))
 
 	// Extract domain by removing the first part (hostname)
+	// Example: if fqdn is "web01.prod.example.com", we split into ["web01", "prod.example.com"]
+	// and return parts[1] which is "prod.example.com"
 	parts := strings.SplitN(fqdn, ".", 2)
 	if len(parts) == 2 {
 		return parts[1]
