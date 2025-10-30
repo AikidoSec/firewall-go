@@ -92,12 +92,28 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types
 	}
 }
 
+type AttackDetectedError struct {
+	Kind          AttackKind
+	Operation     string
+	Source        string
+	PathToPayload string
+}
+
+func (e *AttackDetectedError) Error() string {
+	return fmt.Sprintf("aikido firewall has blocked %s: %s(...) originating from %s%s",
+		getDisplayNameForAttackKind(e.Kind),
+		e.Operation,
+		e.Source,
+		html.EscapeString(e.PathToPayload))
+}
+
 func buildAttackDetectedError(result InterceptorResult) error {
-	return fmt.Errorf("aikido firewall has blocked %s: %s(...) originating from %s%s",
-		getDisplayNameForAttackKind(result.Kind),
-		result.Operation,
-		result.Source,
-		html.EscapeString(result.PathToPayload))
+	return &AttackDetectedError{
+		Kind:          result.Kind,
+		Operation:     result.Operation,
+		Source:        result.Source,
+		PathToPayload: result.PathToPayload,
+	}
 }
 
 // onInterceptorResult sends the detected attack to the cloud
