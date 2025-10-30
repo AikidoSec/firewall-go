@@ -40,6 +40,16 @@ func TestNewWasmInstance(t *testing.T) {
 	require.True(t, ok, "newWasmInstance should return *wasmInstance")
 }
 
+func TestDetectSQLInjection(t *testing.T) {
+	require.NoError(t, Init())
+
+	result := DetectSQLInjection("SELECT * FROM users", "user input", int(MySQL))
+	require.Equal(t, 0, result)
+
+	result = DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(MySQL))
+	require.Equal(t, 1, result)
+}
+
 // mockMemoryWriter is a mock implementation of memoryWriter that can simulate write failures
 type mockMemoryWriter struct {
 	mu              sync.Mutex
