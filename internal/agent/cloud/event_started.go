@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
@@ -13,7 +12,7 @@ func (c *Client) SendStartEvent() {
 		Time:  utils.GetTime(),
 	}
 
-	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, startedEvent)
+	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, startedEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending start event: ", err)
 		return
