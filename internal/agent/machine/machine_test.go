@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"context"
 	"net"
 	"runtime"
 	"testing"
@@ -9,7 +10,7 @@ import (
 )
 
 func TestGetMachineData(t *testing.T) {
-	machineData := getMachineData()
+	machineData := getMachineData(context.TODO())
 
 	assert.Equal(t, runtime.GOOS, machineData.OS, "OS should match runtime.GOOS")
 	assert.NotEmpty(t, machineData.OSVersion, "OSVersion should be set")

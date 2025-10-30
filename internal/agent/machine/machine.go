@@ -1,6 +1,7 @@
 package machine
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
@@ -34,9 +36,9 @@ func getHostName() string {
 	return hostname
 }
 
-func getDomainName() string {
+func getDomainName(ctx context.Context) string {
 	// We're using `hostname -f` instead of `hostname --domain` for darwin support
-	cmd := exec.Command("hostname", "-f")
+	cmd := exec.CommandContext(ctx, "hostname", "-f")
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -53,8 +55,8 @@ func getDomainName() string {
 	return ""
 }
 
-func getOSVersion() string {
-	cmd := exec.Command("uname", "-r")
+func getOSVersion(ctx context.Context) string {
+	cmd := exec.CommandContext(ctx, "uname", "-r")
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -78,19 +80,22 @@ func getIPAddress() string {
 	return ""
 }
 
-func getMachineData() MachineData {
+func getMachineData(ctx context.Context) MachineData {
 	return MachineData{
 		HostName:   getHostName(),
-		DomainName: getDomainName(),
+		DomainName: getDomainName(ctx),
 		OS:         runtime.GOOS,
-		OSVersion:  getOSVersion(),
+		OSVersion:  getOSVersion(ctx),
 		IPAddress:  getIPAddress(),
 	}
 }
 
 func Init() {
 	initOnce.Do(func() {
-		Machine = getMachineData()
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		Machine = getMachineData(ctx)
 		log.Debug("Machine data", slog.Any("machine", Machine))
 	})
 }
