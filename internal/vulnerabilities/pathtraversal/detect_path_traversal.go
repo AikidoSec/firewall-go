@@ -1,6 +1,8 @@
 package pathtraversal
 
-import "strings"
+import (
+	"strings"
+)
 
 // detectPathTraversal detects path traversal attacks.
 func detectPathTraversal(filePath, userInput string, checkPathStart bool) bool {
