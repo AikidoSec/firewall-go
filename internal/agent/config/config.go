@@ -77,6 +77,12 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		log.Info("No token set!")
 	}
 
+	// If blocking is enabled, set the service config to block whilst we wait for the cloud config to be retrieved
+	if globals.AikidoConfig.Blocking {
+		serviceConfigMutex.Lock()
+		defer serviceConfigMutex.Unlock()
+		serviceConfig.Block = true
+	}
 	return nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal"
@@ -36,6 +37,9 @@ type Config struct {
 	Endpoint string
 	// ConfigEndpoint is the Aikido real-time config endpoint
 	ConfigEndpoint string
+	// Block will block any requests with suspected attacks
+	// Once cloud config is retrieved, Zen will use the configured mode from the dashboard.
+	Block bool
 }
 
 // Protect initializes and starts the firewall background process.
@@ -92,7 +96,7 @@ func doProtect(cfg *Config) {
 
 	config.CollectAPISchema = true
 
-	err := initAgent(config.CollectAPISchema, logLevel, mergedCfg.Token, mergedCfg.Endpoint, mergedCfg.ConfigEndpoint)
+	err := initAgent(config.CollectAPISchema, logLevel, mergedCfg.Token, mergedCfg.Endpoint, mergedCfg.ConfigEndpoint, mergedCfg.Block)
 	if err != nil {
 		protectErr = err
 		return
@@ -105,7 +109,7 @@ func doProtect(cfg *Config) {
 	}
 }
 
-func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, configEndpoint string) error {
+func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, configEndpoint string, block bool) error {
 	environmentConfig := &aikido_types.EnvironmentConfigData{
 		PlatformName:    "golang",
 		PlatformVersion: runtime.Version(),
@@ -118,6 +122,7 @@ func initAgent(collectAPISchema bool, logLevel string, token string, endpoint st
 		LogLevel:         logLevel,
 		Token:            token,
 		CollectAPISchema: collectAPISchema,
+		Blocking:         block,
 	}
 
 	return agent.Init(environmentConfig, aikidoConfig)
@@ -139,7 +144,10 @@ func populateConfigFromEnv(cfg *Config) *Config {
 		result.LogFormat = os.Getenv("AIKIDO_LOG_FORMAT")
 	}
 	if !result.Debug {
-		result.Debug = os.Getenv("AIKIDO_DEBUG") == "true"
+		result.Debug = getEnvBool("AIKIDO_DEBUG")
+	}
+	if !result.Block {
+		result.Block = getEnvBool("AIKIDO_BLOCK")
 	}
 	if result.Token == "" {
 		result.Token = os.Getenv("AIKIDO_TOKEN")
@@ -152,4 +160,9 @@ func populateConfigFromEnv(cfg *Config) *Config {
 	}
 
 	return &result
+}
+
+func getEnvBool(name string) bool {
+	v := strings.ToLower(os.Getenv(name))
+	return v == "true" || v == "1"
 }
