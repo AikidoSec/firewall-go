@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
+meta:
+  name: github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath
+  description: |-
+    Protection from Local File Inclusion (LFI) Attacks
+aspects:
+  - id: JoinPath
+    join-point:
+      all-of:
+        - import-path: path/filepath
+        - function-body:
+            function:
+              - name: Join
+    advice:
+      - inject-declarations:
+          # We're using go:linkname to avoid circular depdendencies.
+          links:
+            - github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath
+          template: |-
+            //go:linkname __aikido_path_filepath_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath.Examine
+            func __aikido_path_filepath_Examine ([]string) error
+      - prepend-statements:
+          template: |-
+            __aikido_path_filepath_Examine({{ .Function.Argument 0 }})
