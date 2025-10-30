@@ -1,16 +1,30 @@
 package machine
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
+)
+
+type MachineData struct {
+	HostName  string
+	OS        string
+	OSVersion string
+	IPAddress string
+}
+
+// Machine caches immutable system information to avoid expensive repeated system calls.
+var (
+	Machine  MachineData
+	initOnce sync.Once
 )
 
 func getHostName() string {
@@ -21,20 +35,11 @@ func getHostName() string {
 	return hostname
 }
 
-func getDomainName() string {
-	var domainName string
-
-	cmd := exec.Command("hostname", "--domain")
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	domainName = strings.TrimSpace(string(output))
-	return domainName
-}
-
 func getOSVersion() string {
-	cmd := exec.Command("uname", "-r")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "uname", "-r")
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -58,14 +63,18 @@ func getIPAddress() string {
 	return ""
 }
 
-func Init() {
-	globals.Machine = aikido_types.MachineData{
-		HostName:   getHostName(),
-		DomainName: getDomainName(),
-		OS:         runtime.GOOS,
-		OSVersion:  getOSVersion(),
-		IPAddress:  getIPAddress(),
+func getMachineData() MachineData {
+	return MachineData{
+		HostName:  getHostName(),
+		OS:        runtime.GOOS,
+		OSVersion: getOSVersion(),
+		IPAddress: getIPAddress(),
 	}
+}
 
-	log.Info("Machine info", slog.Any("machine", globals.Machine))
+func Init() {
+	initOnce.Do(func() {
+		Machine = getMachineData()
+		log.Debug("Machine data", slog.Any("machine", Machine))
+	})
 }

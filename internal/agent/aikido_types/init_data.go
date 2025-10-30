@@ -2,14 +2,6 @@ package aikido_types
 
 import "sync"
 
-type MachineData struct {
-	HostName   string `json:"hostname"`
-	DomainName string `json:"domainname"`
-	OS         string `json:"os"`
-	OSVersion  string `json:"os_version"`
-	IPAddress  string `json:"ip_address"`
-}
-
 type EnvironmentConfigData struct {
 	PlatformName    string `json:"platform_name"`             // Platform name (fpm-fcgi, cli-server, ...)
 	PlatformVersion string `json:"platform_version"`          // Language version

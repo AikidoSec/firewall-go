@@ -12,9 +12,6 @@ var EnvironmentConfig *aikido_types.EnvironmentConfigData
 // Aikido config that contains info about endpoint, log_level, token, ...
 var AikidoConfig *aikido_types.AikidoConfigData
 
-// Data about the current machine, computed at init
-var Machine aikido_types.MachineData
-
 // List of outgoing hostnames, their ports and number of hits, collected from the requests
 var Hostnames = make(map[string]map[uint32]uint64)
 
