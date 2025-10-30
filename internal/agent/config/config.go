@@ -95,3 +95,10 @@ func IsBlockingEnabled() bool {
 
 	return serviceConfig.Block
 }
+
+func SetBlocking(blocking bool) {
+	serviceConfigMutex.Lock()
+	defer serviceConfigMutex.Unlock()
+
+	serviceConfig.Block = blocking
+}
