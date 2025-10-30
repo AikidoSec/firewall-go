@@ -20,7 +20,7 @@ type MachineData struct {
 	IPAddress  string
 }
 
-// Machine holds data about the current machine, computed at init
+// Machine caches immutable system information to avoid expensive repeated system calls.
 var (
 	Machine  MachineData
 	initOnce sync.Once
