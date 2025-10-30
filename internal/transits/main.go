@@ -1,6 +1,8 @@
 package transits
 
-import "sync"
+import (
+	"sync"
+)
 
 // OSSinkFunction is a global variable that will hold the function to
 // test for path traversal. We cannot directly call it because then the compiler crashes.
