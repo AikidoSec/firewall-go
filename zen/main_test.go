@@ -73,3 +73,59 @@ func TestPopulateConfigFromEnv(t *testing.T) {
 		require.Equal(t, "https://runtime.test.example.com", result.ConfigEndpoint)
 	})
 }
+
+func TestGetEnvBool(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		want     bool
+	}{
+		{
+			name:     "returns true for 'true'",
+			envValue: "true",
+			want:     true,
+		},
+		{
+			name:     "returns true for '1'",
+			envValue: "1",
+			want:     true,
+		},
+		{
+			name:     "returns true for 'TRUE' (case insensitive)",
+			envValue: "TRUE",
+			want:     true,
+		},
+		{
+			name:     "returns false for 'false'",
+			envValue: "false",
+			want:     false,
+		},
+		{
+			name:     "returns false for '0'",
+			envValue: "0",
+			want:     false,
+		},
+		{
+			name:     "returns false for empty string",
+			envValue: "",
+			want:     false,
+		},
+		{
+			name:     "returns false for other values",
+			envValue: "yes",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			envVar := "TEST_ENV_BOOL"
+			t.Setenv(envVar, tt.envValue)
+
+			got := getEnvBool(envVar)
+			if got != tt.want {
+				t.Errorf("getEnvBool() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
