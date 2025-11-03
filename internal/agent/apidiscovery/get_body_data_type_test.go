@@ -19,6 +19,7 @@ func TestGetBodyDataType(t *testing.T) {
 		{"JSON with charset", map[string][]string{"content-type": {"application/json; charset=utf-8"}}, "json"},
 		{"JSON uppercase", map[string][]string{"content-type": {"Application/JSON"}}, "json"},
 		{"JSON LD", map[string][]string{"content-type": {"application/ld+json"}}, "json"},
+		{"JSON with whitespace", map[string][]string{"content-type": {" application/json "}}, "json"},
 		{"Form-urlencoded content type", map[string][]string{"content-type": {"application/x-www-form-urlencoded"}}, "form-urlencoded"},
 		{"Multipart form-data content type", map[string][]string{"content-type": {"multipart/form-data"}}, "form-data"},
 		{"XML content type", map[string][]string{"content-type": {"text/xml"}}, "xml"},

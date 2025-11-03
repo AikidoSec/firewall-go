@@ -24,7 +24,7 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 	if !exists || len(contentTypeArray) < 1 {
 		return BodyTypeUndefined
 	}
-	contentType := strings.ToLower(contentTypeArray[0])
+	contentType := strings.ToLower(strings.TrimSpace(contentTypeArray[0]))
 
 	if isJSONContentType(contentType) {
 		return BodyTypeJSON
