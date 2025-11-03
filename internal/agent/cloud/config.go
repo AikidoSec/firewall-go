@@ -71,6 +71,8 @@ func (c *Client) updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bo
 	return true
 }
 
+// storeCloudConfig applies cloud configuration if newer than the current
+// version. Returns false only if unmarshaling fails.
 func (c *Client) storeCloudConfig(configResponse []byte) bool {
 	cloudConfig := &aikido_types.CloudConfigData{}
 	err := json.Unmarshal(configResponse, &cloudConfig)
