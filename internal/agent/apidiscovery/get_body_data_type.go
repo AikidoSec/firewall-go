@@ -32,7 +32,7 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 		contentType = strings.Split(contentType, ",")[0]
 	}
 
-	if IsJsonContentType(contentType) {
+	if isJSONContentType(contentType) {
 		return BodyTypeJSON
 	}
 
@@ -49,4 +49,20 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 	}
 
 	return BodyTypeUndefined
+}
+
+var jsonContentTypes = []string{
+	"application/json",
+	"application/vnd.api+json",
+	"application/csp-report",
+	"application/x-json",
+}
+
+func isJSONContentType(contentType string) bool {
+	for _, jsonType := range jsonContentTypes {
+		if strings.Contains(contentType, jsonType) {
+			return true
+		}
+	}
+	return false
 }
