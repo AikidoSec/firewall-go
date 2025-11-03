@@ -1,4 +1,4 @@
-package gingonic
+package gin
 
 import (
 	"errors"

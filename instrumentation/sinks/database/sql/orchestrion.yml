@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
 meta:
-  name: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+  name: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
   description: |-
     Protection from SQL Injection.
 
@@ -19,7 +19,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.Query(Row)Context")
             if _aikido_block != nil {
@@ -39,7 +39,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Query(Row)")
             if _aikido_block != nil {
@@ -54,7 +54,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.ExecContext")
             if _aikido_block != nil {
@@ -69,7 +69,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Exec")
             if _aikido_block != nil {
@@ -84,7 +84,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.PrepareContext")
             if _aikido_block != nil {
@@ -99,7 +99,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Prepare")
             if _aikido_block != nil {
@@ -119,7 +119,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.Query(Row)Context")
             if _aikido_block != nil {
@@ -139,7 +139,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.Tx.Query(Row)")
             if _aikido_block != nil {
@@ -154,7 +154,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.ExecContext")
             if _aikido_block != nil {
@@ -169,7 +169,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.Tx.Exec")
             if _aikido_block != nil {
@@ -184,7 +184,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.PrepareContext")
             if _aikido_block != nil {
@@ -199,7 +199,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/databasesql
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.Tx.Prepare")
             if _aikido_block != nil {

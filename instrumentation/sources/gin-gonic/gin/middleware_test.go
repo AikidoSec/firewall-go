@@ -1,13 +1,13 @@
 //go:build !integration
 
-package gingonic_test
+package gin_test
 
 import (
 	"context"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/instrumentation/sources/gingonic"
+	zengin "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ import (
 func TestMiddlewareAddsContext(t *testing.T) {
 	router := gin.New()
 	router.ContextWithFallback = true
-	router.Use(gingonic.GetMiddleware())
+	router.Use(zengin.GetMiddleware())
 
 	router.GET("/route", func(c *gin.Context) {
 		ctx := request.GetContext(c)
@@ -39,7 +39,7 @@ func TestMiddlewareAddsContext(t *testing.T) {
 func TestMiddlewareGLSFallback(t *testing.T) {
 	router := gin.New()
 	router.ContextWithFallback = true
-	router.Use(gingonic.GetMiddleware())
+	router.Use(zengin.GetMiddleware())
 
 	router.GET("/route", func(c *gin.Context) {
 		// Test that we can get context using context.Background() (should fallback to GLS)
@@ -59,7 +59,7 @@ func TestMiddlewareGLSFallback(t *testing.T) {
 func BenchmarkMiddleware(b *testing.B) {
 	router := gin.New()
 	router.ContextWithFallback = true
-	router.Use(gingonic.GetMiddleware())
+	router.Use(zengin.GetMiddleware())
 
 	router.GET("/route", func(c *gin.Context) {})
 

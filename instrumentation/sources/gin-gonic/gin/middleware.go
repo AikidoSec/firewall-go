@@ -1,4 +1,4 @@
-package gingonic
+package gin
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/http"
