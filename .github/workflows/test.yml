@@ -38,11 +38,22 @@ jobs:
 
       - name: Run tests
         run: make test
-      - name: Upload coverage report to Codecov
+
+      - name: Upload main module coverage to Codecov
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
           fail_ci_if_error: true
           files: ./coverage.out
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+
+      - name: Upload zen-go CLI coverage to Codecov
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        with:
+          fail_ci_if_error: false
+          files: ./cmd/zen-go/coverage.out
+          flags: cli
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
@@ -68,6 +79,15 @@ jobs:
 
       - name: Run tests
         run: make test-instrumentation
+
+      - name: Upload instrumentation coverage to Codecov
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        with:
+          fail_ci_if_error: true
+          files: ./coverage.out
+          flags: instrumentation
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
 
   build-sample-apps:
     name: "Build ${{ matrix.app }}"
