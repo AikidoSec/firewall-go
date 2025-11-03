@@ -24,13 +24,7 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 	if !exists || len(contentTypeArray) < 1 {
 		return BodyTypeUndefined
 	}
-	contentType := contentTypeArray[0] // Unwrap
-
-	// Check if contentType has multiple values (comma separated or otherwise)
-	// and use the first one.
-	if strings.Contains(contentType, ",") {
-		contentType = strings.Split(contentType, ",")[0]
-	}
+	contentType := strings.ToLower(contentTypeArray[0])
 
 	if isJSONContentType(contentType) {
 		return BodyTypeJSON
@@ -53,16 +47,16 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 
 var jsonContentTypes = []string{
 	"application/json",
-	"application/vnd.api+json",
 	"application/csp-report",
 	"application/x-json",
 }
 
 func isJSONContentType(contentType string) bool {
 	for _, jsonType := range jsonContentTypes {
-		if strings.Contains(contentType, jsonType) {
+		if strings.HasPrefix(contentType, jsonType) {
 			return true
 		}
 	}
-	return false
+
+	return strings.Contains(contentType, "+json")
 }
