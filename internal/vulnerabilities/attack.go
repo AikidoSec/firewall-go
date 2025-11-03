@@ -52,15 +52,6 @@ func (i InterceptorResult) ToString() string {
 	return string(json)
 }
 
-// getHeaders clones headers map to be sent to the Agent
-func getHeaders(context *request.Context) map[string][]string {
-	headers := make(map[string][]string)
-	for key, value := range context.Headers {
-		headers[key] = append([]string{}, value...)
-	}
-	return headers
-}
-
 func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types.DetectedAttack {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
@@ -73,8 +64,6 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types
 			IPAddress: *reqCtx.RemoteAddress,
 			UserAgent: reqCtx.GetUserAgent(),
 			URL:       reqCtx.URL,
-			Headers:   getHeaders(reqCtx),
-			Body:      reqCtx.GetBodyRaw(),
 			Source:    reqCtx.Source,
 			Route:     reqCtx.Route,
 		},

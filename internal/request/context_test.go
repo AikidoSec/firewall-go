@@ -53,53 +53,6 @@ func TestContext_GetUserAgent(t *testing.T) {
 	}
 }
 
-func TestContext_GetBodyRaw(t *testing.T) {
-	tests := []struct {
-		name     string
-		body     any
-		expected string
-	}{
-		{
-			name:     "nil body",
-			body:     nil,
-			expected: "null",
-		},
-		{
-			name:     "string body",
-			body:     "test string",
-			expected: `"test string"`,
-		},
-		{
-			name:     "map body",
-			body:     map[string]string{"key": "value"},
-			expected: `{"key":"value"}`,
-		},
-		{
-			name:     "slice body",
-			body:     []string{"item1", "item2"},
-			expected: `["item1","item2"]`,
-		},
-		{
-			name:     "number body",
-			body:     42,
-			expected: "42",
-		},
-		{
-			name:     "invalid body",
-			body:     func() {},
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := &Context{Body: tt.body}
-			result := ctx.GetBodyRaw()
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestContext_SetUser_GetUserID(t *testing.T) {
 	ctx := &Context{}
 

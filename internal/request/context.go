@@ -1,7 +1,6 @@
 package request
 
 import (
-	"encoding/json"
 	"sync"
 )
 
@@ -27,14 +26,6 @@ func (ctx *Context) GetUserAgent() string {
 		return ctx.Headers["user-agent"][0]
 	}
 	return "unknown"
-}
-
-func (ctx *Context) GetBodyRaw() string {
-	data, err := json.Marshal(ctx.Body)
-	if err != nil {
-		return ""
-	}
-	return string(data)
 }
 
 func (ctx *Context) SetUser(user *User) {

@@ -66,28 +66,6 @@ func TestInterceptorResultToString(t *testing.T) {
 	}
 }
 
-func TestGetHeaders(t *testing.T) {
-	headers := map[string][]string{
-		"content-type": {"application/json"},
-		"user-agent":   {"test-agent"},
-	}
-
-	reqCtx := &request.Context{
-		Headers: headers,
-	}
-
-	result := getHeaders(reqCtx)
-
-	// Verify it's a clone (modifications to result shouldn't affect original)
-	result["x-test"] = []string{"test"}
-	_, ok := headers["x-test"]
-	assert.False(t, ok, "getHeaders() should return a cloned map")
-
-	// Verify values match
-	assert.Equal(t, []string{"application/json"}, result["content-type"])
-	assert.Equal(t, []string{"test-agent"}, result["user-agent"])
-}
-
 func TestBuildAttackDetectedError(t *testing.T) {
 	result := InterceptorResult{
 		Kind:          KindPathTraversal,
