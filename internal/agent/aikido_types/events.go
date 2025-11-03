@@ -94,14 +94,12 @@ type Heartbeat struct {
 }
 
 type RequestInfo struct {
-	Method    string              `json:"method"`
-	IPAddress string              `json:"ipAddress"`
-	UserAgent string              `json:"userAgent"`
-	URL       string              `json:"url"`
-	Headers   map[string][]string `json:"headers"`
-	Body      string              `json:"body"`
-	Source    string              `json:"source"`
-	Route     string              `json:"route"`
+	Method    string `json:"method"`
+	IPAddress string `json:"ipAddress"`
+	UserAgent string `json:"userAgent"`
+	URL       string `json:"url"`
+	Source    string `json:"source"`
+	Route     string `json:"route"`
 }
 
 type AttackDetails struct {
