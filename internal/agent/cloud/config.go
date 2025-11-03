@@ -103,6 +103,8 @@ func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
 	}
 }
 
+// updateRateLimitingConfig applies endpoint rate limiting configuration
+// from the cloud config.
 func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
 	endpointConfigs := make([]ratelimiting.EndpointConfig, len(endpoints))
 	for i, endpoint := range endpoints {
