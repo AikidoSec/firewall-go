@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/pathtraversal"
 )
@@ -11,10 +12,16 @@ import (
 func Examine(args []string) {
 	path := strings.Join(args, "")
 
-	// The error that the vulnerability scan returns is ignored as with filepath.Join
+	// The error that the vulnerability scan returns is deferred with filepath.Join
 	// We delay blocking and reporting until the result is used in os.OpenFile
-	_ = vulnerabilities.Scan(context.Background(), "filepath.Join", pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
+	err := vulnerabilities.Scan(context.Background(), "filepath.Join", pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
 		FilePath:       path,
 		CheckPathStart: true,
 	})
+	if err != nil {
+		ctx := request.GetContext(context.Background())
+		if ctx != nil {
+			ctx.SetDeferredBlock(err)
+		}
+	}
 }

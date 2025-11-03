@@ -4,6 +4,10 @@ import (
 	"sync"
 )
 
+type DeferredBlock struct {
+	Error error
+}
+
 type Context struct {
 	URL                string
 	Method             string
@@ -17,6 +21,8 @@ type Context struct {
 	Route              string
 	executedMiddleware bool
 	user               *User
+
+	deferredBlock error
 
 	mu sync.RWMutex
 }
@@ -71,4 +77,20 @@ func (ctx *Context) GetIP() string {
 		return *ctx.RemoteAddress
 	}
 	return ""
+}
+
+// SetDeferredBlock allows for blocking later in the request flow on vulnerable code paths.
+// This allows for detecting attacks on functions that don't return errors, such as `filepath.Join`.
+func (ctx *Context) SetDeferredBlock(err error) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	ctx.deferredBlock = err
+}
+
+func (ctx *Context) GetDeferredBlock() error {
+	ctx.mu.RLock()
+	defer ctx.mu.RUnlock()
+
+	return ctx.deferredBlock
 }

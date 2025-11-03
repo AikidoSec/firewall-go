@@ -2,6 +2,7 @@ package vulnerabilities
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -27,6 +28,16 @@ func Scan[T any](ctx context.Context, operation string, vulnerability Vulnerabil
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
+	}
+
+	if deferred := reqCtx.GetDeferredBlock(); deferred != nil {
+		// Check if the deferred block is for the same type of vulnerability
+		var detectedErr *AttackDetectedError
+		if errors.As(deferred, &detectedErr) {
+			if detectedErr.Kind == vulnerability.Kind {
+				return reqCtx.GetDeferredBlock()
+			}
+		}
 	}
 
 	err := scanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args)
