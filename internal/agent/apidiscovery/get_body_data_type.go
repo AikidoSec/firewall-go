@@ -38,7 +38,7 @@ func getBodyDataType(headers map[string][]string) BodyDataType {
 		return BodyTypeFormData
 	}
 
-	if strings.Contains(contentType, "xml") {
+	if isXMLContentType(contentType) {
 		return BodyTypeXML
 	}
 
@@ -59,4 +59,10 @@ func isJSONContentType(contentType string) bool {
 	}
 
 	return strings.Contains(contentType, "+json")
+}
+
+func isXMLContentType(contentType string) bool {
+	return strings.HasPrefix(contentType, "application/xml") ||
+		strings.HasPrefix(contentType, "text/xml") ||
+		strings.Contains(contentType, "+xml")
 }
