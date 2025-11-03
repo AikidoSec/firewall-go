@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-const version = "1.0.0"
+const version = "0.0.0"
 
 const toolsFileTemplate = `// This file was created by 'zen-go init', and is used to ensure the
 // go.mod file contains the necessary entries for repeatable builds.
