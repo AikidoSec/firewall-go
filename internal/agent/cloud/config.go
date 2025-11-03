@@ -92,6 +92,8 @@ func (c *Client) storeCloudConfig(configResponse []byte) bool {
 	return true
 }
 
+// resetHeartbeatTicker sets heartbeat interval to 1 minute initially,
+// then uses the provided interval if it meets the minimum threshold.
 func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
 	if !receivedAnyStats {
 		heartBeatTicker.Reset(1 * time.Minute)
