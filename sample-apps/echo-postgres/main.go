@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/AikidoSec/firewall-go/zen"
@@ -11,7 +12,11 @@ import (
 var db *DatabaseHelper
 
 func main() {
-	zen.Protect()
+	err := zen.Protect()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	db = NewDatabaseHelper()
 	// Set up Echo router
 	e := echo.New()
@@ -30,7 +35,10 @@ func main() {
 	defineAPIRoutes(e, db)
 
 	// Start the server
-	e.Start(":8082")
+	err = e.Start(":8082")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func AikidoMiddleware() echo.MiddlewareFunc {

@@ -34,7 +34,7 @@ func defineAPIRoutes(e *echo.Echo, db *DatabaseHelper) {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
 		rowsCreated, _ := db.CreatePetByName(c.Request().Context(), req.Name)
-		return c.String(http.StatusOK, string(rowsCreated))
+		return c.String(http.StatusOK, fmt.Sprint("%i", rowsCreated))
 	})
 
 	e.POST("/api/execute", func(c echo.Context) error {
