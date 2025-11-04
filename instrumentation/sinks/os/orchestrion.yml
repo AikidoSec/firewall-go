@@ -21,7 +21,7 @@ aspects:
               - name: Getpid
     advice:
       - inject-declarations:
-          # We're using go:linkname to avoid circular depdendencies with `os`.
+          # We're using go:linkname to avoid circular dependencies with `os`.
           # Separate aspect to handle both OpenFile methods (standalone and Root.OpenFile).
           # We attach the declaration to a function that only exists in the main os package
           # to ensure it's included exactly once.
