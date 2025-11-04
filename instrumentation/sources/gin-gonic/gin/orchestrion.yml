@@ -5,7 +5,7 @@
 ---
 # yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
 meta:
-  name: github.com/AikidoSec/firewall-go/instrumentation/sources/gingonic
+  name: github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
   description: Gin is a web framework written in Go.
 
 aspects:
@@ -18,10 +18,10 @@ aspects:
       - wrap-expression:
           imports:
             gin: github.com/gin-gonic/gin
-            zen_gin: github.com/AikidoSec/firewall-go/instrumentation/sources/gingonic
+            zengin: github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
           template: |-
             func() *gin.Engine {
               e := {{ . }}
-              e.Use(zen_gin.GetMiddleware())
+              e.Use(zengin.GetMiddleware())
               return e
             }()

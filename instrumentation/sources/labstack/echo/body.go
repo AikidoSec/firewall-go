@@ -1,4 +1,4 @@
-package labstackecho
+package echo
 
 import (
 	"errors"

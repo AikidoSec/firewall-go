@@ -1,13 +1,13 @@
 //go:build !integration
 
-package labstackecho_test
+package echo_test
 
 import (
 	"context"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/instrumentation/sources/labstackecho"
+	zenecho "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +16,7 @@ import (
 
 func TestMiddlewareAddsContext(t *testing.T) {
 	router := echo.New()
-	router.Use(labstackecho.GetMiddleware())
+	router.Use(zenecho.GetMiddleware())
 
 	router.GET("/route", func(e echo.Context) error {
 		ctx := request.GetContext(e.Request().Context())
@@ -38,7 +38,7 @@ func TestMiddlewareAddsContext(t *testing.T) {
 
 func TestMiddlewareGLSFallback(t *testing.T) {
 	router := echo.New()
-	router.Use(labstackecho.GetMiddleware())
+	router.Use(zenecho.GetMiddleware())
 
 	router.GET("/route", func(e echo.Context) error {
 		// Test that we can get context using context.Background() (should fallback to GLS)
@@ -58,7 +58,7 @@ func TestMiddlewareGLSFallback(t *testing.T) {
 
 func BenchmarkMiddleware(b *testing.B) {
 	router := echo.New()
-	router.Use(labstackecho.GetMiddleware())
+	router.Use(zenecho.GetMiddleware())
 
 	router.GET("/route", func(e echo.Context) error { return nil })
 

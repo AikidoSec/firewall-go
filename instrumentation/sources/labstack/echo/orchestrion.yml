@@ -5,7 +5,7 @@
 ---
 # yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
 meta:
-  name: github.com/AikidoSec/firewall-go/instrumentation/sources/labstackecho
+  name: github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo
   description: High performance, extensible, minimalist Go web framework.
 
 aspects:
@@ -16,10 +16,10 @@ aspects:
       - wrap-expression:
           imports:
             echo: github.com/labstack/echo/v4
-            zen_echo: github.com/AikidoSec/firewall-go/instrumentation/sources/labstackecho
+            zenecho: github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo
           template: |-
             func() *echo.Echo {
               e := {{ . }}
-              e.Use(zen_echo.GetMiddleware())
+              e.Use(zenecho.GetMiddleware())
               return e
             }()

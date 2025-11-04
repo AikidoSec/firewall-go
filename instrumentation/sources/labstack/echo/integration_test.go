@@ -1,6 +1,6 @@
 //go:build integration
 
-package gingonic_test
+package echo_test
 
 import (
 	"net/http/httptest"
@@ -8,26 +8,26 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGinIsAutomaticallyInstrumented(t *testing.T) {
+func TestEchoIsAutomaticallyInstrumented(t *testing.T) {
 	zen.Protect()
 
-	router := gin.New()
-	router.ContextWithFallback = true
+	router := echo.New()
 
-	router.GET("/route", func(c *gin.Context) {
-		ctx := request.GetContext(c)
+	router.GET("/route", func(e echo.Context) error {
+		ctx := request.GetContext(e.Request().Context())
 		require.NotNil(t, ctx, "request context should be set")
 
-		assert.Equal(t, "gin", ctx.Source)
+		assert.Equal(t, "echo", ctx.Source)
 		assert.Equal(t, "/route", ctx.Route)
 		assert.Equal(t, map[string][]string{
 			"query": {"value"},
 		}, ctx.Query)
+		return nil
 	})
 
 	r := httptest.NewRequest("GET", "/route?query=value", nil)
