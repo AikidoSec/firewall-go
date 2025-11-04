@@ -16,7 +16,7 @@ import (
 )
 
 func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
-	zen.Protect()
+	require.NoError(t, zen.Protect())
 
 	// Enable blocking so that Zen should cause os.OpenFile to return an error
 	original := config.IsBlockingEnabled()
