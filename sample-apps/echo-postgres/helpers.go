@@ -23,6 +23,7 @@ func executeShellCommand(command string) (string, error) {
 
 // makeHTTPRequest makes a simple HTTP GET request and returns the response.
 func makeHTTPRequest(url string) (string, error) {
+	// #nosec - this is an intentional vulnerability
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err

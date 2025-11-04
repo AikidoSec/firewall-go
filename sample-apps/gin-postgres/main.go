@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/AikidoSec/firewall-go/zen"
@@ -10,7 +11,11 @@ import (
 var db *DatabaseHelper
 
 func main() {
-	zen.Protect()
+	err := zen.Protect()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	db = NewDatabaseHelper()
 	// Set up Gin router
 	r := gin.Default()
@@ -29,7 +34,10 @@ func main() {
 	defineAPIRoutes(r, db)
 
 	// Start the server
-	r.Run(":8080")
+	err = r.Run(":8080")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func RateLimitMiddleware() gin.HandlerFunc {

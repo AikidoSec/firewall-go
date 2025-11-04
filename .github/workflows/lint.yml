@@ -26,3 +26,6 @@ jobs:
 
       - name: Run linter
         run: make lint
+
+      - name: Run linter with integration tag
+        run: make lint-integration

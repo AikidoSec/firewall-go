@@ -14,7 +14,7 @@ import (
 )
 
 func TestEchoIsAutomaticallyInstrumented(t *testing.T) {
-	zen.Protect()
+	require.NoError(t, zen.Protect())
 
 	router := echo.New()
 
