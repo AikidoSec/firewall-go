@@ -38,13 +38,13 @@ test-coverage-html: test
 .PHONY: lint
 lint:
 	@echo "Linting code with golangci-lint"
-	@golangci-lint run ./...
+	@golangci-lint run ./... --build-tags=integration
 	@echo "✅ Linting completed successfully"
 
 .PHONY: lint-fix
 lint-fix:
 	@echo "Linting and fixing code with golangci-lint"
-	@golangci-lint run --fix ./...
+	@golangci-lint run --fix ./... --build-tags=integration
 	@echo "✅ Linting and fixing completed successfully"
 
 
