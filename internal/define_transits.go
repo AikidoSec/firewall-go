@@ -20,7 +20,8 @@ func DefineTransits() {
 func OSExamine(path string) error {
 	operation := "os.OpenFile"
 
-	return vulnerabilities.Scan(context.Background(), operation, pathtraversal.PathTraversalVulnerability, []string{
-		path /* checkPathStart */, "1",
+	return vulnerabilities.Scan(context.Background(), operation, pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
+		FilePath:       path,
+		CheckPathStart: true,
 	})
 }
