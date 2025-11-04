@@ -14,7 +14,7 @@ type ScanResult struct {
 }
 
 type Vulnerability struct {
-	ScanFunction func(string, []string) *ScanResult
+	ScanFunction func(string, []string) (*ScanResult, error)
 	Kind         AttackKind
 	Error        string
 }
@@ -55,9 +55,16 @@ func scanSource(ctx context.Context, source string, sourceData any, operation st
 	userInputMap := extractStringsFromUserInput(sourceData, []pathPart{})
 
 	for userInput, path := range userInputMap {
-		results := vulnerability.ScanFunction(userInput, args)
+		results, err := vulnerability.ScanFunction(userInput, args)
+		if err != nil {
+			log.Error("Scan error",
+				slog.String("kind", string(vulnerability.Kind)),
+				slog.String("operation", operation),
+				slog.Any("error", err))
+			continue
+		}
+
 		if results != nil && results.DetectedAttack {
-			// Attack detected :
 			attack := &InterceptorResult{
 				Operation:     operation,
 				Kind:          vulnerability.Kind,
