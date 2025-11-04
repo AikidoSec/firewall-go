@@ -30,7 +30,7 @@ test-zen-go:
 	@echo "Running zen-go CLI tests with gotestsum"
 	@cd cmd/zen-go && gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./...
 	@echo "✅ zen-go tests completed successfully"
-	@cd cmd/zen-go && go tool cover -func=coverage.out | grep total | awk '{print "zen-go coverage: " $$3}'
+	@cd cmd/zen-go && go tool cover -func=coverage.out | grep total | awk '{print "cmd/zen-go coverage: " $$3}'
 
 .PHONY: test-instrumentation
 test-instrumentation:
