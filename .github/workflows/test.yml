@@ -15,6 +15,8 @@ jobs:
         os:
           - runner: ubuntu-latest
             name: ubuntu-x86_64
+          - runner: ubuntu-24.04-arm
+            name: ubuntu-arm64
           - runner: macos-14
             name: macos-arm64
           - runner: macos-15-intel
@@ -40,6 +42,7 @@ jobs:
         run: make test
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        if: ${{ !contains(matrix.os.name, 'arm64') }}
         with:
           fail_ci_if_error: true
           files: ./coverage.out
