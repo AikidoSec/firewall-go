@@ -9,15 +9,6 @@ import (
 
 // sampleRouteMetadata creates a new RouteMetadata for testing.
 func sampleRouteMetadata(url, method, route string) RouteMetadata {
-	if route == "" {
-		route = "/posts/:number"
-	}
-	if method == "" {
-		method = "POST"
-	}
-	if url == "" {
-		url = "http://localhost:4000/posts/3"
-	}
 	return RouteMetadata{
 		Route:  route,
 		URL:    url,
@@ -27,17 +18,17 @@ func sampleRouteMetadata(url, method, route string) RouteMetadata {
 
 func TestMatchEndpoints(t *testing.T) {
 	t.Run("testInvalidUrlAndNoRoute", func(t *testing.T) {
-		result := MatchEndpoints(sampleRouteMetadata("", "", "abc"), nil)
+		result := MatchEndpoints(sampleRouteMetadata("abc", "", ""), nil)
 		assert.Nil(t, result)
 	})
 
 	t.Run("testNoUrlAndNoRoute", func(t *testing.T) {
-		result := MatchEndpoints(sampleRouteMetadata("", "", "GET"), nil)
+		result := MatchEndpoints(sampleRouteMetadata("", "POST", ""), nil)
 		assert.Nil(t, result)
 	})
 
 	t.Run("testNoMethod", func(t *testing.T) {
-		result := MatchEndpoints(sampleRouteMetadata("/posts/:id", "http://localhost:4000/posts/3", ""), nil)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "", "/posts/:id"), nil)
 		assert.Nil(t, result)
 	})
 
@@ -60,7 +51,7 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("", "", ""), endpoints)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "POST", "/posts/:number"), endpoints)
 		assert.Equal(t, endpoints, result)
 	})
 
@@ -96,7 +87,7 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("", "", ""), endpoints)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "POST", "/posts/:number"), endpoints)
 		assert.Equal(t, endpoints, result)
 	})
 
@@ -148,7 +139,7 @@ func TestMatchEndpoints(t *testing.T) {
 			endpoints[1],
 			endpoints[0],
 		}
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "", "/posts/:number/comments/:number"), endpoints)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "POST", "/posts/:number/comments/:number"), endpoints)
 		assert.Equal(t, expected, result)
 	})
 
@@ -166,7 +157,7 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "", "/posts/:number/comments/:number"), endpoints)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "POST", "/posts/:number/comments/:number"), endpoints)
 		assert.Equal(t, endpoints, result)
 	})
 
@@ -201,7 +192,7 @@ func TestMatchEndpoints(t *testing.T) {
 			endpoints[0],
 		}
 
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/api/coach", "", "/api/coach"), endpoints)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/api/coach", "POST", "/api/coach"), endpoints)
 		assert.Equal(t, expected, result)
 	})
 
