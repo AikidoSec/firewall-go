@@ -1,6 +1,7 @@
 package apidiscovery
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -40,7 +41,7 @@ func GetApiAuthType(headers map[string][]string, cookies map[string]string) []*a
 		}
 	}
 
-	result = append(result, findApiKeys(headers, cookies)...)
+	result = append(result, findAPIKeys(headers, cookies)...)
 	return result
 }
 
@@ -76,8 +77,8 @@ func getPhpHttpHeaderEquivalent(apiKey string) string {
 	return strings.ReplaceAll(apiKey, "-", "_")
 }
 
-// findApiKeys searches for API keys in headers and cookies.
-func findApiKeys(headers map[string][]string, cookies map[string]string) []*aikido_types.APIAuthType {
+// findAPIKeys searches for API keys in headers and cookies.
+func findAPIKeys(headers map[string][]string, cookies map[string]string) []*aikido_types.APIAuthType {
 	var result []*aikido_types.APIAuthType
 
 	for headerIndex, header := range commonApiKeyHeaderNames {
@@ -93,7 +94,7 @@ func findApiKeys(headers map[string][]string, cookies map[string]string) []*aiki
 	if len(cookies) > 0 {
 		for cookieName := range cookies {
 			lowerCookieName := strings.ToLower(cookieName)
-			if contains(commonAuthCookieNames, lowerCookieName) {
+			if slices.Contains(commonAuthCookieNames, lowerCookieName) {
 				result = append(result, &aikido_types.APIAuthType{
 					Type: "apiKey",
 					In:   "cookie",
@@ -106,21 +107,11 @@ func findApiKeys(headers map[string][]string, cookies map[string]string) []*aiki
 	return result
 }
 
-// contains checks if a string exists in a slice.
-func contains(slice []string, item string) bool {
-	for _, a := range slice {
-		if a == item {
-			return true
-		}
-	}
-	return false
-}
-
 // isHTTPAuthScheme checks if the given string is a valid HTTP authentication scheme.
 // You will need to implement this function similar to the TypeScript helper function.
 func isHTTPAuthScheme(scheme string) bool {
 	// You can add proper logic here to check the scheme, e.g., "basic", "bearer", etc.
 	// For example:
 	allowedSchemes := []string{"basic", "bearer"}
-	return contains(allowedSchemes, strings.ToLower(scheme))
+	return slices.Contains(allowedSchemes, strings.ToLower(scheme))
 }

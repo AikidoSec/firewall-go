@@ -55,6 +55,10 @@ func GetAPIInfo(ctx *request.Context) *aikido_types.APISpec {
 }
 
 func isObject(data any) bool {
+	if data == nil {
+		return false
+	}
+
 	// Helper function to determine if the data is an object (map in Go)
 	return reflect.TypeOf(data).Kind() == reflect.Map
 }
