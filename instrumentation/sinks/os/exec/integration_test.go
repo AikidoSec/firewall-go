@@ -137,5 +137,55 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 				})
 			})
 		}
+
+		t.Run("shell injection via positional parameters", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/route?target=8.8.8.8%3Bcat%20/etc/passwd", nil)
+			ip := "127.0.0.1"
+			ctx := request.SetContext(context.Background(), req, "/route?target=8.8.8.8%3Bcat%20/etc/passwd", "test", &ip, nil)
+
+			request.WrapWithGLS(ctx, func() {
+				// This is vulnerable because the command uses $0 which references the next argument
+				userInput := "8.8.8.8;cat /etc/passwd"
+				cmd := exec.Command("sh", "-c", "ping $0", userInput)
+				err := cmd.Run()
+
+				var detectedErr *vulnerabilities.AttackDetectedError
+				require.ErrorAs(t, err, &detectedErr, "Should detect injection in positional parameter")
+			})
+		})
+
+		t.Run("multiple positional parameters with injection", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/route?arg1=safe&arg2=malicious%3Brm%20-rf%20/", nil)
+			ip := "127.0.0.1"
+			ctx := request.SetContext(context.Background(), req, "/route?arg1=safe&arg2=malicious%3Brm%20-rf%20/", "test", &ip, nil)
+
+			request.WrapWithGLS(ctx, func() {
+				// Command references multiple positional parameters
+				arg1 := "safe"
+				arg2 := "malicious;rm -rf /"
+				cmd := exec.Command("sh", "-c", "echo $0 && cat $1", arg1, arg2)
+				err := cmd.Run()
+
+				var detectedErr *vulnerabilities.AttackDetectedError
+				require.ErrorAs(t, err, &detectedErr, "Should detect injection in second positional parameter")
+			})
+		})
+
+		t.Run("safe positional parameter not referenced", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/route?unused=malicious%3Brm%20-rf%20/", nil)
+			ip := "127.0.0.1"
+			ctx := request.SetContext(context.Background(), req, "/route?unused=malicious%3Brm%20-rf%20/", "test", &ip, nil)
+
+			request.WrapWithGLS(ctx, func() {
+				// Even though userInput is malicious, it's never used by the command
+				// However, we should still detect it since we scan all args after -c
+				userInput := "malicious;rm -rf /"
+				cmd := exec.Command("sh", "-c", "echo hello", userInput)
+				err := cmd.Run()
+
+				var detectedErr *vulnerabilities.AttackDetectedError
+				require.ErrorAs(t, err, &detectedErr, "Should detect malicious content even if not referenced")
+			})
+		})
 	})
 }

@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/shellinjection"
@@ -28,7 +29,9 @@ func Examine(cmdCtx context.Context, args []string, op string) error {
 		return nil
 	}
 
+	fullCommand := strings.Join(commandsToScan, " ")
+
 	return vulnerabilities.Scan(ctx, op, shellinjection.ShellInjectionVulnerability, &shellinjection.ScanArgs{
-		Command: commandsToScan[0],
+		Command: fullCommand,
 	})
 }
