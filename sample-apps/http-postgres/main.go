@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/zen"
 )
@@ -31,8 +33,16 @@ func main() {
 
 	// Start the server
 	port := 8084
-	err = http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
-	if err != nil {
+
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           handler,
+		ReadHeaderTimeout: 2 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	log.Printf("Starting HTTP server on :%d\n", port)
+	if err = server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }
