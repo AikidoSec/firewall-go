@@ -12,7 +12,7 @@ func TestInitCommand_CreatesFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	oldDir, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldDir)
+	defer func() { _ = os.Chdir(oldDir) }()
 
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
@@ -40,14 +40,14 @@ func TestInitCommand_DoesNotOverwriteExistingFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	oldDir, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldDir)
+	defer func() { _ = os.Chdir(oldDir) }()
 
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
 	// Create existing file
 	filename := "orchestrion.tool.go"
-	err = os.WriteFile(filename, []byte("existing content"), 0644)
+	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
 	// Save original args
@@ -68,14 +68,14 @@ func TestInitCommand_ForceOverwritesExistingFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	oldDir, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldDir)
+	defer func() { _ = os.Chdir(oldDir) }()
 
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
 	// Create existing file
 	filename := "orchestrion.tool.go"
-	err = os.WriteFile(filename, []byte("existing content"), 0644)
+	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
 	// Save original args
@@ -97,14 +97,14 @@ func TestInitCommand_ForceShortFlag(t *testing.T) {
 	tmpDir := t.TempDir()
 	oldDir, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(oldDir)
+	defer func() { _ = os.Chdir(oldDir) }()
 
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
 	// Create existing file
 	filename := "orchestrion.tool.go"
-	err = os.WriteFile(filename, []byte("existing content"), 0644)
+	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
 	// Save original args
