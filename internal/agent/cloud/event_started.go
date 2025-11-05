@@ -17,5 +17,5 @@ func (c *Client) SendStartEvent() {
 		logCloudRequestError("Error in sending start event: ", err)
 		return
 	}
-	c.storeCloudConfig(response)
+	_ = c.storeCloudConfig(response)
 }

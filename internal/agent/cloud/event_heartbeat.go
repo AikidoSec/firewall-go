@@ -3,6 +3,7 @@ package cloud
 import (
 	"slices"
 	"sync/atomic"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
@@ -118,7 +119,8 @@ func GetMiddlewareInstalled() bool {
 	return atomic.LoadUint32(&globals.MiddlewareInstalled) == 1
 }
 
-func (c *Client) SendHeartbeatEvent() {
+// SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
+func (c *Client) SendHeartbeatEvent() time.Duration {
 	heartbeatEvent := aikido_types.Heartbeat{
 		Type:                "heartbeat",
 		Agent:               getAgentInfo(),
@@ -133,9 +135,9 @@ func (c *Client) SendHeartbeatEvent() {
 	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, heartbeatEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending heartbeat event: ", err)
-		return
+		return 0
 	}
-	c.storeCloudConfig(response)
+	return c.storeCloudConfig(response)
 }
 
 func computeAverage(times []int64) float64 {
