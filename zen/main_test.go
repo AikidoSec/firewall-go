@@ -32,7 +32,7 @@ func TestPopulateConfigFromEnv(t *testing.T) {
 		require.True(t, result.Debug)
 		require.Equal(t, "test-token", result.Token)
 		require.Equal(t, "https://test.example.com", result.Endpoint)
-		require.Equal(t, "https://runtime.test.example.com", result.ConfigEndpoint)
+		require.Equal(t, "https://runtime.test.example.com", result.RealtimeEndpoint)
 	})
 
 	t.Run("partial config with env fallback", func(t *testing.T) {
@@ -49,12 +49,12 @@ func TestPopulateConfigFromEnv(t *testing.T) {
 		require.Equal(t, "explicit-token", original.Token)
 
 		// Result should have explicit values where provided, env vars elsewhere
-		require.Equal(t, "ERROR", result.LogLevel)                                  // explicit value preserved
-		require.Equal(t, "json", result.LogFormat)                                  // from env
-		require.True(t, result.Debug)                                               // from env
-		require.Equal(t, "explicit-token", result.Token)                            // explicit value preserved
-		require.Equal(t, "https://test.example.com", result.Endpoint)               // from env
-		require.Equal(t, "https://runtime.test.example.com", result.ConfigEndpoint) // from env
+		require.Equal(t, "ERROR", result.LogLevel)                                    // explicit value preserved
+		require.Equal(t, "json", result.LogFormat)                                    // from env
+		require.True(t, result.Debug)                                                 // from env
+		require.Equal(t, "explicit-token", result.Token)                              // explicit value preserved
+		require.Equal(t, "https://test.example.com", result.Endpoint)                 // from env
+		require.Equal(t, "https://runtime.test.example.com", result.RealtimeEndpoint) // from env
 	})
 
 	t.Run("empty config", func(t *testing.T) {
@@ -70,7 +70,7 @@ func TestPopulateConfigFromEnv(t *testing.T) {
 		require.True(t, result.Debug)
 		require.Equal(t, "test-token", result.Token)
 		require.Equal(t, "https://test.example.com", result.Endpoint)
-		require.Equal(t, "https://runtime.test.example.com", result.ConfigEndpoint)
+		require.Equal(t, "https://runtime.test.example.com", result.RealtimeEndpoint)
 	})
 }
 

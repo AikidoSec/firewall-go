@@ -67,8 +67,8 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		globals.EnvironmentConfig.Endpoint = getEndpointURL(aikidoConfig.Token)
 	}
 
-	if globals.EnvironmentConfig.ConfigEndpoint == "" {
-		globals.EnvironmentConfig.ConfigEndpoint = RuntimeEndpoint
+	if globals.EnvironmentConfig.RealtimeEndpoint == "" {
+		globals.EnvironmentConfig.RealtimeEndpoint = RuntimeEndpoint
 	}
 
 	log.Info("Loaded local config", slog.Any("config", globals.EnvironmentConfig))
@@ -87,13 +87,6 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 }
 
 func Uninit() {}
-
-func GetToken() string {
-	globals.AikidoConfig.ConfigMutex.Lock()
-	defer globals.AikidoConfig.ConfigMutex.Unlock()
-
-	return globals.AikidoConfig.Token
-}
 
 func IsBlockingEnabled() bool {
 	serviceConfigMutex.RLock()

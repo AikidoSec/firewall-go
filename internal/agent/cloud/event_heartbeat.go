@@ -9,6 +9,10 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
+const (
+	minStatsCollectedForRelevantMetrics = 10000
+)
+
 func GetHostnamesAndClear() []aikido_types.Hostname {
 	globals.HostnamesMutex.Lock()
 	defer globals.HostnamesMutex.Unlock()
@@ -60,7 +64,7 @@ func GetUsersAndClear() []aikido_types.User {
 func GetMonitoredSinkStatsAndClear() map[string]aikido_types.MonitoredSinkStats {
 	monitoredSinkStats := make(map[string]aikido_types.MonitoredSinkStats)
 	for sink, stats := range globals.StatsData.MonitoredSinkTimings {
-		if stats.Total <= globals.MinStatsCollectedForRelevantMetrics {
+		if stats.Total <= minStatsCollectedForRelevantMetrics {
 			continue
 		}
 
@@ -126,7 +130,7 @@ func (c *Client) SendHeartbeatEvent() {
 		MiddlewareInstalled: GetMiddlewareInstalled(),
 	}
 
-	response, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, heartbeatEvent)
+	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, heartbeatEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending heartbeat event: ", err)
 		return

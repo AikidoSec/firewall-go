@@ -10,15 +10,18 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 var ErrNoTokenSet = errors.New("no token set")
 
+const (
+	eventsAPIMethod = "POST"
+	eventsAPIRoute  = "/api/runtime/events"
+)
+
 func (c *Client) sendCloudRequest(endpoint string, route string, method string, payload any) ([]byte, error) {
-	token := config.GetToken()
-	if token == "" {
+	if c.token == "" {
 		return nil, ErrNoTokenSet
 	}
 
@@ -43,7 +46,7 @@ func (c *Client) sendCloudRequest(endpoint string, route string, method string, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", c.token)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)

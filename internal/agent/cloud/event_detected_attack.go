@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
@@ -17,6 +16,11 @@ var (
 	attackDetectedEventsSentAtMutex sync.Mutex
 )
 
+const (
+	maxAttackDetectedEventsPerInterval = 100
+	attackDetectedEventsIntervalInMs   = 60 * 60 * 1000 // 1 hour
+)
+
 func shouldSendAttackDetectedEvent() bool {
 	attackDetectedEventsSentAtMutex.Lock()
 	defer attackDetectedEventsSentAtMutex.Unlock()
@@ -26,17 +30,17 @@ func shouldSendAttackDetectedEvent() bool {
 	// Filter out events that are outside the current interval
 	var filteredEvents []int64
 	for _, eventTime := range attackDetectedEventsSentAt {
-		if eventTime > currentTime-globals.AttackDetectedEventsIntervalInMs {
+		if eventTime > currentTime-attackDetectedEventsIntervalInMs {
 			filteredEvents = append(filteredEvents, eventTime)
 		}
 	}
 	attackDetectedEventsSentAt = filteredEvents
 
-	if len(attackDetectedEventsSentAt) >= globals.MaxAttackDetectedEventsPerInterval {
+	if len(attackDetectedEventsSentAt) >= maxAttackDetectedEventsPerInterval {
 		log.Warn("Maximum number of \"detected_attack\" events exceeded for timeframe",
-			slog.Int("max", globals.MaxAttackDetectedEventsPerInterval),
+			slog.Int("max", maxAttackDetectedEventsPerInterval),
 			slog.Int("count", len(attackDetectedEventsSentAt)),
-			slog.Int("interval_ms", globals.AttackDetectedEventsIntervalInMs))
+			slog.Int("interval_ms", attackDetectedEventsIntervalInMs))
 
 		return false
 	}
@@ -57,7 +61,7 @@ func (c *Client) SendAttackDetectedEvent(attack *aikido_types.DetectedAttack) {
 		Time:    utils.GetTime(),
 	}
 
-	_, err := c.sendCloudRequest(globals.EnvironmentConfig.Endpoint, globals.EventsAPI, globals.EventsAPIMethod, detectedAttackEvent)
+	_, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, detectedAttackEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending detected attack event: ", err)
 		return
