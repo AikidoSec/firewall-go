@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -29,8 +30,8 @@ func main() {
 	defineAPIRoutes(mux, db)
 
 	// Start the server
-	log.Println("Server starting on :8084...")
-	err = http.ListenAndServe(":8084", handler)
+	port := 8084
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), handler)
 	if err != nil {
 		log.Fatal(err)
 	}
