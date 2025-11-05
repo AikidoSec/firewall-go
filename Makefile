@@ -42,7 +42,7 @@ lint:
 	@golangci-lint run ./... $(FLAGS) || exit 1
 	@for dir in $$(find . -name go.mod -not -path "./go.mod" -exec dirname {} \;); do \
 		echo "📦 Linting module in $$dir"; \
-		(cd $$dir && golangci-lint run ./... $(FLAGS)) || exit 1; \
+		(cd $$dir && golangci-lint run $(FLAGS) ./...) || exit 1; \
 	done
 	@echo "✅ All modules linted successfully"
 
@@ -51,9 +51,14 @@ lint-integration:
 	@echo "🔍 Linting modules in instrumentation/ with integration tag..."
 	@for dir in $$(find ./instrumentation -name go.mod -exec dirname {} \; 2>/dev/null); do \
 		echo "📦 Linting module in $$dir"; \
-		(cd $$dir && golangci-lint run ./... --build-tags=integration) || exit 1; \
+		(cd $$dir && golangci-lint run --build-tags=integration $(FLAGS) ./...) || exit 1; \
 	done
 	@echo "✅ Integration linting completed successfully"
+
+.PHONY: lint-fix
+lint-fix:
+	@$(MAKE) lint FLAGS=--fix
+	@$(MAKE) lint-integration FLAGS=--fix
 
 BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/$(ZEN_INTERNALS_VERSION)
 FILES = \
