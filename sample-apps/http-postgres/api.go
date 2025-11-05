@@ -10,10 +10,6 @@ type CreateRequest struct {
 	Name string `json:"name"`
 }
 
-type CommandRequest struct {
-	UserCommand string `json:"userCommand"`
-}
-
 type RequestRequest struct {
 	URL string `json:"url"`
 }
@@ -25,7 +21,10 @@ func getAllPetsHandler(w http.ResponseWriter, r *http.Request, db *DatabaseHelpe
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pets)
+	if err := json.NewEncoder(w).Encode(pets); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func createPetHandler(w http.ResponseWriter, r *http.Request, db *DatabaseHelper) {
@@ -34,8 +33,15 @@ func createPetHandler(w http.ResponseWriter, r *http.Request, db *DatabaseHelper
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	rowsCreated, _ := db.CreatePetByName(r.Context(), req.Name)
-	w.Write([]byte(fmt.Sprintf("%d", rowsCreated)))
+	rowsCreated, err := db.CreatePetByName(r.Context(), req.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := w.Write([]byte(fmt.Sprintf("%d", rowsCreated))); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func executeCommandHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,12 +51,18 @@ func executeCommandHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result := executeShellCommand(userCommand)
-	w.Write([]byte(result))
+	if _, err := w.Write([]byte(result)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func executeCommandParamHandler(w http.ResponseWriter, r *http.Request, command string) {
 	result := executeShellCommand(command)
-	w.Write([]byte(result))
+	if _, err := w.Write([]byte(result)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func makeRequestHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,13 +72,19 @@ func makeRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := makeHTTPRequest(req.URL)
-	w.Write([]byte(response))
+	if _, err := w.Write([]byte(response)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func readFileHandler(w http.ResponseWriter, r *http.Request) {
 	filePath := r.URL.Query().Get("path")
 	content := readFile(filePath)
-	w.Write([]byte(content))
+	if _, err := w.Write([]byte(content)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func defineAPIRoutes(mux *http.ServeMux, db *DatabaseHelper) {
