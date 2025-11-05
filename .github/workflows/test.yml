@@ -78,7 +78,7 @@ jobs:
 
     strategy:
       matrix:
-        app: ["echo-postgres", "gin-postgres"]
+        app: ["echo-postgres", "gin-postgres", "http-postgres"]
 
     steps:
       - name: Checkout code
