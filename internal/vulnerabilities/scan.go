@@ -13,8 +13,8 @@ type ScanResult struct {
 	Metadata       map[string]string
 }
 
-type Vulnerability struct {
-	ScanFunction func(string, []string) (*ScanResult, error)
+type Vulnerability[T any] struct {
+	ScanFunction func(string, T) (*ScanResult, error)
 	Kind         AttackKind
 	Error        string
 }
@@ -23,7 +23,7 @@ type Attack struct {
 	Kind string
 }
 
-func Scan(ctx context.Context, operation string, vulnerability Vulnerability, args []string) error {
+func Scan[T any](ctx context.Context, operation string, vulnerability Vulnerability[T], args T) error {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
@@ -51,7 +51,7 @@ func Scan(ctx context.Context, operation string, vulnerability Vulnerability, ar
 	return nil
 }
 
-func scanSource(ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability, args []string) error {
+func scanSource[T any](ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability[T], args T) error {
 	userInputMap := extractStringsFromUserInput(sourceData, []pathPart{})
 
 	for userInput, path := range userInputMap {
