@@ -20,7 +20,7 @@ var (
 	ErrCloudConfigNotUpdated    = errors.New("cloud config was not updated")
 	cloudClient                 *cloud.Client
 	heartbeatRoutineChannel     = make(chan struct{})
-	heartBeatTicker             *time.Ticker
+	heartbeatTicker             *time.Ticker
 	configPollingRoutineChannel = make(chan struct{})
 	configPollingTicker         *time.Ticker
 )
@@ -112,31 +112,31 @@ func OnMiddlewareInstalled() {
 	atomic.StoreUint32(&globals.MiddlewareInstalled, 1)
 }
 
+func handlePollingInterval(fn func() time.Duration) func() {
+	return func() {
+		newInterval := fn()
+		if newInterval > 0 {
+			resetHeartbeatTicker(newInterval)
+		}
+	}
+}
+
 func startPolling(client *cloud.Client) {
-	// Initialize tickers with default intervals
-	heartBeatTicker = time.NewTicker(10 * time.Minute)
+	heartbeatTicker = time.NewTicker(10 * time.Minute)
 	configPollingTicker = time.NewTicker(1 * time.Minute)
 
-	utils.StartPollingRoutine(heartbeatRoutineChannel, heartBeatTicker, func() {
-		newInterval := client.SendHeartbeatEvent()
-		if newInterval > 0 {
-			resetHeartbeatTicker(newInterval)
-		}
-	})
+	utils.StartPollingRoutine(heartbeatRoutineChannel, heartbeatTicker,
+		handlePollingInterval(client.SendHeartbeatEvent))
 
-	utils.StartPollingRoutine(configPollingRoutineChannel, configPollingTicker, func() {
-		newInterval := client.CheckConfigUpdatedAt()
-		if newInterval > 0 {
-			resetHeartbeatTicker(newInterval)
-		}
-	})
+	utils.StartPollingRoutine(configPollingRoutineChannel, configPollingTicker,
+		handlePollingInterval(client.CheckConfigUpdatedAt))
 }
 
 func stopPolling() {
 	utils.StopPollingRoutine(heartbeatRoutineChannel)
 	utils.StopPollingRoutine(configPollingRoutineChannel)
-	if heartBeatTicker != nil {
-		heartBeatTicker.Stop()
+	if heartbeatTicker != nil {
+		heartbeatTicker.Stop()
 	}
 	if configPollingTicker != nil {
 		configPollingTicker.Stop()
@@ -144,8 +144,8 @@ func stopPolling() {
 }
 
 func resetHeartbeatTicker(newInterval time.Duration) {
-	if heartBeatTicker != nil && newInterval > 0 {
+	if heartbeatTicker != nil && newInterval > 0 {
 		log.Info("Resetting HeartBeatTicker!", slog.String("interval", newInterval.String()))
-		heartBeatTicker.Reset(newInterval)
+		heartbeatTicker.Reset(newInterval)
 	}
 }
