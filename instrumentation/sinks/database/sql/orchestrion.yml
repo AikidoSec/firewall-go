@@ -25,26 +25,6 @@ aspects:
             if _aikido_block != nil {
               panic(_aikido_block)
             }
-  - id: database/sql.DB.Query
-    join-point:
-      one-of:
-        - function-body:
-            function:
-              - receiver: "*database/sql.DB"
-              - name: Query
-        - function-body:
-            function:
-              - receiver: "*database/sql.DB"
-              - name: QueryRow
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Query(Row)")
-            if _aikido_block != nil {
-              panic(_aikido_block)
-            }
   - id: database/sql.DB.ExecContext
     join-point:
       function-body:
@@ -60,21 +40,6 @@ aspects:
             if _aikido_block != nil {
               panic(_aikido_block)
             }
-  - id: database/sql.DB.Exec
-    join-point:
-      function-body:
-        function:
-          - receiver: "*database/sql.DB"
-          - name: Exec
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Exec")
-            if _aikido_block != nil {
-              panic(_aikido_block)
-            }
   - id: database/sql.DB.PrepareContext
     join-point:
       function-body:
@@ -87,21 +52,6 @@ aspects:
             sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.PrepareContext")
-            if _aikido_block != nil {
-              panic(_aikido_block)
-            }
-  - id: database/sql.DB.Prepare
-    join-point:
-      function-body:
-        function:
-          - receiver: "*database/sql.DB"
-          - name: Prepare
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.DB.Prepare")
             if _aikido_block != nil {
               panic(_aikido_block)
             }
@@ -125,26 +75,6 @@ aspects:
             if _aikido_block != nil {
               panic(_aikido_block)
             }
-  - id: database/sql.Tx.Query
-    join-point:
-      one-of:
-        - function-body:
-            function:
-              - receiver: "*database/sql.Tx"
-              - name: Query
-        - function-body:
-            function:
-              - receiver: "*database/sql.Tx"
-              - name: QueryRow
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.Tx.Query(Row)")
-            if _aikido_block != nil {
-              panic(_aikido_block)
-            }
   - id: database/sql.Tx.ExecContext
     join-point:
       function-body:
@@ -160,21 +90,6 @@ aspects:
             if _aikido_block != nil {
               panic(_aikido_block)
             }
-  - id: database/sql.Tx.Exec
-    join-point:
-      function-body:
-        function:
-          - receiver: "*database/sql.Tx"
-          - name: Exec
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.Tx.Exec")
-            if _aikido_block != nil {
-              panic(_aikido_block)
-            }
   - id: database/sql.Tx.PrepareContext
     join-point:
       function-body:
@@ -187,21 +102,6 @@ aspects:
             sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.PrepareContext")
-            if _aikido_block != nil {
-              panic(_aikido_block)
-            }
-  - id: database/sql.Tx.Prepare
-    join-point:
-      function-body:
-        function:
-          - receiver: "*database/sql.Tx"
-          - name: Prepare
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.Examine({{ .Function.Argument 0}}, "database/sql.Tx.Prepare")
             if _aikido_block != nil {
               panic(_aikido_block)
             }
