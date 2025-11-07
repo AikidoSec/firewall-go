@@ -40,7 +40,9 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 			writer: w,
 		}
 
-		orig(recorder, wrappedR)
+		request.WrapWithGLS(ctx, func() {
+			orig(recorder, wrappedR)
+		})
 
 		zenhttp.OnPostRequest(ctx, recorder.statusCode)
 	}
