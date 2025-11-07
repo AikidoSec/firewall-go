@@ -21,7 +21,6 @@ func tryExtractBody(r *http.Request) any {
 		return bodyFromForm
 	}
 
-	// No usable data found, returning nil
 	return nil
 }
 
