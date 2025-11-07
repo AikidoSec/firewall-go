@@ -20,6 +20,29 @@ const (
 	eventsAPIRoute  = "/api/runtime/events"
 )
 
+type AgentInfo struct {
+	DryMode                   bool              `json:"dryMode"`
+	Hostname                  string            `json:"hostname"`
+	Version                   string            `json:"version"`
+	IPAddress                 string            `json:"ipAddress"`
+	OS                        OSInfo            `json:"os"`
+	Platform                  PlatformInfo      `json:"platform"`
+	Packages                  map[string]string `json:"packages"`
+	PreventPrototypePollution bool              `json:"preventedPrototypePollution"`
+	NodeEnv                   string            `json:"nodeEnv"`
+	Library                   string            `json:"library"`
+}
+
+type OSInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+type PlatformInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 func (c *Client) sendCloudRequest(endpoint string, route string, method string, payload any) ([]byte, error) {
 	if c.token == "" {
 		return nil, ErrNoTokenSet

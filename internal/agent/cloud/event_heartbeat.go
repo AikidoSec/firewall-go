@@ -119,9 +119,20 @@ func GetMiddlewareInstalled() bool {
 	return atomic.LoadUint32(&globals.MiddlewareInstalled) == 1
 }
 
+type HeartbeatEvent struct {
+	Type                string                  `json:"type"`
+	Stats               aikido_types.Stats      `json:"stats"`
+	Hostnames           []aikido_types.Hostname `json:"hostnames"`
+	Routes              []aikido_types.Route    `json:"routes"`
+	Users               []aikido_types.User     `json:"users"`
+	Agent               AgentInfo               `json:"agent"`
+	Time                int64                   `json:"time"`
+	MiddlewareInstalled bool                    `json:"middlewareInstalled"`
+}
+
 // SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
-func (c *Client) SendHeartbeatEvent(agentInfo aikido_types.AgentInfo) time.Duration {
-	heartbeatEvent := aikido_types.Heartbeat{
+func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo) time.Duration {
+	heartbeatEvent := HeartbeatEvent{
 		Type:                "heartbeat",
 		Agent:               agentInfo,
 		Time:                utils.GetTime(),

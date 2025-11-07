@@ -49,15 +49,23 @@ func shouldSendAttackDetectedEvent() bool {
 	return true
 }
 
-func (c *Client) SendAttackDetectedEvent(agentInfo aikido_types.AgentInfo, attack *aikido_types.DetectedAttack) {
+type DetectedAttackEvent struct {
+	Type    string                     `json:"type"`
+	Request aikido_types.RequestInfo   `json:"request"`
+	Attack  aikido_types.AttackDetails `json:"attack"`
+	Agent   AgentInfo                  `json:"agent"`
+	Time    int64                      `json:"time"`
+}
+
+func (c *Client) SendAttackDetectedEvent(agentInfo AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 	if !shouldSendAttackDetectedEvent() {
 		return
 	}
-	detectedAttackEvent := aikido_types.DetectedAttack{
+	detectedAttackEvent := DetectedAttackEvent{
 		Type:    "detected_attack",
 		Agent:   agentInfo,
-		Request: attack.Request,
-		Attack:  attack.Attack,
+		Request: request,
+		Attack:  attack,
 		Time:    utils.GetTime(),
 	}
 

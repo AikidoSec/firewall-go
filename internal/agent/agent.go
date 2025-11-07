@@ -93,11 +93,16 @@ func OnUser(id string, username string, ip string) {
 	onUserEvent(id, username, ip)
 }
 
-func OnAttackDetected(attack *aikido_types.DetectedAttack) {
+type DetectedAttack struct {
+	Request aikido_types.RequestInfo   `json:"request"`
+	Attack  aikido_types.AttackDetails `json:"attack"`
+}
+
+func OnAttackDetected(attack *DetectedAttack) {
 	log.Debug("Reporting attack")
 
 	if cloudClient != nil {
-		cloudClient.SendAttackDetectedEvent(getAgentInfo(), attack)
+		cloudClient.SendAttackDetectedEvent(getAgentInfo(), attack.Request, attack.Attack)
 	}
 
 	storeAttackStats(attack.Attack.Blocked)

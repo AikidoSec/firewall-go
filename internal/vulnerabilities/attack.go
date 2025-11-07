@@ -52,13 +52,13 @@ func (i InterceptorResult) ToString() string {
 	return string(json)
 }
 
-func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types.DetectedAttack {
+func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.DetectedAttack {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
 	}
 
-	return &aikido_types.DetectedAttack{
+	return &agent.DetectedAttack{
 		Request: aikido_types.RequestInfo{
 			Method:    reqCtx.Method,
 			IPAddress: *reqCtx.RemoteAddress,
