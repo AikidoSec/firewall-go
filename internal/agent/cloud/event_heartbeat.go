@@ -120,10 +120,10 @@ func GetMiddlewareInstalled() bool {
 }
 
 // SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
-func (c *Client) SendHeartbeatEvent() time.Duration {
+func (c *Client) SendHeartbeatEvent(agentInfo aikido_types.AgentInfo) time.Duration {
 	heartbeatEvent := aikido_types.Heartbeat{
 		Type:                "heartbeat",
-		Agent:               getAgentInfo(),
+		Agent:               agentInfo,
 		Time:                utils.GetTime(),
 		Stats:               GetStatsAndClear(),
 		Hostnames:           GetHostnamesAndClear(),

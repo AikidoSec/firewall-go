@@ -40,7 +40,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		APIEndpoint:      globals.EnvironmentConfig.Endpoint,
 		RealtimeEndpoint: globals.EnvironmentConfig.RealtimeEndpoint,
 	})
-	go cloudClient.SendStartEvent()
+	go cloudClient.SendStartEvent(getAgentInfo())
 
 	startPolling(cloudClient)
 
@@ -97,7 +97,7 @@ func OnAttackDetected(attack *aikido_types.DetectedAttack) {
 	log.Debug("Reporting attack")
 
 	if cloudClient != nil {
-		cloudClient.SendAttackDetectedEvent(attack)
+		cloudClient.SendAttackDetectedEvent(getAgentInfo(), attack)
 	}
 
 	storeAttackStats(attack.Attack.Blocked)
@@ -126,7 +126,11 @@ func startPolling(client *cloud.Client) {
 	configPollingTicker = time.NewTicker(1 * time.Minute)
 
 	utils.StartPollingRoutine(heartbeatRoutineChannel, heartbeatTicker,
-		handlePollingInterval(client.SendHeartbeatEvent))
+		handlePollingInterval(func() time.Duration {
+			return client.SendHeartbeatEvent(
+				getAgentInfo(),
+			)
+		}))
 
 	utils.StartPollingRoutine(configPollingRoutineChannel, configPollingTicker,
 		handlePollingInterval(client.CheckConfigUpdatedAt))

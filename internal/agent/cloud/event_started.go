@@ -5,10 +5,10 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
-func (c *Client) SendStartEvent() {
+func (c *Client) SendStartEvent(agentInfo aikido_types.AgentInfo) {
 	startedEvent := aikido_types.Started{
 		Type:  "started",
-		Agent: getAgentInfo(),
+		Agent: agentInfo,
 		Time:  utils.GetTime(),
 	}
 

@@ -49,13 +49,13 @@ func shouldSendAttackDetectedEvent() bool {
 	return true
 }
 
-func (c *Client) SendAttackDetectedEvent(attack *aikido_types.DetectedAttack) {
+func (c *Client) SendAttackDetectedEvent(agentInfo aikido_types.AgentInfo, attack *aikido_types.DetectedAttack) {
 	if !shouldSendAttackDetectedEvent() {
 		return
 	}
 	detectedAttackEvent := aikido_types.DetectedAttack{
 		Type:    "detected_attack",
-		Agent:   getAgentInfo(),
+		Agent:   agentInfo,
 		Request: attack.Request,
 		Attack:  attack.Attack,
 		Time:    utils.GetTime(),
