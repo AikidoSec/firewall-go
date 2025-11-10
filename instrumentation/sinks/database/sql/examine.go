@@ -2,9 +2,11 @@ package sql
 
 import (
 	"context"
+	"errors"
 
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/sqlinjection"
+	"github.com/AikidoSec/firewall-go/zen"
 )
 
 // Examine checks for SQL injection on non-context database methods.
@@ -17,8 +19,13 @@ func Examine(query string, op string) error {
 // This function is called by the instrumentation framework to scan SQL queries
 // before they are executed against the database.
 func ExamineContext(ctx context.Context, query string, op string) error {
-	return vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
+	err := vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
 		Statement: query,
 		Dialect:   "default",
 	})
+	if err != nil {
+		return errors.Join(zen.ErrAttackBlocked, err)
+	}
+
+	return nil
 }

@@ -3,6 +3,7 @@
 package zen
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"runtime"
@@ -15,6 +16,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
+
+var ErrAttackBlocked = errors.New("zen blocked attack")
 
 var (
 	protectOnce sync.Once
