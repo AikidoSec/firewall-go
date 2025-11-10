@@ -29,6 +29,9 @@ func Examine(cmdCtx context.Context, args []string, op string) error {
 		return nil
 	}
 
+	// We scan everything after the first '-c' to ensure we cover all potential cases
+	// such as, unlikely scenarios like:
+	//   cmd := exec.Command("sh", "-c", "$0", userInput)
 	fullCommand := strings.Join(commandsToScan, " ")
 
 	return vulnerabilities.Scan(ctx, op, shellinjection.ShellInjectionVulnerability, &shellinjection.ScanArgs{
