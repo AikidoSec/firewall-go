@@ -18,19 +18,17 @@ import (
 )
 
 var (
-	ErrCloudConfigNotUpdated    = errors.New("cloud config was not updated")
-	cloudClient                 CloudClient
-	cloudClientMutex            sync.RWMutex
-	heartbeatRoutineChannel     = make(chan struct{})
-	heartbeatTicker             *time.Ticker
-	configPollingRoutineChannel = make(chan struct{})
-	configPollingTicker         *time.Ticker
+	ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
+	cloudClient              CloudClient
+	cloudClientMutex         sync.RWMutex
 )
 
 type CloudClient interface {
-	SendStartEvent(agentInfo cloud.AgentInfo)
-	SendHeartbeatEvent(agentInfo cloud.AgentInfo) time.Duration
-	CheckConfigUpdatedAt() time.Duration
+	SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error)
+	SendHeartbeatEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error)
+	FetchConfigUpdatedAt() time.Time
+	FetchConfig() (*aikido_types.CloudConfigData, error)
+	FetchListsConfig() (*aikido_types.ListsConfigData, error)
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 }
 
@@ -50,9 +48,17 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		RealtimeEndpoint: globals.EnvironmentConfig.RealtimeEndpoint,
 	})
 	SetCloudClient(client)
-	go client.SendStartEvent(getAgentInfo())
 
-	startPolling(client)
+	go func() {
+		cloudConfig, err := client.SendStartEvent(getAgentInfo())
+		if err != nil {
+			return
+		}
+
+		updateCloudConfig(client, cloudConfig)
+	}()
+
+	startPolling()
 
 	ratelimiting.Init()
 
@@ -125,48 +131,6 @@ func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings)
 func OnMiddlewareInstalled() {
 	log.Debug("Received MiddlewareInstalled")
 	atomic.StoreUint32(&globals.MiddlewareInstalled, 1)
-}
-
-func handlePollingInterval(fn func() time.Duration) func() {
-	return func() {
-		newInterval := fn()
-		if newInterval > 0 {
-			resetHeartbeatTicker(newInterval)
-		}
-	}
-}
-
-func startPolling(client CloudClient) {
-	heartbeatTicker = time.NewTicker(10 * time.Minute)
-	configPollingTicker = time.NewTicker(1 * time.Minute)
-
-	utils.StartPollingRoutine(heartbeatRoutineChannel, heartbeatTicker,
-		handlePollingInterval(func() time.Duration {
-			return client.SendHeartbeatEvent(
-				getAgentInfo(),
-			)
-		}))
-
-	utils.StartPollingRoutine(configPollingRoutineChannel, configPollingTicker,
-		handlePollingInterval(client.CheckConfigUpdatedAt))
-}
-
-func stopPolling() {
-	utils.StopPollingRoutine(heartbeatRoutineChannel)
-	utils.StopPollingRoutine(configPollingRoutineChannel)
-	if heartbeatTicker != nil {
-		heartbeatTicker.Stop()
-	}
-	if configPollingTicker != nil {
-		configPollingTicker.Stop()
-	}
-}
-
-func resetHeartbeatTicker(newInterval time.Duration) {
-	if heartbeatTicker != nil && newInterval > 0 {
-		log.Info("Resetting HeartBeatTicker!", slog.String("interval", newInterval.String()))
-		heartbeatTicker.Reset(newInterval)
-	}
 }
 
 // GetCloudClient returns the current cloud client.

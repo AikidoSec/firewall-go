@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
@@ -40,7 +41,7 @@ type IPBlockList struct {
 }
 
 type ServiceConfigData struct {
-	ConfigUpdatedAt   int64
+	ConfigUpdatedAt   time.Time
 	Endpoints         []aikido_types.Endpoint
 	BlockedUserIDs    map[string]bool
 	BypassedIPs       map[string]bool
@@ -81,7 +82,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockL
 	serviceConfigMutex.Lock()
 	defer serviceConfigMutex.Unlock()
 
-	serviceConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
+	serviceConfig.ConfigUpdatedAt = time.UnixMilli(cloudConfigFromAgent.ConfigUpdatedAt)
 
 	var endpoints []aikido_types.Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
@@ -136,7 +137,7 @@ func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData, blockListCon
 
 var CollectAPISchema bool
 
-func GetCloudConfigUpdatedAt() int64 {
+func GetCloudConfigUpdatedAt() time.Time {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()
 
