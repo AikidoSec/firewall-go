@@ -1,14 +1,19 @@
 package cloud
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
-func (c *Client) SendStartEvent() {
-	startedEvent := aikido_types.Started{
+type StartEvent struct {
+	Type  string    `json:"type"`
+	Agent AgentInfo `json:"agent"`
+	Time  int64     `json:"time"`
+}
+
+func (c *Client) SendStartEvent(agentInfo AgentInfo) {
+	startedEvent := StartEvent{
 		Type:  "started",
-		Agent: getAgentInfo(),
+		Agent: agentInfo,
 		Time:  utils.GetTime(),
 	}
 
