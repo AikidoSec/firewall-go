@@ -185,6 +185,17 @@ func IsUserBlocked(userID string) bool {
 	return keyExists(serviceConfig.BlockedUserIDs, userID)
 }
 
+func SetUserBlocked(userID string) {
+	serviceConfigMutex.Lock()
+	defer serviceConfigMutex.Unlock()
+
+	if serviceConfig.BlockedUserIDs == nil {
+		serviceConfig.BlockedUserIDs = map[string]bool{}
+	}
+
+	serviceConfig.BlockedUserIDs[userID] = true
+}
+
 func IsIPBypassed(ip string) bool {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()

@@ -8,8 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,6 +21,22 @@ func TestShouldBlockRequest(t *testing.T) {
 	result := zen.ShouldBlockRequest(ctx)
 
 	require.Nil(t, result, "Expected nil result for empty context")
+}
+
+func TestShouldBlockRequest_BlockedUser(t *testing.T) {
+	req := httptest.NewRequest("GET", "/route", nil)
+	ip := "127.0.0.1"
+	reqCtx := request.SetContext(context.Background(), req, "/route", "/test", &ip, nil)
+
+	zen.SetUser(reqCtx, "banned", "Banned User")
+
+	config.SetUserBlocked("banned")
+
+	response := zen.ShouldBlockRequest(reqCtx)
+	require.NotNil(t, response)
+	assert.Equal(t, "blocked", response.Type)
+	assert.Equal(t, "user", response.Trigger)
+	assert.Nil(t, response.IP)
 }
 
 // ExampleShouldBlockRequest demonstrates the complete middleware pattern with auth and Zen middleware.

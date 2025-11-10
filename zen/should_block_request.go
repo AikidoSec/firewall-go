@@ -13,12 +13,11 @@ import (
 
 func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 	reqCtx := request.GetContext(ctx)
-	if reqCtx == nil || reqCtx.MarkMiddlewareExecuted() {
+	if reqCtx == nil || !reqCtx.MarkMiddlewareExecuted() {
 		return nil // Do not run middleware twice.
 	}
 
 	agent.OnMiddlewareInstalled() // Report middleware as installed, handy for dashboard.
-
 	// user-blocking :
 	userID := reqCtx.GetUserID()
 	if config.IsUserBlocked(userID) {
