@@ -46,11 +46,11 @@ func TestUpdateServiceConfig(t *testing.T) {
 		resetServiceConfig()
 
 		blockTrue := true
-		now := time.Now().UnixMilli()
+		now := time.Now()
 		cloudConfig := &aikido_types.CloudConfigData{
 			Success:               true,
 			ServiceID:             123,
-			ConfigUpdatedAt:       now,
+			ConfigUpdatedAt:       now.UnixMilli(),
 			HeartbeatIntervalInMS: 300000,
 			Endpoints: []aikido_types.Endpoint{
 				{
@@ -88,7 +88,7 @@ func TestUpdateServiceConfig(t *testing.T) {
 
 		// Verify config was updated
 		updatedAt := GetCloudConfigUpdatedAt()
-		assert.Equal(t, now, updatedAt)
+		assert.WithinDuration(t, now, updatedAt, time.Second)
 
 		// Verify endpoints
 		endpoints := GetEndpoints()
@@ -124,7 +124,7 @@ func TestUpdateServiceConfig(t *testing.T) {
 
 		// Config should remain empty
 		updatedAt := GetCloudConfigUpdatedAt()
-		assert.Equal(t, int64(0), updatedAt)
+		assert.Zero(t, updatedAt)
 	})
 
 	t.Run("uses aikido config blocking when cloud config block is nil", func(t *testing.T) {
@@ -587,22 +587,22 @@ func TestGetCloudConfigUpdatedAt(t *testing.T) {
 	t.Run("returns updated timestamp", func(t *testing.T) {
 		resetServiceConfig()
 
-		now := time.Now().UnixMilli()
+		now := time.Now()
 		cloudConfig := &aikido_types.CloudConfigData{
-			ConfigUpdatedAt: now,
+			ConfigUpdatedAt: now.UnixMilli(),
 		}
 
 		UpdateServiceConfig(cloudConfig, nil)
 
 		updatedAt := GetCloudConfigUpdatedAt()
-		assert.Equal(t, now, updatedAt)
+		assert.WithinDuration(t, now, updatedAt, time.Second)
 	})
 
 	t.Run("returns zero time when not initialized", func(t *testing.T) {
 		resetServiceConfig()
 
 		updatedAt := GetCloudConfigUpdatedAt()
-		assert.Equal(t, int64(0), updatedAt)
+		assert.Zero(t, updatedAt)
 	})
 }
 
