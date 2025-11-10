@@ -3,6 +3,7 @@ package agent
 import (
 	"errors"
 	"log/slog"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -18,12 +19,20 @@ import (
 
 var (
 	ErrCloudConfigNotUpdated    = errors.New("cloud config was not updated")
-	cloudClient                 *cloud.Client
+	cloudClient                 CloudClient
+	cloudClientMutex            sync.RWMutex
 	heartbeatRoutineChannel     = make(chan struct{})
 	heartbeatTicker             *time.Ticker
 	configPollingRoutineChannel = make(chan struct{})
 	configPollingTicker         *time.Ticker
 )
+
+type CloudClient interface {
+	SendStartEvent(agentInfo cloud.AgentInfo)
+	SendHeartbeatEvent(agentInfo cloud.AgentInfo) time.Duration
+	CheckConfigUpdatedAt() time.Duration
+	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
+}
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
 	machine.Init()
@@ -35,14 +44,15 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	globals.StatsData.StartedAt = utils.GetTime()
 	globals.StatsData.MonitoredSinkTimings = make(map[string]aikido_types.MonitoredSinkTimings)
 
-	cloudClient = cloud.NewClient(&cloud.ClientConfig{
+	client := cloud.NewClient(&cloud.ClientConfig{
 		Token:            aikidoConfig.Token,
 		APIEndpoint:      globals.EnvironmentConfig.Endpoint,
 		RealtimeEndpoint: globals.EnvironmentConfig.RealtimeEndpoint,
 	})
-	go cloudClient.SendStartEvent(getAgentInfo())
+	SetCloudClient(client)
+	go client.SendStartEvent(getAgentInfo())
 
-	startPolling(cloudClient)
+	startPolling(client)
 
 	ratelimiting.Init()
 
@@ -101,8 +111,8 @@ type DetectedAttack struct {
 func OnAttackDetected(attack *DetectedAttack) {
 	log.Debug("Reporting attack")
 
-	if cloudClient != nil {
-		cloudClient.SendAttackDetectedEvent(getAgentInfo(), attack.Request, attack.Attack)
+	if client := GetCloudClient(); client != nil {
+		client.SendAttackDetectedEvent(getAgentInfo(), attack.Request, attack.Attack)
 	}
 
 	storeAttackStats(attack.Attack.Blocked)
@@ -126,7 +136,7 @@ func handlePollingInterval(fn func() time.Duration) func() {
 	}
 }
 
-func startPolling(client *cloud.Client) {
+func startPolling(client CloudClient) {
 	heartbeatTicker = time.NewTicker(10 * time.Minute)
 	configPollingTicker = time.NewTicker(1 * time.Minute)
 
@@ -157,4 +167,20 @@ func resetHeartbeatTicker(newInterval time.Duration) {
 		log.Info("Resetting HeartBeatTicker!", slog.String("interval", newInterval.String()))
 		heartbeatTicker.Reset(newInterval)
 	}
+}
+
+// GetCloudClient returns the current cloud client.
+// This should be used instead of direct access to the cloudClient variable.
+func GetCloudClient() CloudClient {
+	cloudClientMutex.RLock()
+	defer cloudClientMutex.RUnlock()
+	return cloudClient
+}
+
+// SetCloudClient sets the cloud client. Useful for testing with mocks.
+func SetCloudClient(client CloudClient) {
+	cloudClientMutex.Lock()
+	defer cloudClientMutex.Unlock()
+
+	cloudClient = client
 }
