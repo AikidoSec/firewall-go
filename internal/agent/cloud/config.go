@@ -17,7 +17,7 @@ const (
 	configAPIMethod         = "GET"
 	configAPIRoute          = "/api/runtime/config"
 	listsAPIMethod          = "GET"
-	listsAPIRoute           = "api/runtime/firewall/lists"
+	listsAPIRoute           = "/api/runtime/firewall/lists"
 
 	minHeartbeatIntervalInMS = 120000
 )
