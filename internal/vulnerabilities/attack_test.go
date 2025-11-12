@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -129,4 +130,112 @@ func TestGetAttackDetectedWithNilContext(t *testing.T) {
 func TestOnInterceptorResultWithNilResult(t *testing.T) {
 	err := onInterceptorResult(context.Background(), nil)
 	assert.NoError(t, err)
+}
+
+func TestStoreDeferredAttack(t *testing.T) {
+	t.Run("returns nil when result is nil", func(t *testing.T) {
+		err := StoreDeferredAttack(context.Background(), nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("returns nil when context has no request context", func(t *testing.T) {
+		result := &InterceptorResult{
+			Kind:      KindPathTraversal,
+			Operation: "filepath.Join",
+		}
+		err := StoreDeferredAttack(context.Background(), result)
+		assert.NoError(t, err)
+	})
+
+	t.Run("stores attack and error in context", func(t *testing.T) {
+		ip := "127.0.0.1"
+		req := httptest.NewRequest("GET", "/test", nil)
+		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+
+		result := &InterceptorResult{
+			Kind:          KindPathTraversal,
+			Operation:     "filepath.Join",
+			Source:        "query",
+			PathToPayload: ".path",
+			Payload:       "../etc/passwd",
+			Metadata:      map[string]string{"filename": "/tmp/../etc/passwd"},
+		}
+
+		original := config.IsBlockingEnabled()
+		config.SetBlocking(true)
+		defer config.SetBlocking(original)
+
+		err := StoreDeferredAttack(ctx, result)
+		assert.NoError(t, err)
+
+		reqCtx := request.GetContext(ctx)
+		require.NotNil(t, reqCtx)
+		deferredAttack := reqCtx.GetDeferredAttack()
+		require.NotNil(t, deferredAttack)
+
+		assert.Equal(t, "filepath.Join", deferredAttack.Operation)
+		assert.Equal(t, string(KindPathTraversal), deferredAttack.Kind)
+		assert.Equal(t, "../etc/passwd", deferredAttack.Payload)
+		assert.NotNil(t, deferredAttack.Error)
+		assert.Contains(t, deferredAttack.Error.Error(), "path traversal attack")
+	})
+
+	t.Run("does not store error when blocking is disabled", func(t *testing.T) {
+		ip := "127.0.0.1"
+		req := httptest.NewRequest("GET", "/test", nil)
+		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+
+		result := &InterceptorResult{
+			Kind:          KindPathTraversal,
+			Operation:     "filepath.Join",
+			Source:        "query",
+			PathToPayload: ".path",
+			Payload:       "../etc/passwd",
+		}
+
+		original := config.IsBlockingEnabled()
+		config.SetBlocking(false)
+		defer config.SetBlocking(original)
+
+		err := StoreDeferredAttack(ctx, result)
+		assert.NoError(t, err)
+
+		reqCtx := request.GetContext(ctx)
+		deferredAttack := reqCtx.GetDeferredAttack()
+		require.NotNil(t, deferredAttack)
+		assert.Nil(t, deferredAttack.Error, "Error should not be stored when attack is not intended to be blocked")
+	})
+}
+
+func TestReportDeferredAttack(t *testing.T) {
+	t.Run("does nothing when context has no request context", func(t *testing.T) {
+		ReportDeferredAttack(context.Background())
+	})
+
+	t.Run("does nothing when no deferred attack exists", func(t *testing.T) {
+		ip := "127.0.0.1"
+		req := httptest.NewRequest("GET", "/test", nil)
+		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+
+		ReportDeferredAttack(ctx)
+	})
+
+	t.Run("reports stored attack", func(t *testing.T) {
+		ip := "127.0.0.1"
+		req := httptest.NewRequest("GET", "/test", nil)
+		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+
+		result := &InterceptorResult{
+			Kind:          KindPathTraversal,
+			Operation:     "filepath.Join",
+			Source:        "query",
+			PathToPayload: ".path",
+			Payload:       "../etc/passwd",
+		}
+
+		err := StoreDeferredAttack(ctx, result)
+		require.NoError(t, err)
+
+		ReportDeferredAttack(ctx)
+	})
 }

@@ -22,7 +22,7 @@ type Context struct {
 	executedMiddleware bool
 	user               *User
 
-	deferredBlock error
+	deferredAttack *DeferredAttack
 
 	mu sync.RWMutex
 }
@@ -79,18 +79,29 @@ func (ctx *Context) GetIP() string {
 	return ""
 }
 
-// SetDeferredBlock allows for blocking later in the request flow on vulnerable code paths.
+// DeferredAttack stores attack information and error to be reported/blocked later
+type DeferredAttack struct {
+	Operation     string
+	Kind          string
+	Source        string
+	PathToPayload string
+	Metadata      map[string]string
+	Payload       string
+	Error         error // The error to return if blocking is enabled
+}
+
+// SetDeferredAttack allows for reporting attacks later in the request flow.
 // This allows for detecting attacks on functions that don't return errors, such as `filepath.Join`.
-func (ctx *Context) SetDeferredBlock(err error) {
+func (ctx *Context) SetDeferredAttack(attack *DeferredAttack) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
 
-	ctx.deferredBlock = err
+	ctx.deferredAttack = attack
 }
 
-func (ctx *Context) GetDeferredBlock() error {
+func (ctx *Context) GetDeferredAttack() *DeferredAttack {
 	ctx.mu.RLock()
 	defer ctx.mu.RUnlock()
 
-	return ctx.deferredBlock
+	return ctx.deferredAttack
 }
