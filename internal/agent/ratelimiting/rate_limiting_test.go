@@ -33,7 +33,7 @@ func TestMillisecondsToMinutes(t *testing.T) {
 }
 
 func TestIncrementRateLimitingCounts(t *testing.T) {
-	m := make(map[string]*Counts)
+	m := make(map[string]*entityCounts)
 
 	incrementRateLimitingCounts(m, "")
 	assert.Empty(t, m, "empty key should not create entry")
@@ -48,18 +48,18 @@ func TestIncrementRateLimitingCounts(t *testing.T) {
 }
 
 func TestIsRateLimitingThresholdExceeded(t *testing.T) {
-	config := Config{MaxRequests: 5, WindowSizeInMinutes: 10}
+	config := rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 10}
 
 	tests := []struct {
 		name     string
-		counts   map[string]*Counts
+		counts   map[string]*entityCounts
 		key      string
 		expected bool
 	}{
-		{"non-existent key", map[string]*Counts{}, "user1", false},
-		{"below threshold", map[string]*Counts{"user1": {TotalNumberOfRequests: 4}}, "user1", false},
-		{"at threshold", map[string]*Counts{"user1": {TotalNumberOfRequests: 5}}, "user1", true},
-		{"above threshold", map[string]*Counts{"user1": {TotalNumberOfRequests: 6}}, "user1", true},
+		{"non-existent key", map[string]*entityCounts{}, "user1", false},
+		{"below threshold", map[string]*entityCounts{"user1": {TotalNumberOfRequests: 4}}, "user1", false},
+		{"at threshold", map[string]*entityCounts{"user1": {TotalNumberOfRequests: 5}}, "user1", true},
+		{"above threshold", map[string]*entityCounts{"user1": {TotalNumberOfRequests: 6}}, "user1", true},
 	}
 
 	for _, tt := range tests {
@@ -73,14 +73,14 @@ func TestIsRateLimitingThresholdExceeded(t *testing.T) {
 func TestUpdateCounts(t *testing.T) {
 	rl := New()
 	// Setup: Add a route to the rate limiting map
-	key := Key{Method: "GET", Route: "/api/test"}
-	rl.rateLimitingMap[key] = &Value{
-		Config: Config{
+	key := endpointKey{Method: "GET", Route: "/api/test"}
+	rl.rateLimitingMap[key] = &endpointData{
+		Config: rateLimitConfig{
 			MaxRequests:         10,
 			WindowSizeInMinutes: 5,
 		},
-		UserCounts: make(map[string]*Counts),
-		IPCounts:   make(map[string]*Counts),
+		UserCounts: make(map[string]*entityCounts),
+		IPCounts:   make(map[string]*entityCounts),
 	}
 
 	// Test updating counts for user and IP
@@ -103,14 +103,14 @@ func TestUpdateCounts(t *testing.T) {
 }
 
 func TestAdvanceQueuesForMap(t *testing.T) {
-	config := Config{MaxRequests: 10, WindowSizeInMinutes: 3}
+	config := rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 3}
 
 	t.Run("pops when window is full", func(t *testing.T) {
-		counts := &Counts{
+		counts := &entityCounts{
 			TotalNumberOfRequests:     15,
 			NumberOfRequestsPerWindow: queue{items: []int{5, 4, 6}},
 		}
-		m := map[string]*Counts{"user1": counts}
+		m := map[string]*entityCounts{"user1": counts}
 
 		advanceQueuesForMap(&config, m)
 
@@ -119,11 +119,11 @@ func TestAdvanceQueuesForMap(t *testing.T) {
 	})
 
 	t.Run("pushes when window not full", func(t *testing.T) {
-		counts := &Counts{
+		counts := &entityCounts{
 			TotalNumberOfRequests:     5,
 			NumberOfRequestsPerWindow: queue{items: []int{3, 2}},
 		}
-		m := map[string]*Counts{"user1": counts}
+		m := map[string]*entityCounts{"user1": counts}
 
 		advanceQueuesForMap(&config, m)
 
@@ -134,30 +134,30 @@ func TestAdvanceQueuesForMap(t *testing.T) {
 
 func TestAdvanceQueues(t *testing.T) {
 	rl := New()
-	key1 := Key{Method: "GET", Route: "/api/test1"}
-	key2 := Key{Method: "POST", Route: "/api/test2"}
+	key1 := endpointKey{Method: "GET", Route: "/api/test1"}
+	key2 := endpointKey{Method: "POST", Route: "/api/test2"}
 
-	rl.rateLimitingMap[key1] = &Value{
-		Config: Config{
+	rl.rateLimitingMap[key1] = &endpointData{
+		Config: rateLimitConfig{
 			MaxRequests:         10,
 			WindowSizeInMinutes: 2,
 		},
-		UserCounts: map[string]*Counts{
+		UserCounts: map[string]*entityCounts{
 			"user1": {
 				TotalNumberOfRequests:     5,
 				NumberOfRequestsPerWindow: queue{items: []int{2, 3}},
 			},
 		},
-		IPCounts: make(map[string]*Counts),
+		IPCounts: make(map[string]*entityCounts),
 	}
 
-	rl.rateLimitingMap[key2] = &Value{
-		Config: Config{
+	rl.rateLimitingMap[key2] = &endpointData{
+		Config: rateLimitConfig{
 			MaxRequests:         10,
 			WindowSizeInMinutes: 2,
 		},
-		UserCounts: make(map[string]*Counts),
-		IPCounts: map[string]*Counts{
+		UserCounts: make(map[string]*entityCounts),
+		IPCounts: map[string]*entityCounts{
 			"192.168.1.1": {
 				TotalNumberOfRequests:     7,
 				NumberOfRequestsPerWindow: queue{items: []int{3, 4}},
@@ -180,13 +180,13 @@ func TestAdvanceQueues(t *testing.T) {
 }
 
 func TestAdvanceQueuesForMap_EdgeCase(t *testing.T) {
-	config := Config{
+	config := rateLimitConfig{
 		MaxRequests:         10,
 		WindowSizeInMinutes: 2,
 	}
 
-	m := make(map[string]*Counts)
-	counts := &Counts{
+	m := make(map[string]*entityCounts)
+	counts := &entityCounts{
 		TotalNumberOfRequests:     5,
 		NumberOfRequestsPerWindow: queue{},
 	}
@@ -215,11 +215,11 @@ func TestGetStatus(t *testing.T) {
 
 	t.Run("user below threshold not blocked", func(t *testing.T) {
 		rl := New()
-		key := Key{Method: "GET", Route: "/api/test"}
-		rl.rateLimitingMap[key] = &Value{
-			Config:     Config{MaxRequests: 3, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*Counts),
-			IPCounts:   make(map[string]*Counts),
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
 		}
 
 		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
@@ -232,11 +232,11 @@ func TestGetStatus(t *testing.T) {
 
 	t.Run("user at threshold blocked", func(t *testing.T) {
 		rl := New()
-		key := Key{Method: "GET", Route: "/api/test"}
-		rl.rateLimitingMap[key] = &Value{
-			Config:     Config{MaxRequests: 3, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*Counts),
-			IPCounts:   make(map[string]*Counts),
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
 		}
 
 		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
@@ -251,11 +251,11 @@ func TestGetStatus(t *testing.T) {
 
 	t.Run("IP blocked when no user provided", func(t *testing.T) {
 		rl := New()
-		key := Key{Method: "GET", Route: "/api/test"}
-		rl.rateLimitingMap[key] = &Value{
-			Config:     Config{MaxRequests: 3, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*Counts),
-			IPCounts:   make(map[string]*Counts),
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
 		}
 
 		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1")
@@ -270,11 +270,11 @@ func TestGetStatus(t *testing.T) {
 
 	t.Run("IP below threshold not blocked", func(t *testing.T) {
 		rl := New()
-		key := Key{Method: "POST", Route: "/api/other"}
-		rl.rateLimitingMap[key] = &Value{
-			Config:     Config{MaxRequests: 5, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*Counts),
-			IPCounts:   make(map[string]*Counts),
+		key := endpointKey{Method: "POST", Route: "/api/other"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
 		}
 
 		rl.UpdateCounts("POST", "/api/other", "", "192.168.1.2")
@@ -288,14 +288,14 @@ func TestGetStatus(t *testing.T) {
 
 func TestGetStatus_Concurrent(t *testing.T) {
 	rl := New()
-	key := Key{Method: "GET", Route: "/api/test"}
-	rl.rateLimitingMap[key] = &Value{
-		Config: Config{
+	key := endpointKey{Method: "GET", Route: "/api/test"}
+	rl.rateLimitingMap[key] = &endpointData{
+		Config: rateLimitConfig{
 			MaxRequests:         100,
 			WindowSizeInMinutes: 5,
 		},
-		UserCounts: make(map[string]*Counts),
-		IPCounts:   make(map[string]*Counts),
+		UserCounts: make(map[string]*entityCounts),
+		IPCounts:   make(map[string]*entityCounts),
 	}
 
 	// Concurrent updates and reads
