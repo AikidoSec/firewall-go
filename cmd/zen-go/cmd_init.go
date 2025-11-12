@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -20,7 +21,7 @@ import (
 )
 `
 
-func initCommand() error {
+func initCommand(stdout io.Writer) error {
 	// Parse force flag: if enabled will overwrite existing files if necessary
 	force := false
 	if len(os.Args) > 2 {
@@ -36,8 +37,8 @@ func initCommand() error {
 	// Check if file already exists
 	if !force {
 		if _, err := os.Stat(filename); err == nil {
-			fmt.Printf("⚠️  %s already exists\n", filename)
-			fmt.Println("   Run with --force to overwrite, or delete the file first.")
+			fmt.Fprintf(stdout, "⚠️  %s already exists\n", filename)
+			fmt.Fprintln(stdout, "   Run with --force to overwrite, or delete the file first.")
 			return nil
 		}
 	}
@@ -49,11 +50,11 @@ func initCommand() error {
 	}
 
 	absPath, _ := filepath.Abs(filename)
-	fmt.Printf("✓ Created %s\n", filename)
-	fmt.Printf("  %s\n\n", absPath)
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Run 'go mod tidy' to update your dependencies")
-	fmt.Println("  2. Build with 'orchestrion go build' to enable instrumentation")
+	fmt.Fprintf(stdout, "✓ Created %s\n", filename)
+	fmt.Fprintf(stdout, "  %s\n\n", absPath)
+	fmt.Fprintln(stdout, "Next steps:")
+	fmt.Fprintln(stdout, "  1. Run 'go mod tidy' to update your dependencies")
+	fmt.Fprintln(stdout, "  2. Build with 'orchestrion go build' to enable instrumentation")
 
 	return nil
 }
