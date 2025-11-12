@@ -49,27 +49,22 @@ func (c *Client) CheckConfigUpdatedAt() time.Duration {
 	return c.storeCloudConfig(configResponse)
 }
 
-// updateListsConfig fetches firewall blocklists to keep local security rules synchronized with cloud configuration.
-func (c *Client) updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
+// fetchListsConfig fetches firewall blocklists to keep local security rules synchronized with cloud configuration.
+func (c *Client) fetchListsConfig() (*aikido_types.ListsConfigData, error) {
 	response, err := c.sendCloudRequest(c.apiEndpoint, listsAPIRoute, listsAPIMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending lists request: ", err)
-		return false
+		return nil, err
 	}
 
-	tempListsConfig := aikido_types.ListsConfigData{}
-	err = json.Unmarshal(response, &tempListsConfig)
+	listsConfig := aikido_types.ListsConfigData{}
+	err = json.Unmarshal(response, &listsConfig)
 	if err != nil {
 		log.Warn("Failed to unmarshal lists config!")
-		return false
+		return nil, err
 	}
 
-	cloudConfig.BlockedIPsList = make(map[string]aikido_types.IPBlocklist)
-	for _, blockedIpsGroup := range tempListsConfig.BlockedIPAddresses {
-		cloudConfig.BlockedIPsList[blockedIpsGroup.Source] = aikido_types.IPBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
-	}
-	cloudConfig.BlockedUserAgents = tempListsConfig.BlockedUserAgents
-	return true
+	return &listsConfig, err
 }
 
 // storeCloudConfig applies cloud configuration if newer than the current
@@ -85,10 +80,14 @@ func (c *Client) storeCloudConfig(configResponse []byte) time.Duration {
 		return 0
 	}
 
-	c.updateListsConfig(cloudConfig)
+	listsConfig, err := c.fetchListsConfig()
+	if err != nil {
+		log.Warn("Failed to fetch lists config", slog.Any("error", err))
+		return 0
+	}
 	updateRateLimitingConfig(cloudConfig.Endpoints)
 
-	config.UpdateServiceConfig(cloudConfig)
+	config.UpdateServiceConfig(cloudConfig, listsConfig)
 	return calculateHeartbeatInterval(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
 }
 
