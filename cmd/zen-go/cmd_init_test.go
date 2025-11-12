@@ -22,7 +22,7 @@ func TestInitCommand_CreatesFile(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	os.Args = []string{"zen-go", "init"}
-	err = initCommand()
+	err = initCommand(os.Stdout)
 	require.NoError(t, err)
 
 	// Verify file was created
@@ -55,7 +55,7 @@ func TestInitCommand_DoesNotOverwriteExistingFile(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	os.Args = []string{"zen-go", "init"}
-	err = initCommand()
+	err = initCommand(os.Stdout)
 	require.NoError(t, err)
 
 	// Verify file content was not overwritten
@@ -83,7 +83,7 @@ func TestInitCommand_ForceOverwritesExistingFile(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	os.Args = []string{"zen-go", "init", "--force"}
-	err = initCommand()
+	err = initCommand(os.Stdout)
 	require.NoError(t, err)
 
 	// Verify file content was overwritten
@@ -112,7 +112,7 @@ func TestInitCommand_ForceShortFlag(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	os.Args = []string{"zen-go", "init", "-f"}
-	err = initCommand()
+	err = initCommand(os.Stdout)
 	require.NoError(t, err)
 
 	// Verify file content was overwritten
