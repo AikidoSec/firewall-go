@@ -21,7 +21,7 @@ type Config struct {
 
 // Counts tracks rate limiting counts for a specific entity (user or IP)
 type Counts struct {
-	NumberOfRequestsPerWindow Queue
+	NumberOfRequestsPerWindow queue
 	TotalNumberOfRequests     int
 }
 
@@ -35,7 +35,7 @@ type Key struct {
 type Value struct {
 	Config     Config
 	UserCounts map[string]*Counts
-	IpCounts   map[string]*Counts
+	IPCounts   map[string]*Counts
 }
 
 // Status represents the result of a rate limiting check
@@ -88,7 +88,7 @@ func advanceQueues() {
 
 	for _, endpoint := range rateLimitingMap {
 		advanceQueuesForMap(&endpoint.Config, endpoint.UserCounts)
-		advanceQueuesForMap(&endpoint.Config, endpoint.IpCounts)
+		advanceQueuesForMap(&endpoint.Config, endpoint.IPCounts)
 	}
 }
 
@@ -129,7 +129,7 @@ func UpdateCounts(method string, route string, user string, ip string) {
 	}
 
 	incrementRateLimitingCounts(rateLimitingData.UserCounts, user)
-	incrementRateLimitingCounts(rateLimitingData.IpCounts, ip)
+	incrementRateLimitingCounts(rateLimitingData.IPCounts, ip)
 }
 
 func isRateLimitingThresholdExceeded(config *Config, countsMap map[string]*Counts, key string) bool {
@@ -163,12 +163,12 @@ func GetStatus(method string, route string, user string, ip string) *Status {
 		}
 	} else {
 		// Otherwise, we rate limit by ip
-		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IpCounts, ip) {
+		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IPCounts, ip) {
 			log.Info("Rate limited request for ip",
 				slog.String("ip", ip),
 				slog.String("method", method),
 				slog.String("route", route),
-				slog.Any("counts", rateLimitingDataForRoute.IpCounts[ip]))
+				slog.Any("counts", rateLimitingDataForRoute.IPCounts[ip]))
 			return &Status{Block: true, Trigger: "ip"}
 		}
 	}
@@ -233,7 +233,7 @@ func UpdateConfig(endpoints []EndpointConfig) {
 				WindowSizeInMinutes: millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS),
 			},
 			UserCounts: make(map[string]*Counts),
-			IpCounts:   make(map[string]*Counts),
+			IPCounts:   make(map[string]*Counts),
 		}
 	}
 
