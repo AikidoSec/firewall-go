@@ -2,7 +2,6 @@ package vulnerabilities
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -24,45 +23,53 @@ type Attack struct {
 	Kind string
 }
 
+type ScanOptions struct {
+	DeferReporting bool
+}
+
 func Scan[T any](ctx context.Context, operation string, vulnerability Vulnerability[T], args T) error {
+	return ScanWithOptions(ctx, operation, vulnerability, args, ScanOptions{})
+}
+
+func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability Vulnerability[T], args T, opts ScanOptions) error {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
 	}
 
-	if deferred := reqCtx.GetDeferredBlock(); deferred != nil {
-		// Check if the deferred block is for the same type of vulnerability
-		var detectedErr *AttackDetectedError
-		if errors.As(deferred, &detectedErr) {
-			if detectedErr.Kind == vulnerability.Kind {
-				return reqCtx.GetDeferredBlock()
-			}
+	deferredAttack := reqCtx.GetDeferredAttack()
+	if deferredAttack != nil && deferredAttack.Kind == string(vulnerability.Kind) {
+		ReportDeferredAttack(ctx)
+
+		// If blocking is enabled, there will be an error to return to block the request
+		if deferredAttack.Error != nil {
+			return deferredAttack.Error
 		}
 	}
 
-	err := scanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args)
+	err := scanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args, opts)
 	if err != nil {
 		return err
 	}
 
-	err = scanSource(ctx, "headers", reqCtx.Headers, operation, vulnerability, args)
+	err = scanSource(ctx, "headers", reqCtx.Headers, operation, vulnerability, args, opts)
 	if err != nil {
 		return err
 	}
 
-	err = scanSource(ctx, "cookies", reqCtx.Cookies, operation, vulnerability, args)
+	err = scanSource(ctx, "cookies", reqCtx.Cookies, operation, vulnerability, args, opts)
 	if err != nil {
 		return err
 	}
 
-	err = scanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args)
+	err = scanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args, opts)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func scanSource[T any](ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability[T], args T) error {
+func scanSource[T any](ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability[T], args T, opts ScanOptions) error {
 	userInputMap := extractStringsFromUserInput(sourceData, []pathPart{})
 
 	for userInput, path := range userInputMap {
@@ -86,6 +93,9 @@ func scanSource[T any](ctx context.Context, source string, sourceData any, opera
 			}
 			log.Debug("Attack", slog.String("attack", attack.ToString()))
 
+			if opts.DeferReporting {
+				return StoreDeferredAttack(ctx, attack)
+			}
 			return onInterceptorResult(ctx, attack)
 		}
 	}
