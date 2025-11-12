@@ -44,17 +44,24 @@ type Status struct {
 	Trigger string
 }
 
-var (
+type RateLimiter struct {
 	// rateLimitingMap holds the current rate limiting state for each configured route
-	rateLimitingMap = make(map[Key]*Value)
+	rateLimitingMap map[Key]*Value
 
-	// mutex is used to sync access across the go routines
-	mutex sync.RWMutex
+	mu sync.RWMutex
 
 	// Channel and Ticker for the rate limiting background routine
-	channel = make(chan struct{})
-	ticker  = time.NewTicker(MinRateLimitingIntervalInMs * time.Millisecond)
-)
+	channel chan struct{}
+	ticker  *time.Ticker
+}
+
+func New() *RateLimiter {
+	return &RateLimiter{
+		rateLimitingMap: make(map[Key]*Value),
+		channel:         make(chan struct{}),
+		ticker:          time.NewTicker(MinRateLimitingIntervalInMs * time.Millisecond),
+	}
+}
 
 func advanceQueuesForMap(config *Config, countsMap map[string]*Counts) {
 	for _, counts := range countsMap {
@@ -82,25 +89,25 @@ func advanceQueuesForMap(config *Config, countsMap map[string]*Counts) {
 }
 
 // advanceQueues moves the sliding window forward by one time unit
-func advanceQueues() {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (rl *RateLimiter) advanceQueues() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	for _, endpoint := range rateLimitingMap {
+	for _, endpoint := range rl.rateLimitingMap {
 		advanceQueuesForMap(&endpoint.Config, endpoint.UserCounts)
 		advanceQueuesForMap(&endpoint.Config, endpoint.IPCounts)
 	}
 }
 
 // Init initializes the rate limiting subsystem
-func Init() {
-	advanceQueues()
-	utils.StartPollingRoutine(channel, ticker, advanceQueues)
+func (rl *RateLimiter) Init() {
+	rl.advanceQueues()
+	utils.StartPollingRoutine(rl.channel, rl.ticker, rl.advanceQueues)
 }
 
 // Uninit shuts down the rate limiting subsystem
-func Uninit() {
-	utils.StopPollingRoutine(channel)
+func (rl *RateLimiter) Uninit() {
+	utils.StopPollingRoutine(rl.channel)
 }
 
 func incrementRateLimitingCounts(m map[string]*Counts, key string) {
@@ -119,11 +126,11 @@ func incrementRateLimitingCounts(m map[string]*Counts, key string) {
 }
 
 // UpdateCounts updates the rate limiting counts for a given route, user, and IP
-func UpdateCounts(method string, route string, user string, ip string) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip string) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	rateLimitingData, exists := rateLimitingMap[Key{Method: method, Route: route}]
+	rateLimitingData, exists := rl.rateLimitingMap[Key{Method: method, Route: route}]
 	if !exists {
 		return
 	}
@@ -142,11 +149,11 @@ func isRateLimitingThresholdExceeded(config *Config, countsMap map[string]*Count
 }
 
 // GetStatus checks if a request should be rate limited based on user or IP
-func GetStatus(method string, route string, user string, ip string) *Status {
-	mutex.RLock()
-	defer mutex.RUnlock()
+func (rl *RateLimiter) GetStatus(method string, route string, user string, ip string) *Status {
+	rl.mu.RLock()
+	defer rl.mu.RUnlock()
 
-	rateLimitingDataForRoute, exists := rateLimitingMap[Key{Method: method, Route: route}]
+	rateLimitingDataForRoute, exists := rl.rateLimitingMap[Key{Method: method, Route: route}]
 	if !exists {
 		return &Status{Block: false}
 	}
@@ -193,9 +200,9 @@ type EndpointConfig struct {
 }
 
 // UpdateConfig updates the rate limiting configuration from cloud endpoints
-func UpdateConfig(endpoints []EndpointConfig) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
 	updatedEndpoints := map[Key]bool{}
 
@@ -203,7 +210,7 @@ func UpdateConfig(endpoints []EndpointConfig) {
 		k := Key{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
 		updatedEndpoints[k] = true
 
-		rateLimitingData, exists := rateLimitingMap[k]
+		rateLimitingData, exists := rl.rateLimitingMap[k]
 		if exists {
 			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
 				rateLimitingData.Config.WindowSizeInMinutes == millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS) {
@@ -212,7 +219,7 @@ func UpdateConfig(endpoints []EndpointConfig) {
 			}
 
 			log.Info("Rate limiting endpoint config has changed", slog.Any("config", newEndpointConfig))
-			delete(rateLimitingMap, k)
+			delete(rl.rateLimitingMap, k)
 		}
 
 		if !newEndpointConfig.RateLimiting.Enabled {
@@ -227,7 +234,7 @@ func UpdateConfig(endpoints []EndpointConfig) {
 		}
 
 		log.Info("Got new rate limiting endpoint config and storing to map", slog.Any("config", newEndpointConfig))
-		rateLimitingMap[k] = &Value{
+		rl.rateLimitingMap[k] = &Value{
 			Config: Config{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
 				WindowSizeInMinutes: millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS),
@@ -237,11 +244,34 @@ func UpdateConfig(endpoints []EndpointConfig) {
 		}
 	}
 
-	for k := range rateLimitingMap {
+	for k := range rl.rateLimitingMap {
 		_, exists := updatedEndpoints[k]
 		if !exists {
 			log.Info("Removed rate limiting entry as it is no longer part of the config", slog.Any("endpoint", k))
-			delete(rateLimitingMap, k)
+			delete(rl.rateLimitingMap, k)
 		}
 	}
+}
+
+// global instance
+var globalRateLimiter = New()
+
+func Init() {
+	globalRateLimiter.Init()
+}
+
+func Uninit() {
+	globalRateLimiter.Uninit()
+}
+
+func GetStatus(method string, route string, user string, ip string) *Status {
+	return globalRateLimiter.GetStatus(method, route, user, ip)
+}
+
+func UpdateConfig(endpoints []EndpointConfig) {
+	globalRateLimiter.UpdateConfig(endpoints)
+}
+
+func UpdateCounts(method string, route string, user string, ip string) {
+	globalRateLimiter.UpdateCounts(method, route, user, ip)
 }
