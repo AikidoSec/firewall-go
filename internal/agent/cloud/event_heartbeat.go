@@ -129,7 +129,7 @@ type HeartbeatEvent struct {
 	MiddlewareInstalled bool                    `json:"middlewareInstalled"`
 }
 
-// SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
+// SendHeartbeatEvent sends a heartbeat to the cloud and returns the latest configuration.
 func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo) (*aikido_types.CloudConfigData, error) {
 	heartbeatEvent := HeartbeatEvent{
 		Type:                "heartbeat",
