@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	MinRateLimitingIntervalInMs = 60000   // 1 minute
-	MaxRateLimitingIntervalInMs = 3600000 // 1 hour
+	minRateLimitingWindowInMs = 60000   // 1 minute
+	maxRateLimitingWindowInMs = 3600000 // 1 hour
+	inactiveCleanupInterval   = 5 * time.Minute
+	inactivityThreshold       = 1 * time.Hour
 )
 
 type rateLimitConfig struct {
@@ -21,8 +23,7 @@ type rateLimitConfig struct {
 
 // entityCounts tracks rate limiting counts for a specific entity (user or IP)
 type entityCounts struct {
-	NumberOfRequestsPerWindow queue
-	TotalNumberOfRequests     int
+	requestTimestamps []int64 // Unix timestamps in seconds
 }
 
 // endpointKey identifies a specific endpoint for rate limiting
@@ -59,50 +60,13 @@ func New() *RateLimiter {
 	return &RateLimiter{
 		rateLimitingMap: make(map[endpointKey]*endpointData),
 		channel:         make(chan struct{}),
-		ticker:          time.NewTicker(MinRateLimitingIntervalInMs * time.Millisecond),
+		ticker:          time.NewTicker(inactiveCleanupInterval),
 	}
 }
 
-func advanceQueuesForMap(config *rateLimitConfig, countsMap map[string]*entityCounts) {
-	for _, counts := range countsMap {
-		if config.WindowSizeInMinutes <= counts.NumberOfRequestsPerWindow.Length() {
-			// Sliding window is moving, need to substract the entry that goes out of the window
-			// Ex: if the window is set to 10 minutes, when another minute passes,
-			//     need to remove the number of requests from the entry of 11 minutes ago
-
-			// Get the number of requests for the entry that just dropped out of the sliding window
-			numberOfRequestToSubstract := counts.NumberOfRequestsPerWindow.Pop()
-			if counts.TotalNumberOfRequests < numberOfRequestToSubstract {
-				// This should never happen, but better to have a check in place
-				log.Warn("More requests to subtract than total number of requests",
-					slog.Int("to_subtract", numberOfRequestToSubstract),
-					slog.Int("total", counts.TotalNumberOfRequests))
-			} else {
-				// Remove the number of requests for the entry that just dropped out of the sliding window from total
-				counts.TotalNumberOfRequests -= numberOfRequestToSubstract
-			}
-		}
-
-		// Create a new entry in queue for the current minute
-		counts.NumberOfRequestsPerWindow.Push(0)
-	}
-}
-
-// advanceQueues moves the sliding window forward by one time unit
-func (rl *RateLimiter) advanceQueues() {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	for _, endpoint := range rl.rateLimitingMap {
-		advanceQueuesForMap(&endpoint.Config, endpoint.UserCounts)
-		advanceQueuesForMap(&endpoint.Config, endpoint.IPCounts)
-	}
-}
-
-// Init initializes the rate limiting subsystem
+// Init initializes the rate limiting subsystem with periodic cleanup
 func (rl *RateLimiter) Init() {
-	rl.advanceQueues()
-	utils.StartPollingRoutine(rl.channel, rl.ticker, rl.advanceQueues)
+	utils.StartPollingRoutine(rl.channel, rl.ticker, rl.cleanupInactive)
 }
 
 // Uninit shuts down the rate limiting subsystem
@@ -110,28 +74,29 @@ func (rl *RateLimiter) Uninit() {
 	utils.StopPollingRoutine(rl.channel)
 }
 
-func incrementRateLimitingCounts(m map[string]*entityCounts, key string) {
-	if key == "" {
-		return
+// cleanOldTimestamps removes timestamps older than windowStart from the slice
+func cleanOldTimestamps(counts *entityCounts, windowStart int64) {
+	i := 0
+	for i < len(counts.requestTimestamps) && counts.requestTimestamps[i] < windowStart {
+		i++
 	}
-
-	rateLimitingData, exists := m[key]
-	if !exists {
-		rateLimitingData = &entityCounts{}
-		m[key] = rateLimitingData
-	}
-
-	rateLimitingData.TotalNumberOfRequests += 1
-	rateLimitingData.NumberOfRequestsPerWindow.IncrementLast()
+	counts.requestTimestamps = counts.requestTimestamps[i:]
 }
 
-func isRateLimitingThresholdExceeded(config *rateLimitConfig, countsMap map[string]*entityCounts, key string) bool {
-	counts, exists := countsMap[key]
-	if !exists {
-		return false
+// getOrCreateCounts gets existing counts or creates new ones
+func getOrCreateCounts(m map[string]*entityCounts, key string) *entityCounts {
+	if key == "" {
+		return nil
 	}
 
-	return counts.TotalNumberOfRequests >= config.MaxRequests
+	counts, exists := m[key]
+	if !exists {
+		counts = &entityCounts{
+			requestTimestamps: make([]int64, 0),
+		}
+		m[key] = counts
+	}
+	return counts
 }
 
 // ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
@@ -144,32 +109,70 @@ func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user 
 		return &Status{Block: false}
 	}
 
-	incrementRateLimitingCounts(rateLimitingDataForRoute.UserCounts, user)
-	incrementRateLimitingCounts(rateLimitingDataForRoute.IPCounts, ip)
+	now := time.Now().Unix()
+	windowStart := now - int64(rateLimitingDataForRoute.Config.WindowSizeInMinutes*60)
 
 	if user != "" {
 		// If the user exists, we only try to rate limit by user
-		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.UserCounts, user) {
-			log.Info("Rate limited request for user",
-				slog.String("user", user),
-				slog.String("method", method),
-				slog.String("route", route),
-				slog.Any("counts", rateLimitingDataForRoute.UserCounts[user]))
-			return &Status{Block: true, Trigger: "user"}
+		if counts, exists := rateLimitingDataForRoute.UserCounts[user]; exists {
+			cleanOldTimestamps(counts, windowStart)
+			counts.requestTimestamps = append(counts.requestTimestamps, now)
+
+			if len(counts.requestTimestamps) >= rateLimitingDataForRoute.Config.MaxRequests {
+				log.Info("Rate limited request for user",
+					slog.String("user", user),
+					slog.String("method", method),
+					slog.String("route", route),
+					slog.Int("count", len(counts.requestTimestamps)))
+				return &Status{Block: true, Trigger: "user"}
+			}
 		}
-	} else {
+	} else if ip != "" {
 		// Otherwise, we rate limit by ip
-		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IPCounts, ip) {
-			log.Info("Rate limited request for ip",
-				slog.String("ip", ip),
-				slog.String("method", method),
-				slog.String("route", route),
-				slog.Any("counts", rateLimitingDataForRoute.IPCounts[ip]))
-			return &Status{Block: true, Trigger: "ip"}
+		if counts, exists := rateLimitingDataForRoute.IPCounts[ip]; exists {
+			cleanOldTimestamps(counts, windowStart)
+			counts.requestTimestamps = append(counts.requestTimestamps, now)
+
+			if len(counts.requestTimestamps) >= rateLimitingDataForRoute.Config.MaxRequests {
+				log.Info("Rate limited request for ip",
+					slog.String("ip", ip),
+					slog.String("method", method),
+					slog.String("route", route),
+					slog.Int("count", len(counts.requestTimestamps)))
+				return &Status{Block: true, Trigger: "ip"}
+			}
 		}
 	}
 
 	return &Status{Block: false}
+}
+
+// cleanupInactive removes completely inactive users/IPs from the maps
+func (rl *RateLimiter) cleanupInactive() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now().Unix()
+	threshold := int64(inactivityThreshold.Seconds())
+
+	for _, endpoint := range rl.rateLimitingMap {
+		cleanupInactiveMap(endpoint.UserCounts, now, threshold)
+		cleanupInactiveMap(endpoint.IPCounts, now, threshold)
+	}
+}
+
+func cleanupInactiveMap(m map[string]*entityCounts, now, threshold int64) {
+	for key, counts := range m {
+		if len(counts.requestTimestamps) == 0 {
+			delete(m, key)
+			continue
+		}
+		// Check last timestamp
+		lastRequest := counts.requestTimestamps[len(counts.requestTimestamps)-1]
+		if now-lastRequest > threshold {
+			delete(m, key)
+		}
+	}
 }
 
 func millisecondsToMinutes(ms int) int {
@@ -202,8 +205,8 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 		}
 
 		// Validate window size
-		if endpoint.RateLimiting.WindowSizeInMS < MinRateLimitingIntervalInMs ||
-			endpoint.RateLimiting.WindowSizeInMS > MaxRateLimitingIntervalInMs {
+		if endpoint.RateLimiting.WindowSizeInMS < minRateLimitingWindowInMs ||
+			endpoint.RateLimiting.WindowSizeInMS > maxRateLimitingWindowInMs {
 			log.Warn("Invalid rate limiting WindowSizeInMS, skipping", slog.Any("endpoint", endpoint))
 			continue
 		}
