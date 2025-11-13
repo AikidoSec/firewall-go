@@ -28,11 +28,23 @@ type mockCloudClient struct {
 	capturedAttack          aikido_types.AttackDetails
 }
 
-func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) {}
-func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) time.Duration {
-	return 0
+func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
 }
-func (m *mockCloudClient) CheckConfigUpdatedAt() time.Duration { return 0 }
+
+func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchConfigUpdatedAt() time.Time { panic("not implemented") }
+func (m *mockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
+	panic("not implemented")
+}
+
 func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 	m.capturedAgentInfo = agentInfo
 	m.capturedRequest = request
