@@ -54,6 +54,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	go func() {
 		cloudConfig, err := client.SendStartEvent(getAgentInfo())
 		if err != nil {
+			log.Warn("Error sending start event", slog.Any("error", err))
 			return
 		}
 
