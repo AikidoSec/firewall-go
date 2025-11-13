@@ -20,7 +20,6 @@ func (c *Client) SendStartEvent(agentInfo AgentInfo) (*aikido_types.CloudConfigD
 
 	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, startedEvent)
 	if err != nil {
-		logCloudRequestError("Error in sending start event: ", err)
 		return nil, err
 	}
 
