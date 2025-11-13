@@ -12,7 +12,9 @@ import (
 
 var cloudConfigMutex sync.Mutex
 
-func updateCloudConfig(client CloudClient, cloudConfig *aikido_types.CloudConfigData) {
+// applyCloudConfig applies a new cloud config if it's newer than the current one.
+// This includes updating service config, rate limiting rules, and heartbeat interval.
+func applyCloudConfig(client CloudClient, cloudConfig *aikido_types.CloudConfigData) {
 	cloudConfigMutex.Lock()
 	defer cloudConfigMutex.Unlock()
 

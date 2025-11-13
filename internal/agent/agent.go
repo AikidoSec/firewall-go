@@ -58,7 +58,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 			return
 		}
 
-		updateCloudConfig(client, cloudConfig)
+		applyCloudConfig(client, cloudConfig)
 	}()
 
 	startPolling()
