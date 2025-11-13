@@ -14,28 +14,28 @@ const (
 	MaxRateLimitingIntervalInMs = 3600000 // 1 hour
 )
 
-type Config struct {
+type rateLimitConfig struct {
 	MaxRequests         int
 	WindowSizeInMinutes int
 }
 
-// Counts tracks rate limiting counts for a specific entity (user or IP)
-type Counts struct {
+// entityCounts tracks rate limiting counts for a specific entity (user or IP)
+type entityCounts struct {
 	NumberOfRequestsPerWindow queue
 	TotalNumberOfRequests     int
 }
 
-// Key identifies a specific endpoint for rate limiting
-type Key struct {
+// endpointKey identifies a specific endpoint for rate limiting
+type endpointKey struct {
 	Method string
 	Route  string
 }
 
-// Value holds the rate limiting configuration and counts for an endpoint
-type Value struct {
-	Config     Config
-	UserCounts map[string]*Counts
-	IPCounts   map[string]*Counts
+// endpointData holds the rate limiting configuration and counts for an endpoint
+type endpointData struct {
+	Config     rateLimitConfig
+	UserCounts map[string]*entityCounts
+	IPCounts   map[string]*entityCounts
 }
 
 // Status represents the result of a rate limiting check
@@ -44,19 +44,26 @@ type Status struct {
 	Trigger string
 }
 
-var (
+type RateLimiter struct {
 	// rateLimitingMap holds the current rate limiting state for each configured route
-	rateLimitingMap = make(map[Key]*Value)
+	rateLimitingMap map[endpointKey]*endpointData
 
-	// mutex is used to sync access across the go routines
-	mutex sync.RWMutex
+	mu sync.RWMutex
 
 	// Channel and Ticker for the rate limiting background routine
-	channel = make(chan struct{})
-	ticker  = time.NewTicker(MinRateLimitingIntervalInMs * time.Millisecond)
-)
+	channel chan struct{}
+	ticker  *time.Ticker
+}
 
-func advanceQueuesForMap(config *Config, countsMap map[string]*Counts) {
+func New() *RateLimiter {
+	return &RateLimiter{
+		rateLimitingMap: make(map[endpointKey]*endpointData),
+		channel:         make(chan struct{}),
+		ticker:          time.NewTicker(MinRateLimitingIntervalInMs * time.Millisecond),
+	}
+}
+
+func advanceQueuesForMap(config *rateLimitConfig, countsMap map[string]*entityCounts) {
 	for _, counts := range countsMap {
 		if config.WindowSizeInMinutes <= counts.NumberOfRequestsPerWindow.Length() {
 			// Sliding window is moving, need to substract the entry that goes out of the window
@@ -82,35 +89,35 @@ func advanceQueuesForMap(config *Config, countsMap map[string]*Counts) {
 }
 
 // advanceQueues moves the sliding window forward by one time unit
-func advanceQueues() {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (rl *RateLimiter) advanceQueues() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	for _, endpoint := range rateLimitingMap {
+	for _, endpoint := range rl.rateLimitingMap {
 		advanceQueuesForMap(&endpoint.Config, endpoint.UserCounts)
 		advanceQueuesForMap(&endpoint.Config, endpoint.IPCounts)
 	}
 }
 
 // Init initializes the rate limiting subsystem
-func Init() {
-	advanceQueues()
-	utils.StartPollingRoutine(channel, ticker, advanceQueues)
+func (rl *RateLimiter) Init() {
+	rl.advanceQueues()
+	utils.StartPollingRoutine(rl.channel, rl.ticker, rl.advanceQueues)
 }
 
 // Uninit shuts down the rate limiting subsystem
-func Uninit() {
-	utils.StopPollingRoutine(channel)
+func (rl *RateLimiter) Uninit() {
+	utils.StopPollingRoutine(rl.channel)
 }
 
-func incrementRateLimitingCounts(m map[string]*Counts, key string) {
+func incrementRateLimitingCounts(m map[string]*entityCounts, key string) {
 	if key == "" {
 		return
 	}
 
 	rateLimitingData, exists := m[key]
 	if !exists {
-		rateLimitingData = &Counts{}
+		rateLimitingData = &entityCounts{}
 		m[key] = rateLimitingData
 	}
 
@@ -119,11 +126,11 @@ func incrementRateLimitingCounts(m map[string]*Counts, key string) {
 }
 
 // UpdateCounts updates the rate limiting counts for a given route, user, and IP
-func UpdateCounts(method string, route string, user string, ip string) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip string) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	rateLimitingData, exists := rateLimitingMap[Key{Method: method, Route: route}]
+	rateLimitingData, exists := rl.rateLimitingMap[endpointKey{Method: method, Route: route}]
 	if !exists {
 		return
 	}
@@ -132,7 +139,7 @@ func UpdateCounts(method string, route string, user string, ip string) {
 	incrementRateLimitingCounts(rateLimitingData.IPCounts, ip)
 }
 
-func isRateLimitingThresholdExceeded(config *Config, countsMap map[string]*Counts, key string) bool {
+func isRateLimitingThresholdExceeded(config *rateLimitConfig, countsMap map[string]*entityCounts, key string) bool {
 	counts, exists := countsMap[key]
 	if !exists {
 		return false
@@ -142,11 +149,11 @@ func isRateLimitingThresholdExceeded(config *Config, countsMap map[string]*Count
 }
 
 // GetStatus checks if a request should be rate limited based on user or IP
-func GetStatus(method string, route string, user string, ip string) *Status {
-	mutex.RLock()
-	defer mutex.RUnlock()
+func (rl *RateLimiter) GetStatus(method string, route string, user string, ip string) *Status {
+	rl.mu.RLock()
+	defer rl.mu.RUnlock()
 
-	rateLimitingDataForRoute, exists := rateLimitingMap[Key{Method: method, Route: route}]
+	rateLimitingDataForRoute, exists := rl.rateLimitingMap[endpointKey{Method: method, Route: route}]
 	if !exists {
 		return &Status{Block: false}
 	}
@@ -193,17 +200,17 @@ type EndpointConfig struct {
 }
 
 // UpdateConfig updates the rate limiting configuration from cloud endpoints
-func UpdateConfig(endpoints []EndpointConfig) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	updatedEndpoints := map[Key]bool{}
+	updatedEndpoints := map[endpointKey]bool{}
 
 	for _, newEndpointConfig := range endpoints {
-		k := Key{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
+		k := endpointKey{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
 		updatedEndpoints[k] = true
 
-		rateLimitingData, exists := rateLimitingMap[k]
+		rateLimitingData, exists := rl.rateLimitingMap[k]
 		if exists {
 			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
 				rateLimitingData.Config.WindowSizeInMinutes == millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS) {
@@ -212,7 +219,7 @@ func UpdateConfig(endpoints []EndpointConfig) {
 			}
 
 			log.Info("Rate limiting endpoint config has changed", slog.Any("config", newEndpointConfig))
-			delete(rateLimitingMap, k)
+			delete(rl.rateLimitingMap, k)
 		}
 
 		if !newEndpointConfig.RateLimiting.Enabled {
@@ -227,21 +234,44 @@ func UpdateConfig(endpoints []EndpointConfig) {
 		}
 
 		log.Info("Got new rate limiting endpoint config and storing to map", slog.Any("config", newEndpointConfig))
-		rateLimitingMap[k] = &Value{
-			Config: Config{
+		rl.rateLimitingMap[k] = &endpointData{
+			Config: rateLimitConfig{
 				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
 				WindowSizeInMinutes: millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS),
 			},
-			UserCounts: make(map[string]*Counts),
-			IPCounts:   make(map[string]*Counts),
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
 		}
 	}
 
-	for k := range rateLimitingMap {
+	for k := range rl.rateLimitingMap {
 		_, exists := updatedEndpoints[k]
 		if !exists {
 			log.Info("Removed rate limiting entry as it is no longer part of the config", slog.Any("endpoint", k))
-			delete(rateLimitingMap, k)
+			delete(rl.rateLimitingMap, k)
 		}
 	}
+}
+
+// global instance
+var globalRateLimiter = New()
+
+func Init() {
+	globalRateLimiter.Init()
+}
+
+func Uninit() {
+	globalRateLimiter.Uninit()
+}
+
+func GetStatus(method string, route string, user string, ip string) *Status {
+	return globalRateLimiter.GetStatus(method, route, user, ip)
+}
+
+func UpdateConfig(endpoints []EndpointConfig) {
+	globalRateLimiter.UpdateConfig(endpoints)
+}
+
+func UpdateCounts(method string, route string, user string, ip string) {
+	globalRateLimiter.UpdateCounts(method, route, user, ip)
 }
