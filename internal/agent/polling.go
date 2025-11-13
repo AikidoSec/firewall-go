@@ -84,8 +84,9 @@ func sendHeartbeatEvent() {
 	applyCloudConfig(client, cloudConfig)
 }
 
-// calculateHeartbeatInterval calculates the heartbeat interval based on config.
-// Returns 1 minute if no stats received, or the provided interval if it meets the minimum threshold.
+// calculateHeartbeatInterval returns a faster polling interval (1 minute) for new agents
+// until they send their first stats, then switches to the cloud-configured interval
+// (minimum 2 minutes) to reduce unnecessary load.
 func calculateHeartbeatInterval(heartbeatIntervalInMS int, receivedAnyStats bool) time.Duration {
 	if !receivedAnyStats {
 		return 1 * time.Minute
