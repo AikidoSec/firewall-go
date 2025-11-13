@@ -18,7 +18,6 @@ func applyCloudConfig(client CloudClient, cloudConfig *aikido_types.CloudConfigD
 	cloudConfigMutex.Lock()
 	defer cloudConfigMutex.Unlock()
 
-	// If cloud config was updated before or at the same time, then just return 0 indicating no changes
 	if !cloudConfig.UpdatedAt().After(config.GetCloudConfigUpdatedAt()) {
 		return
 	}
