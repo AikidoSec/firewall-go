@@ -3,6 +3,7 @@ package ratelimiting
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,47 +33,71 @@ func TestMillisecondsToMinutes(t *testing.T) {
 	}
 }
 
-func TestIncrementRateLimitingCounts(t *testing.T) {
+func TestGetOrCreateCounts(t *testing.T) {
 	m := make(map[string]*entityCounts)
 
-	incrementRateLimitingCounts(m, "")
-	assert.Empty(t, m, "empty key should not create entry")
+	// Empty key returns nil
+	counts := getOrCreateCounts(m, "")
+	assert.Nil(t, counts)
+	assert.Empty(t, m)
 
-	incrementRateLimitingCounts(m, "user1")
-	incrementRateLimitingCounts(m, "user1")
-	assert.Equal(t, 2, m["user1"].TotalNumberOfRequests)
+	// Creates new entry
+	counts = getOrCreateCounts(m, "user1")
+	require.NotNil(t, counts)
+	assert.Empty(t, counts.requestTimestamps)
+	assert.Contains(t, m, "user1")
 
-	incrementRateLimitingCounts(m, "user2")
-	assert.Equal(t, 1, m["user2"].TotalNumberOfRequests)
-	assert.Equal(t, 2, m["user1"].TotalNumberOfRequests, "user1 unchanged")
+	// Returns existing entry
+	counts.requestTimestamps = append(counts.requestTimestamps, 100)
+	counts2 := getOrCreateCounts(m, "user1")
+	assert.Equal(t, counts, counts2)
+	assert.Equal(t, 1, len(counts2.requestTimestamps))
 }
 
-func TestIsRateLimitingThresholdExceeded(t *testing.T) {
-	config := rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 10}
+func TestCleanOldTimestamps(t *testing.T) {
+	t.Run("removes old timestamps", func(t *testing.T) {
+		counts := &entityCounts{
+			requestTimestamps: []int64{100, 200, 300, 400, 500},
+		}
 
-	tests := []struct {
-		name     string
-		counts   map[string]*entityCounts
-		key      string
-		expected bool
-	}{
-		{"non-existent key", map[string]*entityCounts{}, "user1", false},
-		{"below threshold", map[string]*entityCounts{"user1": {TotalNumberOfRequests: 4}}, "user1", false},
-		{"at threshold", map[string]*entityCounts{"user1": {TotalNumberOfRequests: 5}}, "user1", true},
-		{"above threshold", map[string]*entityCounts{"user1": {TotalNumberOfRequests: 6}}, "user1", true},
-	}
+		cleanOldTimestamps(counts, 350)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isRateLimitingThresholdExceeded(&config, tt.counts, tt.key)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+		assert.Equal(t, []int64{400, 500}, counts.requestTimestamps)
+	})
+
+	t.Run("removes all if all old", func(t *testing.T) {
+		counts := &entityCounts{
+			requestTimestamps: []int64{100, 200, 300},
+		}
+
+		cleanOldTimestamps(counts, 500)
+
+		assert.Empty(t, counts.requestTimestamps)
+	})
+
+	t.Run("keeps all if none old", func(t *testing.T) {
+		counts := &entityCounts{
+			requestTimestamps: []int64{100, 200, 300},
+		}
+
+		cleanOldTimestamps(counts, 50)
+
+		assert.Equal(t, []int64{100, 200, 300}, counts.requestTimestamps)
+	})
+
+	t.Run("handles empty slice", func(t *testing.T) {
+		counts := &entityCounts{
+			requestTimestamps: []int64{},
+		}
+
+		cleanOldTimestamps(counts, 100)
+
+		assert.Empty(t, counts.requestTimestamps)
+	})
 }
 
 func TestUpdateCounts(t *testing.T) {
 	rl := New()
-	// Setup: Add a route to the rate limiting map
 	key := endpointKey{Method: "GET", Route: "/api/test"}
 	rl.rateLimitingMap[key] = &endpointData{
 		Config: rateLimitConfig{
@@ -88,118 +113,46 @@ func TestUpdateCounts(t *testing.T) {
 
 	value := rl.rateLimitingMap[key]
 	require.NotNil(t, value)
-	assert.Equal(t, 1, value.UserCounts["user1"].TotalNumberOfRequests)
-	assert.Equal(t, 1, value.IPCounts["192.168.1.1"].TotalNumberOfRequests)
+	assert.Equal(t, 1, len(value.UserCounts["user1"].requestTimestamps))
+	assert.Equal(t, 1, len(value.IPCounts["192.168.1.1"].requestTimestamps))
 
 	// Update again
 	rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
 
 	value = rl.rateLimitingMap[key]
-	assert.Equal(t, 2, value.UserCounts["user1"].TotalNumberOfRequests)
-	assert.Equal(t, 2, value.IPCounts["192.168.1.1"].TotalNumberOfRequests)
+	assert.Equal(t, 2, len(value.UserCounts["user1"].requestTimestamps))
+	assert.Equal(t, 2, len(value.IPCounts["192.168.1.1"].requestTimestamps))
 
 	// Test with non-existent route (should do nothing)
 	rl.UpdateCounts("POST", "/api/other", "user1", "192.168.1.1")
 }
 
-func TestAdvanceQueuesForMap(t *testing.T) {
-	config := rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 3}
-
-	t.Run("pops when window is full", func(t *testing.T) {
-		counts := &entityCounts{
-			TotalNumberOfRequests:     15,
-			NumberOfRequestsPerWindow: queue{items: []int{5, 4, 6}},
-		}
-		m := map[string]*entityCounts{"user1": counts}
-
-		advanceQueuesForMap(&config, m)
-
-		assert.Equal(t, 10, counts.TotalNumberOfRequests)
-		assert.Equal(t, 3, counts.NumberOfRequestsPerWindow.Length())
-	})
-
-	t.Run("pushes when window not full", func(t *testing.T) {
-		counts := &entityCounts{
-			TotalNumberOfRequests:     5,
-			NumberOfRequestsPerWindow: queue{items: []int{3, 2}},
-		}
-		m := map[string]*entityCounts{"user1": counts}
-
-		advanceQueuesForMap(&config, m)
-
-		assert.Equal(t, 5, counts.TotalNumberOfRequests)
-		assert.Equal(t, 3, counts.NumberOfRequestsPerWindow.Length())
-	})
-}
-
-func TestAdvanceQueues(t *testing.T) {
+func TestUpdateCounts_CleansOldTimestamps(t *testing.T) {
 	rl := New()
-	key1 := endpointKey{Method: "GET", Route: "/api/test1"}
-	key2 := endpointKey{Method: "POST", Route: "/api/test2"}
-
-	rl.rateLimitingMap[key1] = &endpointData{
+	key := endpointKey{Method: "GET", Route: "/api/test"}
+	rl.rateLimitingMap[key] = &endpointData{
 		Config: rateLimitConfig{
 			MaxRequests:         10,
-			WindowSizeInMinutes: 2,
-		},
-		UserCounts: map[string]*entityCounts{
-			"user1": {
-				TotalNumberOfRequests:     5,
-				NumberOfRequestsPerWindow: queue{items: []int{2, 3}},
-			},
-		},
-		IPCounts: make(map[string]*entityCounts),
-	}
-
-	rl.rateLimitingMap[key2] = &endpointData{
-		Config: rateLimitConfig{
-			MaxRequests:         10,
-			WindowSizeInMinutes: 2,
+			WindowSizeInMinutes: 5,
 		},
 		UserCounts: make(map[string]*entityCounts),
-		IPCounts: map[string]*entityCounts{
-			"192.168.1.1": {
-				TotalNumberOfRequests:     7,
-				NumberOfRequestsPerWindow: queue{items: []int{3, 4}},
-			},
-		},
+		IPCounts:   make(map[string]*entityCounts),
 	}
 
-	rl.advanceQueues()
-
-	value1 := rl.rateLimitingMap[key1]
-	value2 := rl.rateLimitingMap[key2]
-
-	// Check user counts for key1
-	assert.Equal(t, 3, value1.UserCounts["user1"].TotalNumberOfRequests) // 5 - 2 = 3
-	assert.Equal(t, 2, value1.UserCounts["user1"].NumberOfRequestsPerWindow.Length())
-
-	// Check IP counts for key2
-	assert.Equal(t, 4, value2.IPCounts["192.168.1.1"].TotalNumberOfRequests) // 7 - 3 = 4
-	assert.Equal(t, 2, value2.IPCounts["192.168.1.1"].NumberOfRequestsPerWindow.Length())
-}
-
-func TestAdvanceQueuesForMap_EdgeCase(t *testing.T) {
-	config := rateLimitConfig{
-		MaxRequests:         10,
-		WindowSizeInMinutes: 2,
+	// Add some old timestamps manually
+	now := time.Now().Unix()
+	old := now - 600 // 10 minutes ago (outside 5 minute window)
+	rl.rateLimitingMap[key].UserCounts["user1"] = &entityCounts{
+		requestTimestamps: []int64{old, old + 10, old + 20},
 	}
 
-	m := make(map[string]*entityCounts)
-	counts := &entityCounts{
-		TotalNumberOfRequests:     5,
-		NumberOfRequestsPerWindow: queue{},
-	}
-	m["user1"] = counts
+	// Update should clean old timestamps
+	rl.UpdateCounts("GET", "/api/test", "user1", "")
 
-	// Setup queue with more requests in popped item than total (edge case)
-	counts.NumberOfRequestsPerWindow.Push(10) // This will be popped
-	counts.TotalNumberOfRequests = 5          // Less than what we'll pop
-
-	advanceQueuesForMap(&config, m)
-
-	// Should handle gracefully - total should not go negative
-	assert.GreaterOrEqual(t, counts.TotalNumberOfRequests, 0)
+	counts := rl.rateLimitingMap[key].UserCounts["user1"]
+	// Only the new timestamp should remain (old ones cleaned)
+	assert.Equal(t, 1, len(counts.requestTimestamps))
+	assert.GreaterOrEqual(t, counts.requestTimestamps[0], now)
 }
 
 func TestGetStatus(t *testing.T) {
@@ -286,6 +239,63 @@ func TestGetStatus(t *testing.T) {
 	})
 }
 
+func TestGetStatus_CleansOldTimestamps(t *testing.T) {
+	rl := New()
+	key := endpointKey{Method: "GET", Route: "/api/test"}
+	rl.rateLimitingMap[key] = &endpointData{
+		Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+		UserCounts: make(map[string]*entityCounts),
+		IPCounts:   make(map[string]*entityCounts),
+	}
+
+	// Add old and new timestamps
+	now := time.Now().Unix()
+	old := now - 600 // 10 minutes ago
+	rl.rateLimitingMap[key].UserCounts["user1"] = &entityCounts{
+		requestTimestamps: []int64{old, old + 10, now - 60, now - 30},
+	}
+
+	status := rl.GetStatus("GET", "/api/test", "user1", "")
+
+	// Should have cleaned old timestamps
+	counts := rl.rateLimitingMap[key].UserCounts["user1"]
+	assert.Equal(t, 2, len(counts.requestTimestamps)) // Only recent ones remain
+	assert.False(t, status.Block)                     // Below threshold
+}
+
+func TestCleanupInactive(t *testing.T) {
+	rl := New()
+	key := endpointKey{Method: "GET", Route: "/api/test"}
+	rl.rateLimitingMap[key] = &endpointData{
+		Config:     rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
+		UserCounts: make(map[string]*entityCounts),
+		IPCounts:   make(map[string]*entityCounts),
+	}
+
+	now := time.Now().Unix()
+	veryOld := now - int64(inactivityThreshold.Seconds()) - 100
+	recent := now - 60
+
+	// Add various states
+	rl.rateLimitingMap[key].UserCounts["inactive"] = &entityCounts{
+		requestTimestamps: []int64{veryOld},
+	}
+	rl.rateLimitingMap[key].UserCounts["active"] = &entityCounts{
+		requestTimestamps: []int64{recent},
+	}
+	rl.rateLimitingMap[key].UserCounts["empty"] = &entityCounts{
+		requestTimestamps: []int64{},
+	}
+
+	rl.cleanupInactive()
+
+	// Inactive and empty should be removed
+	assert.NotContains(t, rl.rateLimitingMap[key].UserCounts, "inactive")
+	assert.NotContains(t, rl.rateLimitingMap[key].UserCounts, "empty")
+	// Active should remain
+	assert.Contains(t, rl.rateLimitingMap[key].UserCounts, "active")
+}
+
 func TestGetStatus_Concurrent(t *testing.T) {
 	rl := New()
 	key := endpointKey{Method: "GET", Route: "/api/test"}
@@ -314,5 +324,5 @@ func TestGetStatus_Concurrent(t *testing.T) {
 	wg.Wait()
 
 	value := rl.rateLimitingMap[key]
-	assert.Equal(t, 100, value.UserCounts["user1"].TotalNumberOfRequests)
+	assert.Equal(t, 100, len(value.UserCounts["user1"].requestTimestamps))
 }
