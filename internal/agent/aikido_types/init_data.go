@@ -1,6 +1,9 @@
 package aikido_types
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type EnvironmentConfigData struct {
 	PlatformName     string `json:"platform_name"`               // Platform name (fpm-fcgi, cli-server, ...)
@@ -45,6 +48,10 @@ type CloudConfigData struct {
 	BypassedIPs           []string   `json:"allowedIPAddresses"`
 	ReceivedAnyStats      bool       `json:"receivedAnyStats"`
 	Block                 *bool      `json:"block,omitempty"`
+}
+
+func (c *CloudConfigData) UpdatedAt() time.Time {
+	return time.UnixMilli(c.ConfigUpdatedAt)
 }
 
 type BlockedIPsData struct {
