@@ -3,6 +3,7 @@
 package zen
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"runtime"
@@ -14,7 +15,38 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 )
+
+// AttackKind represents the type of attack that was detected.
+type AttackKind string
+
+const (
+	// KindSQLInjection indicates a SQL injection attack was detected.
+	KindSQLInjection AttackKind = "sql_injection"
+	// KindPathTraversal indicates a path traversal attack was detected.
+	KindPathTraversal AttackKind = "path_traversal"
+	// KindShellInjection indicates a shell injection attack was detected.
+	KindShellInjection AttackKind = "shell_injection"
+	// KindSSRF indicates a server-side request forgery attack was detected.
+	KindSSRF AttackKind = "ssrf"
+)
+
+// AttackBlockedError represents an error when an attack is blocked by Zen.
+type AttackBlockedError struct {
+	Kind AttackKind
+}
+
+func (e *AttackBlockedError) Error() string {
+	return fmt.Sprintf("zen blocked %s attack", e.Kind)
+}
+
+// ErrAttackBlocked returns an error indicating that an attack was blocked.
+// The error includes the attack type and can be checked using errors.As
+// with *AttackBlockedError to extract the attack kind.
+func ErrAttackBlocked(kind vulnerabilities.AttackKind) error {
+	return &AttackBlockedError{Kind: AttackKind(kind)}
+}
 
 var (
 	protectOnce sync.Once

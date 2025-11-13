@@ -15,6 +15,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -150,4 +151,44 @@ func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 	m.mu.Unlock()
 
 	m.attackDetectedEventSent <- struct{}{}
+}
+
+func TestExecContextShouldReturnError(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	// Enable blocking so that Zen should cause ExecContext to return an error
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}),
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+	db, err := sql.Open("test", "")
+	require.NoError(t, err)
+
+	request.WrapWithGLS(ctx, func() {
+		result, err := db.ExecContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+		require.Nil(t, result)
+		require.Error(t, err)
+
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+
+		var attackBlockedErr *zen.AttackBlockedError
+		require.ErrorAs(t, err, &attackBlockedErr)
+		require.Equal(t, zen.KindSQLInjection, attackBlockedErr.Kind)
+	})
 }
