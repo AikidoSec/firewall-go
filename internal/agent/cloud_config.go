@@ -18,7 +18,7 @@ func applyCloudConfig(client CloudClient, cloudConfig *aikido_types.CloudConfigD
 	cloudConfigMutex.Lock()
 	defer cloudConfigMutex.Unlock()
 
-	if !cloudConfig.UpdatedAt().After(config.GetCloudConfigUpdatedAt()) {
+	if cloudConfig == nil || !cloudConfig.UpdatedAt().After(config.GetCloudConfigUpdatedAt()) {
 		return
 	}
 
@@ -38,8 +38,6 @@ func applyCloudConfig(client CloudClient, cloudConfig *aikido_types.CloudConfigD
 	}
 }
 
-// updateRateLimitingConfig applies endpoint rate limiting configuration
-// from the cloud config.
 func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {
 	endpointConfigs := make([]ratelimiting.EndpointConfig, len(endpoints))
 	for i, endpoint := range endpoints {

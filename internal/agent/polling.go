@@ -39,7 +39,8 @@ func stopPolling() {
 	}
 }
 
-// refreshCloudConfig checks if the local service config is stale and updates if necessary
+// refreshCloudConfig checks if config has changed before fetching the full config
+// to avoid unnecessary calls to the API
 func refreshCloudConfig() {
 	client := GetCloudClient()
 	if client == nil {
@@ -48,8 +49,6 @@ func refreshCloudConfig() {
 
 	// Check if cloud config has been updated
 	lastUpdatedAt := client.FetchConfigUpdatedAt()
-
-	// If cloud config was updated before or at the same time, then just return 0 indicating no changes
 	if !lastUpdatedAt.After(config.GetCloudConfigUpdatedAt()) {
 		return
 	}
