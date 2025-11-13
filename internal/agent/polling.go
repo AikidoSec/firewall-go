@@ -38,6 +38,7 @@ func stopPolling() {
 	}
 }
 
+// refreshCloudConfig checks if the local service config is stale and updates if necessary
 func refreshCloudConfig() {
 	client := GetCloudClient()
 	if client == nil {
@@ -59,7 +60,7 @@ func refreshCloudConfig() {
 		return
 	}
 
-	updateCloudConfig(client, cloudConfig)
+	applyCloudConfig(client, cloudConfig)
 }
 
 func sendHeartbeatEvent() {
@@ -74,7 +75,7 @@ func sendHeartbeatEvent() {
 		return
 	}
 
-	updateCloudConfig(client, cloudConfig)
+	applyCloudConfig(client, cloudConfig)
 }
 
 // calculateHeartbeatInterval calculates the heartbeat interval based on config.
