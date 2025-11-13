@@ -187,6 +187,8 @@ func TestExecContextShouldReturnError(t *testing.T) {
 		var detectedErr *vulnerabilities.AttackDetectedError
 		require.ErrorAs(t, err, &detectedErr)
 
-		require.ErrorIs(t, err, zen.ErrAttackBlocked)
+		var attackBlockedErr *zen.AttackBlockedError
+		require.ErrorAs(t, err, &attackBlockedErr)
+		require.Equal(t, zen.KindSQLInjection, attackBlockedErr.Kind)
 	})
 }

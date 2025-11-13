@@ -24,7 +24,13 @@ func ExamineContext(ctx context.Context, query string, op string) error {
 		Dialect:   "default",
 	})
 	if err != nil {
-		return errors.Join(zen.ErrAttackBlocked, err)
+		// Extract attack kind from error if available, otherwise default to SQL injection
+		attackKind := vulnerabilities.KindSQLInjection
+		var attackErr *vulnerabilities.AttackDetectedError
+		if errors.As(err, &attackErr) {
+			attackKind = attackErr.Kind
+		}
+		return errors.Join(zen.ErrAttackBlocked(attackKind), err)
 	}
 
 	return nil
