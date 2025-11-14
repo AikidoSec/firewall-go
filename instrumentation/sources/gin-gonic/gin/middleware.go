@@ -16,7 +16,8 @@ func GetMiddleware() gin.HandlerFunc {
 
 		ip := c.ClientIP()
 
-		reqCtx := request.SetContext(c.Request.Context(), c.Request, c.FullPath(), "gin", &ip, tryExtractBody(c))
+		reqCtx := request.SetContext(c.Request.Context(), c.Request, c.FullPath(), "gin", &ip,
+			http.TryExtractBody(c.Request, c))
 		c.Request = c.Request.WithContext(reqCtx)
 
 		// Write a response using Gin :
