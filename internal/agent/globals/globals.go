@@ -12,13 +12,6 @@ var EnvironmentConfig *aikido_types.EnvironmentConfigData
 // Aikido config that contains info about endpoint, log_level, token, ...
 var AikidoConfig *aikido_types.AikidoConfigData
 
-// List of routes and their methods and count of calls collect from the requests
-// [method][route] = hits
-var Routes = make(map[string]map[string]*aikido_types.Route)
-
-// Routes mutex used to sync access to routes data across the go routines
-var RoutesMutex sync.Mutex
-
 // Global stats data, including mutex used to sync access to stats data across the go routines
 var StatsData aikido_types.StatsDataType
 

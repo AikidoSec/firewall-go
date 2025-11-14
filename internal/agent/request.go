@@ -91,23 +91,6 @@ func getMergedAPISpec(currentAPISpec *aikido_types.APISpec, newAPISpec *aikido_t
 	}
 }
 
-func storeRoute(method string, route string, apiSpec *aikido_types.APISpec) {
-	globals.RoutesMutex.Lock()
-	defer globals.RoutesMutex.Unlock()
-
-	if _, ok := globals.Routes[route]; !ok {
-		globals.Routes[route] = make(map[string]*aikido_types.Route)
-	}
-	routeData, ok := globals.Routes[route][method]
-	if !ok {
-		routeData = &aikido_types.Route{Path: route, Method: method}
-		globals.Routes[route][method] = routeData
-	}
-
-	routeData.Hits++
-	routeData.APISpec = getMergedAPISpec(routeData.APISpec, apiSpec)
-}
-
 func onUserEvent(id string, username string, ip string) {
 	globals.UsersMutex.Lock()
 	defer globals.UsersMutex.Unlock()

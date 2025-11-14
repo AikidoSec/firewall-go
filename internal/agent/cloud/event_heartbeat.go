@@ -14,26 +14,6 @@ const (
 	minStatsCollectedForRelevantMetrics = 10000
 )
 
-func GetRoutesAndClear() []aikido_types.Route {
-	globals.RoutesMutex.Lock()
-	defer globals.RoutesMutex.Unlock()
-
-	var routes []aikido_types.Route
-	for _, methodsMap := range globals.Routes {
-		for _, routeData := range methodsMap {
-			if routeData.Hits == 0 {
-				continue
-			}
-			routes = append(routes, *routeData)
-			routeData.Hits = 0
-		}
-	}
-
-	// Clear routes data
-	globals.Routes = make(map[string]map[string]*aikido_types.Route)
-	return routes
-}
-
 func GetUsersAndClear() []aikido_types.User {
 	globals.UsersMutex.Lock()
 	defer globals.UsersMutex.Unlock()
@@ -117,6 +97,7 @@ type HeartbeatEvent struct {
 
 type HeartbeatData struct {
 	Hostnames []aikido_types.Hostname
+	Routes    []aikido_types.Route
 }
 
 // SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
@@ -127,7 +108,7 @@ func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) tim
 		Time:                utils.GetTime(),
 		Stats:               GetStatsAndClear(),
 		Hostnames:           data.Hostnames,
-		Routes:              GetRoutesAndClear(),
+		Routes:              data.Routes,
 		Users:               GetUsersAndClear(),
 		MiddlewareInstalled: GetMiddlewareInstalled(),
 	}
