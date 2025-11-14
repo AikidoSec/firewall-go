@@ -13,6 +13,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/machine"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
+	"github.com/AikidoSec/firewall-go/internal/agent/state"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
@@ -27,6 +28,8 @@ var (
 	configPollingTicker         *time.Ticker
 
 	middlewareInstalled uint32
+
+	stateCollector = state.NewCollector()
 )
 
 type CloudClient interface {
@@ -74,7 +77,7 @@ func AgentUninit() error {
 
 func OnDomain(domain string, port uint32) {
 	log.Debug("Received domain", slog.String("domain", domain), slog.Uint64("port", uint64(port)))
-	storeDomain(domain, port)
+	stateCollector.StoreHostname(domain, port)
 }
 
 func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.Status {
@@ -151,7 +154,7 @@ func startPolling(client CloudClient) {
 			return client.SendHeartbeatEvent(
 				getAgentInfo(),
 				cloud.HeartbeatData{
-					Hostnames:           GetAndClearHostnames(),
+					Hostnames:           stateCollector.GetAndClearHostnames(),
 					Routes:              GetRoutesAndClear(),
 					Users:               GetUsersAndClear(),
 					MiddlewareInstalled: IsMiddlewareInstalled(),
