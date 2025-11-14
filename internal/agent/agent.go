@@ -29,7 +29,7 @@ var (
 
 type CloudClient interface {
 	SendStartEvent(agentInfo cloud.AgentInfo)
-	SendHeartbeatEvent(agentInfo cloud.AgentInfo) time.Duration
+	SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) time.Duration
 	CheckConfigUpdatedAt() time.Duration
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 }
@@ -144,6 +144,9 @@ func startPolling(client CloudClient) {
 		handlePollingInterval(func() time.Duration {
 			return client.SendHeartbeatEvent(
 				getAgentInfo(),
+				cloud.HeartbeatData{
+					Hostnames: GetAndClearHostnames(),
+				},
 			)
 		}))
 

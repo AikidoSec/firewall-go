@@ -12,12 +12,6 @@ var EnvironmentConfig *aikido_types.EnvironmentConfigData
 // Aikido config that contains info about endpoint, log_level, token, ...
 var AikidoConfig *aikido_types.AikidoConfigData
 
-// List of outgoing hostnames, their ports and number of hits, collected from the requests
-var Hostnames = make(map[string]map[uint32]uint64)
-
-// Hostnames mutex used to sync access to hostnames data across the go routines
-var HostnamesMutex sync.Mutex
-
 // List of routes and their methods and count of calls collect from the requests
 // [method][route] = hits
 var Routes = make(map[string]map[string]*aikido_types.Route)

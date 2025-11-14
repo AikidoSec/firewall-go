@@ -14,21 +14,6 @@ const (
 	minStatsCollectedForRelevantMetrics = 10000
 )
 
-func GetHostnamesAndClear() []aikido_types.Hostname {
-	globals.HostnamesMutex.Lock()
-	defer globals.HostnamesMutex.Unlock()
-
-	var hostnames []aikido_types.Hostname
-	for domain := range globals.Hostnames {
-		for port := range globals.Hostnames[domain] {
-			hostnames = append(hostnames, aikido_types.Hostname{URL: domain, Port: port, Hits: globals.Hostnames[domain][port]})
-		}
-	}
-
-	globals.Hostnames = make(map[string]map[uint32]uint64)
-	return hostnames
-}
-
 func GetRoutesAndClear() []aikido_types.Route {
 	globals.RoutesMutex.Lock()
 	defer globals.RoutesMutex.Unlock()
@@ -130,14 +115,18 @@ type HeartbeatEvent struct {
 	MiddlewareInstalled bool                    `json:"middlewareInstalled"`
 }
 
+type HeartbeatData struct {
+	Hostnames []aikido_types.Hostname
+}
+
 // SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
-func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo) time.Duration {
+func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) time.Duration {
 	heartbeatEvent := HeartbeatEvent{
 		Type:                "heartbeat",
 		Agent:               agentInfo,
 		Time:                utils.GetTime(),
 		Stats:               GetStatsAndClear(),
-		Hostnames:           GetHostnamesAndClear(),
+		Hostnames:           data.Hostnames,
 		Routes:              GetRoutesAndClear(),
 		Users:               GetUsersAndClear(),
 		MiddlewareInstalled: GetMiddlewareInstalled(),
