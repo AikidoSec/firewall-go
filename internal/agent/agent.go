@@ -25,6 +25,9 @@ var (
 	heartbeatTicker             *time.Ticker
 	configPollingRoutineChannel = make(chan struct{})
 	configPollingTicker         *time.Ticker
+
+	// middlewareInstalled boolean value to be reported on heartbeat events
+	middlewareInstalled uint32
 )
 
 type CloudClient interface {
@@ -124,7 +127,11 @@ func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings)
 
 func OnMiddlewareInstalled() {
 	log.Debug("Received MiddlewareInstalled")
-	atomic.StoreUint32(&globals.MiddlewareInstalled, 1)
+	atomic.StoreUint32(&middlewareInstalled, 1)
+}
+
+func IsMiddlewareInstalled() bool {
+	return atomic.LoadUint32(&middlewareInstalled) == 1
 }
 
 func handlePollingInterval(fn func() time.Duration) func() {
@@ -145,7 +152,9 @@ func startPolling(client CloudClient) {
 			return client.SendHeartbeatEvent(
 				getAgentInfo(),
 				cloud.HeartbeatData{
-					Hostnames: GetAndClearHostnames(),
+					Hostnames:           GetAndClearHostnames(),
+					Routes:              GetRoutesAndClear(),
+					MiddlewareInstalled: IsMiddlewareInstalled(),
 				},
 			)
 		}))

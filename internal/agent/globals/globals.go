@@ -20,6 +20,3 @@ var Users = make(map[string]aikido_types.User)
 
 // Users mutex used to sync access across the go routines
 var UsersMutex sync.Mutex
-
-// MiddlewareInstalled boolean value to be reported on heartbeat events
-var MiddlewareInstalled uint32

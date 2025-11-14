@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"slices"
-	"sync/atomic"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -80,10 +79,6 @@ func GetStatsAndClear() aikido_types.Stats {
 	return stats
 }
 
-func GetMiddlewareInstalled() bool {
-	return atomic.LoadUint32(&globals.MiddlewareInstalled) == 1
-}
-
 type HeartbeatEvent struct {
 	Type                string                  `json:"type"`
 	Stats               aikido_types.Stats      `json:"stats"`
@@ -96,8 +91,9 @@ type HeartbeatEvent struct {
 }
 
 type HeartbeatData struct {
-	Hostnames []aikido_types.Hostname
-	Routes    []aikido_types.Route
+	Hostnames           []aikido_types.Hostname
+	Routes              []aikido_types.Route
+	MiddlewareInstalled bool
 }
 
 // SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
@@ -110,7 +106,7 @@ func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) tim
 		Hostnames:           data.Hostnames,
 		Routes:              data.Routes,
 		Users:               GetUsersAndClear(),
-		MiddlewareInstalled: GetMiddlewareInstalled(),
+		MiddlewareInstalled: data.MiddlewareInstalled,
 	}
 
 	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, heartbeatEvent)
