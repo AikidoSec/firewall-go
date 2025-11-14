@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func TryExtractJSON(r *http.Request) any {
+func tryExtractJSON(r *http.Request) any {
 	var buf bytes.Buffer
 	tee := io.TeeReader(r.Body, &buf)
 
