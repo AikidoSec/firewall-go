@@ -7,6 +7,7 @@ import (
 )
 
 // List of outgoing hostnames, their ports and number of hits, collected from the requests
+// [domain][port] = hits
 var (
 	hostnames      = make(map[string]map[uint32]uint64)
 	hostnamesMutex sync.Mutex

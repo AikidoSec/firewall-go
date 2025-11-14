@@ -4,7 +4,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/apidiscovery"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
 func storeStats() {
@@ -88,29 +87,5 @@ func getMergedAPISpec(currentAPISpec *aikido_types.APISpec, newAPISpec *aikido_t
 		},
 		Query: mergedQuerySchema,
 		Auth:  mergedAuth,
-	}
-}
-
-func onUserEvent(id string, username string, ip string) {
-	globals.UsersMutex.Lock()
-	defer globals.UsersMutex.Unlock()
-
-	if _, exists := globals.Users[id]; exists {
-		globals.Users[id] = aikido_types.User{
-			ID:            id,
-			Name:          username,
-			LastIpAddress: ip,
-			FirstSeenAt:   globals.Users[id].FirstSeenAt,
-			LastSeenAt:    utils.GetTime(),
-		}
-		return
-	}
-
-	globals.Users[id] = aikido_types.User{
-		ID:            id,
-		Name:          username,
-		LastIpAddress: ip,
-		FirstSeenAt:   utils.GetTime(),
-		LastSeenAt:    utils.GetTime(),
 	}
 }

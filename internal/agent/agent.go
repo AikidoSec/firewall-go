@@ -26,7 +26,6 @@ var (
 	configPollingRoutineChannel = make(chan struct{})
 	configPollingTicker         *time.Ticker
 
-	// middlewareInstalled boolean value to be reported on heartbeat events
 	middlewareInstalled uint32
 )
 
@@ -103,7 +102,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 func OnUser(id string, username string, ip string) {
 	log.Debug("Received user event", slog.String("id", id))
-	onUserEvent(id, username, ip)
+	storeUser(id, username, ip)
 }
 
 type DetectedAttack struct {
@@ -154,6 +153,7 @@ func startPolling(client CloudClient) {
 				cloud.HeartbeatData{
 					Hostnames:           GetAndClearHostnames(),
 					Routes:              GetRoutesAndClear(),
+					Users:               GetUsersAndClear(),
 					MiddlewareInstalled: IsMiddlewareInstalled(),
 				},
 			)

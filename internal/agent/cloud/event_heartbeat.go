@@ -13,19 +13,6 @@ const (
 	minStatsCollectedForRelevantMetrics = 10000
 )
 
-func GetUsersAndClear() []aikido_types.User {
-	globals.UsersMutex.Lock()
-	defer globals.UsersMutex.Unlock()
-
-	var users []aikido_types.User
-	for _, user := range globals.Users {
-		users = append(users, user)
-	}
-
-	globals.Users = make(map[string]aikido_types.User)
-	return users
-}
-
 func GetMonitoredSinkStatsAndClear() map[string]aikido_types.MonitoredSinkStats {
 	monitoredSinkStats := make(map[string]aikido_types.MonitoredSinkStats)
 	for sink, stats := range globals.StatsData.MonitoredSinkTimings {
@@ -93,6 +80,7 @@ type HeartbeatEvent struct {
 type HeartbeatData struct {
 	Hostnames           []aikido_types.Hostname
 	Routes              []aikido_types.Route
+	Users               []aikido_types.User
 	MiddlewareInstalled bool
 }
 
@@ -105,7 +93,7 @@ func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) tim
 		Stats:               GetStatsAndClear(),
 		Hostnames:           data.Hostnames,
 		Routes:              data.Routes,
-		Users:               GetUsersAndClear(),
+		Users:               data.Users,
 		MiddlewareInstalled: data.MiddlewareInstalled,
 	}
 

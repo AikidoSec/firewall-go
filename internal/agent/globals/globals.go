@@ -1,8 +1,6 @@
 package globals
 
 import (
-	"sync"
-
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
@@ -14,9 +12,3 @@ var AikidoConfig *aikido_types.AikidoConfigData
 
 // Global stats data, including mutex used to sync access to stats data across the go routines
 var StatsData aikido_types.StatsDataType
-
-// Users map, which holds the current users and their data
-var Users = make(map[string]aikido_types.User)
-
-// Users mutex used to sync access across the go routines
-var UsersMutex sync.Mutex

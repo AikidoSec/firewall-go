@@ -10,7 +10,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -76,7 +75,7 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.Detect
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  maps.Clone(res.Metadata),
-			User:      utils.GetUserByID(reqCtx.GetUserID()),
+			User:      agent.GetUserByID(reqCtx.GetUserID()),
 		},
 	}
 }

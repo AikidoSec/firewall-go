@@ -7,7 +7,7 @@ import (
 )
 
 // List of routes and their methods and count of calls collect from the requests
-// [method][route] = hits
+// [route][method] = hits
 var routes = make(map[string]map[string]*aikido_types.Route)
 
 // Routes mutex used to sync access to routes data across the go routines
