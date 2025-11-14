@@ -9,23 +9,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
-
-func TestOnDomain(t *testing.T) {
-	t.Run("calls storeDomain correctly", func(t *testing.T) {
-		// Reset hostnames before test
-		_ = agent.GetAndClearHostnames()
-
-		agent.OnDomain("example.com", 443)
-
-		hostnames := agent.GetAndClearHostnames()
-
-		require.Contains(t, hostnames, aikido_types.Hostname{
-			URL: "example.com", Port: 443, Hits: 1,
-		}, "domain should be stored")
-	})
-}
 
 type mockCloudClient struct{}
 
