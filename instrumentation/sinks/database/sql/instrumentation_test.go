@@ -140,9 +140,11 @@ type mockCloudClient struct {
 	mu                      sync.Mutex
 }
 
-func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo)                   {}
-func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo) time.Duration { return 0 }
-func (m *mockCloudClient) CheckConfigUpdatedAt() time.Duration                        { return 0 }
+func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) {}
+func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) time.Duration {
+	return 0
+}
+func (m *mockCloudClient) CheckConfigUpdatedAt() time.Duration { return 0 }
 func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 	m.mu.Lock()
 	m.capturedAgentInfo = agentInfo

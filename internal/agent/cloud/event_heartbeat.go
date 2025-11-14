@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"slices"
-	"sync/atomic"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -13,54 +12,6 @@ import (
 const (
 	minStatsCollectedForRelevantMetrics = 10000
 )
-
-func GetHostnamesAndClear() []aikido_types.Hostname {
-	globals.HostnamesMutex.Lock()
-	defer globals.HostnamesMutex.Unlock()
-
-	var hostnames []aikido_types.Hostname
-	for domain := range globals.Hostnames {
-		for port := range globals.Hostnames[domain] {
-			hostnames = append(hostnames, aikido_types.Hostname{URL: domain, Port: port, Hits: globals.Hostnames[domain][port]})
-		}
-	}
-
-	globals.Hostnames = make(map[string]map[uint32]uint64)
-	return hostnames
-}
-
-func GetRoutesAndClear() []aikido_types.Route {
-	globals.RoutesMutex.Lock()
-	defer globals.RoutesMutex.Unlock()
-
-	var routes []aikido_types.Route
-	for _, methodsMap := range globals.Routes {
-		for _, routeData := range methodsMap {
-			if routeData.Hits == 0 {
-				continue
-			}
-			routes = append(routes, *routeData)
-			routeData.Hits = 0
-		}
-	}
-
-	// Clear routes data
-	globals.Routes = make(map[string]map[string]*aikido_types.Route)
-	return routes
-}
-
-func GetUsersAndClear() []aikido_types.User {
-	globals.UsersMutex.Lock()
-	defer globals.UsersMutex.Unlock()
-
-	var users []aikido_types.User
-	for _, user := range globals.Users {
-		users = append(users, user)
-	}
-
-	globals.Users = make(map[string]aikido_types.User)
-	return users
-}
 
 func GetMonitoredSinkStatsAndClear() map[string]aikido_types.MonitoredSinkStats {
 	monitoredSinkStats := make(map[string]aikido_types.MonitoredSinkStats)
@@ -115,10 +66,6 @@ func GetStatsAndClear() aikido_types.Stats {
 	return stats
 }
 
-func GetMiddlewareInstalled() bool {
-	return atomic.LoadUint32(&globals.MiddlewareInstalled) == 1
-}
-
 type HeartbeatEvent struct {
 	Type                string                  `json:"type"`
 	Stats               aikido_types.Stats      `json:"stats"`
@@ -130,17 +77,24 @@ type HeartbeatEvent struct {
 	MiddlewareInstalled bool                    `json:"middlewareInstalled"`
 }
 
+type HeartbeatData struct {
+	Hostnames           []aikido_types.Hostname
+	Routes              []aikido_types.Route
+	Users               []aikido_types.User
+	MiddlewareInstalled bool
+}
+
 // SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
-func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo) time.Duration {
+func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) time.Duration {
 	heartbeatEvent := HeartbeatEvent{
 		Type:                "heartbeat",
 		Agent:               agentInfo,
 		Time:                utils.GetTime(),
 		Stats:               GetStatsAndClear(),
-		Hostnames:           GetHostnamesAndClear(),
-		Routes:              GetRoutesAndClear(),
-		Users:               GetUsersAndClear(),
-		MiddlewareInstalled: GetMiddlewareInstalled(),
+		Hostnames:           data.Hostnames,
+		Routes:              data.Routes,
+		Users:               data.Users,
+		MiddlewareInstalled: data.MiddlewareInstalled,
 	}
 
 	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, heartbeatEvent)
