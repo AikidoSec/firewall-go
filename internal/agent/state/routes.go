@@ -22,6 +22,9 @@ func (c *Collector) StoreRoute(method string, route string, apiSpec *aikido_type
 	routeData.APISpec = getMergedAPISpec(routeData.APISpec, apiSpec)
 }
 
+// GetRoutesAndClear retrieves route statistics for reporting to the backend.
+// Routes with zero hits are excluded as they represent inactive endpoints.
+// The collector is fully reset after retrieval to avoid double-counting in the next collection cycle.
 func (c *Collector) GetRoutesAndClear() []aikido_types.Route {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -37,7 +40,6 @@ func (c *Collector) GetRoutesAndClear() []aikido_types.Route {
 		}
 	}
 
-	// Clear routes data
 	c.routes = make(map[string]map[string]*aikido_types.Route)
 	return result
 }
@@ -57,6 +59,7 @@ func getAPISpecData(apiSpec *aikido_types.APISpec) (*aikido_types.DataSchema, st
 	return bodyDataSchema, bodyType, apiSpec.Query, apiSpec.Auth
 }
 
+// getMergedAPISpec combines two API specs, preferring new data while preserving existing information.
 func getMergedAPISpec(currentAPISpec *aikido_types.APISpec, newAPISpec *aikido_types.APISpec) *aikido_types.APISpec {
 	if newAPISpec == nil {
 		return currentAPISpec
