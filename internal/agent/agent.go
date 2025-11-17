@@ -99,7 +99,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 		slog.String("ip", ip))
 
 	go storeStats()
-	go storeRoute(method, route, apiSpec)
+	go stateCollector.StoreRoute(method, route, apiSpec)
 	go ratelimiting.UpdateCounts(method, route, user, ip)
 }
 
@@ -155,7 +155,7 @@ func startPolling(client CloudClient) {
 				getAgentInfo(),
 				cloud.HeartbeatData{
 					Hostnames:           stateCollector.GetAndClearHostnames(),
-					Routes:              GetRoutesAndClear(),
+					Routes:              stateCollector.GetRoutesAndClear(),
 					Users:               GetUsersAndClear(),
 					MiddlewareInstalled: IsMiddlewareInstalled(),
 				},
