@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"sync/atomic"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -12,24 +11,24 @@ import (
 func TestOnMiddlewareInstalled(t *testing.T) {
 	t.Run("sets MiddlewareInstalled to 1", func(t *testing.T) {
 		// Reset the value before test
-		atomic.StoreUint32(&middlewareInstalled, 0)
+		stateCollector.SetMiddlewareInstalled(false)
 
 		OnMiddlewareInstalled()
 
-		value := atomic.LoadUint32(&middlewareInstalled)
-		assert.Equal(t, uint32(1), value, "MiddlewareInstalled should be set to 1")
+		value := stateCollector.IsMiddlewareInstalled()
+		assert.True(t, value, "MiddlewareInstalled should be true")
 	})
 
 	t.Run("can be called multiple times", func(t *testing.T) {
 		// Reset the value before test
-		atomic.StoreUint32(&middlewareInstalled, 0)
+		stateCollector.SetMiddlewareInstalled(false)
 
 		OnMiddlewareInstalled()
 		OnMiddlewareInstalled()
 		OnMiddlewareInstalled()
 
-		value := atomic.LoadUint32(&middlewareInstalled)
-		assert.Equal(t, uint32(1), value, "MiddlewareInstalled should remain 1 after multiple calls")
+		value := stateCollector.IsMiddlewareInstalled()
+		assert.True(t, value, "MiddlewareInstalled should remain true")
 	})
 }
 

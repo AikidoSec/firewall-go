@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -26,8 +25,6 @@ var (
 	heartbeatTicker             *time.Ticker
 	configPollingRoutineChannel = make(chan struct{})
 	configPollingTicker         *time.Ticker
-
-	middlewareInstalled uint32
 
 	stateCollector = state.NewCollector()
 )
@@ -129,11 +126,7 @@ func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings)
 
 func OnMiddlewareInstalled() {
 	log.Debug("Received MiddlewareInstalled")
-	atomic.StoreUint32(&middlewareInstalled, 1)
-}
-
-func IsMiddlewareInstalled() bool {
-	return atomic.LoadUint32(&middlewareInstalled) == 1
+	stateCollector.SetMiddlewareInstalled(true)
 }
 
 func handlePollingInterval(fn func() time.Duration) func() {
@@ -157,7 +150,7 @@ func startPolling(client CloudClient) {
 					Hostnames:           stateCollector.GetAndClearHostnames(),
 					Routes:              stateCollector.GetRoutesAndClear(),
 					Users:               GetUsersAndClear(),
-					MiddlewareInstalled: IsMiddlewareInstalled(),
+					MiddlewareInstalled: stateCollector.IsMiddlewareInstalled(),
 				},
 			)
 		}))
