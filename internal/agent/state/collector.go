@@ -18,7 +18,7 @@ type Collector struct {
 	// [route][method] = hits
 	routes map[string]map[string]*aikido_types.Route
 
-	middlewareInstalled uint32
+	middlewareInstalled atomic.Bool
 }
 
 func NewCollector() *Collector {
@@ -29,13 +29,9 @@ func NewCollector() *Collector {
 }
 
 func (c *Collector) SetMiddlewareInstalled(val bool) {
-	if val {
-		atomic.StoreUint32(&c.middlewareInstalled, 1)
-	} else {
-		atomic.StoreUint32(&c.middlewareInstalled, 0)
-	}
+	c.middlewareInstalled.Store(val)
 }
 
 func (c *Collector) IsMiddlewareInstalled() bool {
-	return atomic.LoadUint32(&c.middlewareInstalled) == 1
+	return c.middlewareInstalled.Load()
 }
