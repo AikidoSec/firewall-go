@@ -57,6 +57,8 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.Detect
 		return nil
 	}
 
+	user := reqCtx.GetUser()
+
 	return &agent.DetectedAttack{
 		Request: aikido_types.RequestInfo{
 			Method:    reqCtx.Method,
@@ -75,7 +77,7 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.Detect
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  maps.Clone(res.Metadata),
-			User:      agent.GetUserByID(reqCtx.GetUserID()),
+			User:      &user,
 		},
 	}
 }

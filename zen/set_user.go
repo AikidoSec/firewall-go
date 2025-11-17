@@ -25,8 +25,8 @@ func SetUser(ctx context.Context, id string, name string) context.Context {
 		return ctx
 	}
 
-	reqCtx.SetUser(&request.User{ID: id, Name: name})
-	go agent.OnUser(id, name, reqCtx.GetIP())
+	user := agent.OnUser(id, name, reqCtx.GetIP())
+	reqCtx.SetUser(user)
 
 	return ctx
 }
