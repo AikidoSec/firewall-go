@@ -11,7 +11,7 @@ import (
 func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c == nil {
-			return // Don't investigate empty requests.
+			return // Gin should never pass us a nil context
 		}
 
 		ip := c.ClientIP()

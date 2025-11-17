@@ -36,6 +36,14 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	router.ServeHTTP(w, r)
 }
 
+func TestMiddlewareHandlesNilContext(t *testing.T) {
+	middleware := zengin.GetMiddleware()
+
+	require.NotPanics(t, func() {
+		middleware(nil)
+	})
+}
+
 func TestMiddlewareGLSFallback(t *testing.T) {
 	router := gin.New()
 	router.ContextWithFallback = true
