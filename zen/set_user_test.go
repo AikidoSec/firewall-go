@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -121,6 +122,24 @@ func TestSetUser(t *testing.T) {
 		// User should not be set
 		userID := reqCtx.GetUserID()
 		assert.Empty(t, userID, "Expected user ID to be empty when middleware already executed")
+	})
+
+	t.Run("UserAvailableImmediatelyForAttackDetection", func(t *testing.T) {
+		ip := "127.0.0.1"
+		req := httptest.NewRequest("POST", "/api/users", nil)
+		req.Header.Set("Content-Type", "application/json")
+		ctx := request.SetContext(context.Background(), req, "/api/users", "test", &ip, nil)
+
+		userID := "user-123"
+		userName := "John Doe"
+
+		// This would normally be called in the service middleware
+		ctx = zen.SetUser(ctx, userID, userName)
+
+		// Verify the user is set on the context
+		reqCtx := request.GetContext(ctx)
+		require.NotNil(t, reqCtx, "Request context should exist")
+		assert.Equal(t, userID, reqCtx.GetUserID(), "User ID should be set on context")
 	})
 }
 

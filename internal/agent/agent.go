@@ -105,9 +105,9 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 	go ratelimiting.UpdateCounts(method, route, user, ip)
 }
 
-func OnUser(id string, username string, ip string) {
+func OnUser(id string, username string, ip string) aikido_types.User {
 	log.Debug("Received user event", slog.String("id", id))
-	storeUser(id, username, ip)
+	return storeUser(id, username, ip)
 }
 
 type DetectedAttack struct {
