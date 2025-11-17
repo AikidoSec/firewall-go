@@ -105,6 +105,9 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 	go ratelimiting.UpdateCounts(method, route, user, ip)
 }
 
+// OnUser records or updates user activity in the global user registry.
+// It updates the user's name, IP address, and last seen timestamp while
+// preserving the original first seen time. Safe for concurrent use.
 func OnUser(id string, username string, ip string) aikido_types.User {
 	log.Debug("Received user event", slog.String("id", id))
 	return storeUser(id, username, ip)

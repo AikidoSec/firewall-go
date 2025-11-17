@@ -13,14 +13,6 @@ var (
 )
 
 func storeUser(id string, username string, ip string) aikido_types.User {
-	users[id] = aikido_types.User{
-		ID:            id,
-		Name:          username,
-		LastIpAddress: ip,
-		FirstSeenAt:   utils.GetTime(),
-		LastSeenAt:    utils.GetTime(),
-	}
-
 	usersMutex.Lock()
 	defer usersMutex.Unlock()
 
