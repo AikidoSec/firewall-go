@@ -3,7 +3,6 @@ package agent
 import (
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -88,37 +87,37 @@ func TestStoreDomain(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset hostnames before each test
-			globals.HostnamesMutex.Lock()
-			globals.Hostnames = make(map[string]map[uint32]uint64)
+			hostnamesMutex.Lock()
+			hostnames = make(map[string]map[uint32]uint64)
 			if tt.setupHostnames != nil {
 				for domain, ports := range tt.setupHostnames {
-					globals.Hostnames[domain] = make(map[uint32]uint64)
+					hostnames[domain] = make(map[uint32]uint64)
 					for port, count := range ports {
-						globals.Hostnames[domain][port] = count
+						hostnames[domain][port] = count
 					}
 				}
 			}
-			globals.HostnamesMutex.Unlock()
+			hostnamesMutex.Unlock()
 
 			// Call storeDomain multiple times if specified
 			for i := 0; i < tt.calls; i++ {
 				storeDomain(tt.domain, tt.port)
 			}
 
-			globals.HostnamesMutex.Lock()
-			defer globals.HostnamesMutex.Unlock()
+			hostnamesMutex.Lock()
+			defer hostnamesMutex.Unlock()
 
 			if tt.shouldStore {
-				require.Contains(t, globals.Hostnames, tt.domain, "domain should be stored")
-				assert.Equal(t, tt.expectedCount, globals.Hostnames[tt.domain][tt.port], "count should match expected value")
+				require.Contains(t, hostnames, tt.domain, "domain should be stored")
+				assert.Equal(t, tt.expectedCount, hostnames[tt.domain][tt.port], "count should match expected value")
 			} else {
 				// For port 0, verify it's not stored
-				if domainMap, exists := globals.Hostnames[tt.domain]; exists {
+				if domainMap, exists := hostnames[tt.domain]; exists {
 					_, portExists := domainMap[tt.port]
 					assert.False(t, portExists, "port 0 should not be stored")
 				} else {
 					// Domain might not exist at all if port was 0
-					assert.NotContains(t, globals.Hostnames, tt.domain, "domain with port 0 should not be stored")
+					assert.NotContains(t, hostnames, tt.domain, "domain with port 0 should not be stored")
 				}
 			}
 		})

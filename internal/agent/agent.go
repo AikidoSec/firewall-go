@@ -25,11 +25,13 @@ var (
 	heartbeatTicker             *time.Ticker
 	configPollingRoutineChannel = make(chan struct{})
 	configPollingTicker         *time.Ticker
+
+	middlewareInstalled uint32
 )
 
 type CloudClient interface {
 	SendStartEvent(agentInfo cloud.AgentInfo)
-	SendHeartbeatEvent(agentInfo cloud.AgentInfo) time.Duration
+	SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) time.Duration
 	CheckConfigUpdatedAt() time.Duration
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 }
@@ -100,7 +102,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 func OnUser(id string, username string, ip string) {
 	log.Debug("Received user event", slog.String("id", id))
-	onUserEvent(id, username, ip)
+	storeUser(id, username, ip)
 }
 
 type DetectedAttack struct {
@@ -124,7 +126,11 @@ func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings)
 
 func OnMiddlewareInstalled() {
 	log.Debug("Received MiddlewareInstalled")
-	atomic.StoreUint32(&globals.MiddlewareInstalled, 1)
+	atomic.StoreUint32(&middlewareInstalled, 1)
+}
+
+func IsMiddlewareInstalled() bool {
+	return atomic.LoadUint32(&middlewareInstalled) == 1
 }
 
 func handlePollingInterval(fn func() time.Duration) func() {
@@ -144,6 +150,12 @@ func startPolling(client CloudClient) {
 		handlePollingInterval(func() time.Duration {
 			return client.SendHeartbeatEvent(
 				getAgentInfo(),
+				cloud.HeartbeatData{
+					Hostnames:           GetAndClearHostnames(),
+					Routes:              GetRoutesAndClear(),
+					Users:               GetUsersAndClear(),
+					MiddlewareInstalled: IsMiddlewareInstalled(),
+				},
 			)
 		}))
 
