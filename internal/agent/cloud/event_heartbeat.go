@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"slices"
-	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
@@ -84,8 +83,8 @@ type HeartbeatData struct {
 	MiddlewareInstalled bool
 }
 
-// SendHeartbeatEvent sends a heartbeat event and returns the new heartbeat interval if config was updated.
-func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) time.Duration {
+// SendHeartbeatEvent sends a heartbeat to the cloud and returns the latest configuration.
+func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	heartbeatEvent := HeartbeatEvent{
 		Type:                "heartbeat",
 		Agent:               agentInfo,
@@ -100,9 +99,10 @@ func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) tim
 	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, heartbeatEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending heartbeat event: ", err)
-		return 0
+		return nil, err
 	}
-	return c.storeCloudConfig(response)
+
+	return parseCloudConfigResponse(response)
 }
 
 func computeAverage(times []int64) float64 {
