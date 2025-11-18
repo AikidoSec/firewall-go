@@ -4,8 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
@@ -208,19 +213,71 @@ func TestStoreDeferredAttack(t *testing.T) {
 }
 
 func TestReportDeferredAttack(t *testing.T) {
+	require.NoError(t, agent.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{}))
+
 	t.Run("does nothing when context has no request context", func(t *testing.T) {
+		originalClient := agent.GetCloudClient()
+
+		t.Cleanup(func() {
+			agent.SetCloudClient(originalClient)
+		})
+
+		client := &mockCloudClient{
+			attackDetectedEventSent: make(chan struct{}),
+		}
+
+		agent.SetCloudClient(client)
+
 		reportDeferredAttack(context.Background())
+
+		select {
+		case <-client.attackDetectedEventSent:
+			t.Fatal("attack should not be reported")
+		case <-time.After(100 * time.Millisecond):
+			// Success!
+		}
 	})
 
 	t.Run("does nothing when no deferred attack exists", func(t *testing.T) {
+		originalClient := agent.GetCloudClient()
+
+		t.Cleanup(func() {
+			agent.SetCloudClient(originalClient)
+		})
+
+		client := &mockCloudClient{
+			attackDetectedEventSent: make(chan struct{}),
+		}
+
+		agent.SetCloudClient(client)
+
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", nil)
 		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
 
 		reportDeferredAttack(ctx)
+
+		select {
+		case <-client.attackDetectedEventSent:
+			t.Fatal("attack should not be reported")
+		case <-time.After(100 * time.Millisecond):
+			// Success!
+		}
 	})
 
-	t.Run("reports stored attack", func(t *testing.T) {
+	t.Run("reports stored attack once", func(t *testing.T) {
+		originalClient := agent.GetCloudClient()
+
+		t.Cleanup(func() {
+			agent.SetCloudClient(originalClient)
+		})
+
+		client := &mockCloudClient{
+			attackDetectedEventSent: make(chan struct{}),
+		}
+
+		agent.SetCloudClient(client)
+
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", nil)
 		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
@@ -237,5 +294,54 @@ func TestReportDeferredAttack(t *testing.T) {
 		require.NoError(t, err)
 
 		reportDeferredAttack(ctx)
+		reportDeferredAttack(ctx)
+
+		select {
+		case <-client.attackDetectedEventSent:
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout waiting for first attack event")
+		}
+
+		select {
+		case <-client.attackDetectedEventSent:
+			t.Fatal("attack was reported more than once")
+		case <-time.After(100 * time.Millisecond):
+			// Success! No duplicate
+		}
 	})
+}
+
+type mockCloudClient struct {
+	attackDetectedEventSent chan struct{}
+	capturedAgentInfo       cloud.AgentInfo
+	capturedRequest         aikido_types.RequestInfo
+	capturedAttack          aikido_types.AttackDetails
+	mu                      sync.Mutex
+}
+
+func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchConfigUpdatedAt() time.Time { panic("not implemented") }
+func (m *mockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+	m.mu.Lock()
+	m.capturedAgentInfo = agentInfo
+	m.capturedRequest = request
+	m.capturedAttack = attack
+	m.mu.Unlock()
+
+	m.attackDetectedEventSent <- struct{}{}
 }
