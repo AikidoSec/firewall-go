@@ -16,7 +16,7 @@ func OnRequestShutdownReporting(method string, route string, statusCode int, use
 		return
 	}
 
-	log.Info("[RSHUTDOWN] Got request metadata", slog.String("method", method), slog.String("route", route), slog.Int("statusCode", statusCode))
+	log.Debug("[RSHUTDOWN] Got request metadata", slog.String("method", method), slog.String("route", route), slog.Int("statusCode", statusCode))
 
 	if !shouldDiscoverRoute(statusCode, route, method) {
 		return // Route is not to be discovered, e.g. status code might be 500.

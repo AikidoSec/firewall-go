@@ -1,14 +1,14 @@
 package ratelimiting
 
-type Queue struct {
+type queue struct {
 	items []int
 }
 
-func (q *Queue) Push(item int) {
+func (q *queue) Push(item int) {
 	q.items = append(q.items, item)
 }
 
-func (q *Queue) Pop() int {
+func (q *queue) Pop() int {
 	if len(q.items) == 0 {
 		return -1
 	}
@@ -17,17 +17,17 @@ func (q *Queue) Pop() int {
 	return item
 }
 
-func (q *Queue) IsEmpty() bool {
+func (q *queue) IsEmpty() bool {
 	return q.Length() == 0
 }
 
-func (q *Queue) IncrementLast() {
+func (q *queue) IncrementLast() {
 	if q.IsEmpty() {
 		return
 	}
 	q.items[q.Length()-1] += 1
 }
 
-func (q *Queue) Length() int {
+func (q *queue) Length() int {
 	return len(q.items)
 }

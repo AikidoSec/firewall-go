@@ -73,7 +73,7 @@ func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
 	return ipBlocklist
 }
 
-func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
+func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockListConfig *aikido_types.ListsConfigData) {
 	if cloudConfigFromAgent == nil {
 		return
 	}
@@ -115,21 +115,23 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 		serviceConfig.Block = *cloudConfigFromAgent.Block
 	}
 
-	serviceConfig.BlockedIPs = map[string]IPBlockList{}
-	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIPsList {
-		serviceConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
-	}
+	if blockListConfig != nil {
+		serviceConfig.BlockedIPs = map[string]IPBlockList{}
+		for _, ipBlocklist := range blockListConfig.BlockedIPAddresses {
+			serviceConfig.BlockedIPs[ipBlocklist.Source] = buildIPBlocklist(ipBlocklist.Source, ipBlocklist.Description, ipBlocklist.IPs)
+		}
 
-	if cloudConfigFromAgent.BlockedUserAgents != "" {
-		serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
-	} else {
-		serviceConfig.BlockedUserAgents = nil
+		if blockListConfig.BlockedUserAgents != "" {
+			serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + blockListConfig.BlockedUserAgents)
+		} else {
+			serviceConfig.BlockedUserAgents = nil
+		}
 	}
 }
 
-func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData) {
+func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData, blockListConfig *aikido_types.ListsConfigData) {
 	log.Debug("Got cloud config", slog.Any("config", cloudConfig))
-	setServiceConfig(cloudConfig)
+	setServiceConfig(cloudConfig, blockListConfig)
 }
 
 var CollectAPISchema bool
@@ -183,6 +185,17 @@ func IsUserBlocked(userID string) bool {
 	defer serviceConfigMutex.RUnlock()
 
 	return keyExists(serviceConfig.BlockedUserIDs, userID)
+}
+
+func SetUserBlocked(userID string) {
+	serviceConfigMutex.Lock()
+	defer serviceConfigMutex.Unlock()
+
+	if serviceConfig.BlockedUserIDs == nil {
+		serviceConfig.BlockedUserIDs = map[string]bool{}
+	}
+
+	serviceConfig.BlockedUserIDs[userID] = true
 }
 
 func IsIPBypassed(ip string) bool {

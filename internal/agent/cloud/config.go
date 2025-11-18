@@ -17,90 +17,90 @@ const (
 	configAPIMethod         = "GET"
 	configAPIRoute          = "/api/runtime/config"
 	listsAPIMethod          = "GET"
-	listsAPIRoute           = "api/runtime/firewall/lists"
+	listsAPIRoute           = "/api/runtime/firewall/lists"
 
 	minHeartbeatIntervalInMS = 120000
 )
 
-func (c *Client) CheckConfigUpdatedAt() {
+// CheckConfigUpdatedAt checks if the config has been updated and returns the new heartbeat interval if updated.
+func (c *Client) CheckConfigUpdatedAt() time.Duration {
 	response, err := c.sendCloudRequest(c.realtimeEndpoint, configUpdatedAtAPIRoute, configUpdatedAtMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending polling config request: ", err)
-		return
+		return 0
 	}
 
 	cloudConfigUpdatedAt := aikido_types.CloudConfigUpdatedAt{}
 	err = json.Unmarshal(response, &cloudConfigUpdatedAt)
 	if err != nil {
-		return
+		return 0
 	}
 
 	if cloudConfigUpdatedAt.ConfigUpdatedAt <= config.GetCloudConfigUpdatedAt() {
-		return
+		return 0
 	}
 
 	configResponse, err := c.sendCloudRequest(c.apiEndpoint, configAPIRoute, configAPIMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending config request: ", err)
-		return
+		return 0
 	}
 
-	c.storeCloudConfig(configResponse)
+	return c.storeCloudConfig(configResponse)
 }
 
-// updateListsConfig fetches firewall blocklists to keep local security rules synchronized with cloud configuration.
-func (c *Client) updateListsConfig(cloudConfig *aikido_types.CloudConfigData) bool {
+// fetchListsConfig fetches firewall blocklists to keep local security rules synchronized with cloud configuration.
+func (c *Client) fetchListsConfig() (*aikido_types.ListsConfigData, error) {
 	response, err := c.sendCloudRequest(c.apiEndpoint, listsAPIRoute, listsAPIMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending lists request: ", err)
-		return false
+		return nil, err
 	}
 
-	tempListsConfig := aikido_types.ListsConfigData{}
-	err = json.Unmarshal(response, &tempListsConfig)
+	listsConfig := aikido_types.ListsConfigData{}
+	err = json.Unmarshal(response, &listsConfig)
 	if err != nil {
 		log.Warn("Failed to unmarshal lists config!")
-		return false
+		return nil, err
 	}
 
-	cloudConfig.BlockedIPsList = make(map[string]aikido_types.IPBlocklist)
-	for _, blockedIpsGroup := range tempListsConfig.BlockedIPAddresses {
-		cloudConfig.BlockedIPsList[blockedIpsGroup.Source] = aikido_types.IPBlocklist{Description: blockedIpsGroup.Description, Ips: blockedIpsGroup.Ips}
-	}
-	cloudConfig.BlockedUserAgents = tempListsConfig.BlockedUserAgents
-	return true
+	return &listsConfig, err
 }
 
 // storeCloudConfig applies cloud configuration if newer than the current
-// version. Returns false only if unmarshaling fails.
-func (c *Client) storeCloudConfig(configResponse []byte) bool {
+// version. Returns the calculated heartbeat interval (0 if unchanged or error).
+func (c *Client) storeCloudConfig(configResponse []byte) time.Duration {
 	cloudConfig := &aikido_types.CloudConfigData{}
 	err := json.Unmarshal(configResponse, &cloudConfig)
 	if err != nil {
 		log.Warn("Failed to unmarshal cloud config!", slog.Any("error", err))
-		return false
+		return 0
 	}
 	if cloudConfig.ConfigUpdatedAt <= config.GetCloudConfigUpdatedAt() {
-		return true
+		return 0
 	}
 
-	c.updateListsConfig(cloudConfig)
-	resetHeartbeatTicker(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
+	listsConfig, err := c.fetchListsConfig()
+	if err != nil {
+		log.Warn("Failed to fetch lists config", slog.Any("error", err))
+		return 0
+	}
 	updateRateLimitingConfig(cloudConfig.Endpoints)
 
-	config.UpdateServiceConfig(cloudConfig)
-	return true
+	config.UpdateServiceConfig(cloudConfig, listsConfig)
+	return calculateHeartbeatInterval(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
 }
 
-// resetHeartbeatTicker sets heartbeat interval to 1 minute initially,
-// then uses the provided interval if it meets the minimum threshold.
-func resetHeartbeatTicker(heartbeatIntervalInMS int, receivedAnyStats bool) {
+// calculateHeartbeatInterval calculates the heartbeat interval based on config.
+// Returns 1 minute if no stats received, or the provided interval if it meets the minimum threshold.
+func calculateHeartbeatInterval(heartbeatIntervalInMS int, receivedAnyStats bool) time.Duration {
 	if !receivedAnyStats {
-		heartBeatTicker.Reset(1 * time.Minute)
+		return 1 * time.Minute
 	} else if heartbeatIntervalInMS >= minHeartbeatIntervalInMS {
-		log.Info("Resetting HeartBeatTicker!", slog.Int("interval", heartbeatIntervalInMS))
-		heartBeatTicker.Reset(time.Duration(heartbeatIntervalInMS) * time.Millisecond)
+		log.Info("Calculating heartbeat interval!", slog.Int("interval", heartbeatIntervalInMS))
+		return time.Duration(heartbeatIntervalInMS) * time.Millisecond
 	}
+	return 0
 }
 
 // updateRateLimitingConfig applies endpoint rate limiting configuration

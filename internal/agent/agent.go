@@ -3,7 +3,8 @@ package agent
 import (
 	"errors"
 	"log/slog"
-	"sync/atomic"
+	"sync"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -11,13 +12,29 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/machine"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
+	"github.com/AikidoSec/firewall-go/internal/agent/state"
+	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 var (
-	ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
-	cloudClient              *cloud.Client
+	ErrCloudConfigNotUpdated    = errors.New("cloud config was not updated")
+	cloudClient                 CloudClient
+	cloudClientMutex            sync.RWMutex
+	heartbeatRoutineChannel     = make(chan struct{})
+	heartbeatTicker             *time.Ticker
+	configPollingRoutineChannel = make(chan struct{})
+	configPollingTicker         *time.Ticker
+
+	stateCollector = state.NewCollector()
 )
+
+type CloudClient interface {
+	SendStartEvent(agentInfo cloud.AgentInfo)
+	SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) time.Duration
+	CheckConfigUpdatedAt() time.Duration
+	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
+}
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
 	machine.Init()
@@ -26,14 +43,18 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		return err
 	}
 
-	cloudClient = cloud.NewClient(&cloud.ClientConfig{
+	globals.StatsData.StartedAt = utils.GetTime()
+	globals.StatsData.MonitoredSinkTimings = make(map[string]aikido_types.MonitoredSinkTimings)
+
+	client := cloud.NewClient(&cloud.ClientConfig{
 		Token:            aikidoConfig.Token,
 		APIEndpoint:      globals.EnvironmentConfig.Endpoint,
 		RealtimeEndpoint: globals.EnvironmentConfig.RealtimeEndpoint,
 	})
-	go cloudClient.SendStartEvent()
+	SetCloudClient(client)
+	go client.SendStartEvent(getAgentInfo())
 
-	cloud.StartPolling(cloudClient)
+	startPolling(client)
 
 	ratelimiting.Init()
 
@@ -43,7 +64,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 
 func AgentUninit() error {
 	ratelimiting.Uninit()
-	cloud.StopPolling()
+	stopPolling()
 	config.Uninit()
 
 	log.Info("Aikido Agent unloaded!", slog.String("version", globals.EnvironmentConfig.Version))
@@ -53,7 +74,7 @@ func AgentUninit() error {
 
 func OnDomain(domain string, port uint32) {
 	log.Debug("Received domain", slog.String("domain", domain), slog.Uint64("port", uint64(port)))
-	storeDomain(domain, port)
+	stateCollector.StoreHostname(domain, port)
 }
 
 func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.Status {
@@ -75,20 +96,25 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 		slog.String("ip", ip))
 
 	go storeStats()
-	go storeRoute(method, route, apiSpec)
+	go stateCollector.StoreRoute(method, route, apiSpec)
 	go ratelimiting.UpdateCounts(method, route, user, ip)
 }
 
 func OnUser(id string, username string, ip string) {
 	log.Debug("Received user event", slog.String("id", id))
-	onUserEvent(id, username, ip)
+	storeUser(id, username, ip)
 }
 
-func OnAttackDetected(attack *aikido_types.DetectedAttack) {
+type DetectedAttack struct {
+	Request aikido_types.RequestInfo   `json:"request"`
+	Attack  aikido_types.AttackDetails `json:"attack"`
+}
+
+func OnAttackDetected(attack *DetectedAttack) {
 	log.Debug("Reporting attack")
 
-	if cloudClient != nil {
-		cloudClient.SendAttackDetectedEvent(attack)
+	if client := GetCloudClient(); client != nil {
+		client.SendAttackDetectedEvent(getAgentInfo(), attack.Request, attack.Attack)
 	}
 
 	storeAttackStats(attack.Attack.Blocked)
@@ -100,5 +126,69 @@ func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings)
 
 func OnMiddlewareInstalled() {
 	log.Debug("Received MiddlewareInstalled")
-	atomic.StoreUint32(&globals.MiddlewareInstalled, 1)
+	stateCollector.SetMiddlewareInstalled(true)
+}
+
+func handlePollingInterval(fn func() time.Duration) func() {
+	return func() {
+		newInterval := fn()
+		if newInterval > 0 {
+			resetHeartbeatTicker(newInterval)
+		}
+	}
+}
+
+func startPolling(client CloudClient) {
+	heartbeatTicker = time.NewTicker(10 * time.Minute)
+	configPollingTicker = time.NewTicker(1 * time.Minute)
+
+	utils.StartPollingRoutine(heartbeatRoutineChannel, heartbeatTicker,
+		handlePollingInterval(func() time.Duration {
+			return client.SendHeartbeatEvent(
+				getAgentInfo(),
+				cloud.HeartbeatData{
+					Hostnames:           stateCollector.GetAndClearHostnames(),
+					Routes:              stateCollector.GetRoutesAndClear(),
+					Users:               GetUsersAndClear(),
+					MiddlewareInstalled: stateCollector.IsMiddlewareInstalled(),
+				},
+			)
+		}))
+
+	utils.StartPollingRoutine(configPollingRoutineChannel, configPollingTicker,
+		handlePollingInterval(client.CheckConfigUpdatedAt))
+}
+
+func stopPolling() {
+	utils.StopPollingRoutine(heartbeatRoutineChannel)
+	utils.StopPollingRoutine(configPollingRoutineChannel)
+	if heartbeatTicker != nil {
+		heartbeatTicker.Stop()
+	}
+	if configPollingTicker != nil {
+		configPollingTicker.Stop()
+	}
+}
+
+func resetHeartbeatTicker(newInterval time.Duration) {
+	if heartbeatTicker != nil && newInterval > 0 {
+		log.Info("Resetting HeartBeatTicker!", slog.String("interval", newInterval.String()))
+		heartbeatTicker.Reset(newInterval)
+	}
+}
+
+// GetCloudClient returns the current cloud client.
+// This should be used instead of direct access to the cloudClient variable.
+func GetCloudClient() CloudClient {
+	cloudClientMutex.RLock()
+	defer cloudClientMutex.RUnlock()
+	return cloudClient
+}
+
+// SetCloudClient sets the cloud client. Useful for testing with mocks.
+func SetCloudClient(client CloudClient) {
+	cloudClientMutex.Lock()
+	defer cloudClientMutex.Unlock()
+
+	cloudClient = client
 }

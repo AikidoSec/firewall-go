@@ -10,7 +10,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -52,13 +51,13 @@ func (i InterceptorResult) ToString() string {
 	return string(json)
 }
 
-func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types.DetectedAttack {
+func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.DetectedAttack {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
 	}
 
-	return &aikido_types.DetectedAttack{
+	return &agent.DetectedAttack{
 		Request: aikido_types.RequestInfo{
 			Method:    reqCtx.Method,
 			IPAddress: *reqCtx.RemoteAddress,
@@ -76,7 +75,7 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *aikido_types
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  maps.Clone(res.Metadata),
-			User:      utils.GetUserByID(reqCtx.GetUserID()),
+			User:      agent.GetUserByID(reqCtx.GetUserID()),
 		},
 	}
 }

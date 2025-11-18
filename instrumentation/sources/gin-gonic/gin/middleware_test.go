@@ -3,11 +3,18 @@
 package gin_test
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"mime/multipart"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	zengin "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -56,6 +63,88 @@ func TestMiddlewareGLSFallback(t *testing.T) {
 	router.ServeHTTP(w, r)
 }
 
+func TestMiddlewareBlockingRequests(t *testing.T) {
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		Block: &block,
+		Endpoints: []aikido_types.Endpoint{
+			{
+				Method:             "GET",
+				Route:              "/admin",
+				AllowedIPAddresses: []string{"192.168.0.1"},
+			},
+		},
+	}, &aikido_types.ListsConfigData{
+		BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			{
+				Source:      "test",
+				Description: "localhost",
+				IPs:         []string{"127.0.0.1"},
+			},
+		},
+
+		BlockedUserAgents: "bot.*",
+	})
+
+	router := gin.New()
+	router.ContextWithFallback = true
+	router.Use(zengin.GetMiddleware())
+
+	router.GET("/route", func(c *gin.Context) {
+		t.Fatal("request should have been blocked")
+	})
+
+	router.GET("/admin", func(c *gin.Context) {})
+
+	t.Run("blocked ip", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/route", nil)
+		r.RemoteAddr = "127.0.0.1:1234"
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("blocked user agent", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/route", nil)
+		r.Header.Set("User-Agent", "bot-test")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("block route with unapproved ip", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/admin", nil)
+		r.RemoteAddr = "192.168.1.1:1234"
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("allow route with approved ip", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/admin", nil)
+		r.RemoteAddr = "192.168.0.1:4321"
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+}
+
 func BenchmarkMiddleware(b *testing.B) {
 	router := gin.New()
 	router.ContextWithFallback = true
@@ -70,4 +159,106 @@ func BenchmarkMiddleware(b *testing.B) {
 			router.ServeHTTP(w, r)
 		}
 	})
+}
+
+func TestMiddlewarePreservesBodyForJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(zengin.GetMiddleware())
+
+	var bodyReadInHandler string
+	router.POST("/route", func(c *gin.Context) {
+		var data map[string]interface{}
+		err := c.ShouldBindJSON(&data)
+		require.NoError(t, err, "Should be able to bind JSON after middleware")
+
+		bodyReadInHandler = data["username"].(string)
+		c.JSON(200, data)
+	})
+
+	jsonBody := `{"username":"bob","email":"bob@example.com"}`
+	r := httptest.NewRequest("POST", "/route", strings.NewReader(jsonBody))
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, "bob", bodyReadInHandler)
+	assert.Equal(t, 200, w.Code)
+}
+
+func TestMiddlewarePreservesBodyForURLEncoded(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(zengin.GetMiddleware())
+
+	var bodyReadInHandler string
+	router.POST("/route", func(c *gin.Context) {
+		username := c.PostForm("username")
+		bodyReadInHandler = username
+		c.String(200, "ok")
+	})
+
+	formData := "username=bob&password=secret"
+	r := httptest.NewRequest("POST", "/route", strings.NewReader(formData))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, "bob", bodyReadInHandler)
+	assert.Equal(t, 200, w.Code)
+}
+
+func TestMiddlewarePreservesBodyForMultipart(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(zengin.GetMiddleware())
+
+	var fieldReadInHandler string
+	router.POST("/route", func(c *gin.Context) {
+		field1 := c.PostForm("field1")
+		fieldReadInHandler = field1
+		c.String(200, "ok")
+	})
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	err := writer.WriteField("field1", "value1")
+	require.NoError(t, err)
+	err = writer.Close()
+	require.NoError(t, err)
+
+	r := httptest.NewRequest("POST", "/route", body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, "value1", fieldReadInHandler)
+	assert.Equal(t, 200, w.Code)
+}
+
+func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(zengin.GetMiddleware())
+
+	var bodyReadInHandler string
+	router.POST("/route", func(c *gin.Context) {
+		bodyBytes, err := io.ReadAll(c.Request.Body)
+		require.NoError(t, err, "Should be able to read raw body after form parsing in middleware")
+		bodyReadInHandler = string(bodyBytes)
+		c.String(200, "ok")
+	})
+
+	originalBody := "username=bob&password=secret"
+	r := httptest.NewRequest("POST", "/route", strings.NewReader(originalBody))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, originalBody, bodyReadInHandler)
+	assert.Equal(t, 200, w.Code)
 }

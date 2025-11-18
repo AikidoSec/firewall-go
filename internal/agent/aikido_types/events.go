@@ -1,15 +1,5 @@
 package aikido_types
 
-type OsInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
-type PlatformInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
 type Hostname struct {
 	URL  string `json:"hostname"`
 	Port uint32 `json:"port,omitempty"`
@@ -63,36 +53,6 @@ type Stats struct {
 	Requests  Requests                      `json:"requests"`
 }
 
-type AgentInfo struct {
-	DryMode                   bool              `json:"dryMode"`
-	Hostname                  string            `json:"hostname"`
-	Version                   string            `json:"version"`
-	IPAddress                 string            `json:"ipAddress"`
-	OS                        OsInfo            `json:"os"`
-	Platform                  PlatformInfo      `json:"platform"`
-	Packages                  map[string]string `json:"packages"`
-	PreventPrototypePollution bool              `json:"preventedPrototypePollution"`
-	NodeEnv                   string            `json:"nodeEnv"`
-	Library                   string            `json:"library"`
-}
-
-type Started struct {
-	Type  string    `json:"type"`
-	Agent AgentInfo `json:"agent"`
-	Time  int64     `json:"time"`
-}
-
-type Heartbeat struct {
-	Type                string     `json:"type"`
-	Stats               Stats      `json:"stats"`
-	Hostnames           []Hostname `json:"hostnames"`
-	Routes              []Route    `json:"routes"`
-	Users               []User     `json:"users"`
-	Agent               AgentInfo  `json:"agent"`
-	Time                int64      `json:"time"`
-	MiddlewareInstalled bool       `json:"middlewareInstalled"`
-}
-
 type RequestInfo struct {
 	Method    string `json:"method"`
 	IPAddress string `json:"ipAddress"`
@@ -113,12 +73,4 @@ type AttackDetails struct {
 	Payload   string            `json:"payload"`
 	Metadata  map[string]string `json:"metadata"`
 	User      *User             `json:"user"`
-}
-
-type DetectedAttack struct {
-	Type    string        `json:"type"`
-	Request RequestInfo   `json:"request"`
-	Attack  AttackDetails `json:"attack"`
-	Agent   AgentInfo     `json:"agent"`
-	Time    int64         `json:"time"`
 }

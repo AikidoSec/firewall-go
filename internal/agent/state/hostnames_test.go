@@ -1,9 +1,8 @@
-package agent
+package state
 
 import (
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,17 +24,6 @@ func TestStoreDomain(t *testing.T) {
 			expectedCount: 1,
 			shouldStore:   true,
 			calls:         1,
-		},
-		{
-			name:          "increments count for existing domain and port",
-			domain:        "example.com",
-			port:          443,
-			expectedCount: 4,
-			shouldStore:   true,
-			setupHostnames: map[string]map[uint32]uint64{
-				"example.com": {443: 1},
-			},
-			calls: 3,
 		},
 		{
 			name:          "creates map for new domain",
@@ -87,38 +75,32 @@ func TestStoreDomain(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset hostnames before each test
-			globals.HostnamesMutex.Lock()
-			globals.Hostnames = make(map[string]map[uint32]uint64)
-			if tt.setupHostnames != nil {
-				for domain, ports := range tt.setupHostnames {
-					globals.Hostnames[domain] = make(map[uint32]uint64)
-					for port, count := range ports {
-						globals.Hostnames[domain][port] = count
-					}
-				}
-			}
-			globals.HostnamesMutex.Unlock()
+			c := NewCollector()
 
 			// Call storeDomain multiple times if specified
 			for i := 0; i < tt.calls; i++ {
-				storeDomain(tt.domain, tt.port)
+				c.StoreHostname(tt.domain, tt.port)
 			}
 
-			globals.HostnamesMutex.Lock()
-			defer globals.HostnamesMutex.Unlock()
+			result := c.GetAndClearHostnames()
 
 			if tt.shouldStore {
-				require.Contains(t, globals.Hostnames, tt.domain, "domain should be stored")
-				assert.Equal(t, tt.expectedCount, globals.Hostnames[tt.domain][tt.port], "count should match expected value")
+				// Find the hostname in results
+				found := false
+				for _, h := range result {
+					if h.URL == tt.domain && h.Port == tt.port {
+						assert.Equal(t, tt.expectedCount, h.Hits, "count should match expected value")
+						found = true
+						break
+					}
+				}
+				require.True(t, found, "domain %s with port %d should be stored", tt.domain, tt.port)
 			} else {
-				// For port 0, verify it's not stored
-				if domainMap, exists := globals.Hostnames[tt.domain]; exists {
-					_, portExists := domainMap[tt.port]
-					assert.False(t, portExists, "port 0 should not be stored")
-				} else {
-					// Domain might not exist at all if port was 0
-					assert.NotContains(t, globals.Hostnames, tt.domain, "domain with port 0 should not be stored")
+				// Verify this domain/port combo is not in results
+				for _, h := range result {
+					if h.URL == tt.domain {
+						assert.NotEqual(t, uint32(0), h.Port, "port 0 should not be stored for domain %s", tt.domain)
+					}
 				}
 			}
 		})

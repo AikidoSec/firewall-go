@@ -16,7 +16,5 @@ func Init() error {
 		return err
 	}
 
-	DefineTransits()
-
 	return nil
 }

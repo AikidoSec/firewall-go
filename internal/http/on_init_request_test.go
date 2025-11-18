@@ -1,0 +1,105 @@
+package http
+
+import (
+	"context"
+	"net/http"
+	"testing"
+
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestOnInitRequest(t *testing.T) {
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		Block: &block,
+		Endpoints: []aikido_types.Endpoint{
+			{
+				Method:             "GET",
+				Route:              "/admin",
+				AllowedIPAddresses: []string{"192.168.0.1"},
+			},
+		},
+	}, &aikido_types.ListsConfigData{
+		BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			{
+				Source:      "test",
+				Description: "localhost",
+				IPs:         []string{"127.0.0.1"},
+			},
+		},
+
+		BlockedUserAgents: "bot.*",
+	})
+
+	t.Run("blocked ip", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/route", nil)
+		req.RemoteAddr = "127.0.0.1:1234"
+		ip := "127.0.0.1"
+		ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+		resp := OnInitRequest(ctx)
+
+		assert.NotNil(t, resp)
+		assert.Equal(t, 403, resp.StatusCode)
+		assert.Contains(t, resp.Message, "Your IP address is not allowed")
+		assert.Contains(t, resp.Message, "127.0.0.1")
+	})
+
+	t.Run("blocked user agent", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/route", nil)
+		req.Header.Set("User-Agent", "bot-test")
+		req.RemoteAddr = "192.168.1.1:1234"
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+		resp := OnInitRequest(ctx)
+
+		assert.NotNil(t, resp)
+		assert.Equal(t, 403, resp.StatusCode)
+		assert.Contains(t, resp.Message, "identified as a bot")
+	})
+
+	t.Run("block route with unapproved ip", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/admin", nil)
+		req.RemoteAddr = "192.168.1.1:1234"
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), req, "/admin", "test", &ip, nil)
+
+		resp := OnInitRequest(ctx)
+
+		assert.NotNil(t, resp)
+		assert.Equal(t, 403, resp.StatusCode)
+		assert.Contains(t, resp.Message, "Your IP address is not allowed")
+	})
+
+	t.Run("allow route with approved ip", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/admin", nil)
+		req.RemoteAddr = "192.168.0.1:4321"
+		ip := "192.168.0.1"
+		ctx := request.SetContext(context.Background(), req, "/admin", "test", &ip, nil)
+
+		resp := OnInitRequest(ctx)
+
+		assert.Nil(t, resp)
+	})
+
+	t.Run("nil context", func(t *testing.T) {
+		resp := OnInitRequest(context.Background())
+
+		assert.Nil(t, resp)
+	})
+
+	t.Run("allowed request", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/route", nil)
+		req.RemoteAddr = "192.168.1.1:1234"
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+		resp := OnInitRequest(ctx)
+
+		assert.Nil(t, resp)
+	})
+}

@@ -12,7 +12,7 @@ func TestTryExtractJSON(t *testing.T) {
 		body := `{"key": "value"}`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := TryExtractJSON(r)
+		got := tryExtractJSON(r)
 
 		if got == nil {
 			t.Error("expected valid JSON to be parsed, got nil")
@@ -29,7 +29,7 @@ func TestTryExtractJSON(t *testing.T) {
 		body := `not json`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := TryExtractJSON(r)
+		got := tryExtractJSON(r)
 
 		if got != nil {
 			t.Errorf("expected invalid JSON to return nil, got %v", got)
@@ -47,7 +47,7 @@ func BenchmarkSmallBody(b *testing.B) {
 	body := generateString(1 * 1024) // 1KB
 	for b.Loop() {
 		r := httptest.NewRequest("GET", "/route", strings.NewReader(body))
-		TryExtractJSON(r)
+		tryExtractJSON(r)
 	}
 }
 
@@ -55,7 +55,7 @@ func BenchmarkLargeBody(b *testing.B) {
 	body := generateString(5 * 1024 * 1024) // 5MB
 	for b.Loop() {
 		r := httptest.NewRequest("GET", "/route", strings.NewReader(body))
-		TryExtractJSON(r)
+		tryExtractJSON(r)
 	}
 }
 
