@@ -39,7 +39,7 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 
 	deferredAttack := reqCtx.GetDeferredAttack()
 	if deferredAttack != nil && deferredAttack.Kind == string(vulnerability.Kind) {
-		ReportDeferredAttack(ctx)
+		reportDeferredAttack(ctx)
 
 		// If blocking is enabled, there will be an error to return to block the request
 		if deferredAttack.Error != nil {
@@ -94,7 +94,7 @@ func scanSource[T any](ctx context.Context, source string, sourceData any, opera
 			log.Debug("Attack", slog.String("attack", attack.ToString()))
 
 			if opts.DeferReporting {
-				return StoreDeferredAttack(ctx, attack)
+				return storeDeferredAttack(ctx, attack)
 			}
 			return onInterceptorResult(ctx, attack)
 		}

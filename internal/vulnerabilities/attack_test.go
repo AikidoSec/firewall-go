@@ -134,7 +134,7 @@ func TestOnInterceptorResultWithNilResult(t *testing.T) {
 
 func TestStoreDeferredAttack(t *testing.T) {
 	t.Run("returns nil when result is nil", func(t *testing.T) {
-		err := StoreDeferredAttack(context.Background(), nil)
+		err := storeDeferredAttack(context.Background(), nil)
 		assert.NoError(t, err)
 	})
 
@@ -143,7 +143,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 			Kind:      KindPathTraversal,
 			Operation: "filepath.Join",
 		}
-		err := StoreDeferredAttack(context.Background(), result)
+		err := storeDeferredAttack(context.Background(), result)
 		assert.NoError(t, err)
 	})
 
@@ -165,7 +165,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 		config.SetBlocking(true)
 		defer config.SetBlocking(original)
 
-		err := StoreDeferredAttack(ctx, result)
+		err := storeDeferredAttack(ctx, result)
 		assert.NoError(t, err)
 
 		reqCtx := request.GetContext(ctx)
@@ -197,7 +197,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 		config.SetBlocking(false)
 		defer config.SetBlocking(original)
 
-		err := StoreDeferredAttack(ctx, result)
+		err := storeDeferredAttack(ctx, result)
 		assert.NoError(t, err)
 
 		reqCtx := request.GetContext(ctx)
@@ -209,7 +209,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 
 func TestReportDeferredAttack(t *testing.T) {
 	t.Run("does nothing when context has no request context", func(t *testing.T) {
-		ReportDeferredAttack(context.Background())
+		reportDeferredAttack(context.Background())
 	})
 
 	t.Run("does nothing when no deferred attack exists", func(t *testing.T) {
@@ -217,7 +217,7 @@ func TestReportDeferredAttack(t *testing.T) {
 		req := httptest.NewRequest("GET", "/test", nil)
 		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
 
-		ReportDeferredAttack(ctx)
+		reportDeferredAttack(ctx)
 	})
 
 	t.Run("reports stored attack", func(t *testing.T) {
@@ -233,9 +233,9 @@ func TestReportDeferredAttack(t *testing.T) {
 			Payload:       "../etc/passwd",
 		}
 
-		err := StoreDeferredAttack(ctx, result)
+		err := storeDeferredAttack(ctx, result)
 		require.NoError(t, err)
 
-		ReportDeferredAttack(ctx)
+		reportDeferredAttack(ctx)
 	})
 }

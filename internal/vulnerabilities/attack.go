@@ -122,10 +122,10 @@ func onInterceptorResult(ctx context.Context, res *InterceptorResult) error {
 	return buildAttackDetectedError(*res)
 }
 
-// StoreDeferredAttack stores the attack result and error for later reporting/blocking.
+// storeDeferredAttack stores the attack result and error for later reporting/blocking.
 // This is used for functions like filepath.Join that don't return errors.
 // The error is only stored if the attack should be blocked.
-func StoreDeferredAttack(ctx context.Context, res *InterceptorResult) error {
+func storeDeferredAttack(ctx context.Context, res *InterceptorResult) error {
 	if res == nil {
 		return nil
 	}
@@ -157,8 +157,8 @@ func StoreDeferredAttack(ctx context.Context, res *InterceptorResult) error {
 	return nil
 }
 
-// ReportDeferredAttack reports a previously stored attack to the cloud.
-func ReportDeferredAttack(ctx context.Context) {
+// reportDeferredAttack reports a previously stored attack to the cloud.
+func reportDeferredAttack(ctx context.Context) {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return
