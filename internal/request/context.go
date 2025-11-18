@@ -2,6 +2,7 @@ package request
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
 type DeferredBlock struct {
@@ -88,6 +89,13 @@ type DeferredAttack struct {
 	Metadata      map[string]string
 	Payload       string
 	Error         error // The error to return if blocking is enabled
+	reported      atomic.Bool
+}
+
+// ShouldReport returns true the first time it's called, false on subsequent calls
+// This is used to check whether the deferred attack needs to be reported.
+func (d *DeferredAttack) ShouldReport() bool {
+	return d.reported.CompareAndSwap(false, true)
 }
 
 // SetDeferredAttack allows for reporting attacks later in the request flow.

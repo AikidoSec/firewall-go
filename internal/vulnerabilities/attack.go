@@ -165,7 +165,7 @@ func reportDeferredAttack(ctx context.Context) {
 	}
 
 	deferredAttack := reqCtx.GetDeferredAttack()
-	if deferredAttack == nil {
+	if deferredAttack == nil || !deferredAttack.ShouldReport() {
 		return
 	}
 
