@@ -1,6 +1,7 @@
 package http
 
 import (
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -25,7 +26,9 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 			pattern = pattern[idx:]
 		}
 
-		ctx := request.SetContext(r.Context(), r, pattern, "ServeMux", &ip, tryExtractBody(r))
+		ctx := request.SetContext(r.Context(), r, pattern, "ServeMux", &ip,
+			zenhttp.TryExtractBody(r, &requestParser{req: r}))
+
 		wrappedR := r.WithContext(ctx)
 
 		res := zenhttp.OnInitRequest(ctx)
@@ -74,4 +77,17 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 
 func (r *statusRecorder) Header() http.Header {
 	return r.writer.Header()
+}
+
+type requestParser struct {
+	req *http.Request
+}
+
+func (rp *requestParser) MultipartForm() (*multipart.Form, error) {
+	err := rp.req.ParseMultipartForm(32 << 20)
+	if err != nil {
+		return nil, err
+	}
+
+	return rp.req.MultipartForm, nil
 }
