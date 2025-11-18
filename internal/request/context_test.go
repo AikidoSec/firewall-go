@@ -3,6 +3,7 @@ package request
 import (
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,13 +61,9 @@ func TestContext_SetUser_GetUserID(t *testing.T) {
 	assert.Empty(t, ctx.GetUserID())
 
 	// Test setting user
-	user := &User{ID: "user123", Name: "Test User"}
+	user := aikido_types.User{ID: "user123", Name: "Test User"}
 	ctx.SetUser(user)
 	assert.Equal(t, "user123", ctx.GetUserID())
-
-	// Test setting nil user
-	ctx.SetUser(nil)
-	assert.Empty(t, ctx.GetUserID())
 }
 
 func TestContext_MarkMiddlewareExecuted(t *testing.T) {
