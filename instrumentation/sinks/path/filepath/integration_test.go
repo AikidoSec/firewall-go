@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,16 +28,43 @@ type mockCloudClient struct {
 	capturedAgentInfo       cloud.AgentInfo
 	capturedRequest         aikido_types.RequestInfo
 	capturedAttack          aikido_types.AttackDetails
+	sendAttackDetectedEvent func(cloud.AgentInfo, aikido_types.RequestInfo, aikido_types.AttackDetails)
 }
 
-func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo)                   {}
-func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo) time.Duration { return 0 }
-func (m *mockCloudClient) CheckConfigUpdatedAt() time.Duration                        { return 0 }
+func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchConfigUpdatedAt() time.Time { panic("not implemented") }
+func (m *mockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
+	panic("not implemented")
+}
+
 func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
-	m.capturedAgentInfo = agentInfo
-	m.capturedRequest = request
-	m.capturedAttack = attack
-	m.attackDetectedEventSent <- struct{}{}
+	if m.sendAttackDetectedEvent != nil {
+		m.sendAttackDetectedEvent(agentInfo, request, attack)
+	}
+}
+
+func newMockClient() *mockCloudClient {
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}, 10),
+	}
+	client.sendAttackDetectedEvent = func(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+		client.capturedAgentInfo = agentInfo
+		client.capturedRequest = request
+		client.capturedAttack = attack
+		client.attackDetectedEventSent <- struct{}{}
+	}
+	return client
 }
 
 func TestJoinPathInjectionBlockIsDeferred(t *testing.T) {
@@ -53,9 +81,7 @@ func TestJoinPathInjectionBlockIsDeferred(t *testing.T) {
 		agent.SetCloudClient(originalClient)
 	})
 
-	client := &mockCloudClient{
-		attackDetectedEventSent: make(chan struct{}),
-	}
+	client := newMockClient()
 	agent.SetCloudClient(client)
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
@@ -114,9 +140,7 @@ func TestJoinPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 		agent.SetCloudClient(originalClient)
 	})
 
-	client := &mockCloudClient{
-		attackDetectedEventSent: make(chan struct{}),
-	}
+	client := newMockClient()
 	agent.SetCloudClient(client)
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
@@ -174,9 +198,7 @@ func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 		agent.SetCloudClient(originalClient)
 	})
 
-	client := &mockCloudClient{
-		attackDetectedEventSent: make(chan struct{}),
-	}
+	client := newMockClient()
 	agent.SetCloudClient(client)
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
@@ -191,7 +213,50 @@ func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 	select {
 	case <-client.attackDetectedEventSent:
 		t.Fatal("attack should not be reported when os.OpenFile is not called")
-	case <-time.After(1 * time.Second):
+	case <-time.After(100 * time.Millisecond):
 		// Success - no attack event should be sent
 	}
+}
+
+func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	attackCount := int64(0)
+	client := newMockClient()
+	client.sendAttackDetectedEvent = func(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+		atomic.AddInt64(&attackCount, 1)
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+	request.WrapWithGLS(ctx, func() {
+		path := filepath.Join("/tmp/", "../test.txt")
+
+		// First file operation - should detect and report attack
+		_, err := os.OpenFile(path, os.O_RDONLY, 0o600)
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+
+		// Second file operation - should block but not report again
+		_, err = os.ReadFile(path)
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	// Wait for potential attack events
+	time.Sleep(100 * time.Millisecond)
+
+	assert.Equal(t, int64(1), atomic.LoadInt64(&attackCount), "attack should only be reported once")
 }
