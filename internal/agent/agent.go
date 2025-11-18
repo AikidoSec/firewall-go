@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -18,9 +17,8 @@ import (
 )
 
 var (
-	ErrCloudConfigNotUpdated = errors.New("cloud config was not updated")
-	cloudClient              CloudClient
-	cloudClientMutex         sync.RWMutex
+	cloudClient      CloudClient
+	cloudClientMutex sync.RWMutex
 
 	stateCollector = state.NewCollector()
 )
