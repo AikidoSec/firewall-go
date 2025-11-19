@@ -95,7 +95,12 @@ func TestGetAttackDetected(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/users", nil)
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := request.SetContext(context.Background(), req, "/api/users", "test", &ip, map[string]interface{}{"name": "test"})
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/api/users",
+		RemoteAddress: &ip,
+		Body:          map[string]interface{}{"name": "test"},
+	})
 
 	result := InterceptorResult{
 		Kind:          KindSQLInjection,
@@ -155,7 +160,11 @@ func TestStoreDeferredAttack(t *testing.T) {
 	t.Run("stores attack and error in context", func(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", nil)
-		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &ip,
+		})
 
 		result := &InterceptorResult{
 			Kind:          KindPathTraversal,
@@ -188,7 +197,11 @@ func TestStoreDeferredAttack(t *testing.T) {
 	t.Run("does not store error when blocking is disabled", func(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", nil)
-		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &ip,
+		})
 
 		result := &InterceptorResult{
 			Kind:          KindPathTraversal,
@@ -253,7 +266,11 @@ func TestReportDeferredAttack(t *testing.T) {
 
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", nil)
-		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &ip,
+		})
 
 		reportDeferredAttack(ctx)
 
@@ -280,7 +297,11 @@ func TestReportDeferredAttack(t *testing.T) {
 
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", nil)
-		ctx := request.SetContext(context.Background(), req, "/test", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &ip,
+		})
 
 		result := &InterceptorResult{
 			Kind:          KindPathTraversal,

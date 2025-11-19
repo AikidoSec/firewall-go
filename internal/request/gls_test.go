@@ -24,7 +24,11 @@ func TestWrapWithGLS(t *testing.T) {
 				req.RemoteAddr = "192.168.1.1:8080"
 
 				ctx := context.Background()
-				return SetContext(ctx, req, "/test", "test-source", &req.RemoteAddr, nil)
+				return SetContext(ctx, req, ContextData{
+					Source:        "test-source",
+					Route:         "/test",
+					RemoteAddress: &req.RemoteAddr,
+				})
 			},
 			wantNil: false,
 		},
@@ -92,7 +96,11 @@ func TestWrapWithGLS_ConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			req, _ := http.NewRequest("GET", fmt.Sprintf("https://example.com/req%d", id), nil)
 			req.RemoteAddr = fmt.Sprintf("192.168.1.%d:8080", id)
-			ctx := SetContext(context.Background(), req, fmt.Sprintf("/req%d", id), fmt.Sprintf("source%d", id), &req.RemoteAddr, nil)
+			ctx := SetContext(context.Background(), req, ContextData{
+				Source:        fmt.Sprintf("source%d", id),
+				Route:         fmt.Sprintf("/req%d", id),
+				RemoteAddress: &req.RemoteAddr,
+			})
 
 			WrapWithGLS(ctx, func() {
 				// Block here until we're told to proceed

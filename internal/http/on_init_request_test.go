@@ -38,7 +38,11 @@ func TestOnInitRequest(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/route", nil)
 		req.RemoteAddr = "127.0.0.1:1234"
 		ip := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
 
 		resp := OnInitRequest(ctx)
 
@@ -53,7 +57,11 @@ func TestOnInitRequest(t *testing.T) {
 		req.Header.Set("User-Agent", "bot-test")
 		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
 
 		resp := OnInitRequest(ctx)
 
@@ -66,7 +74,11 @@ func TestOnInitRequest(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/admin", nil)
 		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, "/admin", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/admin",
+			RemoteAddress: &ip,
+		})
 
 		resp := OnInitRequest(ctx)
 
@@ -79,7 +91,11 @@ func TestOnInitRequest(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/admin", nil)
 		req.RemoteAddr = "192.168.0.1:4321"
 		ip := "192.168.0.1"
-		ctx := request.SetContext(context.Background(), req, "/admin", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/admin",
+			RemoteAddress: &ip,
+		})
 
 		resp := OnInitRequest(ctx)
 
@@ -96,7 +112,11 @@ func TestOnInitRequest(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/route", nil)
 		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
 
 		resp := OnInitRequest(ctx)
 

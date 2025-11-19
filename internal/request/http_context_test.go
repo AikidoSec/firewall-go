@@ -63,7 +63,12 @@ func TestSetContext(t *testing.T) {
 
 			// Set context
 			ctx := context.Background()
-			resultCtx := SetContext(ctx, req, tt.route, tt.source, tt.remoteAddress, tt.body)
+			resultCtx := SetContext(ctx, req, ContextData{
+				Source:        tt.source,
+				Route:         tt.route,
+				RemoteAddress: tt.remoteAddress,
+				Body:          tt.body,
+			})
 
 			// Get context back
 			reqCtx := GetContext(resultCtx)

@@ -26,7 +26,11 @@ func TestShouldBlockRequest(t *testing.T) {
 func TestShouldBlockRequest_BlockedUser(t *testing.T) {
 	req := httptest.NewRequest("GET", "/route", nil)
 	ip := "127.0.0.1"
-	reqCtx := request.SetContext(context.Background(), req, "/route", "/test", &ip, nil)
+	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	zen.SetUser(reqCtx, "banned", "Banned User")
 
@@ -52,7 +56,11 @@ func ExampleShouldBlockRequest() {
 			// Set up proper request context
 			ctx := context.Background()
 			remoteAddr := "127.0.0.1"
-			ctx = request.SetContext(ctx, r, "/test", "GET", &remoteAddr, nil)
+			ctx = request.SetContext(ctx, r, request.ContextData{
+				Source:        "test",
+				Route:         "/test",
+				RemoteAddress: &remoteAddr,
+			})
 
 			// Set user in context
 			ctx = zen.SetUser(ctx, "user123", "John Doe")

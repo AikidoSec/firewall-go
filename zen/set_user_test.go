@@ -16,10 +16,13 @@ import (
 func TestSetUser(t *testing.T) {
 	t.Run("ValidInput", func(t *testing.T) {
 		// Setup
-		ctx := context.Background()
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx = request.SetContext(ctx, req, "/test", "test", &remoteAddr, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &remoteAddr,
+		})
 
 		// Execute
 		resultCtx := zen.SetUser(ctx, "user123", "John Doe")
@@ -36,10 +39,13 @@ func TestSetUser(t *testing.T) {
 
 	t.Run("EmptyID", func(t *testing.T) {
 		// Setup
-		ctx := context.Background()
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx = request.SetContext(ctx, req, "/test", "test", &remoteAddr, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &remoteAddr,
+		})
 
 		// Execute
 		resultCtx := zen.SetUser(ctx, "", "John Doe")
@@ -56,10 +62,13 @@ func TestSetUser(t *testing.T) {
 
 	t.Run("EmptyName", func(t *testing.T) {
 		// Setup
-		ctx := context.Background()
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx = request.SetContext(ctx, req, "/test", "test", &remoteAddr, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &remoteAddr,
+		})
 
 		// Execute
 		resultCtx := zen.SetUser(ctx, "user123", "")
@@ -90,10 +99,13 @@ func TestSetUser(t *testing.T) {
 
 	t.Run("MiddlewareAlreadyExecuted", func(t *testing.T) {
 		// Setup
-		ctx := context.Background()
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx = request.SetContext(ctx, req, "/test", "test", &remoteAddr, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &remoteAddr,
+		})
 
 		// Mark middleware as executed
 		reqCtx := request.GetContext(ctx)

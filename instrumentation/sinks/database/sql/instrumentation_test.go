@@ -42,7 +42,11 @@ func TestQueryContextIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	db, err := sql.Open("test", "")
 	require.NoError(t, err)
@@ -105,7 +109,11 @@ func TestQueryShouldReportAttackOnlyOnce(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	db, err := sql.Open("test", "")
 	require.NoError(t, err)
@@ -188,7 +196,11 @@ func TestExecContextShouldReturnError(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	db, err := sql.Open("test", "")
 	require.NoError(t, err)
