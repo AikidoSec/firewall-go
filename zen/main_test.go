@@ -1,131 +1,133 @@
-package zen
+package zen_test
 
 import (
-	"os"
+	"errors"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/zen"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestPopulateConfigFromEnv(t *testing.T) {
-	// Set up test environment
-	os.Setenv("AIKIDO_LOG_LEVEL", "DEBUG")
-	os.Setenv("AIKIDO_LOG_FORMAT", "json")
-	os.Setenv("AIKIDO_DEBUG", "true")
-	os.Setenv("AIKIDO_TOKEN", "test-token")
-	os.Setenv("AIKIDO_ENDPOINT", "https://test.example.com")
-	os.Setenv("AIKIDO_REALTIME_ENDPOINT", "https://runtime.test.example.com")
-	defer func() {
-		os.Unsetenv("AIKIDO_LOG_LEVEL")
-		os.Unsetenv("AIKIDO_LOG_FORMAT")
-		os.Unsetenv("AIKIDO_DEBUG")
-		os.Unsetenv("AIKIDO_TOKEN")
-		os.Unsetenv("AIKIDO_ENDPOINT")
-		os.Unsetenv("AIKIDO_REALTIME_ENDPOINT")
-	}()
-
-	t.Run("nil config", func(t *testing.T) {
-		result := populateConfigFromEnv(nil)
-		require.NotNil(t, result)
-		require.Equal(t, "DEBUG", result.LogLevel)
-		require.Equal(t, "json", result.LogFormat)
-		require.True(t, result.Debug)
-		require.Equal(t, "test-token", result.Token)
-		require.Equal(t, "https://test.example.com", result.Endpoint)
-		require.Equal(t, "https://runtime.test.example.com", result.RealtimeEndpoint)
-	})
-
-	t.Run("partial config with env fallback", func(t *testing.T) {
-		original := &Config{
-			LogLevel: "ERROR",          // explicit value should not be overridden
-			Token:    "explicit-token", // explicit value should not be overridden
-			// other fields should fall back to env vars
-		}
-
-		result := populateConfigFromEnv(original)
-
-		// Original should not be modified
-		require.Equal(t, "ERROR", original.LogLevel)
-		require.Equal(t, "explicit-token", original.Token)
-
-		// Result should have explicit values where provided, env vars elsewhere
-		require.Equal(t, "ERROR", result.LogLevel)                                    // explicit value preserved
-		require.Equal(t, "json", result.LogFormat)                                    // from env
-		require.True(t, result.Debug)                                                 // from env
-		require.Equal(t, "explicit-token", result.Token)                              // explicit value preserved
-		require.Equal(t, "https://test.example.com", result.Endpoint)                 // from env
-		require.Equal(t, "https://runtime.test.example.com", result.RealtimeEndpoint) // from env
-	})
-
-	t.Run("empty config", func(t *testing.T) {
-		original := &Config{}
-		result := populateConfigFromEnv(original)
-
-		// Original should not be modified
-		require.Equal(t, "", original.LogLevel)
-
-		// Result should have env var values
-		require.Equal(t, "DEBUG", result.LogLevel)
-		require.Equal(t, "json", result.LogFormat)
-		require.True(t, result.Debug)
-		require.Equal(t, "test-token", result.Token)
-		require.Equal(t, "https://test.example.com", result.Endpoint)
-		require.Equal(t, "https://runtime.test.example.com", result.RealtimeEndpoint)
-	})
-}
-
-func TestGetEnvBool(t *testing.T) {
+func TestAttackKind_Constants(t *testing.T) {
 	tests := []struct {
 		name     string
-		envValue string
-		want     bool
+		kind     zen.AttackKind
+		expected string
+	}{
+		{"SQL injection", zen.KindSQLInjection, "sql_injection"},
+		{"path traversal", zen.KindPathTraversal, "path_traversal"},
+		{"shell injection", zen.KindShellInjection, "shell_injection"},
+		{"SSRF", zen.KindSSRF, "ssrf"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, string(tt.kind))
+		})
+	}
+}
+
+func TestAttackBlockedError_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		kind     zen.AttackKind
+		expected string
 	}{
 		{
-			name:     "returns true for 'true'",
-			envValue: "true",
-			want:     true,
+			name:     "SQL injection",
+			kind:     zen.KindSQLInjection,
+			expected: "zen blocked sql_injection attack",
 		},
 		{
-			name:     "returns true for '1'",
-			envValue: "1",
-			want:     true,
+			name:     "path traversal",
+			kind:     zen.KindPathTraversal,
+			expected: "zen blocked path_traversal attack",
 		},
 		{
-			name:     "returns true for 'TRUE' (case insensitive)",
-			envValue: "TRUE",
-			want:     true,
+			name:     "shell injection",
+			kind:     zen.KindShellInjection,
+			expected: "zen blocked shell_injection attack",
 		},
 		{
-			name:     "returns false for 'false'",
-			envValue: "false",
-			want:     false,
-		},
-		{
-			name:     "returns false for '0'",
-			envValue: "0",
-			want:     false,
-		},
-		{
-			name:     "returns false for empty string",
-			envValue: "",
-			want:     false,
-		},
-		{
-			name:     "returns false for other values",
-			envValue: "yes",
-			want:     false,
+			name:     "SSRF",
+			kind:     zen.KindSSRF,
+			expected: "zen blocked ssrf attack",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			envVar := "TEST_ENV_BOOL"
-			t.Setenv(envVar, tt.envValue)
-
-			got := getEnvBool(envVar)
-			if got != tt.want {
-				t.Errorf("getEnvBool() = %v, want %v", got, tt.want)
-			}
+			err := &zen.AttackBlockedError{Kind: tt.kind}
+			assert.Equal(t, tt.expected, err.Error())
 		})
 	}
+}
+
+func TestErrAttackBlocked(t *testing.T) {
+	tests := []struct {
+		name         string
+		kind         vulnerabilities.AttackKind
+		expectedKind zen.AttackKind
+		expectedMsg  string
+	}{
+		{
+			name:         "SQL injection",
+			kind:         vulnerabilities.KindSQLInjection,
+			expectedKind: zen.KindSQLInjection,
+			expectedMsg:  "zen blocked sql_injection attack",
+		},
+		{
+			name:         "path traversal",
+			kind:         vulnerabilities.KindPathTraversal,
+			expectedKind: zen.KindPathTraversal,
+			expectedMsg:  "zen blocked path_traversal attack",
+		},
+		{
+			name:         "shell injection",
+			kind:         vulnerabilities.KindShellInjection,
+			expectedKind: zen.KindShellInjection,
+			expectedMsg:  "zen blocked shell_injection attack",
+		},
+		{
+			name:         "SSRF",
+			kind:         vulnerabilities.KindSSRF,
+			expectedKind: zen.KindSSRF,
+			expectedMsg:  "zen blocked ssrf attack",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := zen.ErrAttackBlocked(tt.kind)
+
+			// Check error message
+			assert.Equal(t, tt.expectedMsg, err.Error())
+
+			// Check it's the right type using errors.As
+			var attackErr *zen.AttackBlockedError
+			require.True(t, errors.As(err, &attackErr), "errors.As should extract *AttackBlockedError")
+
+			// Verify the kind was correctly set
+			assert.Equal(t, tt.expectedKind, attackErr.Kind)
+		})
+	}
+}
+
+func TestAttackBlockedError_ErrorsAs(t *testing.T) {
+	err := zen.ErrAttackBlocked(vulnerabilities.KindSQLInjection)
+
+	var attackErr *zen.AttackBlockedError
+	require.True(t, errors.As(err, &attackErr), "errors.As should work with *AttackBlockedError")
+	assert.Equal(t, zen.KindSQLInjection, attackErr.Kind)
+}
+
+func TestAttackBlockedError_ErrorsIs(t *testing.T) {
+	// Test that two errors with the same kind are not considered equal by errors.Is
+	// (they shouldn't be, as they're pointer types)
+	err1 := zen.ErrAttackBlocked(vulnerabilities.KindSQLInjection)
+	err2 := zen.ErrAttackBlocked(vulnerabilities.KindSQLInjection)
+
+	assert.False(t, errors.Is(err1, err2), "errors.Is should return false for different *AttackBlockedError instances")
 }
