@@ -46,6 +46,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		name        string
 		setupReq    func() *http.Request
 		body        any
+		routeParams map[string]string
 		expectError bool
 		description string
 	}{
@@ -79,6 +80,16 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 			body:        nil,
 			expectError: true,
 			description: "cookies should be scanned",
+		},
+		{
+			name: "route params are scanned",
+			setupReq: func() *http.Request {
+				return httptest.NewRequest("GET", "/test", nil)
+			},
+			body:        nil,
+			routeParams: map[string]string{"id": "attack"},
+			expectError: true,
+			description: "routeParams should be scanned",
 		},
 		{
 			name: "body is scanned - string",
@@ -150,6 +161,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 				Source:        "test",
 				Route:         "/test",
 				RemoteAddress: &ip,
+				RouteParams:   tt.routeParams,
 				Body:          tt.body,
 			})
 
@@ -188,6 +200,7 @@ func TestScanWithOptions_AllSourcesScannedWhenNoAttack(t *testing.T) {
 		Source:        "test",
 		Route:         "/test",
 		RemoteAddress: &ip,
+		RouteParams:   map[string]string{"routeParam": "routeValue"},
 		Body:          map[string]any{"bodyField": "bodyValue"},
 	})
 
@@ -199,6 +212,7 @@ func TestScanWithOptions_AllSourcesScannedWhenNoAttack(t *testing.T) {
 	assert.True(t, scannedInputs["queryValue"], "query parameters should be scanned")
 	assert.True(t, scannedInputs["headerValue"], "headers should be scanned")
 	assert.True(t, scannedInputs["cookieValue"], "cookies should be scanned")
+	assert.True(t, scannedInputs["routeValue"], "routeParams should be scanned")
 	assert.True(t, scannedInputs["bodyValue"], "body should be scanned")
 }
 
