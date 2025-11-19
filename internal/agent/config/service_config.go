@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
@@ -40,7 +41,7 @@ type IPBlockList struct {
 }
 
 type ServiceConfigData struct {
-	ConfigUpdatedAt   int64
+	ConfigUpdatedAt   time.Time
 	Endpoints         []aikido_types.Endpoint
 	BlockedUserIDs    map[string]bool
 	BypassedIPs       map[string]bool
@@ -73,7 +74,7 @@ func buildIPBlocklist(name, description string, ipsList []string) IPBlockList {
 	return ipBlocklist
 }
 
-func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
+func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockListConfig *aikido_types.ListsConfigData) {
 	if cloudConfigFromAgent == nil {
 		return
 	}
@@ -81,7 +82,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 	serviceConfigMutex.Lock()
 	defer serviceConfigMutex.Unlock()
 
-	serviceConfig.ConfigUpdatedAt = cloudConfigFromAgent.ConfigUpdatedAt
+	serviceConfig.ConfigUpdatedAt = time.UnixMilli(cloudConfigFromAgent.ConfigUpdatedAt)
 
 	var endpoints []aikido_types.Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
@@ -115,26 +116,28 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData) {
 		serviceConfig.Block = *cloudConfigFromAgent.Block
 	}
 
-	serviceConfig.BlockedIPs = map[string]IPBlockList{}
-	for ipBlocklistSource, ipBlocklist := range cloudConfigFromAgent.BlockedIPsList {
-		serviceConfig.BlockedIPs[ipBlocklistSource] = buildIPBlocklist(ipBlocklistSource, ipBlocklist.Description, ipBlocklist.Ips)
-	}
+	if blockListConfig != nil {
+		serviceConfig.BlockedIPs = map[string]IPBlockList{}
+		for _, ipBlocklist := range blockListConfig.BlockedIPAddresses {
+			serviceConfig.BlockedIPs[ipBlocklist.Source] = buildIPBlocklist(ipBlocklist.Source, ipBlocklist.Description, ipBlocklist.IPs)
+		}
 
-	if cloudConfigFromAgent.BlockedUserAgents != "" {
-		serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + cloudConfigFromAgent.BlockedUserAgents)
-	} else {
-		serviceConfig.BlockedUserAgents = nil
+		if blockListConfig.BlockedUserAgents != "" {
+			serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + blockListConfig.BlockedUserAgents)
+		} else {
+			serviceConfig.BlockedUserAgents = nil
+		}
 	}
 }
 
-func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData) {
+func UpdateServiceConfig(cloudConfig *aikido_types.CloudConfigData, blockListConfig *aikido_types.ListsConfigData) {
 	log.Debug("Got cloud config", slog.Any("config", cloudConfig))
-	setServiceConfig(cloudConfig)
+	setServiceConfig(cloudConfig, blockListConfig)
 }
 
 var CollectAPISchema bool
 
-func GetCloudConfigUpdatedAt() int64 {
+func GetCloudConfigUpdatedAt() time.Time {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()
 
@@ -183,6 +186,17 @@ func IsUserBlocked(userID string) bool {
 	defer serviceConfigMutex.RUnlock()
 
 	return keyExists(serviceConfig.BlockedUserIDs, userID)
+}
+
+func SetUserBlocked(userID string) {
+	serviceConfigMutex.Lock()
+	defer serviceConfigMutex.Unlock()
+
+	if serviceConfig.BlockedUserIDs == nil {
+		serviceConfig.BlockedUserIDs = map[string]bool{}
+	}
+
+	serviceConfig.BlockedUserIDs[userID] = true
 }
 
 func IsIPBypassed(ip string) bool {

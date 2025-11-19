@@ -1,6 +1,9 @@
 package aikido_types
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type EnvironmentConfigData struct {
 	PlatformName     string `json:"platform_name"`               // Platform name (fpm-fcgi, cli-server, ...)
@@ -35,11 +38,6 @@ type Endpoint struct {
 	RateLimiting       RateLimiting `json:"rateLimiting"`
 }
 
-type IPBlocklist struct {
-	Description string
-	Ips         []string
-}
-
 type CloudConfigData struct {
 	Success               bool       `json:"success"`
 	ServiceID             int        `json:"serviceId"`
@@ -50,20 +48,22 @@ type CloudConfigData struct {
 	BypassedIPs           []string   `json:"allowedIPAddresses"`
 	ReceivedAnyStats      bool       `json:"receivedAnyStats"`
 	Block                 *bool      `json:"block,omitempty"`
-	BlockedIPsList        map[string]IPBlocklist
-	BlockedUserAgents     string
 }
 
-type BlockedIpsData struct {
+func (c *CloudConfigData) UpdatedAt() time.Time {
+	return time.UnixMilli(c.ConfigUpdatedAt)
+}
+
+type BlockedIPsData struct {
 	Source      string   `json:"source"`
 	Description string   `json:"description"`
-	Ips         []string `json:"ips"`
+	IPs         []string `json:"ips"`
 }
 
 type ListsConfigData struct {
 	Success            bool             `json:"success"`
 	ServiceID          int              `json:"serviceId"`
-	BlockedIPAddresses []BlockedIpsData `json:"blockedIPAddresses"`
+	BlockedIPAddresses []BlockedIPsData `json:"blockedIPAddresses"`
 	BlockedUserAgents  string           `json:"blockedUserAgents"`
 }
 

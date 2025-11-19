@@ -2,7 +2,12 @@ package request
 
 import (
 	"sync"
+	"sync/atomic"
 )
+
+type DeferredBlock struct {
+	Error error
+}
 
 type Context struct {
 	URL                string
@@ -17,6 +22,8 @@ type Context struct {
 	Route              string
 	executedMiddleware bool
 	user               *User
+
+	deferredAttack *DeferredAttack
 
 	mu sync.RWMutex
 }
@@ -71,4 +78,38 @@ func (ctx *Context) GetIP() string {
 		return *ctx.RemoteAddress
 	}
 	return ""
+}
+
+// DeferredAttack stores attack information and error to be reported/blocked later
+type DeferredAttack struct {
+	Operation     string
+	Kind          string
+	Source        string
+	PathToPayload string
+	Metadata      map[string]string
+	Payload       string
+	Error         error // The error to return if blocking is enabled
+	reported      atomic.Bool
+}
+
+// ShouldReport returns true the first time it's called, false on subsequent calls
+// This is used to check whether the deferred attack needs to be reported.
+func (d *DeferredAttack) ShouldReport() bool {
+	return d.reported.CompareAndSwap(false, true)
+}
+
+// SetDeferredAttack allows for reporting attacks later in the request flow.
+// This allows for detecting attacks on functions that don't return errors, such as `filepath.Join`.
+func (ctx *Context) SetDeferredAttack(attack *DeferredAttack) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	ctx.deferredAttack = attack
+}
+
+func (ctx *Context) GetDeferredAttack() *DeferredAttack {
+	ctx.mu.RLock()
+	defer ctx.mu.RUnlock()
+
+	return ctx.deferredAttack
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -139,9 +140,23 @@ type mockCloudClient struct {
 	mu                      sync.Mutex
 }
 
-func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo)                   {}
-func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo) time.Duration { return 0 }
-func (m *mockCloudClient) CheckConfigUpdatedAt() time.Duration                        { return 0 }
+func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchConfigUpdatedAt() time.Time { panic("not implemented") }
+func (m *mockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
+	panic("not implemented")
+}
+
+func (m *mockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
+	panic("not implemented")
+}
+
 func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 	m.mu.Lock()
 	m.capturedAgentInfo = agentInfo
@@ -150,4 +165,44 @@ func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 	m.mu.Unlock()
 
 	m.attackDetectedEventSent <- struct{}{}
+}
+
+func TestExecContextShouldReturnError(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	// Enable blocking so that Zen should cause ExecContext to return an error
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}),
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+	db, err := sql.Open("test", "")
+	require.NoError(t, err)
+
+	request.WrapWithGLS(ctx, func() {
+		result, err := db.ExecContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+		require.Nil(t, result)
+		require.Error(t, err)
+
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+
+		var attackBlockedErr *zen.AttackBlockedError
+		require.ErrorAs(t, err, &attackBlockedErr)
+		require.Equal(t, zen.KindSQLInjection, attackBlockedErr.Kind)
+	})
 }

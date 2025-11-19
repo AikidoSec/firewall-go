@@ -38,7 +38,7 @@ aspects:
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.ExecContext")
             if _aikido_block != nil {
-              panic(_aikido_block)
+              return nil, _aikido_block 
             }
   - id: database/sql.DB.PrepareContext
     join-point:

@@ -1,12 +1,14 @@
 //go:build integration
 
-package os_test
+package filepath_test
 
 import (
 	"context"
 	"io/fs"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,6 +28,7 @@ type mockCloudClient struct {
 	capturedAgentInfo       cloud.AgentInfo
 	capturedRequest         aikido_types.RequestInfo
 	capturedAttack          aikido_types.AttackDetails
+	sendAttackDetectedEvent func(cloud.AgentInfo, aikido_types.RequestInfo, aikido_types.AttackDetails)
 }
 
 func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
@@ -46,13 +49,25 @@ func (m *mockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, err
 }
 
 func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
-	m.capturedAgentInfo = agentInfo
-	m.capturedRequest = request
-	m.capturedAttack = attack
-	m.attackDetectedEventSent <- struct{}{}
+	if m.sendAttackDetectedEvent != nil {
+		m.sendAttackDetectedEvent(agentInfo, request, attack)
+	}
 }
 
-func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
+func newMockClient() *mockCloudClient {
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}, 10),
+	}
+	client.sendAttackDetectedEvent = func(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+		client.capturedAgentInfo = agentInfo
+		client.capturedRequest = request
+		client.capturedAttack = attack
+		client.attackDetectedEventSent <- struct{}{}
+	}
+	return client
+}
+
+func TestJoinPathInjectionBlockIsDeferred(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
 	originalClient := agent.GetCloudClient()
@@ -66,9 +81,7 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 		agent.SetCloudClient(originalClient)
 	})
 
-	client := &mockCloudClient{
-		attackDetectedEventSent: make(chan struct{}),
-	}
+	client := newMockClient()
 	agent.SetCloudClient(client)
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
@@ -76,7 +89,8 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
 
 	request.WrapWithGLS(ctx, func() {
-		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)
+		path := filepath.Join("/tmp/", "../test.txt")
+		_, err := os.OpenFile(path, os.O_RDONLY, 0o600)
 
 		var detectedErr *vulnerabilities.AttackDetectedError
 		require.ErrorAs(t, err, &detectedErr)
@@ -95,7 +109,7 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
 		assert.True(t, client.capturedAttack.Blocked)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
-		assert.Equal(t, "os.OpenFile", client.capturedAttack.Operation)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
 		assert.Equal(t, "Module", client.capturedAttack.Module)
 		assert.Equal(t, ".path", client.capturedAttack.Path)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
@@ -111,7 +125,7 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 	}
 }
 
-func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
+func TestJoinPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
 	originalClient := agent.GetCloudClient()
@@ -126,9 +140,7 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 		agent.SetCloudClient(originalClient)
 	})
 
-	client := &mockCloudClient{
-		attackDetectedEventSent: make(chan struct{}),
-	}
+	client := newMockClient()
 	agent.SetCloudClient(client)
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
@@ -136,7 +148,8 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
 
 	request.WrapWithGLS(ctx, func() {
-		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)
+		path := filepath.Join("/tmp/", "../test.txt")
+		_, err := os.OpenFile(path, os.O_RDONLY, 0o600)
 
 		var notFound *fs.PathError
 		require.ErrorAs(t, err, &notFound)
@@ -155,7 +168,7 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
 		assert.False(t, client.capturedAttack.Blocked)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
-		assert.Equal(t, "os.OpenFile", client.capturedAttack.Operation)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
 		assert.Equal(t, "Module", client.capturedAttack.Module)
 		assert.Equal(t, ".path", client.capturedAttack.Path)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
@@ -169,4 +182,81 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for attack event")
 	}
+}
+
+func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	// Disable blocking
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+	request.WrapWithGLS(ctx, func() {
+		// Call filepath.Join but don't call os.OpenFile
+		_ = filepath.Join("/tmp/", "../test.txt")
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		t.Fatal("attack should not be reported when os.OpenFile is not called")
+	case <-time.After(100 * time.Millisecond):
+		// Success - no attack event should be sent
+	}
+}
+
+func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	attackCount := int64(0)
+	client := newMockClient()
+	client.sendAttackDetectedEvent = func(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+		atomic.AddInt64(&attackCount, 1)
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+
+	request.WrapWithGLS(ctx, func() {
+		path := filepath.Join("/tmp/", "../test.txt")
+
+		// First file operation - should detect and report attack
+		_, err := os.OpenFile(path, os.O_RDONLY, 0o600)
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+
+		// Second file operation - should block but not report again
+		_, err = os.ReadFile(path)
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	// Wait for potential attack events
+	time.Sleep(100 * time.Millisecond)
+
+	assert.Equal(t, int64(1), atomic.LoadInt64(&attackCount), "attack should only be reported once")
 }

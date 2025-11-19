@@ -10,7 +10,6 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -76,7 +75,7 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.Detect
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  maps.Clone(res.Metadata),
-			User:      utils.GetUserByID(reqCtx.GetUserID()),
+			User:      agent.GetUserByID(reqCtx.GetUserID()),
 		},
 	}
 }
@@ -121,4 +120,64 @@ func onInterceptorResult(ctx context.Context, res *InterceptorResult) error {
 	}
 
 	return buildAttackDetectedError(*res)
+}
+
+// storeDeferredAttack stores the attack result and error for later reporting/blocking.
+// This is used for functions like filepath.Join that don't return errors.
+// The error is only stored if the attack should be blocked.
+func storeDeferredAttack(ctx context.Context, res *InterceptorResult) error {
+	if res == nil {
+		return nil
+	}
+
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil {
+		return nil
+	}
+
+	// Get the attack to check if it should be blocked
+	attack := getAttackDetected(ctx, *res)
+
+	var blockError error
+	if attack != nil && attack.Attack.Blocked {
+		blockError = buildAttackDetectedError(*res)
+	}
+
+	deferredAttack := &request.DeferredAttack{
+		Operation:     res.Operation,
+		Kind:          string(res.Kind),
+		Source:        res.Source,
+		PathToPayload: res.PathToPayload,
+		Metadata:      maps.Clone(res.Metadata),
+		Payload:       res.Payload,
+		Error:         blockError,
+	}
+	reqCtx.SetDeferredAttack(deferredAttack)
+
+	return nil
+}
+
+// reportDeferredAttack reports a previously stored attack to the cloud.
+func reportDeferredAttack(ctx context.Context) {
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil {
+		return
+	}
+
+	deferredAttack := reqCtx.GetDeferredAttack()
+	if deferredAttack == nil || !deferredAttack.ShouldReport() {
+		return
+	}
+
+	res := &InterceptorResult{
+		Operation:     deferredAttack.Operation,
+		Kind:          AttackKind(deferredAttack.Kind),
+		Source:        deferredAttack.Source,
+		PathToPayload: deferredAttack.PathToPayload,
+		Metadata:      maps.Clone(deferredAttack.Metadata),
+		Payload:       deferredAttack.Payload,
+	}
+
+	attack := getAttackDetected(ctx, *res)
+	go agent.OnAttackDetected(attack)
 }

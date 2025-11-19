@@ -131,3 +131,42 @@ func TestContext_GetIP(t *testing.T) {
 func stringPtr(s string) *string {
 	return &s
 }
+
+func TestContext_SetDeferredAttack_GetDeferredAttack(t *testing.T) {
+	ctx := &Context{}
+
+	// Test initial state
+	assert.Nil(t, ctx.GetDeferredAttack())
+
+	// Test setting deferred attack
+	attack := &DeferredAttack{
+		Operation: "path.Join",
+		Kind:      "path_traversal",
+		Payload:   "../../etc/passwd",
+	}
+	ctx.SetDeferredAttack(attack)
+
+	result := ctx.GetDeferredAttack()
+	assert.NotNil(t, result)
+	assert.Equal(t, "path.Join", result.Operation)
+	assert.Equal(t, "path_traversal", result.Kind)
+	assert.Equal(t, "../../etc/passwd", result.Payload)
+
+	// Test setting nil
+	ctx.SetDeferredAttack(nil)
+	assert.Nil(t, ctx.GetDeferredAttack())
+}
+
+func TestDeferredAttack_ShouldReport(t *testing.T) {
+	attack := &DeferredAttack{
+		Operation: "test",
+		Kind:      "test_attack",
+	}
+
+	// First call should return true
+	assert.True(t, attack.ShouldReport())
+
+	// Subsequent calls should return false
+	assert.False(t, attack.ShouldReport())
+	assert.False(t, attack.ShouldReport())
+}
