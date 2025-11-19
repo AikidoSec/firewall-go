@@ -19,6 +19,10 @@ type MultipartFormParser interface {
 
 // TryExtractBody attempts to extract body data from a request, trying JSON first, then forms
 func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
+	if req.Body == nil || req.Body == http.NoBody {
+		return nil
+	}
+
 	bodyFromJSON := tryExtractJSON(req)
 	if bodyFromJSON != nil {
 		return bodyFromJSON
@@ -35,10 +39,6 @@ func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
 
 // tryExtractFormBody attempts to extract form data (urlencoded or multipart)
 func tryExtractFormBody(req *http.Request, parser MultipartFormParser) url.Values {
-	if req.Body == nil {
-		return req.PostForm
-	}
-
 	// Use TeeReader to preserve the body while MultipartForm consumes it
 	var buf bytes.Buffer
 
@@ -59,6 +59,10 @@ func tryExtractFormBody(req *http.Request, parser MultipartFormParser) url.Value
 			log.Debug("error on parse multipart form", slog.Any("error", err))
 			return nil
 		}
+	}
+
+	if len(req.PostForm) == 0 {
+		return nil
 	}
 
 	return req.PostForm

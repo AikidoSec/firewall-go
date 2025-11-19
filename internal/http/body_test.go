@@ -69,6 +69,28 @@ func TestTryExtractFormBody(t *testing.T) {
 	})
 }
 
+func TestTryExtractFormBody_EmptyData(t *testing.T) {
+	t.Run("nil body with populated PostForm returns PostForm", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+		req.PostForm = url.Values{"username": []string{"alice"}}
+
+		parser := &mockParser{req: req}
+		result := tryExtractFormBody(req, parser)
+
+		assert.NotNil(t, result)
+		assert.Equal(t, "alice", result.Get("username"))
+	})
+
+	t.Run("nil body with nil PostForm returns nil", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+
+		parser := &mockParser{req: req}
+		result := tryExtractFormBody(req, parser)
+
+		assert.Nil(t, result)
+	})
+}
+
 func TestTryExtractBody(t *testing.T) {
 	t.Run("extracts JSON", func(t *testing.T) {
 		jsonBody := `{"username":"alice"}`
@@ -100,6 +122,15 @@ func TestTryExtractBody(t *testing.T) {
 	t.Run("returns nil when both fail", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader("some data"))
 		req.Header.Set("Content-Type", "multipart/form-data") // Missing boundary
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		assert.Nil(t, result)
+	})
+
+	t.Run("returns nil when no body", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 
 		parser := &mockParser{req: req}
 		result := TryExtractBody(req, parser)
