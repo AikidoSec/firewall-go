@@ -27,7 +27,11 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 		// Simple test to verify each exec method is instrumented
 		req := httptest.NewRequest("GET", "/route?cmd=ls%20.", nil)
 		ip := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, "/route?cmd=ls%20.", "test", &ip, nil)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
 
 		t.Run("Run", func(t *testing.T) {
 			request.WrapWithGLS(ctx, func() {
@@ -122,7 +126,11 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				req := httptest.NewRequest("GET", "/route?"+tc.queryParam, nil)
 				ip := "127.0.0.1"
-				ctx := request.SetContext(context.Background(), req, "/route?"+tc.queryParam, "test", &ip, nil)
+				ctx := request.SetContext(context.Background(), req, request.ContextData{
+					Source:        "test",
+					Route:         "/route",
+					RemoteAddress: &ip,
+				})
 
 				request.WrapWithGLS(ctx, func() {
 					cmd := exec.Command(tc.command[0], tc.command[1:]...)
@@ -141,7 +149,11 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 		t.Run("shell injection via positional parameters", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/route?target=8.8.8.8%3Bcat%20/etc/passwd", nil)
 			ip := "127.0.0.1"
-			ctx := request.SetContext(context.Background(), req, "/route?target=8.8.8.8%3Bcat%20/etc/passwd", "test", &ip, nil)
+			ctx := request.SetContext(context.Background(), req, request.ContextData{
+				Source:        "test",
+				Route:         "/route",
+				RemoteAddress: &ip,
+			})
 
 			request.WrapWithGLS(ctx, func() {
 				// This is vulnerable because the command uses $0 which references the next argument
@@ -157,7 +169,11 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 		t.Run("multiple positional parameters with injection", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/route?arg1=safe&arg2=malicious%3Brm%20-rf%20/", nil)
 			ip := "127.0.0.1"
-			ctx := request.SetContext(context.Background(), req, "/route?arg1=safe&arg2=malicious%3Brm%20-rf%20/", "test", &ip, nil)
+			ctx := request.SetContext(context.Background(), req, request.ContextData{
+				Source:        "test",
+				Route:         "/route",
+				RemoteAddress: &ip,
+			})
 
 			request.WrapWithGLS(ctx, func() {
 				// Command references multiple positional parameters
@@ -174,7 +190,11 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 		t.Run("safe positional parameter not referenced", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/route?unused=malicious%3Brm%20-rf%20/", nil)
 			ip := "127.0.0.1"
-			ctx := request.SetContext(context.Background(), req, "/route?unused=malicious%3Brm%20-rf%20/", "test", &ip, nil)
+			ctx := request.SetContext(context.Background(), req, request.ContextData{
+				Source:        "test",
+				Route:         "/route",
+				RemoteAddress: &ip,
+			})
 
 			request.WrapWithGLS(ctx, func() {
 				// Even though userInput is malicious, it's never used by the command

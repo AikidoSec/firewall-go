@@ -11,7 +11,15 @@ type contextKey struct{}
 
 var reqCtxKey contextKey
 
-func SetContext(ctx context.Context, r *http.Request, route string, source string, remoteAddress *string, body any) context.Context {
+type ContextData struct {
+	Source        string
+	Route         string
+	RemoteAddress *string
+	Body          any
+}
+
+func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
+	route := data.Route
 	if len(route) == 0 {
 		route = r.URL.Path // Use path from URL as default.
 	}
@@ -22,10 +30,10 @@ func SetContext(ctx context.Context, r *http.Request, route string, source strin
 		Query:              r.URL.Query(),
 		Headers:            headersToMap(r.Header),
 		RouteParams:        nil,
-		RemoteAddress:      remoteAddress,
-		Body:               body,
+		RemoteAddress:      data.RemoteAddress,
+		Body:               data.Body,
 		Cookies:            cookiesToMap(r.Cookies()),
-		Source:             source,
+		Source:             data.Source,
 		Route:              route,
 		executedMiddleware: false, // We start with no middleware executed.
 	}

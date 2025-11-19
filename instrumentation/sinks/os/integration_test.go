@@ -73,7 +73,11 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	request.WrapWithGLS(ctx, func() {
 		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)
@@ -133,7 +137,11 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	request.WrapWithGLS(ctx, func() {
 		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)

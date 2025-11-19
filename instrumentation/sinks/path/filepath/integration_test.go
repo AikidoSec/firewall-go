@@ -86,7 +86,11 @@ func TestJoinPathInjectionBlockIsDeferred(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	request.WrapWithGLS(ctx, func() {
 		path := filepath.Join("/tmp/", "../test.txt")
@@ -145,7 +149,11 @@ func TestJoinPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	request.WrapWithGLS(ctx, func() {
 		path := filepath.Join("/tmp/", "../test.txt")
@@ -203,7 +211,11 @@ func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	request.WrapWithGLS(ctx, func() {
 		// Call filepath.Join but don't call os.OpenFile
@@ -240,7 +252,11 @@ func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, "/route", "test", &ip, nil)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
 
 	request.WrapWithGLS(ctx, func() {
 		path := filepath.Join("/tmp/", "../test.txt")
