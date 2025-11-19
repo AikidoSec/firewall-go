@@ -26,18 +26,21 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	router.ContextWithFallback = true
 	router.Use(zengin.GetMiddleware())
 
-	router.GET("/route", func(c *gin.Context) {
+	router.GET("/route/:id", func(c *gin.Context) {
 		ctx := request.GetContext(c)
 		require.NotNil(t, ctx, "request context should be set")
 
 		assert.Equal(t, "gin", ctx.Source)
-		assert.Equal(t, "/route", ctx.Route)
+		assert.Equal(t, "/route/:id", ctx.Route)
 		assert.Equal(t, map[string][]string{
 			"query": {"value"},
 		}, ctx.Query)
+		assert.Equal(t, map[string]string{
+			"id": "foo",
+		}, ctx.RouteParams)
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route/foo?query=value", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)

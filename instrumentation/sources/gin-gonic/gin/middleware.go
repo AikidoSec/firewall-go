@@ -16,9 +16,19 @@ func GetMiddleware() gin.HandlerFunc {
 
 		ip := c.ClientIP()
 
+		var routeParams map[string]string
+		if len(c.Params) > 0 {
+			routeParams = make(map[string]string, len(c.Params))
+
+			for _, v := range c.Params {
+				routeParams[v.Key] = v.Value
+			}
+		}
+
 		reqCtx := request.SetContext(c.Request.Context(), c.Request, request.ContextData{
 			Source:        "gin",
 			Route:         c.FullPath(),
+			RouteParams:   routeParams,
 			RemoteAddress: &ip,
 			Body:          http.TryExtractBody(c.Request, c),
 		})

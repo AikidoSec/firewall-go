@@ -19,9 +19,20 @@ func GetMiddleware() echo.MiddlewareFunc {
 			}
 
 			ip := c.RealIP()
+
+			var routeParams map[string]string
+			if len(c.ParamNames()) > 0 {
+				routeParams = make(map[string]string, len(c.ParamNames()))
+
+				for _, name := range c.ParamNames() {
+					routeParams[name] = c.Param(name)
+				}
+			}
+
 			reqCtx := request.SetContext(httpRequest.Context(), httpRequest, request.ContextData{
 				Source:        "echo",
 				Route:         c.Path(),
+				RouteParams:   routeParams,
 				RemoteAddress: &ip,
 				Body:          http.TryExtractBody(httpRequest, c),
 			})
