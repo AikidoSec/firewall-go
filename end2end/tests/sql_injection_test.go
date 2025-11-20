@@ -25,7 +25,7 @@ func TestSQLInjection(t *testing.T) {
 
 	t.Run("blocks SQL injection attack", func(t *testing.T) {
 		// SQL injection attack in POST body
-		maliciousInput := "test' OR 1=1--"
+		maliciousInput := "Fluffy' || current_user || '"
 		body := map[string]string{"name": maliciousInput}
 		jsonBody, err := json.Marshal(body)
 		require.NoError(t, err)
