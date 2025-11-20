@@ -126,7 +126,7 @@ jobs:
 
       - name: Run E2E tests
         working-directory: ./end2end
-        run: make test-app APP=${{ matrix.app }}
+        run: make run-tests APP=${{ matrix.app }}
 
       - name: Stop app
         if: always()
