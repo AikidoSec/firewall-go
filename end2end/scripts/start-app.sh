@@ -29,6 +29,22 @@ if [ -f "$PID_FILE" ]; then
 	fi
 fi
 
+# Check if port is already in use
+if lsof -ti:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
+	EXISTING_PID=$(lsof -ti:$PORT -sTCP:LISTEN)
+	echo "❌ Port $PORT is already in use by process $EXISTING_PID"
+	# Check if it's one of our managed apps
+	for existing_port_file in /tmp/*.port; do
+		if [ -f "$existing_port_file" ] && [ "$(cat "$existing_port_file")" = "$PORT" ]; then
+			EXISTING_APP=$(basename "$existing_port_file" .port)
+			echo "   It appears to be managed by app: $EXISTING_APP"
+			echo "   Stop it first with: make stop-app APP=$EXISTING_APP"
+			break
+		fi
+	done
+	exit 1
+fi
+
 echo "Starting $APP on port $PORT..."
 
 # Start database
