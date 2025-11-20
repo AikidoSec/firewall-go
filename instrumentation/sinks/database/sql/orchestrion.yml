@@ -5,17 +5,13 @@ meta:
     Protection from SQL Injection.
 
 aspects:
+  # DB.QueryContext returns (*Rows, error) - should return error
   - id: database/sql.DB.QueryContext
     join-point:
-      one-of:
-        - function-body:
-            function:
-              - receiver: "*database/sql.DB"
-              - name: QueryContext
-        - function-body:
-            function:
-              - receiver: "*database/sql.DB"
-              - name: QueryRowContext
+      function-body:
+        function:
+          - receiver: "*database/sql.DB"
+          - name: QueryContext
     advice:
       - prepend-statements:
           imports:
@@ -23,8 +19,10 @@ aspects:
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.Query(Row)Context")
             if _aikido_block != nil {
-              panic(_aikido_block)
+              return nil, _aikido_block
             }
+
+  # DB.ExecContext returns (Result, error) - should return error
   - id: database/sql.DB.ExecContext
     join-point:
       function-body:
@@ -40,6 +38,8 @@ aspects:
             if _aikido_block != nil {
               return nil, _aikido_block 
             }
+
+  # DB.PrepareContext returns (*Stmt, error) - should return error
   - id: database/sql.DB.PrepareContext
     join-point:
       function-body:
@@ -53,19 +53,16 @@ aspects:
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.PrepareContext")
             if _aikido_block != nil {
-              panic(_aikido_block)
+              return nil, _aikido_block
             }
+
+  # Tx.QueryContext returns (*Rows, error) - should return error
   - id: database/sql.Tx.QueryContext
     join-point:
-      one-of:
-        - function-body:
-            function:
-              - receiver: "*database/sql.Tx"
-              - name: QueryContext
-        - function-body:
-            function:
-              - receiver: "*database/sql.Tx"
-              - name: QueryRowContext
+      function-body:
+        function:
+          - receiver: "*database/sql.Tx"
+          - name: QueryContext
     advice:
       - prepend-statements:
           imports:
@@ -73,8 +70,10 @@ aspects:
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.Query(Row)Context")
             if _aikido_block != nil {
-              panic(_aikido_block)
+              return nil, _aikido_block
             }
+
+  # Tx.ExecContext returns (Result, error) - should return error
   - id: database/sql.Tx.ExecContext
     join-point:
       function-body:
@@ -88,8 +87,10 @@ aspects:
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.ExecContext")
             if _aikido_block != nil {
-              panic(_aikido_block)
+              return nil, _aikido_block
             }
+
+  # Tx.PrepareContext returns (*Stmt, error) - should return error
   - id: database/sql.Tx.PrepareContext
     join-point:
       function-body:
@@ -103,5 +104,5 @@ aspects:
           template: |-
             _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.PrepareContext")
             if _aikido_block != nil {
-              panic(_aikido_block)
+              return nil, _aikido_block
             }
