@@ -17,26 +17,9 @@ aspects:
           imports:
             sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
-            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.QueryContext")
+            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.Query(Row)Context")
             if _aikido_block != nil {
               return nil, _aikido_block
-            }
-
-  # DB.QueryRowContext returns *Row (no error) - return Row with error
-  - id: database/sql.DB.QueryRowContext
-    join-point:
-      function-body:
-        function:
-          - receiver: "*database/sql.DB"
-          - name: QueryRowContext
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.DB.QueryRowContext")
-            if _aikido_block != nil {
-              return &Row{err: _aikido_block}
             }
 
   # DB.ExecContext returns (Result, error) - should return error
@@ -85,26 +68,9 @@ aspects:
           imports:
             sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
           template: |-
-            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.QueryContext")
+            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.Query(Row)Context")
             if _aikido_block != nil {
               return nil, _aikido_block
-            }
-
-  # Tx.QueryRowContext returns *Row (no error) - return Row with error
-  - id: database/sql.Tx.QueryRowContext
-    join-point:
-      function-body:
-        function:
-          - receiver: "*database/sql.Tx"
-          - name: QueryRowContext
-    advice:
-      - prepend-statements:
-          imports:
-            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
-          template: |-
-            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "database/sql.Tx.QueryRowContext")
-            if _aikido_block != nil {
-              return &Row{err: _aikido_block}
             }
 
   # Tx.ExecContext returns (Result, error) - should return error
