@@ -92,17 +92,23 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
-  build-sample-apps:
-    name: "Build ${{ matrix.app }}"
+  test-e2e:
+    name: "e2e tests - ${{ matrix.app }}"
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        app: ["echo-postgres", "gin-postgres", "http-postgres"]
+        app:
+          - name: gin-postgres
+            port: 8080
+          - name: echo-postgres
+            port: 8082
+          - name: http-postgres
+            port: 8084
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -112,6 +118,23 @@ jobs:
       - name: Install tools
         run: make install-tools
 
-      - name: Build ${{ matrix.app }} app
-        working-directory: ./sample-apps/${{ matrix.app }}
-        run: make build
+      - name: Start ${{ matrix.app.name }} app
+        working-directory: ./end2end
+        env:
+          PORT: ${{ matrix.app.port }}
+          AIKIDO_DEBUG: "true"
+          AIKIDO_BLOCK: "true"
+        run: make start-app APP=${{ matrix.app.name }} PORT=${{ matrix.app.port }}
+
+      - name: Run E2E tests
+        working-directory: ./end2end
+        run: make test APP=${{ matrix.app.name }} PORT=${{ matrix.app.port }}
+
+      - name: Stop app
+        if: always()
+        working-directory: ./end2end
+        run: make stop-app APP=${{ matrix.app.name }}
+
+      - name: Show app logs on failure
+        if: failure()
+        run: cat /tmp/${{ matrix.app.name }}.log || true
