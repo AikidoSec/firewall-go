@@ -20,7 +20,7 @@ type RequestRequest struct {
 }
 
 func defineAPIRoutes(e *echo.Echo, db *DatabaseHelper) {
-	e.GET("/api/pets/", func(c echo.Context) error {
+	e.GET("/api/pets", func(c echo.Context) error {
 		pets, err := db.GetAllPets(c.Request().Context()) // Assuming GetAllPets returns an error
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
