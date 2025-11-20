@@ -32,6 +32,7 @@ func TestSQLInjection(t *testing.T) {
 
 		resp, err := client.Post(appURL+"/api/create", "application/json", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})
 
@@ -39,6 +40,7 @@ func TestSQLInjection(t *testing.T) {
 		// Normal, safe request
 		resp, err := client.Get(appURL + "/api/pets")
 		require.NoError(t, err)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// SQL injection attack in POST body
@@ -49,6 +51,7 @@ func TestSQLInjection(t *testing.T) {
 
 		resp, err = client.Post(appURL+"/api/create", "application/json", bytes.NewBuffer(jsonBody))
 		require.NoError(t, err)
+		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 }
