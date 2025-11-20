@@ -135,4 +135,4 @@ jobs:
 
       - name: Show app logs on failure
         if: failure()
-        run: cat /tmp/${{ matrix.app.name }}.log || true
+        run: cat /tmp/${{ matrix.app }}.log || true
