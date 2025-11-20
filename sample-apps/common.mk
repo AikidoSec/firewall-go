@@ -5,13 +5,13 @@ BINARY := bin/app
 
 build:
 	@mkdir -p bin
-	@go build $(BUILD_FLAGS) -o $(BINARY) .
+	@go build -toolexec="orchestrion toolexec" -o $(BINARY) .
 
 run: build
 	@PORT=$(PORT) ./$(BINARY)
 
 dev:
-	@PORT=$(PORT) go run $(BUILD_FLAGS) .
+	@PORT=$(PORT) go run -toolexec="orchestrion toolexec" .
 
 start-database:
 	@cd ../databases/ && docker compose up $(DB_SERVICE) -d
@@ -21,4 +21,3 @@ stop-database:
 
 clean:
 	@rm -rf bin/
-
