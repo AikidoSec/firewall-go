@@ -4,3 +4,6 @@ run:
 
 build:
 	go build -toolexec="orchestrion toolexec" -v gin-postgres
+
+start-database:
+	cd ../databases/ && docker compose up postgres_database -d
