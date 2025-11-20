@@ -33,7 +33,10 @@ func defineAPIRoutes(e *echo.Echo, db *DatabaseHelper) {
 		if err := c.Bind(req); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 		}
-		rowsCreated, _ := db.CreatePetByName(c.Request().Context(), req.Name)
+		rowsCreated, err := db.CreatePetByName(c.Request().Context(), req.Name)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
 		return c.String(http.StatusOK, fmt.Sprint("%i", rowsCreated))
 	})
 
