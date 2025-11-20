@@ -31,3 +31,5 @@ go.work.sum
 # Zen libs
 .cache*
 internal/vulnerabilities/zen_internals/lib/*
+
+sample-apps/*/bin
