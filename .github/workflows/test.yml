@@ -100,12 +100,9 @@ jobs:
       fail-fast: false
       matrix:
         app:
-          - name: gin-postgres
-            port: 8080
-          - name: echo-postgres
-            port: 8082
-          - name: http-postgres
-            port: 8084
+          - gin-postgres
+          - echo-postgres
+          - http-postgres
 
     steps:
       - name: Checkout code
@@ -119,22 +116,22 @@ jobs:
       - name: Install tools
         run: make install-tools
 
-      - name: Start ${{ matrix.app.name }} app
+      - name: Start ${{ matrix.app }} app
         working-directory: ./end2end
         env:
           PORT: ${{ matrix.app.port }}
           AIKIDO_DEBUG: "true"
           AIKIDO_BLOCK: "true"
-        run: make start-app APP=${{ matrix.app.name }} PORT=${{ matrix.app.port }}
+        run: make start-app APP=${{ matrix.app }}
 
       - name: Run E2E tests
         working-directory: ./end2end
-        run: make test APP=${{ matrix.app.name }} PORT=${{ matrix.app.port }}
+        run: make test-app APP=${{ matrix.app }}
 
       - name: Stop app
         if: always()
         working-directory: ./end2end
-        run: make stop-app APP=${{ matrix.app.name }}
+        run: make stop-app APP=${{ matrix.app }}
 
       - name: Show app logs on failure
         if: failure()

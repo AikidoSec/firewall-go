@@ -10,11 +10,13 @@ if [ -z "$APP" ]; then
 fi
 
 PID_FILE="/tmp/$APP.pid"
+PORT_FILE="/tmp/$APP.port"
 APP_DIR="../sample-apps/$APP"
 
 if [ -f "$PID_FILE" ]; then
 	PID=$(cat "$PID_FILE")
-	echo "Stopping $APP (PID: $PID)..."
+	PORT=$(cat "$PORT_FILE" 2>/dev/null || echo "unknown")
+	echo "Stopping $APP (PID: $PID, Port: $PORT)..."
 
 	if ps -p $PID >/dev/null 2>&1; then
 		# Try graceful shutdown first
@@ -46,6 +48,7 @@ if [ -f "$PID_FILE" ]; then
 	fi
 
 	rm "$PID_FILE"
+	rm -f "$PORT_FILE"
 else
 	echo "⚠️  No PID file found for $APP"
 
@@ -58,6 +61,8 @@ else
 		sleep 1
 		echo "$PIDS" | xargs kill -9 2>/dev/null || true
 	fi
+
+	rm -f "$PORT_FILE"
 fi
 
 # Stop database

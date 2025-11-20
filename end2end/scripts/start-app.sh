@@ -13,6 +13,7 @@ fi
 APP_DIR="../sample-apps/$APP"
 LOG_FILE="/tmp/$APP.log"
 PID_FILE="/tmp/$APP.pid"
+PORT_FILE="/tmp/$APP.port"
 
 # Check if already running
 if [ -f "$PID_FILE" ]; then
@@ -24,6 +25,7 @@ if [ -f "$PID_FILE" ]; then
 	else
 		echo "⚠️  Cleaning up stale PID file"
 		rm "$PID_FILE"
+		rm -f "$PORT_FILE"
 	fi
 fi
 
@@ -52,12 +54,13 @@ echo "Waiting for health check on port $PORT..."
 
 # Wait for health check
 for i in {1..120}; do
-	if curl -sf "http://localhost:$PORT/" >/dev/null 2>&1; then
-		# Only write PID file after successful health check
+	if curl -sf "http://localhost:$PORT" >/dev/null 2>&1; then
+		# Write both PID and PORT files after successful health check
 		echo $APP_PID >"$PID_FILE"
+		echo $PORT >"$PORT_FILE"
 		echo "✓ $APP is ready on port $PORT!"
 		echo "  Logs: $LOG_FILE"
-		echo "  PID file: $PID_FILE"
+		echo "  PID: $APP_PID"
 		exit 0
 	fi
 
