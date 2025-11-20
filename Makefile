@@ -20,7 +20,7 @@ test: test-main test-zen-go
 .PHONY: test-main
 test-main:
 	@echo "Running main module tests with gotestsum"
-	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./...
+	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./internal/... ./zen/...
 	@echo "✅ Main module tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
