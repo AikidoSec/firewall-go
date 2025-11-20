@@ -62,6 +62,11 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 		return err
 	}
 
+	err = scanSource(ctx, "routeParams", reqCtx.RouteParams, operation, vulnerability, args, opts)
+	if err != nil {
+		return err
+	}
+
 	err = scanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args, opts)
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package request
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 )
@@ -14,6 +15,7 @@ var reqCtxKey contextKey
 type ContextData struct {
 	Source        string
 	Route         string
+	RouteParams   map[string]string
 	RemoteAddress *string
 	Body          any
 }
@@ -24,12 +26,17 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 		route = r.URL.Path // Use path from URL as default.
 	}
 
+	var routeParams map[string]string
+	if data.RouteParams != nil {
+		routeParams = maps.Clone(data.RouteParams)
+	}
+
 	c := &Context{
 		URL:                fullURL(r),
 		Method:             r.Method,
 		Query:              r.URL.Query(),
 		Headers:            headersToMap(r.Header),
-		RouteParams:        nil,
+		RouteParams:        routeParams,
 		RemoteAddress:      data.RemoteAddress,
 		Body:               data.Body,
 		Cookies:            cookiesToMap(r.Cookies()),

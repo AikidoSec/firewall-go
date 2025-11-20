@@ -25,19 +25,23 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	router := echo.New()
 	router.Use(zenecho.GetMiddleware())
 
-	router.GET("/route", func(e echo.Context) error {
+	router.GET("/route/:id", func(e echo.Context) error {
 		ctx := request.GetContext(e.Request().Context())
 		require.NotNil(t, ctx, "request context should be set")
 
 		assert.Equal(t, "echo", ctx.Source)
-		assert.Equal(t, "/route", ctx.Route)
+		assert.Equal(t, "/route/:id", ctx.Route)
 		assert.Equal(t, map[string][]string{
 			"query": {"value"},
 		}, ctx.Query)
+		assert.Equal(t, map[string]string{
+			"id": "foo",
+		}, ctx.RouteParams)
+
 		return nil
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route/foo?query=value", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)

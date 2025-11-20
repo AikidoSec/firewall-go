@@ -19,6 +19,7 @@ func TestSetContext(t *testing.T) {
 	tests := []struct {
 		name          string
 		route         string
+		routeParams   map[string]string
 		source        string
 		remoteAddress *string
 		body          any
@@ -48,6 +49,18 @@ func TestSetContext(t *testing.T) {
 			body:          nil,
 			expectedRoute: "/api/data",
 		},
+		{
+			name:          "route params",
+			route:         "/test/path",
+			source:        "test",
+			remoteAddress: stringPtr("127.0.0.1"),
+			body:          "test body",
+			routeParams: map[string]string{
+				"user": "1234",
+				"role": "test",
+			},
+			expectedRoute: "/test/path", // Will be set from request URL
+		},
 	}
 
 	for _, tt := range tests {
@@ -66,6 +79,7 @@ func TestSetContext(t *testing.T) {
 			resultCtx := SetContext(ctx, req, ContextData{
 				Source:        tt.source,
 				Route:         tt.route,
+				RouteParams:   tt.routeParams,
 				RemoteAddress: tt.remoteAddress,
 				Body:          tt.body,
 			})
@@ -83,6 +97,8 @@ func TestSetContext(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectedRoute, reqCtx.Route)
 			}
+
+			assert.Equal(t, tt.routeParams, reqCtx.RouteParams)
 
 			// Verify basic request data is captured
 			assert.NotEmpty(t, reqCtx.URL, "URL should not be empty")
