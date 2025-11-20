@@ -1,6 +1,9 @@
-.PHONY: run
+PORT ?= 8080
+
+.PHONY: run build start-database
+
 run:
-	go run -toolexec="orchestrion toolexec" -v gin-postgres
+	PORT=$(PORT) go run -toolexec="orchestrion toolexec" -v gin-postgres
 
 build:
 	go build -toolexec="orchestrion toolexec" -v gin-postgres

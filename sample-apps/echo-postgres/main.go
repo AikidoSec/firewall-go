@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/labstack/echo/v4"
@@ -35,7 +36,7 @@ func main() {
 	defineAPIRoutes(e, db)
 
 	// Start the server
-	err = e.Start(":8082")
+	err = e.Start(":" + os.Getenv("PORT"))
 	if err != nil {
 		log.Fatal(err)
 	}
