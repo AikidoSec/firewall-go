@@ -35,3 +35,22 @@ endif
 	@$(MAKE) run-tests APP=$(APP) || ($(MAKE) stop-app APP=$(APP); exit 1)
 	@$(MAKE) stop-app APP=$(APP)
 	@echo "✓ All tests completed successfully"
+
+test-interactive:
+	@if ! command -v fzf >/dev/null 2>&1; then \
+		echo "❌ fzf is not installed. Install it with: brew install fzf"; \
+		exit 1; \
+	fi
+	@APPS=$$(find ../sample-apps -mindepth 1 -maxdepth 1 -type d ! -name databases -exec basename {} \; | fzf --multi --prompt="Select apps to test (TAB to select multiple): " --height=40% --border); \
+	if [ -z "$$APPS" ]; then \
+		echo "No apps selected"; \
+		exit 1; \
+	fi; \
+	echo "Testing apps: $$APPS"; \
+	for app in $$APPS; do \
+		echo ""; \
+		echo "=== Testing $$app ==="; \
+		$(MAKE) test-app APP=$$app || exit 1; \
+	done; \
+	echo ""; \
+	echo "✓ All selected apps tested successfully"
