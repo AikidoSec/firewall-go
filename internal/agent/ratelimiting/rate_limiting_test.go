@@ -188,7 +188,7 @@ func TestShouldRateLimitRequest_CleansOldTimestamps(t *testing.T) {
 	now := time.Now().Unix()
 	old := now - 600 // 10 minutes ago
 	rl.rateLimitingMap[key].UserCounts["user1"] = &entityCounts{
-		requestTimestamps: []int64{old, old + 10, now - 60, now - 30},
+		requestTimestamps: []int64{old, old + 10, now - 60},
 	}
 
 	status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "")

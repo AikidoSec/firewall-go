@@ -99,6 +99,15 @@ func getOrCreateCounts(m map[string]*entityCounts, key string) *entityCounts {
 	return counts
 }
 
+// updateEntityCounts updates the counts for a single entity (user or IP)
+func updateEntityCounts(m map[string]*entityCounts, key string, windowStart, now int64) {
+	counts := getOrCreateCounts(m, key)
+	if counts != nil {
+		cleanOldTimestamps(counts, windowStart)
+		counts.requestTimestamps = append(counts.requestTimestamps, now)
+	}
+}
+
 // ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
 func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user string, ip string) *Status {
 	rl.mu.Lock()
@@ -114,9 +123,10 @@ func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user 
 
 	if user != "" {
 		// If the user exists, we only try to rate limit by user
+
+		updateEntityCounts(rateLimitingDataForRoute.UserCounts, user, windowStart, now)
 		if counts, exists := rateLimitingDataForRoute.UserCounts[user]; exists {
 			cleanOldTimestamps(counts, windowStart)
-			counts.requestTimestamps = append(counts.requestTimestamps, now)
 
 			if len(counts.requestTimestamps) >= rateLimitingDataForRoute.Config.MaxRequests {
 				log.Info("Rate limited request for user",
@@ -129,9 +139,10 @@ func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user 
 		}
 	} else if ip != "" {
 		// Otherwise, we rate limit by ip
+
+		updateEntityCounts(rateLimitingDataForRoute.IPCounts, ip, windowStart, now)
 		if counts, exists := rateLimitingDataForRoute.IPCounts[ip]; exists {
 			cleanOldTimestamps(counts, windowStart)
-			counts.requestTimestamps = append(counts.requestTimestamps, now)
 
 			if len(counts.requestTimestamps) >= rateLimitingDataForRoute.Config.MaxRequests {
 				log.Info("Rate limited request for ip",
@@ -162,16 +173,21 @@ func (rl *RateLimiter) cleanupInactive() {
 }
 
 func cleanupInactiveMap(m map[string]*entityCounts, now, threshold int64) {
+	keysToDelete := make([]string, 0)
 	for key, counts := range m {
 		if len(counts.requestTimestamps) == 0 {
-			delete(m, key)
+			keysToDelete = append(keysToDelete, key)
 			continue
 		}
 		// Check last timestamp
 		lastRequest := counts.requestTimestamps[len(counts.requestTimestamps)-1]
 		if now-lastRequest > threshold {
-			delete(m, key)
+			keysToDelete = append(keysToDelete, key)
 		}
+	}
+	// Delete after iteration to avoid modifying map during iteration
+	for _, key := range keysToDelete {
+		delete(m, key)
 	}
 }
 
