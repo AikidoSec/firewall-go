@@ -61,6 +61,18 @@ func TestSetContext(t *testing.T) {
 			},
 			expectedRoute: "/test/path", // Will be set from request URL
 		},
+		{
+			name:          "trim trailing slash",
+			route:         "/test/slash/",
+			source:        "test",
+			expectedRoute: "/test/slash",
+		},
+		{
+			name:          "don't trim root slash",
+			route:         "/",
+			source:        "test",
+			expectedRoute: "/",
+		},
 	}
 
 	for _, tt := range tests {
