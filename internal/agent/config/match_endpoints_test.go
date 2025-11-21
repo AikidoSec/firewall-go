@@ -1,4 +1,4 @@
-package http
+package config
 
 import (
 	"testing"
@@ -18,27 +18,27 @@ func sampleRouteMetadata(url, method, route string) RouteMetadata {
 
 func TestMatchEndpoints(t *testing.T) {
 	t.Run("testInvalidUrlAndNoRoute", func(t *testing.T) {
-		result := MatchEndpoints(sampleRouteMetadata("abc", "", ""), nil)
+		result := MatchEndpoints(sampleRouteMetadata("abc", "", ""))
 		assert.Nil(t, result)
 	})
 
 	t.Run("testNoUrlAndNoRoute", func(t *testing.T) {
-		result := MatchEndpoints(sampleRouteMetadata("", "POST", ""), nil)
+		result := MatchEndpoints(sampleRouteMetadata("", "POST", ""))
 		assert.Nil(t, result)
 	})
 
 	t.Run("testNoMethod", func(t *testing.T) {
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "", "/posts/:id"), nil)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "", "/posts/:id"))
 		assert.Nil(t, result)
 	})
 
 	t.Run("testItReturnsUndefinedIfNothingFound", func(t *testing.T) {
-		result := MatchEndpoints(sampleRouteMetadata("", "", ""), nil)
+		result := MatchEndpoints(sampleRouteMetadata("", "", ""))
 		assert.Nil(t, result)
 	})
 
 	t.Run("testItReturnsEndpointBasedOnRoute", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/:number",
@@ -51,12 +51,13 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "POST", "/posts/:number"), endpoints)
-		assert.Equal(t, endpoints, result)
+
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "POST", "/posts/:number"))
+		assert.Equal(t, serviceConfig.Endpoints, result)
 	})
 
 	t.Run("testItReturnsEndpointBasedOnRelativeUrl", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/:number",
@@ -69,12 +70,12 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("/posts/3", "POST", "/posts/:number"), endpoints)
-		assert.Equal(t, endpoints, result)
+		result := MatchEndpoints(sampleRouteMetadata("/posts/3", "POST", "/posts/:number"))
+		assert.Equal(t, serviceConfig.Endpoints, result)
 	})
 
 	t.Run("testItReturnsEndpointBasedOnWildcard", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
@@ -87,12 +88,12 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "POST", "/posts/:number"), endpoints)
-		assert.Equal(t, endpoints, result)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3", "POST", "/posts/:number"))
+		assert.Equal(t, serviceConfig.Endpoints, result)
 	})
 
 	t.Run("testItReturnsEndpointBasedOnWildcardWithRelativeUrl", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
@@ -105,12 +106,12 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("/posts/3", "POST", "/posts/:number"), endpoints)
-		assert.Equal(t, endpoints, result)
+		result := MatchEndpoints(sampleRouteMetadata("/posts/3", "POST", "/posts/:number"))
+		assert.Equal(t, serviceConfig.Endpoints, result)
 	})
 
 	t.Run("testItFavorsMoreSpecificWildcard", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
@@ -136,15 +137,15 @@ func TestMatchEndpoints(t *testing.T) {
 		}
 
 		expected := []aikido_types.Endpoint{
-			endpoints[1],
-			endpoints[0],
+			serviceConfig.Endpoints[1],
+			serviceConfig.Endpoints[0],
 		}
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "POST", "/posts/:number/comments/:number"), endpoints)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "POST", "/posts/:number/comments/:number"))
 		assert.Equal(t, expected, result)
 	})
 
 	t.Run("testItMatchesWildcardRouteWithSpecificMethod", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/*/comments/*",
@@ -157,12 +158,12 @@ func TestMatchEndpoints(t *testing.T) {
 				ForceProtectionOff: false,
 			},
 		}
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "POST", "/posts/:number/comments/:number"), endpoints)
-		assert.Equal(t, endpoints, result)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/posts/3/comments/10", "POST", "/posts/:number/comments/:number"))
+		assert.Equal(t, serviceConfig.Endpoints, result)
 	})
 
 	t.Run("testItPrefersSpecificRouteOverWildcard", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/api/*",
@@ -188,11 +189,11 @@ func TestMatchEndpoints(t *testing.T) {
 		}
 
 		expected := []aikido_types.Endpoint{
-			endpoints[1],
-			endpoints[0],
+			serviceConfig.Endpoints[1],
+			serviceConfig.Endpoints[0],
 		}
 
-		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/api/coach", "POST", "/api/coach"), endpoints)
+		result := MatchEndpoints(sampleRouteMetadata("http://localhost:4000/api/coach", "POST", "/api/coach"))
 		assert.Equal(t, expected, result)
 	})
 
@@ -201,7 +202,7 @@ func TestMatchEndpoints(t *testing.T) {
 			"http://localhost:4000/api/test", "POST", "/api/test",
 		)
 
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "*",
 				Route:  "/api/test",
@@ -227,10 +228,10 @@ func TestMatchEndpoints(t *testing.T) {
 		}
 
 		expected := []aikido_types.Endpoint{
-			endpoints[1],
-			endpoints[0],
+			serviceConfig.Endpoints[1],
+			serviceConfig.Endpoints[0],
 		}
-		result := MatchEndpoints(routeMetadata, endpoints)
+		result := MatchEndpoints(routeMetadata)
 		assert.Equal(t, expected, result)
 	})
 
@@ -239,7 +240,7 @@ func TestMatchEndpoints(t *testing.T) {
 			"http://localhost:4000/api/test", "POST", "/api/test",
 		)
 
-		endpoints := []aikido_types.Endpoint{
+		serviceConfig.Endpoints = []aikido_types.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/api/test",
@@ -265,10 +266,10 @@ func TestMatchEndpoints(t *testing.T) {
 		}
 
 		expected := []aikido_types.Endpoint{
-			endpoints[0],
-			endpoints[1],
+			serviceConfig.Endpoints[0],
+			serviceConfig.Endpoints[1],
 		}
-		result := MatchEndpoints(routeMetadata, endpoints)
+		result := MatchEndpoints(routeMetadata)
 		assert.Equal(t, expected, result)
 	})
 }

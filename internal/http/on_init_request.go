@@ -36,9 +36,8 @@ func OnInitRequest(ctx context.Context) *Response {
 		return &Response{403, msg}
 	}
 
-	matches := MatchEndpoints(
-		RouteMetadata{URL: reqCtx.URL, Method: reqCtx.Method, Route: reqCtx.Route},
-		config.GetEndpoints(),
+	matches := config.MatchEndpoints(
+		config.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.Method, Route: reqCtx.Route},
 	)
 	// IP Allowlists per route
 	if !ipAllowedToAccessRoute(ip, matches) {

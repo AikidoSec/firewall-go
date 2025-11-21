@@ -1,4 +1,4 @@
-package http
+package config
 
 import (
 	"regexp"
@@ -16,7 +16,9 @@ type RouteMetadata struct {
 }
 
 // MatchEndpoints finds matching endpoints based on the provided context.
-func MatchEndpoints(context RouteMetadata, endpoints []aikido_types.Endpoint) []aikido_types.Endpoint {
+func MatchEndpoints(context RouteMetadata) []aikido_types.Endpoint {
+	endpoints := GetEndpoints()
+
 	var matches []aikido_types.Endpoint
 
 	if context.Method == "" {
