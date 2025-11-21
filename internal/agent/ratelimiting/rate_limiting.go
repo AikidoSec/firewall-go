@@ -36,9 +36,10 @@ type endpointKey struct {
 
 // endpointData holds the rate limiting configuration and counts for an endpoint
 type endpointData struct {
-	Config     rateLimitConfig
-	UserCounts map[string]*entityCounts
-	IPCounts   map[string]*entityCounts
+	Config      rateLimitConfig
+	UserCounts  map[string]*entityCounts
+	GroupCounts map[string]*entityCounts
+	IPCounts    map[string]*entityCounts
 }
 
 // Status represents the result of a rate limiting check
@@ -98,6 +99,7 @@ func (rl *RateLimiter) advanceQueues() {
 
 	for _, endpoint := range rl.rateLimitingMap {
 		advanceQueuesForMap(&endpoint.Config, endpoint.UserCounts)
+		advanceQueuesForMap(&endpoint.Config, endpoint.GroupCounts)
 		advanceQueuesForMap(&endpoint.Config, endpoint.IPCounts)
 	}
 }
@@ -181,7 +183,7 @@ func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string
 }
 
 // UpdateCounts updates the rate limiting counts for a given route, user, and IP
-func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip string) {
+func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip string, group string) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
@@ -197,6 +199,10 @@ func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip
 
 	incrementRateLimitingCounts(rateLimitingData.UserCounts, user)
 	incrementRateLimitingCounts(rateLimitingData.IPCounts, ip)
+
+	if group != "" {
+		incrementRateLimitingCounts(rateLimitingData.GroupCounts, group)
+	}
 }
 
 func isRateLimitingThresholdExceeded(config *rateLimitConfig, countsMap map[string]*entityCounts, key string) bool {
@@ -209,7 +215,7 @@ func isRateLimitingThresholdExceeded(config *rateLimitConfig, countsMap map[stri
 }
 
 // GetStatus checks if a request should be rate limited based on user or IP
-func (rl *RateLimiter) GetStatus(method string, route string, user string, ip string) *Status {
+func (rl *RateLimiter) GetStatus(method string, route string, user string, ip string, group string) *Status {
 	rl.mu.RLock()
 	defer rl.mu.RUnlock()
 
@@ -223,7 +229,18 @@ func (rl *RateLimiter) GetStatus(method string, route string, user string, ip st
 		return &Status{Block: false}
 	}
 
-	if user != "" {
+	switch {
+	case group != "":
+		// If the group exists, we only try to rate limit by group
+		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.GroupCounts, group) {
+			log.Info("Rate limited request for group",
+				slog.String("group", group),
+				slog.String("method", method),
+				slog.String("route", route),
+				slog.Any("counts", rateLimitingDataForRoute.GroupCounts[group]))
+			return &Status{Block: true, Trigger: "group"}
+		}
+	case user != "":
 		// If the user exists, we only try to rate limit by user
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.UserCounts, user) {
 			log.Info("Rate limited request for user",
@@ -233,7 +250,7 @@ func (rl *RateLimiter) GetStatus(method string, route string, user string, ip st
 				slog.Any("counts", rateLimitingDataForRoute.UserCounts[user]))
 			return &Status{Block: true, Trigger: "user"}
 		}
-	} else {
+	default:
 		// Otherwise, we rate limit by ip
 		if isRateLimitingThresholdExceeded(&rateLimitingDataForRoute.Config, rateLimitingDataForRoute.IPCounts, ip) {
 			log.Info("Rate limited request for ip",
@@ -306,9 +323,10 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 
 		// Create new entry
 		newMap[k] = &endpointData{
-			Config:     newConfig,
-			UserCounts: make(map[string]*entityCounts),
-			IPCounts:   make(map[string]*entityCounts),
+			Config:      newConfig,
+			UserCounts:  make(map[string]*entityCounts),
+			GroupCounts: make(map[string]*entityCounts),
+			IPCounts:    make(map[string]*entityCounts),
 		}
 	}
 
@@ -333,14 +351,14 @@ func Uninit() {
 	globalRateLimiter.Uninit()
 }
 
-func GetStatus(method string, route string, user string, ip string) *Status {
-	return globalRateLimiter.GetStatus(method, route, user, ip)
+func GetStatus(method string, route string, user string, ip string, group string) *Status {
+	return globalRateLimiter.GetStatus(method, route, user, ip, group)
 }
 
 func UpdateConfig(endpoints []EndpointConfig) {
 	globalRateLimiter.UpdateConfig(endpoints)
 }
 
-func UpdateCounts(method string, route string, user string, ip string) {
-	globalRateLimiter.UpdateCounts(method, route, user, ip)
+func UpdateCounts(method string, route string, user string, ip string, group string) {
+	globalRateLimiter.UpdateCounts(method, route, user, ip, group)
 }

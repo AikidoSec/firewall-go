@@ -79,12 +79,13 @@ func TestUpdateCounts(t *testing.T) {
 			MaxRequests:         10,
 			WindowSizeInMinutes: 5,
 		},
-		UserCounts: make(map[string]*entityCounts),
-		IPCounts:   make(map[string]*entityCounts),
+		UserCounts:  make(map[string]*entityCounts),
+		GroupCounts: make(map[string]*entityCounts),
+		IPCounts:    make(map[string]*entityCounts),
 	}
 
 	// Test updating counts for user and IP
-	rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+	rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
 	value := rl.rateLimitingMap[key]
 	require.NotNil(t, value)
@@ -92,14 +93,22 @@ func TestUpdateCounts(t *testing.T) {
 	assert.Equal(t, 1, value.IPCounts["192.168.1.1"].TotalNumberOfRequests)
 
 	// Update again
-	rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+	rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
 	value = rl.rateLimitingMap[key]
 	assert.Equal(t, 2, value.UserCounts["user1"].TotalNumberOfRequests)
 	assert.Equal(t, 2, value.IPCounts["192.168.1.1"].TotalNumberOfRequests)
 
 	// Test with non-existent route (should do nothing)
-	rl.UpdateCounts("POST", "/api/other", "user1", "192.168.1.1")
+	rl.UpdateCounts("POST", "/api/other", "user1", "192.168.1.1", "")
+
+	// Test updating counts with group
+	rl.UpdateCounts("GET", "/api/test", "user2", "192.168.1.2", "group1")
+
+	value = rl.rateLimitingMap[key]
+	assert.Equal(t, 1, value.UserCounts["user2"].TotalNumberOfRequests)
+	assert.Equal(t, 1, value.IPCounts["192.168.1.2"].TotalNumberOfRequests)
+	assert.Equal(t, 1, value.GroupCounts["group1"].TotalNumberOfRequests)
 }
 
 func TestAdvanceQueuesForMap(t *testing.T) {
@@ -148,7 +157,8 @@ func TestAdvanceQueues(t *testing.T) {
 				NumberOfRequestsPerWindow: queue{items: []int{2, 3}},
 			},
 		},
-		IPCounts: make(map[string]*entityCounts),
+		GroupCounts: make(map[string]*entityCounts),
+		IPCounts:    make(map[string]*entityCounts),
 	}
 
 	rl.rateLimitingMap[key2] = &endpointData{
@@ -206,7 +216,7 @@ func TestGetStatus(t *testing.T) {
 	t.Run("non-existent route returns no block", func(t *testing.T) {
 		rl := New()
 
-		status := rl.GetStatus("POST", "/api/other", "user1", "192.168.1.1")
+		status := rl.GetStatus("POST", "/api/other", "user1", "192.168.1.1", "")
 
 		assert.NotNil(t, status)
 		assert.False(t, status.Block)
@@ -222,10 +232,10 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "")
 
 		assert.False(t, status.Block)
 	})
@@ -239,11 +249,11 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "")
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "user", status.Trigger)
@@ -258,11 +268,11 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1", "")
 
-		status := rl.GetStatus("GET", "/api/test", "", "192.168.1.1")
+		status := rl.GetStatus("GET", "/api/test", "", "192.168.1.1", "")
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "ip", status.Trigger)
@@ -277,12 +287,71 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("POST", "/api/other", "", "192.168.1.2")
-		rl.UpdateCounts("POST", "/api/other", "", "192.168.1.2")
+		rl.UpdateCounts("POST", "/api/other", "", "192.168.1.2", "")
+		rl.UpdateCounts("POST", "/api/other", "", "192.168.1.2", "")
 
-		status := rl.GetStatus("POST", "/api/other", "", "192.168.1.2")
+		status := rl.GetStatus("POST", "/api/other", "", "192.168.1.2", "")
 
 		assert.False(t, status.Block)
+	})
+
+	t.Run("group at threshold blocked", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:      rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts:  make(map[string]*entityCounts),
+			GroupCounts: make(map[string]*entityCounts),
+			IPCounts:    make(map[string]*entityCounts),
+		}
+
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "group1")
+
+		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "group1")
+
+		assert.True(t, status.Block)
+		assert.Equal(t, "group", status.Trigger)
+	})
+
+	t.Run("group below threshold not blocked", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "POST", Route: "/api/other"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:      rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 5},
+			UserCounts:  make(map[string]*entityCounts),
+			GroupCounts: make(map[string]*entityCounts),
+			IPCounts:    make(map[string]*entityCounts),
+		}
+
+		rl.UpdateCounts("POST", "/api/other", "user1", "192.168.1.2", "group1")
+		rl.UpdateCounts("POST", "/api/other", "user1", "192.168.1.2", "group1")
+
+		status := rl.GetStatus("POST", "/api/other", "user1", "192.168.1.2", "group1")
+
+		assert.False(t, status.Block)
+	})
+
+	t.Run("group takes precedence over user", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:      rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts:  make(map[string]*entityCounts),
+			GroupCounts: make(map[string]*entityCounts),
+			IPCounts:    make(map[string]*entityCounts),
+		}
+
+		// Update user counts but not group counts
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "group1")
+
+		// Should block by group, not user
+		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		assert.True(t, status.Block)
+		assert.Equal(t, "group", status.Trigger)
 	})
 }
 
@@ -294,8 +363,9 @@ func TestGetStatus_Concurrent(t *testing.T) {
 			MaxRequests:         100,
 			WindowSizeInMinutes: 5,
 		},
-		UserCounts: make(map[string]*entityCounts),
-		IPCounts:   make(map[string]*entityCounts),
+		UserCounts:  make(map[string]*entityCounts),
+		GroupCounts: make(map[string]*entityCounts),
+		IPCounts:    make(map[string]*entityCounts),
 	}
 
 	// Concurrent updates and reads
@@ -304,8 +374,8 @@ func TestGetStatus_Concurrent(t *testing.T) {
 	for range 10 {
 		go func() {
 			for range 10 {
-				rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-				rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+				rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+				rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "")
 			}
 			wg.Done()
 		}()
@@ -350,6 +420,7 @@ func TestUpdateConfig(t *testing.T) {
 		assert.Equal(t, 10, value1.Config.MaxRequests)
 		assert.Equal(t, 5, value1.Config.WindowSizeInMinutes)
 		assert.NotNil(t, value1.UserCounts)
+		assert.NotNil(t, value1.GroupCounts)
 		assert.NotNil(t, value1.IPCounts)
 
 		key2 := endpointKey{Method: "POST", Route: "/api/create"}
@@ -533,21 +604,21 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// /api/test should match /api/*
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block after exceeding limit on wildcard route")
 
 		// /api/users/123 should also match /api/*
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.UpdateCounts("POST", "/api/users/123", "user2", "192.168.1.2")
-		rl2.UpdateCounts("POST", "/api/users/123", "user2", "192.168.1.2")
-		rl2.UpdateCounts("POST", "/api/users/123", "user2", "192.168.1.2")
+		rl2.UpdateCounts("POST", "/api/users/123", "user2", "192.168.1.2", "")
+		rl2.UpdateCounts("POST", "/api/users/123", "user2", "192.168.1.2", "")
+		rl2.UpdateCounts("POST", "/api/users/123", "user2", "192.168.1.2", "")
 
-		status2 := rl2.GetStatus("POST", "/api/users/123", "user2", "192.168.1.2")
+		status2 := rl2.GetStatus("POST", "/api/users/123", "user2", "192.168.1.2", "")
 		assert.True(t, status2.Block, "should block after exceeding limit on another route matching wildcard")
 	})
 
@@ -574,20 +645,20 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// POST requests should match
-		rl.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1")
+		rl.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.GetStatus("POST", "/api/test", "user1", "192.168.1.1")
+		status := rl.GetStatus("POST", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block POST requests matching wildcard")
 
 		// GET requests should not match
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl2.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl2.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+		rl2.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl2.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl2.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status2 := rl2.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		status2 := rl2.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.False(t, status2.Block, "should not block GET requests when wildcard is for POST only")
 	})
 
@@ -629,20 +700,20 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 			rl.UpdateConfig(endpoints)
 
 			// /api/posts/123 matches both wildcards, but should use the most restrictive one (2 requests)
-			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1")
-			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1")
+			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1", "")
+			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 
-			status := rl.GetStatus("GET", "/api/posts/123", "user1", "192.168.1.1")
+			status := rl.GetStatus("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 			assert.True(t, status.Block, "should block based on most restrictive wildcard limit (2 requests)")
 
 			// /api/users/123 only matches /api/*, so should use that limit (10 requests)
 			rl2 := New()
 			rl2.UpdateConfig(endpoints)
-			rl2.UpdateCounts("GET", "/api/users/123", "user1", "192.168.1.1")
-			rl2.UpdateCounts("GET", "/api/users/123", "user1", "192.168.1.1")
-			rl2.UpdateCounts("GET", "/api/users/123", "user1", "192.168.1.1")
+			rl2.UpdateCounts("GET", "/api/users/123", "user1", "192.168.1.1", "")
+			rl2.UpdateCounts("GET", "/api/users/123", "user1", "192.168.1.1", "")
+			rl2.UpdateCounts("GET", "/api/users/123", "user1", "192.168.1.1", "")
 
-			status2 := rl2.GetStatus("GET", "/api/users/123", "user1", "192.168.1.1")
+			status2 := rl2.GetStatus("GET", "/api/users/123", "user1", "192.168.1.1", "")
 			assert.False(t, status2.Block, "should not block based on wildcard limit (10 requests)")
 		})
 
@@ -682,10 +753,10 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 			rl.UpdateConfig(endpoints)
 
 			// /api/posts/123 matches both wildcards, should use the most restrictive one (/api/* with 2 requests)
-			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1")
-			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1")
+			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1", "")
+			rl.UpdateCounts("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 
-			status := rl.GetStatus("GET", "/api/posts/123", "user1", "192.168.1.1")
+			status := rl.GetStatus("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 			assert.True(t, status.Block, "should block based on most restrictive rate (2 requests from /api/*), not specificity")
 		})
 	})
@@ -726,20 +797,20 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// /api/test should match the exact route, not the wildcard
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block based on exact route limit (2 requests), not wildcard")
 
 		// /api/other should match the wildcard
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.UpdateCounts("GET", "/api/other", "user1", "192.168.1.1")
-		rl2.UpdateCounts("GET", "/api/other", "user1", "192.168.1.1")
-		rl2.UpdateCounts("GET", "/api/other", "user1", "192.168.1.1")
+		rl2.UpdateCounts("GET", "/api/other", "user1", "192.168.1.1", "")
+		rl2.UpdateCounts("GET", "/api/other", "user1", "192.168.1.1", "")
+		rl2.UpdateCounts("GET", "/api/other", "user1", "192.168.1.1", "")
 
-		status2 := rl2.GetStatus("GET", "/api/other", "user1", "192.168.1.1")
+		status2 := rl2.GetStatus("GET", "/api/other", "user1", "192.168.1.1", "")
 		assert.False(t, status2.Block, "should not block based on wildcard limit (10 requests)")
 	})
 
@@ -779,20 +850,20 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// GET /api/test should match the exact method (GET), not the wildcard method (*)
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block based on exact method limit (2 requests), not wildcard method")
 
 		// POST /api/test should match the wildcard method (*)
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1")
-		rl2.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1")
-		rl2.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1")
+		rl2.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1", "")
+		rl2.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1", "")
+		rl2.UpdateCounts("POST", "/api/test", "user1", "192.168.1.1", "")
 
-		status2 := rl2.GetStatus("POST", "/api/test", "user1", "192.168.1.1")
+		status2 := rl2.GetStatus("POST", "/api/test", "user1", "192.168.1.1", "")
 		assert.False(t, status2.Block, "should not block based on wildcard method limit (10 requests)")
 	})
 

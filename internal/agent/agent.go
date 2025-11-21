@@ -82,17 +82,18 @@ func OnDomain(domain string, port uint32) {
 	stateCollector.StoreHostname(domain, port)
 }
 
-func GetRateLimitingStatus(method string, route string, user string, ip string) *ratelimiting.Status {
+func GetRateLimitingStatus(method string, route string, user string, ip string, group string) *ratelimiting.Status {
 	log.Debug("Received rate limiting info",
 		slog.String("method", method),
 		slog.String("route", route),
 		slog.String("user", user),
+		slog.String("group", user),
 		slog.String("ip", ip))
 
-	return ratelimiting.GetStatus(method, route, user, ip)
+	return ratelimiting.GetStatus(method, route, user, ip, group)
 }
 
-func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
+func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, rateLimitGroup string, apiSpec *aikido_types.APISpec) {
 	log.Debug("Received request metadata",
 		slog.String("method", method),
 		slog.String("route", route),
@@ -102,7 +103,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 	go storeStats()
 	go stateCollector.StoreRoute(method, route, apiSpec)
-	go ratelimiting.UpdateCounts(method, route, user, ip)
+	go ratelimiting.UpdateCounts(method, route, user, ip, rateLimitGroup)
 }
 
 func OnUser(id string, username string, ip string) {

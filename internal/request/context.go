@@ -22,6 +22,7 @@ type Context struct {
 	Route              string
 	executedMiddleware bool
 	user               *User
+	rateLimitGroup     string
 
 	deferredAttack *DeferredAttack
 
@@ -50,6 +51,20 @@ func (ctx *Context) GetUserID() string {
 		return ctx.user.ID
 	}
 	return "" // Empty ID
+}
+
+func (ctx *Context) SetRateLimitGroup(id string) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	ctx.rateLimitGroup = id
+}
+
+func (ctx *Context) GetRateLimitGroup() string {
+	ctx.mu.RLock()
+	defer ctx.mu.RUnlock()
+
+	return ctx.rateLimitGroup
 }
 
 // MarkMiddlewareExecuted marks the middleware as executed.
