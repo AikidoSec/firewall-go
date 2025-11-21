@@ -99,6 +99,15 @@ func getOrCreateCounts(m map[string]*entityCounts, key string) *entityCounts {
 	return counts
 }
 
+// updateEntityCounts updates the counts for a single entity (user or IP)
+func updateEntityCounts(m map[string]*entityCounts, key string, windowStart, now int64) {
+	counts := getOrCreateCounts(m, key)
+	if counts != nil {
+		cleanOldTimestamps(counts, windowStart)
+		counts.requestTimestamps = append(counts.requestTimestamps, now)
+	}
+}
+
 // UpdateCounts updates the rate limiting counts for a given route, user, and IP
 func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip string) {
 	rl.mu.Lock()
@@ -112,21 +121,8 @@ func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip
 	now := time.Now().Unix()
 	windowStart := now - int64(rateLimitingData.Config.WindowSizeInMinutes*60)
 
-	if user != "" {
-		counts := getOrCreateCounts(rateLimitingData.UserCounts, user)
-		if counts != nil {
-			cleanOldTimestamps(counts, windowStart)
-			counts.requestTimestamps = append(counts.requestTimestamps, now)
-		}
-	}
-
-	if ip != "" {
-		counts := getOrCreateCounts(rateLimitingData.IPCounts, ip)
-		if counts != nil {
-			cleanOldTimestamps(counts, windowStart)
-			counts.requestTimestamps = append(counts.requestTimestamps, now)
-		}
-	}
+	updateEntityCounts(rateLimitingData.UserCounts, user, windowStart, now)
+	updateEntityCounts(rateLimitingData.IPCounts, ip, windowStart, now)
 }
 
 // GetStatus checks if a request should be rate limited based on user or IP
@@ -188,16 +184,21 @@ func (rl *RateLimiter) cleanupInactive() {
 }
 
 func cleanupInactiveMap(m map[string]*entityCounts, now, threshold int64) {
+	keysToDelete := make([]string, 0)
 	for key, counts := range m {
 		if len(counts.requestTimestamps) == 0 {
-			delete(m, key)
+			keysToDelete = append(keysToDelete, key)
 			continue
 		}
 		// Check last timestamp
 		lastRequest := counts.requestTimestamps[len(counts.requestTimestamps)-1]
 		if now-lastRequest > threshold {
-			delete(m, key)
+			keysToDelete = append(keysToDelete, key)
 		}
+	}
+	// Delete after iteration to avoid modifying map during iteration
+	for _, key := range keysToDelete {
+		delete(m, key)
 	}
 }
 
