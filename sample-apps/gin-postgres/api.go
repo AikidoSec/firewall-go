@@ -34,7 +34,12 @@ func defineAPIRoutes(r *gin.Engine, db *DatabaseHelper) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		rowsCreated, _ := db.CreatePetByName(c, req.Name)
+		rowsCreated, err := db.CreatePetByName(c, req.Name)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		c.String(http.StatusOK, "%d", rowsCreated)
 	})
 

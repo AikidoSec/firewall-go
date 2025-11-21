@@ -2,9 +2,9 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/zen"
@@ -32,16 +32,16 @@ func main() {
 	defineAPIRoutes(mux, db)
 
 	// Start the server
-	port := 8084
+	port := os.Getenv("PORT")
 
 	server := &http.Server{
-		Addr:              fmt.Sprintf(":%d", port),
+		Addr:              ":" + port,
 		Handler:           handler,
 		ReadHeaderTimeout: 2 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
 
-	log.Printf("Starting HTTP server on :%d\n", port)
+	log.Printf("Starting HTTP server on :%s\n", port)
 	if err = server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
