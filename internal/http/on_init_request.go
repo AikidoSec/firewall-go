@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -24,9 +25,8 @@ func OnInitRequest(ctx context.Context) *Response {
 
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
 	ip := reqCtx.GetIP()
-	if ipBlocked, _ := config.IsIPBlocked(ip); ipBlocked {
-		msg := "Your IP address is not allowed to access this resource."
-		msg += " (Your IP: " + ip + ")"
+	if ipBlocked, reason := config.IsIPBlocked(ip); ipBlocked {
+		msg := fmt.Sprintf("Your IP address is blocked due to %s", reason)
 		return &Response{403, msg}
 	}
 

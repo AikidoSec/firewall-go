@@ -48,8 +48,7 @@ func TestOnInitRequest(t *testing.T) {
 
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
-		assert.Contains(t, resp.Message, "Your IP address is not allowed")
-		assert.Contains(t, resp.Message, "127.0.0.1")
+		assert.Contains(t, resp.Message, "Your IP address is blocked due to localhost")
 	})
 
 	t.Run("blocked user agent", func(t *testing.T) {
