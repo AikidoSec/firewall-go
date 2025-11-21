@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -39,11 +40,14 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 	}
 
 	// Check if route has force protection off, if so, we don't run any scans
-	matches := config.MatchEndpoints(config.RouteMetadata{
-		URL:    reqCtx.URL,
-		Method: reqCtx.Method,
-		Route:  reqCtx.Route,
-	})
+	matches := endpoints.FindMatches(
+		config.GetEndpoints(),
+		endpoints.RouteMetadata{
+			URL:    reqCtx.URL,
+			Method: reqCtx.Method,
+			Route:  reqCtx.Route,
+		},
+	)
 	for _, match := range matches {
 		if match.ForceProtectionOff {
 			return nil
