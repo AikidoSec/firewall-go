@@ -208,14 +208,14 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 
 	for _, endpoint := range endpoints {
 		if !endpoint.RateLimiting.Enabled {
-			log.Debug("Skipping disabled rate limiting endpoint", slog.Any("config", endpoint))
+			log.Debug("Skipping disabled rate limiting endpoint", slog.Any("endpoint", endpoint))
 			continue
 		}
 
 		// Validate window size
 		if endpoint.RateLimiting.WindowSizeInMS < MinRateLimitingIntervalInMs ||
 			endpoint.RateLimiting.WindowSizeInMS > MaxRateLimitingIntervalInMs {
-			log.Warn("Invalid rate limiting WindowSizeInMS, skipping", slog.Any("config", endpoint))
+			log.Warn("Invalid rate limiting WindowSizeInMS, skipping", slog.Any("endpoint", endpoint))
 			continue
 		}
 
