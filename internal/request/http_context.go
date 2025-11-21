@@ -26,6 +26,11 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 		route = r.URL.Path // Use path from URL as default.
 	}
 
+	// Trim the trailing slashes from route to normalise for matching with API
+	if route != "/" {
+		route = strings.TrimSuffix(route, "/")
+	}
+
 	var routeParams map[string]string
 	if data.RouteParams != nil {
 		routeParams = maps.Clone(data.RouteParams)
