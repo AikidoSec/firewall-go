@@ -69,6 +69,21 @@ func TestContext_SetUser_GetUserID(t *testing.T) {
 	assert.Empty(t, ctx.GetUserID())
 }
 
+func TestContext_SetRateLimitGroup_GetRateLimitGroup(t *testing.T) {
+	ctx := &Context{}
+
+	// Test initial state
+	assert.Empty(t, ctx.GetRateLimitGroup())
+
+	// Test setting user
+	ctx.SetRateLimitGroup("group")
+	assert.Equal(t, "group", ctx.GetRateLimitGroup())
+
+	// Test setting nil user
+	ctx.SetRateLimitGroup("")
+	assert.Empty(t, ctx.GetRateLimitGroup())
+}
+
 func TestContext_MarkMiddlewareExecuted(t *testing.T) {
 	ctx := &Context{}
 
