@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
@@ -221,4 +222,106 @@ func TestScanWithOptions_NilContext(t *testing.T) {
 	ctx := context.Background()
 	err := ScanWithOptions(ctx, "testOperation", mockVulnerability, args, ScanOptions{})
 	assert.NoError(t, err)
+}
+
+func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
+	ip := "127.0.0.1"
+	args := mockScanArgs{Value: "test"}
+
+	// Enable blocking for tests that expect errors
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer config.SetBlocking(original)
+
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		Block: &block,
+		Endpoints: []aikido_types.Endpoint{
+			{
+				Method:             "POST",
+				Route:              "/api/danger",
+				ForceProtectionOff: true,
+			},
+			{
+				Method:             "*",
+				Route:              "/api/wildcard",
+				ForceProtectionOff: true,
+			},
+			{
+				Method:             "GET",
+				Route:              "/api/safe",
+				ForceProtectionOff: false,
+			},
+		},
+	}, nil)
+
+	tests := []struct {
+		name        string
+		setupReq    func() *http.Request
+		body        any
+		routeParams map[string]string
+		expectError bool
+		description string
+	}{
+		{
+			name: "force protection off should not scan",
+			setupReq: func() *http.Request {
+				return httptest.NewRequest("POST", "/api/danger?param1=attack&param2=safe", nil)
+			},
+			body:        nil,
+			expectError: false,
+			description: "route should not have protection",
+		},
+		{
+			name: "wildcards should be respected",
+			setupReq: func() *http.Request {
+				req := httptest.NewRequest("GET", "/api/wildcard", nil)
+				req.Header.Set("X-Custom-Header", "attack")
+				return req
+			},
+			body:        nil,
+			expectError: false,
+			description: "route should match with wildcard method",
+		},
+		{
+			name: "force protection off should still scan",
+			setupReq: func() *http.Request {
+				req := httptest.NewRequest("GET", "/api/safe", nil)
+				req.AddCookie(&http.Cookie{Name: "session", Value: "attack"})
+				return req
+			},
+			body:        nil,
+			expectError: true,
+		},
+		{
+			name: "unmatched routes should scan",
+			setupReq: func() *http.Request {
+				return httptest.NewRequest("GET", "/api/danger?param1=attack&param2=safe", nil)
+			},
+			body:        nil,
+			expectError: true,
+			description: "route should be scanned with force protection off false",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := tt.setupReq()
+			ctx := request.SetContext(context.Background(), req, request.ContextData{
+				Source: "test",
+				// Route:         tt.route,
+				RemoteAddress: &ip,
+				RouteParams:   tt.routeParams,
+				Body:          tt.body,
+			})
+
+			err := ScanWithOptions(ctx, "testOperation", mockVulnerability, args, ScanOptions{})
+			if tt.expectError {
+				require.Error(t, err, tt.description)
+				assert.Contains(t, err.Error(), "SQL injection")
+			} else {
+				assert.NoError(t, err, tt.description)
+			}
+		})
+	}
 }
