@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -37,8 +38,9 @@ func OnInitRequest(ctx context.Context) *Response {
 		return &Response{403, msg}
 	}
 
-	matches := config.MatchEndpoints(
-		config.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.Method, Route: reqCtx.Route},
+	matches := endpoints.FindMatches(
+		config.GetEndpoints(),
+		endpoints.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.Method, Route: reqCtx.Route},
 	)
 	// IP Allowlists per route
 	if !ipAllowedToAccessRoute(ip, matches) {
