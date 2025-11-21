@@ -204,53 +204,56 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	updatedEndpoints := map[endpointKey]bool{}
+	newMap := make(map[endpointKey]*endpointData)
 
-	for _, newEndpointConfig := range endpoints {
-		k := endpointKey{Method: newEndpointConfig.Method, Route: newEndpointConfig.Route}
-		updatedEndpoints[k] = true
+	for _, endpoint := range endpoints {
+		if !endpoint.RateLimiting.Enabled {
+			log.Debug("Skipping disabled rate limiting endpoint", slog.Any("endpoint", endpoint))
+			continue
+		}
 
-		rateLimitingData, exists := rl.rateLimitingMap[k]
-		if exists {
-			if rateLimitingData.Config.MaxRequests == newEndpointConfig.RateLimiting.MaxRequests &&
-				rateLimitingData.Config.WindowSizeInMinutes == millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS) {
-				log.Debug("New rate limiting endpoint config is the same", slog.Any("config", newEndpointConfig))
+		// Validate window size
+		if endpoint.RateLimiting.WindowSizeInMS < MinRateLimitingIntervalInMs ||
+			endpoint.RateLimiting.WindowSizeInMS > MaxRateLimitingIntervalInMs {
+			log.Warn("Invalid rate limiting WindowSizeInMS, skipping", slog.Any("endpoint", endpoint))
+			continue
+		}
+
+		k := endpointKey{Method: endpoint.Method, Route: endpoint.Route}
+		newConfig := rateLimitConfig{
+			MaxRequests:         endpoint.RateLimiting.MaxRequests,
+			WindowSizeInMinutes: millisecondsToMinutes(endpoint.RateLimiting.WindowSizeInMS),
+		}
+
+		// Check if we can preserve existing data
+		if existingData, exists := rl.rateLimitingMap[k]; exists {
+			if existingData.Config == newConfig {
+				// Config unchanged, preserve data
+				log.Debug("Rate limiting config unchanged, preserving data", slog.Any("config", endpoint))
+				newMap[k] = existingData
 				continue
 			}
-
-			log.Info("Rate limiting endpoint config has changed", slog.Any("config", newEndpointConfig))
-			delete(rl.rateLimitingMap, k)
+			log.Info("Rate limiting config changed, resetting data", slog.Any("config", endpoint))
+		} else {
+			log.Info("Adding new rate limiting endpoint", slog.Any("config", endpoint))
 		}
 
-		if !newEndpointConfig.RateLimiting.Enabled {
-			log.Info("Got new rate limiting endpoint config, but is disabled", slog.Any("config", newEndpointConfig))
-			continue
-		}
-
-		if newEndpointConfig.RateLimiting.WindowSizeInMS < MinRateLimitingIntervalInMs ||
-			newEndpointConfig.RateLimiting.WindowSizeInMS > MaxRateLimitingIntervalInMs {
-			log.Warn("Got new rate limiting endpoint config, but WindowSizeInMS is invalid", slog.Any("config", newEndpointConfig))
-			continue
-		}
-
-		log.Info("Got new rate limiting endpoint config and storing to map", slog.Any("config", newEndpointConfig))
-		rl.rateLimitingMap[k] = &endpointData{
-			Config: rateLimitConfig{
-				MaxRequests:         newEndpointConfig.RateLimiting.MaxRequests,
-				WindowSizeInMinutes: millisecondsToMinutes(newEndpointConfig.RateLimiting.WindowSizeInMS),
-			},
+		// Create new entry
+		newMap[k] = &endpointData{
+			Config:     newConfig,
 			UserCounts: make(map[string]*entityCounts),
 			IPCounts:   make(map[string]*entityCounts),
 		}
 	}
 
 	for k := range rl.rateLimitingMap {
-		_, exists := updatedEndpoints[k]
-		if !exists {
-			log.Info("Removed rate limiting entry as it is no longer part of the config", slog.Any("endpoint", k))
-			delete(rl.rateLimitingMap, k)
+		if _, exists := newMap[k]; !exists {
+			log.Info("Removing rate limiting endpoint", slog.Any("endpoint", k))
 		}
 	}
+
+	// Replace the entire map
+	rl.rateLimitingMap = newMap
 }
 
 // global instance

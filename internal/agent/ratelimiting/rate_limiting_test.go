@@ -316,3 +316,195 @@ func TestGetStatus_Concurrent(t *testing.T) {
 	value := rl.rateLimitingMap[key]
 	assert.Equal(t, 100, value.UserCounts["user1"].TotalNumberOfRequests)
 }
+
+func TestUpdateConfig(t *testing.T) {
+	makeEndpointConfig := func(method, route string, enabled bool, maxRequests, windowSizeInMS int) EndpointConfig {
+		return EndpointConfig{
+			Method: method,
+			Route:  route,
+			RateLimiting: struct {
+				Enabled        bool
+				MaxRequests    int
+				WindowSizeInMS int
+			}{
+				Enabled:        enabled,
+				MaxRequests:    maxRequests,
+				WindowSizeInMS: windowSizeInMS,
+			},
+		}
+	}
+
+	t.Run("adds new endpoints", func(t *testing.T) {
+		rl := New()
+
+		endpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", true, 10, 300000),
+			makeEndpointConfig("POST", "/api/create", true, 5, 600000),
+		}
+
+		rl.UpdateConfig(endpoints)
+
+		key1 := endpointKey{Method: "GET", Route: "/api/test"}
+		value1 := rl.rateLimitingMap[key1]
+		require.NotNil(t, value1)
+		assert.Equal(t, 10, value1.Config.MaxRequests)
+		assert.Equal(t, 5, value1.Config.WindowSizeInMinutes)
+		assert.NotNil(t, value1.UserCounts)
+		assert.NotNil(t, value1.IPCounts)
+
+		key2 := endpointKey{Method: "POST", Route: "/api/create"}
+		value2 := rl.rateLimitingMap[key2]
+		require.NotNil(t, value2)
+		assert.Equal(t, 5, value2.Config.MaxRequests)
+		assert.Equal(t, 10, value2.Config.WindowSizeInMinutes)
+	})
+
+	t.Run("preserves data when config unchanged", func(t *testing.T) {
+		rl := New()
+
+		endpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", true, 10, 300000),
+		}
+
+		rl.UpdateConfig(endpoints)
+
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		originalValue := rl.rateLimitingMap[key]
+
+		// Add some data
+		originalValue.UserCounts["user1"] = &entityCounts{TotalNumberOfRequests: 5}
+		originalValue.IPCounts["192.168.1.1"] = &entityCounts{TotalNumberOfRequests: 3}
+
+		// Update with same config
+		rl.UpdateConfig(endpoints)
+
+		updatedValue := rl.rateLimitingMap[key]
+		assert.Equal(t, originalValue, updatedValue, "should be same instance")
+		assert.Equal(t, 5, updatedValue.UserCounts["user1"].TotalNumberOfRequests)
+		assert.Equal(t, 3, updatedValue.IPCounts["192.168.1.1"].TotalNumberOfRequests)
+	})
+
+	t.Run("resets data when config changed", func(t *testing.T) {
+		rl := New()
+
+		initialEndpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", true, 10, 300000),
+		}
+		rl.UpdateConfig(initialEndpoints)
+
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key].UserCounts["user1"] = &entityCounts{TotalNumberOfRequests: 5}
+
+		// Update with different config
+		changedEndpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", true, 20, 300000),
+		}
+		rl.UpdateConfig(changedEndpoints)
+
+		value := rl.rateLimitingMap[key]
+		require.NotNil(t, value)
+		assert.Equal(t, 20, value.Config.MaxRequests)
+		assert.Empty(t, value.UserCounts)
+		assert.Empty(t, value.IPCounts)
+	})
+
+	t.Run("ignores disabled endpoints", func(t *testing.T) {
+		rl := New()
+
+		endpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", false, 10, 300000),
+		}
+
+		rl.UpdateConfig(endpoints)
+
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		assert.Nil(t, rl.rateLimitingMap[key])
+	})
+
+	t.Run("removes disabled endpoints", func(t *testing.T) {
+		rl := New()
+
+		// First add enabled endpoint
+		enabledEndpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", true, 10, 300000),
+		}
+		rl.UpdateConfig(enabledEndpoints)
+
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		require.NotNil(t, rl.rateLimitingMap[key])
+
+		// Now disable it
+		disabledEndpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", false, 10, 300000),
+		}
+		rl.UpdateConfig(disabledEndpoints)
+
+		assert.Nil(t, rl.rateLimitingMap[key])
+	})
+
+	t.Run("ignores invalid window sizes", func(t *testing.T) {
+		tests := []struct {
+			name           string
+			windowSizeInMS int
+		}{
+			{"too small", 1000},
+			{"too large", 4000000},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				rl := New()
+
+				endpoints := []EndpointConfig{
+					makeEndpointConfig("GET", "/api/test", true, 10, tt.windowSizeInMS),
+				}
+
+				rl.UpdateConfig(endpoints)
+
+				key := endpointKey{Method: "GET", Route: "/api/test"}
+				assert.Nil(t, rl.rateLimitingMap[key])
+			})
+		}
+	})
+
+	t.Run("removes endpoints not in new config", func(t *testing.T) {
+		rl := New()
+
+		// Add two endpoints
+		initialEndpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", true, 10, 300000),
+			makeEndpointConfig("POST", "/api/create", true, 5, 600000),
+		}
+		rl.UpdateConfig(initialEndpoints)
+
+		key1 := endpointKey{Method: "GET", Route: "/api/test"}
+		key2 := endpointKey{Method: "POST", Route: "/api/create"}
+		require.NotNil(t, rl.rateLimitingMap[key1])
+		require.NotNil(t, rl.rateLimitingMap[key2])
+
+		// Update with only one endpoint
+		updatedEndpoints := []EndpointConfig{
+			makeEndpointConfig("POST", "/api/create", true, 5, 600000),
+		}
+		rl.UpdateConfig(updatedEndpoints)
+
+		assert.Nil(t, rl.rateLimitingMap[key1])
+		assert.NotNil(t, rl.rateLimitingMap[key2])
+	})
+
+	t.Run("removes all endpoints when config empty", func(t *testing.T) {
+		rl := New()
+
+		// Add an endpoint
+		endpoints := []EndpointConfig{
+			makeEndpointConfig("GET", "/api/test", true, 10, 300000),
+		}
+		rl.UpdateConfig(endpoints)
+		require.NotEmpty(t, rl.rateLimitingMap)
+
+		// Update with empty config
+		rl.UpdateConfig([]EndpointConfig{})
+
+		assert.Empty(t, rl.rateLimitingMap)
+	})
+}
