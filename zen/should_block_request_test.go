@@ -62,6 +62,11 @@ func setupRateLimitingConfig(t *testing.T, method, route string, maxRequests int
 
 func createRequestContext(t *testing.T, method, route, ip string, userID, userName string) context.Context {
 	t.Helper()
+	return createRequestContextWithGroup(t, method, route, ip, userID, userName, "")
+}
+
+func createRequestContextWithGroup(t *testing.T, method, route, ip string, userID, userName, groupID string) context.Context {
+	t.Helper()
 	req := httptest.NewRequest(method, route, nil)
 	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -70,6 +75,9 @@ func createRequestContext(t *testing.T, method, route, ip string, userID, userNa
 	})
 	if userID != "" {
 		zen.SetUser(reqCtx, userID, userName)
+	}
+	if groupID != "" {
+		zen.SetRateLimitGroup(reqCtx, groupID)
 	}
 	return reqCtx
 }
@@ -106,9 +114,9 @@ func TestShouldBlockRequest_RateLimitedByUser(t *testing.T) {
 	setupRateLimitingConfig(t, "GET", "/api/test", 2)
 
 	// Update counts to exceed limit
-	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
 	reqCtx := createRequestContext(t, "GET", "/api/test", "192.168.1.1", "user1", "Test User")
 
@@ -125,10 +133,10 @@ func TestShouldBlockRequest_RateLimitedByIP(t *testing.T) {
 
 	// Update counts to exceed limit (no user, so rate limit by IP)
 	// Use a specific route that matches the wildcard
-	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
-	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
-	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
-	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1", "")
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1", "")
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1", "")
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1", "")
 
 	reqCtx := createRequestContext(t, "POST", "/api/submit", "10.0.0.1", "", "")
 
@@ -144,13 +152,30 @@ func TestShouldBlockRequest_NotRateLimited(t *testing.T) {
 	setupRateLimitingConfig(t, "GET", "/api/test", 5)
 
 	// Update counts but stay below limit
-	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
 	reqCtx := createRequestContext(t, "GET", "/api/test", "192.168.1.1", "user1", "Test User")
 
 	response := zen.ShouldBlockRequest(reqCtx)
 	assert.Nil(t, response)
+}
+
+func TestShouldBlockRequest_RateLimitedByGroup(t *testing.T) {
+	setupRateLimitingConfig(t, "GET", "/api/test", 2)
+
+	// Update counts to exceed limit
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+
+	reqCtx := createRequestContextWithGroup(t, "GET", "/api/test", "192.168.1.1", "user1", "Test User", "group1")
+
+	response := zen.ShouldBlockRequest(reqCtx)
+	require.NotNil(t, response)
+	assert.Equal(t, "rate-limited", response.Type)
+	assert.Equal(t, "group", response.Trigger)
+	assert.Nil(t, response.IP)
 }
 
 // ExampleShouldBlockRequest demonstrates the complete middleware pattern with auth and Zen middleware.
