@@ -26,7 +26,8 @@ func OnInitRequest(ctx context.Context) *Response {
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
 	ip := reqCtx.GetIP()
 	if ipBlocked, reason := config.IsIPBlocked(ip); ipBlocked {
-		msg := fmt.Sprintf("Your IP address is blocked due to %s", reason)
+		msg := fmt.Sprintf("Your IP address is blocked due to %s. (Your IP: %s)", reason, ip)
+
 		return &Response{403, msg}
 	}
 
