@@ -26,8 +26,8 @@ func TestOnInitRequest(t *testing.T) {
 		BlockedIPAddresses: []aikido_types.BlockedIPsData{
 			{
 				Source:      "test",
-				Description: "localhost",
-				IPs:         []string{"127.0.0.1"},
+				Description: "geo-ip",
+				IPs:         []string{"10.0.0.1"},
 			},
 		},
 
@@ -36,8 +36,8 @@ func TestOnInitRequest(t *testing.T) {
 
 	t.Run("blocked ip", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/route", nil)
-		req.RemoteAddr = "127.0.0.1:1234"
-		ip := "127.0.0.1"
+		req.RemoteAddr = "10.0.0.1:1234"
+		ip := "10.0.0.1"
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
 			Route:         "/route",
@@ -48,8 +48,8 @@ func TestOnInitRequest(t *testing.T) {
 
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
-		assert.Contains(t, resp.Message, "Your IP address is blocked due to localhost")
-		assert.Contains(t, resp.Message, "127.0.0.1")
+		assert.Contains(t, resp.Message, "Your IP address is blocked due to geo-ip")
+		assert.Contains(t, resp.Message, "10.0.0.1")
 	})
 
 	t.Run("blocked user agent", func(t *testing.T) {
