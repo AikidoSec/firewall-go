@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
@@ -19,6 +21,7 @@ const (
 type rateLimitConfig struct {
 	MaxRequests         int
 	WindowSizeInMinutes int
+	WindowSizeInMS      int // Store original window size in milliseconds for rate calculation
 }
 
 // endpointKey identifies a specific endpoint for rate limiting
@@ -115,7 +118,12 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	rateLimitingDataForRoute, exists := rl.rateLimitingMap[endpointKey{Method: method, Route: route}]
+	matchingKey := rl.findMatchingRateLimitEndpoint(method, route)
+	if matchingKey == nil {
+		return &Status{Block: false}
+	}
+
+	rateLimitingDataForRoute, exists := rl.rateLimitingMap[*matchingKey]
 	if !exists {
 		return &Status{Block: false}
 	}
@@ -143,6 +151,58 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 	}
 
 	return &Status{Block: false}
+}
+
+// findMatchingRateLimitEndpoint finds the appropriate rate limiting endpoint for a given method and route.
+// It uses [endpoints.FindMatches] to find all matching endpoints, then:
+// 1. Checks for exact route match first
+// 2. If no exact match, selects the most restrictive rate (lowest maxRequests / windowSizeInMS)
+func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string) *endpointKey {
+	var endpointList []aikido_types.Endpoint
+	for key := range rl.rateLimitingMap {
+		endpointList = append(endpointList, aikido_types.Endpoint{
+			Method: key.Method,
+			Route:  key.Route,
+		})
+	}
+
+	matches := endpoints.FindMatches(endpointList, endpoints.RouteMetadata{
+		Method: method,
+		Route:  route,
+	})
+
+	if len(matches) == 0 {
+		return nil
+	}
+
+	// Check for exact route match first ([endpoints.FindMatches] returns exact matches first)
+	for _, match := range matches {
+		if match.Route == route {
+			key := endpointKey{Method: match.Method, Route: match.Route}
+			return &key
+		}
+	}
+
+	// No exact match found, find the most restrictive (lowest rate)
+	var mostRestrictive *endpointKey
+	var lowestRate float64
+
+	for _, match := range matches {
+		key := endpointKey{Method: match.Method, Route: match.Route}
+		data := rl.rateLimitingMap[key]
+		if data.Config.WindowSizeInMS == 0 {
+			continue
+		}
+
+		rate := float64(data.Config.MaxRequests) / float64(data.Config.WindowSizeInMS)
+
+		if mostRestrictive == nil || rate < lowestRate {
+			mostRestrictive = &key
+			lowestRate = rate
+		}
+	}
+
+	return mostRestrictive
 }
 
 // cleanupInactive removes completely inactive users/IPs from the maps
@@ -211,6 +271,7 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 		newConfig := rateLimitConfig{
 			MaxRequests:         endpoint.RateLimiting.MaxRequests,
 			WindowSizeInMinutes: millisecondsToMinutes(endpoint.RateLimiting.WindowSizeInMS),
+			WindowSizeInMS:      endpoint.RateLimiting.WindowSizeInMS,
 		}
 
 		// Check if we can preserve existing data

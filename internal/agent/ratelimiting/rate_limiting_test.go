@@ -378,3 +378,291 @@ func TestUpdateConfig(t *testing.T) {
 		assert.Empty(t, rl.rateLimitingMap)
 	})
 }
+
+func TestRateLimitingWithWildcards(t *testing.T) {
+	t.Run("wildcard route matches multiple specific routes", func(t *testing.T) {
+		rl := New()
+
+		// Configure a wildcard endpoint
+		endpoints := []EndpointConfig{
+			{
+				Method: "*",
+				Route:  "/api/*",
+				RateLimiting: struct {
+					Enabled        bool
+					MaxRequests    int
+					WindowSizeInMS int
+				}{
+					Enabled:        true,
+					MaxRequests:    3,
+					WindowSizeInMS: 100000,
+				},
+			},
+		}
+
+		rl.UpdateConfig(endpoints)
+
+		// /api/test should match /api/*
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		assert.True(t, status.Block, "should block after exceeding limit on wildcard route")
+
+		// /api/users/123 should also match /api/*
+		rl2 := New()
+		rl2.UpdateConfig(endpoints)
+		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
+		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
+		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
+
+		status2 := rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
+		assert.True(t, status2.Block, "should block after exceeding limit on another route matching wildcard")
+	})
+
+	t.Run("wildcard route with specific method matches only that method", func(t *testing.T) {
+		rl := New()
+
+		// Configure a wildcard endpoint with specific method
+		endpoints := []EndpointConfig{
+			{
+				Method: "POST",
+				Route:  "/api/*",
+				RateLimiting: struct {
+					Enabled        bool
+					MaxRequests    int
+					WindowSizeInMS int
+				}{
+					Enabled:        true,
+					MaxRequests:    2,
+					WindowSizeInMS: 100000,
+				},
+			},
+		}
+
+		rl.UpdateConfig(endpoints)
+
+		// POST requests should match
+		rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+
+		status := rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		assert.True(t, status.Block, "should block POST requests matching wildcard")
+
+		// GET requests should not match
+		rl2 := New()
+		rl2.UpdateConfig(endpoints)
+		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+
+		status2 := rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		assert.False(t, status2.Block, "should not block GET requests when wildcard is for POST only")
+	})
+
+	t.Run("most restrictive rate takes precedence when multiple wildcards match", func(t *testing.T) {
+		t.Run("more specific wildcard is more restrictive", func(t *testing.T) {
+			rl := New()
+
+			// Configure multiple wildcard endpoints that both match the same route
+			// The one with the lowest rate (maxRequests / windowSizeInMS) should win
+			endpoints := []EndpointConfig{
+				{
+					Method: "*",
+					Route:  "/api/*",
+					RateLimiting: struct {
+						Enabled        bool
+						MaxRequests    int
+						WindowSizeInMS int
+					}{
+						Enabled:        true,
+						MaxRequests:    10,
+						WindowSizeInMS: 100000, // Rate: 10/100000 = 0.0001
+					},
+				},
+				{
+					Method: "*",
+					Route:  "/api/posts/*",
+					RateLimiting: struct {
+						Enabled        bool
+						MaxRequests    int
+						WindowSizeInMS int
+					}{
+						Enabled:        true,
+						MaxRequests:    2,
+						WindowSizeInMS: 100000, // Rate: 2/100000 = 0.00002 (more restrictive)
+					},
+				},
+			}
+
+			rl.UpdateConfig(endpoints)
+
+			// /api/posts/123 matches both wildcards, but should use the most restrictive one (2 requests)
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+
+			status := rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			assert.True(t, status.Block, "should block based on most restrictive wildcard limit (2 requests)")
+
+			// /api/users/123 only matches /api/*, so should use that limit (10 requests)
+			rl2 := New()
+			rl2.UpdateConfig(endpoints)
+			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
+			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
+			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
+
+			status2 := rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
+			assert.False(t, status2.Block, "should not block based on wildcard limit (10 requests)")
+		})
+
+		t.Run("less specific wildcard is more restrictive", func(t *testing.T) {
+			rl := New()
+
+			// Configure wildcards where the less specific one is more restrictive
+			endpoints := []EndpointConfig{
+				{
+					Method: "*",
+					Route:  "/api/*",
+					RateLimiting: struct {
+						Enabled        bool
+						MaxRequests    int
+						WindowSizeInMS int
+					}{
+						Enabled:        true,
+						MaxRequests:    2,
+						WindowSizeInMS: 100000, // Rate: 2/100000 = 0.00002 (more restrictive)
+					},
+				},
+				{
+					Method: "*",
+					Route:  "/api/posts/*",
+					RateLimiting: struct {
+						Enabled        bool
+						MaxRequests    int
+						WindowSizeInMS int
+					}{
+						Enabled:        true,
+						MaxRequests:    10,
+						WindowSizeInMS: 100000, // Rate: 10/100000 = 0.0001 (less restrictive)
+					},
+				},
+			}
+
+			rl.UpdateConfig(endpoints)
+
+			// /api/posts/123 matches both wildcards, should use the most restrictive one (/api/* with 2 requests)
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+
+			status := rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			assert.True(t, status.Block, "should block based on most restrictive rate (2 requests from /api/*), not specificity")
+		})
+	})
+
+	t.Run("exact route takes precedence over wildcard", func(t *testing.T) {
+		rl := New()
+
+		// Configure both exact and wildcard endpoints
+		endpoints := []EndpointConfig{
+			{
+				Method: "GET",
+				Route:  "/api/test",
+				RateLimiting: struct {
+					Enabled        bool
+					MaxRequests    int
+					WindowSizeInMS int
+				}{
+					Enabled:        true,
+					MaxRequests:    2,
+					WindowSizeInMS: 100000,
+				},
+			},
+			{
+				Method: "*",
+				Route:  "/api/*",
+				RateLimiting: struct {
+					Enabled        bool
+					MaxRequests    int
+					WindowSizeInMS int
+				}{
+					Enabled:        true,
+					MaxRequests:    10,
+					WindowSizeInMS: 100000,
+				},
+			},
+		}
+
+		rl.UpdateConfig(endpoints)
+
+		// /api/test should match the exact route, not the wildcard
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		assert.True(t, status.Block, "should block based on exact route limit (2 requests), not wildcard")
+
+		// /api/other should match the wildcard
+		rl2 := New()
+		rl2.UpdateConfig(endpoints)
+		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
+
+		status2 := rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
+		assert.False(t, status2.Block, "should not block based on wildcard limit (10 requests)")
+	})
+
+	t.Run("exact method takes precedence over wildcard method for same route", func(t *testing.T) {
+		rl := New()
+
+		// Configure both wildcard method and exact method for the same route
+		endpoints := []EndpointConfig{
+			{
+				Method: "*",
+				Route:  "/api/test",
+				RateLimiting: struct {
+					Enabled        bool
+					MaxRequests    int
+					WindowSizeInMS int
+				}{
+					Enabled:        true,
+					MaxRequests:    10,
+					WindowSizeInMS: 100000,
+				},
+			},
+			{
+				Method: "GET",
+				Route:  "/api/test",
+				RateLimiting: struct {
+					Enabled        bool
+					MaxRequests    int
+					WindowSizeInMS int
+				}{
+					Enabled:        true,
+					MaxRequests:    2,
+					WindowSizeInMS: 100000,
+				},
+			},
+		}
+
+		rl.UpdateConfig(endpoints)
+
+		// GET /api/test should match the exact method (GET), not the wildcard method (*)
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		assert.True(t, status.Block, "should block based on exact method limit (2 requests), not wildcard method")
+
+		// POST /api/test should match the wildcard method (*)
+		rl2 := New()
+		rl2.UpdateConfig(endpoints)
+		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+
+		status2 := rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		assert.False(t, status2.Block, "should not block based on wildcard method limit (10 requests)")
+	})
+}
