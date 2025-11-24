@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -315,6 +317,180 @@ func TestGetStatus_Concurrent(t *testing.T) {
 
 	value := rl.rateLimitingMap[key]
 	assert.Equal(t, 100, value.UserCounts["user1"].TotalNumberOfRequests)
+}
+
+func TestGetStatus_BypassedIP(t *testing.T) {
+	blockFalse := false
+	cloudConfig := &aikido_types.CloudConfigData{
+		BypassedIPs: []string{"192.168.1.100", "10.0.0.1"},
+		Block:       &blockFalse,
+	}
+	config.UpdateServiceConfig(cloudConfig, nil)
+
+	t.Run("bypassed IP is not rate limited even when exceeding threshold", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Make requests that would normally exceed the rate limit
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+
+		status := rl.GetStatus("GET", "/api/test", "", "192.168.1.100")
+
+		assert.False(t, status.Block, "bypassed IP should not be rate limited")
+	})
+
+	t.Run("non-bypassed IP is rate limited normally", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Make requests from non-bypassed IP
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+
+		status := rl.GetStatus("GET", "/api/test", "", "192.168.1.99")
+
+		assert.True(t, status.Block, "non-bypassed IP should be rate limited")
+		assert.Equal(t, "ip", status.Trigger)
+	})
+
+	t.Run("bypassed IP with user is not rate limited", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "POST", Route: "/api/login"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Make requests from bypassed IP with user that would exceed limit
+		rl.UpdateCounts("POST", "/api/login", "user123", "10.0.0.1")
+		rl.UpdateCounts("POST", "/api/login", "user123", "10.0.0.1")
+		rl.UpdateCounts("POST", "/api/login", "user123", "10.0.0.1")
+		rl.UpdateCounts("POST", "/api/login", "user123", "10.0.0.1")
+
+		status := rl.GetStatus("POST", "/api/login", "user123", "10.0.0.1")
+
+		assert.False(t, status.Block, "bypassed IP with user should not be rate limited")
+	})
+
+	t.Run("empty IP is not treated as bypassed", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Empty IP should be handled normally (not bypassed)
+		status := rl.GetStatus("GET", "/api/test", "user1", "")
+
+		assert.False(t, status.Block)
+	})
+}
+
+func TestUpdateCounts_BypassedIP(t *testing.T) {
+	blockFalse := false
+	cloudConfig := &aikido_types.CloudConfigData{
+		BlockedUserIds: []string{},
+		BypassedIPs:    []string{"192.168.1.100", "10.0.0.1"},
+		Block:          &blockFalse,
+	}
+	config.UpdateServiceConfig(cloudConfig, nil)
+
+	t.Run("bypassed IP does not increment counts", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Make several requests from bypassed IP
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+
+		value := rl.rateLimitingMap[key]
+		assert.Empty(t, value.IPCounts, "bypassed IP should not be counted")
+	})
+
+	t.Run("non-bypassed IP increments counts normally", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Make requests from non-bypassed IP
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+
+		value := rl.rateLimitingMap[key]
+		require.NotNil(t, value.IPCounts["192.168.1.99"])
+		assert.Equal(t, 3, value.IPCounts["192.168.1.99"].TotalNumberOfRequests)
+	})
+
+	t.Run("bypassed IP with user does not increment counts", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "POST", Route: "/api/login"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Make requests from bypassed IP with user
+		rl.UpdateCounts("POST", "/api/login", "user123", "10.0.0.1")
+		rl.UpdateCounts("POST", "/api/login", "user123", "10.0.0.1")
+
+		value := rl.rateLimitingMap[key]
+		assert.Empty(t, value.UserCounts, "user counts should not be incremented for bypassed IP")
+		assert.Empty(t, value.IPCounts, "IP counts should not be incremented for bypassed IP")
+	})
+
+	t.Run("mixed bypassed and non-bypassed IPs", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config:     rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
+			UserCounts: make(map[string]*entityCounts),
+			IPCounts:   make(map[string]*entityCounts),
+		}
+
+		// Requests from bypassed IP
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.100")
+
+		// Requests from non-bypassed IP
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.99")
+
+		value := rl.rateLimitingMap[key]
+		assert.Empty(t, value.IPCounts["192.168.1.100"], "bypassed IP should not be in counts")
+		require.NotNil(t, value.IPCounts["192.168.1.99"])
+		assert.Equal(t, 3, value.IPCounts["192.168.1.99"].TotalNumberOfRequests)
+	})
 }
 
 func TestUpdateConfig(t *testing.T) {

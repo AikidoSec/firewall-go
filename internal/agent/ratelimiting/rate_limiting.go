@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
@@ -130,6 +131,11 @@ func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
+	// Don't count requests from bypassed IPs
+	if ip != "" && config.IsIPBypassed(ip) {
+		return
+	}
+
 	rateLimitingData, exists := rl.rateLimitingMap[endpointKey{Method: method, Route: route}]
 	if !exists {
 		return
@@ -155,6 +161,11 @@ func (rl *RateLimiter) GetStatus(method string, route string, user string, ip st
 
 	rateLimitingDataForRoute, exists := rl.rateLimitingMap[endpointKey{Method: method, Route: route}]
 	if !exists {
+		return &Status{Block: false}
+	}
+
+	// Allow requests from bypassed IPs, e.g. never rate limit office IPs
+	if ip != "" && config.IsIPBypassed(ip) {
 		return &Status{Block: false}
 	}
 
