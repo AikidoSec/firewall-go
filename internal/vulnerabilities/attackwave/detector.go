@@ -12,6 +12,8 @@ type Detector struct {
 	attackWaveThreshold int
 	// attackWaveTimeFrame is the time window for counting suspicious requests
 	attackWaveTimeFrame time.Duration
+
+	suspiciousRequests *lruCache
 }
 
 type Options struct {
@@ -35,6 +37,8 @@ func NewDetector(opts *Options) *Detector {
 	return &Detector{
 		attackWaveThreshold: opts.AttackWaveThreshold,
 		attackWaveTimeFrame: opts.AttackWaveTimeFrame,
+
+		suspiciousRequests: newLRUCache(10_000, time.Hour),
 	}
 }
 
@@ -47,11 +51,34 @@ func (d *Detector) Check(ctx *request.Context) bool {
 
 	// @todo check if we've recently sent an event for this IP
 
-	// @todo check if suspicious
+	if !isWebScanner(ctx) {
+		return false
+	}
 
-	// @todo record suspicious requests
+	ip := *ctx.RemoteAddress
+	requestCount := d.addSuspiciousRequest(ip, time.Now())
 
-	// @todo count suspicious requests, if over threshold, then true
+	if requestCount < d.attackWaveThreshold {
+		return false
+	}
 
-	return false
+	return true
+}
+
+func (d *Detector) addSuspiciousRequest(ip string, timestamp time.Time) int {
+	timestamps, _ := d.suspiciousRequests.Get(ip)
+
+	// Filter out old timestamps outside the time window
+	cutoff := timestamp.Add(-d.attackWaveTimeFrame)
+	validTimestamps := make([]time.Time, 0, len(timestamps)+1)
+	for _, ts := range timestamps {
+		if ts.After(cutoff) {
+			validTimestamps = append(validTimestamps, ts)
+		}
+	}
+
+	validTimestamps = append(validTimestamps, timestamp)
+	d.suspiciousRequests.Set(ip, validTimestamps)
+
+	return len(validTimestamps)
 }
