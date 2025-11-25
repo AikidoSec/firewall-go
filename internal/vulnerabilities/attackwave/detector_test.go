@@ -19,7 +19,7 @@ func TestDetectorCheck(t *testing.T) {
 			AttackWaveTimeFrame: 60 * time.Second,
 		})
 
-		result := detector.Check(nil)
+		result := detector.CheckRequest(nil)
 		assert.False(t, result)
 	})
 
@@ -31,7 +31,7 @@ func TestDetectorCheck(t *testing.T) {
 		})
 
 		ctx := &request.Context{}
-		result := detector.Check(ctx)
+		result := detector.CheckRequest(ctx)
 		assert.False(t, result)
 	})
 
@@ -49,7 +49,7 @@ func TestDetectorCheck(t *testing.T) {
 			Route:         "/api/users",
 		}
 
-		result := detector.Check(ctx)
+		result := detector.CheckRequest(ctx)
 		assert.False(t, result)
 	})
 
@@ -68,14 +68,14 @@ func TestDetectorCheck(t *testing.T) {
 		}
 
 		// First two checks should return false
-		result := detector.Check(ctx)
+		result := detector.CheckRequest(ctx)
 		assert.False(t, result, "First suspicious request should not trigger")
 
-		result = detector.Check(ctx)
+		result = detector.CheckRequest(ctx)
 		assert.False(t, result, "Second suspicious request should not trigger")
 
 		// Third check should return true (threshold reached)
-		result = detector.Check(ctx)
+		result = detector.CheckRequest(ctx)
 		assert.True(t, result, "Third suspicious request should trigger attack wave")
 	})
 
@@ -100,18 +100,18 @@ func TestDetectorCheck(t *testing.T) {
 		}
 
 		// IP1: 2 requests
-		detector.Check(ctx1)
-		detector.Check(ctx1)
+		detector.CheckRequest(ctx1)
+		detector.CheckRequest(ctx1)
 
 		// IP2: 2 requests
-		detector.Check(ctx2)
-		detector.Check(ctx2)
+		detector.CheckRequest(ctx2)
+		detector.CheckRequest(ctx2)
 
 		// Neither should trigger yet
-		result1 := detector.Check(ctx1)
+		result1 := detector.CheckRequest(ctx1)
 		assert.True(t, result1, "IP1 should trigger on third request")
 
-		result2 := detector.Check(ctx2)
+		result2 := detector.CheckRequest(ctx2)
 		assert.True(t, result2, "IP2 should trigger on third request")
 	})
 
@@ -130,13 +130,13 @@ func TestDetectorCheck(t *testing.T) {
 		}
 
 		// Trigger attack wave
-		detector.Check(ctx)
-		result := detector.Check(ctx)
+		detector.CheckRequest(ctx)
+		result := detector.CheckRequest(ctx)
 		assert.True(t, result, "Should trigger attack wave")
 
 		// Immediate subsequent check should return false (even with more suspicious requests)
 		for i := 0; i < 3; i++ {
-			result = detector.Check(ctx)
+			result = detector.CheckRequest(ctx)
 			assert.False(t, result, "Should not trigger again immediately (attempt %d)", i+1)
 		}
 
@@ -145,7 +145,7 @@ func TestDetectorCheck(t *testing.T) {
 
 		// After waiting, the next suspicious request should trigger again
 		// Since the counter is still incrementing during the waiting period
-		result = detector.Check(ctx)
+		result = detector.CheckRequest(ctx)
 		assert.True(t, result, "Should trigger again after waiting")
 	})
 }
