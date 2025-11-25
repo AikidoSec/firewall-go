@@ -92,17 +92,20 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
-  build-sample-apps:
-    name: "Build ${{ matrix.app }}"
+  test-e2e:
+    name: "e2e tests - ${{ matrix.app }}"
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        app: ["echo-postgres", "gin-postgres", "http-postgres"]
+        app:
+          - gin-postgres
+          - echo-postgres
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -112,6 +115,23 @@ jobs:
       - name: Install tools
         run: make install-tools
 
-      - name: Build ${{ matrix.app }} app
-        working-directory: ./sample-apps/${{ matrix.app }}
-        run: make build
+      - name: Start ${{ matrix.app }} app
+        working-directory: ./end2end
+        env:
+          PORT: ${{ matrix.app.port }}
+          AIKIDO_DEBUG: "true"
+          AIKIDO_BLOCK: "true"
+        run: make start-app APP=${{ matrix.app }}
+
+      - name: Run E2E tests
+        working-directory: ./end2end
+        run: make run-tests APP=${{ matrix.app }}
+
+      - name: Stop app
+        if: always()
+        working-directory: ./end2end
+        run: make stop-app APP=${{ matrix.app }}
+
+      - name: Show app logs on failure
+        if: failure()
+        run: cat /tmp/${{ matrix.app }}.log || true

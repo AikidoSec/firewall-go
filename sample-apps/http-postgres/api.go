@@ -89,6 +89,10 @@ func readFileHandler(w http.ResponseWriter, r *http.Request) {
 
 func defineAPIRoutes(mux *http.ServeMux, db *DatabaseHelper) {
 	mux.HandleFunc("/api/pets/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/api/pets", http.StatusMovedPermanently)
+	})
+
+	mux.HandleFunc("/api/pets", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
 			getAllPetsHandler(w, r, db)

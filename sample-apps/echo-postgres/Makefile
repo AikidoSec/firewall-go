@@ -1,6 +1,4 @@
-.PHONY: run
-run:
-	go run -toolexec="orchestrion toolexec" -v echo-postgres
+PORT ?= 8082
+DB_SERVICE := postgres_database
 
-build:
-	go build -toolexec="orchestrion toolexec" -v echo-postgres
+include ../common.mk

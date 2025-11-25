@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,7 @@ func main() {
 	defineAPIRoutes(r, db)
 
 	// Start the server
-	err = r.Run(":8080")
+	err = r.Run(":" + os.Getenv("PORT"))
 	if err != nil {
 		log.Fatal(err)
 	}
