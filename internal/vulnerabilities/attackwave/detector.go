@@ -8,7 +8,7 @@ import (
 
 // Detector tracks suspicious requests per IP and reports attack waves
 type Detector struct {
-	// attackWaveThreshold is the number of suspicious requests needed to trigger an alert
+	// attackWaveThreshold is the number of suspicious requests needed within the time frame to trigger an alert
 	attackWaveThreshold int
 	// attackWaveTimeFrame is the time window for counting suspicious requests
 	attackWaveTimeFrame time.Duration
@@ -28,34 +28,37 @@ type Options struct {
 }
 
 func NewDetector(opts *Options) *Detector {
-	if opts == nil {
-		opts = &Options{}
+	options := &Options{}
+	if opts != nil {
+		options.AttackWaveThreshold = opts.AttackWaveThreshold
+		options.AttackWaveTimeFrame = opts.AttackWaveTimeFrame
+		options.MinTimeBetweenReports = opts.MinTimeBetweenReports
 	}
 
 	// Set defaults
-	if opts.AttackWaveThreshold == 0 {
-		opts.AttackWaveThreshold = 15
+	if options.AttackWaveThreshold == 0 {
+		options.AttackWaveThreshold = 15
 	}
-	if opts.AttackWaveTimeFrame == 0 {
-		opts.AttackWaveTimeFrame = 60 * time.Second
+	if options.AttackWaveTimeFrame == 0 {
+		options.AttackWaveTimeFrame = 60 * time.Second
 	}
-	if opts.MinTimeBetweenReports == 0 {
-		opts.MinTimeBetweenReports = 20 * time.Minute
+	if options.MinTimeBetweenReports == 0 {
+		options.MinTimeBetweenReports = 20 * time.Minute
 	}
 
 	return &Detector{
-		attackWaveThreshold:   opts.AttackWaveThreshold,
-		attackWaveTimeFrame:   opts.AttackWaveTimeFrame,
-		minTimeBetweenReports: opts.MinTimeBetweenReports,
+		attackWaveThreshold:   options.AttackWaveThreshold,
+		attackWaveTimeFrame:   options.AttackWaveTimeFrame,
+		minTimeBetweenReports: options.MinTimeBetweenReports,
 
-		suspiciousRequests: newLRUCache(10_000, opts.AttackWaveTimeFrame),
-		recentReports:      newLRUCache(10_000, opts.MinTimeBetweenReports),
+		suspiciousRequests: newLRUCache(10_000, options.AttackWaveTimeFrame),
+		recentReports:      newLRUCache(10_000, options.MinTimeBetweenReports),
 	}
 }
 
-// Check checks if the request is part of an attack wave
+// CheckRequest checks if the request is part of an attack wave
 // Returns true if an attack wave is detected and should be reported
-func (d *Detector) Check(ctx *request.Context) bool {
+func (d *Detector) CheckRequest(ctx *request.Context) bool {
 	if ctx == nil || ctx.RemoteAddress == nil || *ctx.RemoteAddress == "" {
 		return false
 	}
@@ -82,6 +85,8 @@ func (d *Detector) Check(ctx *request.Context) bool {
 	return true
 }
 
+// addSuspiciousRequest adds a new request timestamp to the slice and filters out any requests past the time window
+// Returns the number of requests remaining in the time window
 func (d *Detector) addSuspiciousRequest(ip string, timestamp time.Time) int {
 	timestamps, _ := d.suspiciousRequests.Get(ip)
 
