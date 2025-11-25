@@ -20,13 +20,13 @@ func TestShouldSendAttackDetectedEvent(t *testing.T) {
 		resetAttackDetectedEvents()
 
 		// Test single call
-		result := shouldSendAttackDetectedEvent()
+		result := shouldSendAttackEvent()
 		assert.True(t, result, "should return true when no events have been sent")
 		assert.Equal(t, 1, len(attackDetectedEventsSentAt), "should add event to list")
 
 		// Test multiple calls (under the limit of 100)
 		for i := 0; i < 50; i++ {
-			result := shouldSendAttackDetectedEvent()
+			result := shouldSendAttackEvent()
 			assert.True(t, result, "should return true for event %d", i+2)
 		}
 		assert.Equal(t, 51, len(attackDetectedEventsSentAt), "should have added all events")
@@ -37,20 +37,20 @@ func TestShouldSendAttackDetectedEvent(t *testing.T) {
 
 		// Send exactly maxAttackDetectedEventsPerInterval events
 		for i := 0; i < maxAttackDetectedEventsPerInterval; i++ {
-			result := shouldSendAttackDetectedEvent()
+			result := shouldSendAttackEvent()
 			assert.True(t, result, "should return true for event %d", i+1)
 		}
 		assert.Equal(t, maxAttackDetectedEventsPerInterval, len(attackDetectedEventsSentAt), "should have added all events up to limit")
 
 		// The next call should return false and not add to the list
 		initialCount := len(attackDetectedEventsSentAt)
-		result := shouldSendAttackDetectedEvent()
+		result := shouldSendAttackEvent()
 		assert.False(t, result, "should return false when limit is reached")
 		assert.Equal(t, initialCount, len(attackDetectedEventsSentAt), "should not add event when limit is exceeded")
 
 		// Verify subsequent calls also return false
 		for i := 0; i < 10; i++ {
-			result := shouldSendAttackDetectedEvent()
+			result := shouldSendAttackEvent()
 			assert.False(t, result, "should return false for subsequent calls")
 		}
 		assert.Equal(t, initialCount, len(attackDetectedEventsSentAt), "should not add any more events")
@@ -71,7 +71,7 @@ func TestShouldSendAttackDetectedEvent(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 
 		// Should return true because old event was filtered out
-		result := shouldSendAttackDetectedEvent()
+		result := shouldSendAttackEvent()
 		assert.True(t, result, "should return true after filtering out old events")
 
 		// Verify old event was removed and recent event was kept
@@ -107,7 +107,7 @@ func TestShouldSendAttackDetectedEvent(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				for j := 0; j < callsPerGoroutine; j++ {
-					result := shouldSendAttackDetectedEvent()
+					result := shouldSendAttackEvent()
 					results <- result
 				}
 			}()
