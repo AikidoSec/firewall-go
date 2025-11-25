@@ -129,6 +129,11 @@ func TestIsSuspiciousPath(t *testing.T) {
 			path:     "/apache/httpd.conf",
 			expected: true,
 		},
+		{
+			name:     "system32 directory",
+			path:     "C:/System32",
+			expected: true,
+		},
 
 		// Case insensitivity
 		{
