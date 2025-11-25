@@ -3,8 +3,8 @@ package cloud
 import (
 	"log/slog"
 	"sync"
+	"time"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
@@ -24,7 +24,7 @@ func shouldSendAttackEvent() bool {
 	attackDetectedEventsSentAtMutex.Lock()
 	defer attackDetectedEventsSentAtMutex.Unlock()
 
-	currentTime := utils.GetTime()
+	currentTime := time.Now().UnixMilli()
 
 	// Filter out events that are outside the current interval
 	var filteredEvents []int64
