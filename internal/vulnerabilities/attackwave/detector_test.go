@@ -114,4 +114,38 @@ func TestDetectorCheck(t *testing.T) {
 		result2 := detector.Check(ctx2)
 		assert.True(t, result2, "IP2 should trigger on third request")
 	})
+
+	t.Run("respects minTimeBetweenReports", func(t *testing.T) {
+		t.Helper()
+		detector := attackwave.NewDetector(&attackwave.Options{
+			AttackWaveThreshold:   2,
+			AttackWaveTimeFrame:   60 * time.Second,
+			MinTimeBetweenReports: 100 * time.Millisecond,
+		})
+
+		ip := "192.168.1.1"
+		ctx := &request.Context{
+			RemoteAddress: &ip,
+			Route:         "/.git/config", // Suspicious path
+		}
+
+		// Trigger attack wave
+		detector.Check(ctx)
+		result := detector.Check(ctx)
+		assert.True(t, result, "Should trigger attack wave")
+
+		// Immediate subsequent check should return false (even with more suspicious requests)
+		for i := 0; i < 3; i++ {
+			result = detector.Check(ctx)
+			assert.False(t, result, "Should not trigger again immediately (attempt %d)", i+1)
+		}
+
+		// Wait for minTimeBetweenEvents to pass
+		time.Sleep(150 * time.Millisecond)
+
+		// After waiting, the next suspicious request should trigger again
+		// Since the counter is still incrementing during the waiting period
+		result = detector.Check(ctx)
+		assert.True(t, result, "Should trigger again after waiting")
+	})
 }
