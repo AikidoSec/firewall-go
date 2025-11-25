@@ -51,13 +51,6 @@ func (ctx *Context) GetUser() aikido_types.User {
 	return ctx.user
 }
 
-func (ctx *Context) GetUserID() string {
-	ctx.mu.RLock()
-	defer ctx.mu.RUnlock()
-
-	return ctx.user.ID
-}
-
 // MarkMiddlewareExecuted marks the middleware as executed.
 // Returns true if the middleware was not already executed, false otherwise.
 func (ctx *Context) MarkMiddlewareExecuted() bool {

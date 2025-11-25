@@ -34,8 +34,9 @@ func TestSetUser(t *testing.T) {
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
 
-		userID := reqCtx.GetUserID()
-		assert.Equal(t, "user123", userID, "Expected user ID to be 'user123'")
+		user := reqCtx.GetUser()
+		assert.Equal(t, "user123", user.ID, "Expected user ID to be 'user123'")
+		assert.Equal(t, "John Doe", user.Name, "Expected name to be 'John Doe'")
 	})
 
 	t.Run("EmptyID", func(t *testing.T) {
@@ -57,7 +58,7 @@ func TestSetUser(t *testing.T) {
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
 
-		userID := reqCtx.GetUserID()
+		userID := reqCtx.GetUser().ID
 		assert.Empty(t, userID, "Expected user ID to be empty")
 	})
 
@@ -80,7 +81,7 @@ func TestSetUser(t *testing.T) {
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
 
-		userID := reqCtx.GetUserID()
+		userID := reqCtx.GetUser().ID
 		assert.Empty(t, userID, "Expected user ID to be empty")
 	})
 
@@ -120,7 +121,7 @@ func TestSetUser(t *testing.T) {
 		require.NotNil(t, resultCtx, "Expected context to be returned")
 
 		// User should not be set
-		userID := reqCtx.GetUserID()
+		userID := reqCtx.GetUser().ID
 		assert.Empty(t, userID, "Expected user ID to be empty when middleware already executed")
 	})
 
@@ -143,7 +144,7 @@ func TestSetUser(t *testing.T) {
 		// Verify the user is set on the context
 		reqCtx := request.GetContext(ctx)
 		require.NotNil(t, reqCtx, "Request context should exist")
-		assert.Equal(t, userID, reqCtx.GetUserID(), "User ID should be set on context")
+		assert.Equal(t, userID, reqCtx.GetUser().ID, "User ID should be set on context")
 	})
 }
 

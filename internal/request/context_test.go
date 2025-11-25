@@ -54,16 +54,16 @@ func TestContext_GetUserAgent(t *testing.T) {
 	}
 }
 
-func TestContext_SetUser_GetUserID(t *testing.T) {
+func TestContext_SetUser_GetUser(t *testing.T) {
 	ctx := &Context{}
 
 	// Test initial state
-	assert.Empty(t, ctx.GetUserID())
+	assert.Empty(t, ctx.GetUser().ID)
 
 	// Test setting user
 	user := aikido_types.User{ID: "user123", Name: "Test User"}
 	ctx.SetUser(user)
-	assert.Equal(t, "user123", ctx.GetUserID())
+	assert.Equal(t, aikido_types.User{ID: "user123", Name: "Test User"}, ctx.GetUser())
 }
 
 func TestContext_MarkMiddlewareExecuted(t *testing.T) {
