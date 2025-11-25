@@ -36,7 +36,7 @@ func shouldSendAttackEvent() bool {
 	attackDetectedEventsSentAt = filteredEvents
 
 	if len(attackDetectedEventsSentAt) >= maxAttackDetectedEventsPerInterval {
-		log.Warn("Maximum number of \"detected_attack\" events exceeded for timeframe",
+		log.Warn("Maximum number of attack events exceeded for timeframe",
 			slog.Int("max", maxAttackDetectedEventsPerInterval),
 			slog.Int("count", len(attackDetectedEventsSentAt)),
 			slog.Int("interval_ms", attackDetectedEventsIntervalInMs))
