@@ -20,6 +20,9 @@ const (
 	attackDetectedEventsIntervalInMs   = 60 * 60 * 1000 // 1 hour
 )
 
+// shouldSendAttackEvent checks if an attack event can be sent based on rate limiting.
+// Side effects: Records the event timestamp if under limit, logs warning if over limit.
+// Returns true if the event should be sent, false if rate limited.
 func shouldSendAttackEvent() bool {
 	attackDetectedEventsSentAtMutex.Lock()
 	defer attackDetectedEventsSentAtMutex.Unlock()
