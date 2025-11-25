@@ -1,16 +1,27 @@
 package attackwave
 
+import "strings"
+
 // suspiciousExtensions contains file extensions commonly targeted by web scanners
-var suspiciousExtensions = map[string]bool{
-	"env":       true,
-	"bak":       true,
-	"sql":       true,
-	"sqlite":    true,
-	"sqlite3":   true,
-	"db":        true,
-	"old":       true,
-	"save":      true,
-	"orig":      true,
-	"sqlitedb":  true,
-	"sqlite3db": true,
+var suspiciousExtensions map[string]bool
+
+func init() {
+	extensions := []string{
+		"env",
+		"bak",
+		"sql",
+		"sqlite",
+		"sqlite3",
+		"db",
+		"old",
+		"save",
+		"orig",
+		"sqlitedb",
+		"sqlite3db",
+	}
+
+	suspiciousExtensions = make(map[string]bool, len(extensions))
+	for _, extension := range extensions {
+		suspiciousExtensions[strings.ToLower(extension)] = true
+	}
 }
