@@ -7,6 +7,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 )
 
 const (
@@ -21,11 +22,6 @@ type rateLimitConfig struct {
 	WindowSizeInMinutes int
 }
 
-// entityCounts tracks rate limiting counts for a specific entity (user or IP)
-type entityCounts struct {
-	requestTimestamps []int64 // Unix timestamps in seconds
-}
-
 // endpointKey identifies a specific endpoint for rate limiting
 type endpointKey struct {
 	Method string
@@ -35,8 +31,8 @@ type endpointKey struct {
 // endpointData holds the rate limiting configuration and counts for an endpoint
 type endpointData struct {
 	Config     rateLimitConfig
-	UserCounts map[string]*entityCounts
-	IPCounts   map[string]*entityCounts
+	UserCounts map[string]*slidingwindow.Window
+	IPCounts   map[string]*slidingwindow.Window
 }
 
 // Status represents the result of a rate limiting check
@@ -74,38 +70,17 @@ func (rl *RateLimiter) Uninit() {
 	utils.StopPollingRoutine(rl.channel)
 }
 
-// cleanOldTimestamps removes timestamps older than windowStart from the slice
-func cleanOldTimestamps(counts *entityCounts, windowStart int64) {
-	i := 0
-	for i < len(counts.requestTimestamps) && counts.requestTimestamps[i] < windowStart {
-		i++
-	}
-	counts.requestTimestamps = counts.requestTimestamps[i:]
-}
-
 // getOrCreateCounts gets existing counts or creates new ones
-func getOrCreateCounts(m map[string]*entityCounts, key string) *entityCounts {
+func getOrCreateCounts(m map[string]*slidingwindow.Window, key string, windowSizeSeconds int64, maxRequests int) *slidingwindow.Window {
 	if key == "" {
 		return nil
 	}
 
-	counts, exists := m[key]
-	if !exists {
-		counts = &entityCounts{
-			requestTimestamps: make([]int64, 0),
-		}
-		m[key] = counts
+	if _, ok := m[key]; !ok {
+		m[key] = slidingwindow.New(windowSizeSeconds, maxRequests)
 	}
-	return counts
-}
 
-// updateEntityCounts updates the counts for a single entity (user or IP)
-func updateEntityCounts(m map[string]*entityCounts, key string, windowStart, now int64) {
-	counts := getOrCreateCounts(m, key)
-	if counts != nil {
-		cleanOldTimestamps(counts, windowStart)
-		counts.requestTimestamps = append(counts.requestTimestamps, now)
-	}
+	return m[key]
 }
 
 // ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
@@ -119,37 +94,33 @@ func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user 
 	}
 
 	now := time.Now().Unix()
-	windowStart := now - int64(rateLimitingDataForRoute.Config.WindowSizeInMinutes*60)
+	maxRequests := rateLimitingDataForRoute.Config.MaxRequests
+	windowSizeSeconds := int64(rateLimitingDataForRoute.Config.WindowSizeInMinutes * 60)
 
 	if user != "" {
 		// If the user exists, we only try to rate limit by user
-
-		updateEntityCounts(rateLimitingDataForRoute.UserCounts, user, windowStart, now)
-		if counts, exists := rateLimitingDataForRoute.UserCounts[user]; exists {
-			cleanOldTimestamps(counts, windowStart)
-
-			if len(counts.requestTimestamps) >= rateLimitingDataForRoute.Config.MaxRequests {
+		if counts := getOrCreateCounts(rateLimitingDataForRoute.UserCounts, user, windowSizeSeconds, maxRequests); counts != nil {
+			if !counts.TryRecord(now) {
 				log.Info("Rate limited request for user",
 					slog.String("user", user),
 					slog.String("method", method),
 					slog.String("route", route),
-					slog.Int("count", len(counts.requestTimestamps)))
+					slog.Int("count", counts.Count(now)))
+
 				return &Status{Block: true, Trigger: "user"}
 			}
 		}
 	} else if ip != "" {
 		// Otherwise, we rate limit by ip
 
-		updateEntityCounts(rateLimitingDataForRoute.IPCounts, ip, windowStart, now)
-		if counts, exists := rateLimitingDataForRoute.IPCounts[ip]; exists {
-			cleanOldTimestamps(counts, windowStart)
-
-			if len(counts.requestTimestamps) >= rateLimitingDataForRoute.Config.MaxRequests {
+		if counts := getOrCreateCounts(rateLimitingDataForRoute.IPCounts, ip, windowSizeSeconds, maxRequests); counts != nil {
+			if !counts.TryRecord(now) {
 				log.Info("Rate limited request for ip",
 					slog.String("ip", ip),
 					slog.String("method", method),
 					slog.String("route", route),
-					slog.Int("count", len(counts.requestTimestamps)))
+					slog.Int("count", counts.Count(now)))
+
 				return &Status{Block: true, Trigger: "ip"}
 			}
 		}
@@ -164,27 +135,21 @@ func (rl *RateLimiter) cleanupInactive() {
 	defer rl.mu.Unlock()
 
 	now := time.Now().Unix()
-	threshold := int64(inactivityThreshold.Seconds())
 
 	for _, endpoint := range rl.rateLimitingMap {
-		cleanupInactiveMap(endpoint.UserCounts, now, threshold)
-		cleanupInactiveMap(endpoint.IPCounts, now, threshold)
+		cleanupInactiveMap(endpoint.UserCounts, now)
+		cleanupInactiveMap(endpoint.IPCounts, now)
 	}
 }
 
-func cleanupInactiveMap(m map[string]*entityCounts, now, threshold int64) {
+func cleanupInactiveMap(m map[string]*slidingwindow.Window, now int64) {
 	keysToDelete := make([]string, 0)
 	for key, counts := range m {
-		if len(counts.requestTimestamps) == 0 {
-			keysToDelete = append(keysToDelete, key)
-			continue
-		}
-		// Check last timestamp
-		lastRequest := counts.requestTimestamps[len(counts.requestTimestamps)-1]
-		if now-lastRequest > threshold {
+		if counts.Count(now) == 0 {
 			keysToDelete = append(keysToDelete, key)
 		}
 	}
+
 	// Delete after iteration to avoid modifying map during iteration
 	for _, key := range keysToDelete {
 		delete(m, key)
@@ -249,8 +214,8 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 		// Create new entry
 		newMap[k] = &endpointData{
 			Config:     newConfig,
-			UserCounts: make(map[string]*entityCounts),
-			IPCounts:   make(map[string]*entityCounts),
+			UserCounts: make(map[string]*slidingwindow.Window),
+			IPCounts:   make(map[string]*slidingwindow.Window),
 		}
 	}
 
