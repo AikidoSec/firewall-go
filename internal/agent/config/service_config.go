@@ -41,6 +41,10 @@ type IPMatchList struct {
 }
 
 func (list *IPMatchList) Matches(ip *ipaddr.IPAddress) bool {
+	if list.TrieV4 == nil || list.TrieV6 == nil {
+		return false
+	}
+
 	if (ip.IsIPv4() && list.TrieV4.ElementContains(ip.ToIPv4())) ||
 		(ip.IsIPv6() && list.TrieV6.ElementContains(ip.ToIPv6())) {
 		return true
