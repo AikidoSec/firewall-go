@@ -70,38 +70,6 @@ func TestIsRateLimitingThresholdExceeded(t *testing.T) {
 	}
 }
 
-func TestUpdateCounts(t *testing.T) {
-	rl := New()
-	// Setup: Add a route to the rate limiting map
-	key := endpointKey{Method: "GET", Route: "/api/test"}
-	rl.rateLimitingMap[key] = &endpointData{
-		Config: rateLimitConfig{
-			MaxRequests:         10,
-			WindowSizeInMinutes: 5,
-		},
-		UserCounts: make(map[string]*entityCounts),
-		IPCounts:   make(map[string]*entityCounts),
-	}
-
-	// Test updating counts for user and IP
-	rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-
-	value := rl.rateLimitingMap[key]
-	require.NotNil(t, value)
-	assert.Equal(t, 1, value.UserCounts["user1"].TotalNumberOfRequests)
-	assert.Equal(t, 1, value.IPCounts["192.168.1.1"].TotalNumberOfRequests)
-
-	// Update again
-	rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-
-	value = rl.rateLimitingMap[key]
-	assert.Equal(t, 2, value.UserCounts["user1"].TotalNumberOfRequests)
-	assert.Equal(t, 2, value.IPCounts["192.168.1.1"].TotalNumberOfRequests)
-
-	// Test with non-existent route (should do nothing)
-	rl.UpdateCounts("POST", "/api/other", "user1", "192.168.1.1")
-}
-
 func TestAdvanceQueuesForMap(t *testing.T) {
 	config := rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 3}
 
@@ -202,11 +170,11 @@ func TestAdvanceQueuesForMap_EdgeCase(t *testing.T) {
 	assert.GreaterOrEqual(t, counts.TotalNumberOfRequests, 0)
 }
 
-func TestGetStatus(t *testing.T) {
+func TestShouldRateLimitRequest(t *testing.T) {
 	t.Run("non-existent route returns no block", func(t *testing.T) {
 		rl := New()
 
-		status := rl.GetStatus("POST", "/api/other", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("POST", "/api/other", "user1", "192.168.1.1")
 
 		assert.NotNil(t, status)
 		assert.False(t, status.Block)
@@ -222,10 +190,8 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-
-		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
 
 		assert.False(t, status.Block)
 	})
@@ -239,11 +205,10 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
 
-		status := rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "user", status.Trigger)
@@ -258,11 +223,10 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1")
-		rl.UpdateCounts("GET", "/api/test", "", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
 
-		status := rl.GetStatus("GET", "/api/test", "", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "ip", status.Trigger)
@@ -277,16 +241,15 @@ func TestGetStatus(t *testing.T) {
 			IPCounts:   make(map[string]*entityCounts),
 		}
 
-		rl.UpdateCounts("POST", "/api/other", "", "192.168.1.2")
-		rl.UpdateCounts("POST", "/api/other", "", "192.168.1.2")
+		_ = rl.ShouldRateLimitRequest("POST", "/api/other", "", "192.168.1.2")
 
-		status := rl.GetStatus("POST", "/api/other", "", "192.168.1.2")
+		status := rl.ShouldRateLimitRequest("POST", "/api/other", "", "192.168.1.2")
 
 		assert.False(t, status.Block)
 	})
 }
 
-func TestGetStatus_Concurrent(t *testing.T) {
+func TestShouldRateLimitRequest_Concurrent(t *testing.T) {
 	rl := New()
 	key := endpointKey{Method: "GET", Route: "/api/test"}
 	rl.rateLimitingMap[key] = &endpointData{
@@ -304,8 +267,7 @@ func TestGetStatus_Concurrent(t *testing.T) {
 	for range 10 {
 		go func() {
 			for range 10 {
-				rl.UpdateCounts("GET", "/api/test", "user1", "192.168.1.1")
-				rl.GetStatus("GET", "/api/test", "user1", "192.168.1.1")
+				rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
 			}
 			wg.Done()
 		}()

@@ -125,20 +125,6 @@ func incrementRateLimitingCounts(m map[string]*entityCounts, key string) {
 	rateLimitingData.NumberOfRequestsPerWindow.IncrementLast()
 }
 
-// UpdateCounts updates the rate limiting counts for a given route, user, and IP
-func (rl *RateLimiter) UpdateCounts(method string, route string, user string, ip string) {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	rateLimitingData, exists := rl.rateLimitingMap[endpointKey{Method: method, Route: route}]
-	if !exists {
-		return
-	}
-
-	incrementRateLimitingCounts(rateLimitingData.UserCounts, user)
-	incrementRateLimitingCounts(rateLimitingData.IPCounts, ip)
-}
-
 func isRateLimitingThresholdExceeded(config *rateLimitConfig, countsMap map[string]*entityCounts, key string) bool {
 	counts, exists := countsMap[key]
 	if !exists {
@@ -148,15 +134,18 @@ func isRateLimitingThresholdExceeded(config *rateLimitConfig, countsMap map[stri
 	return counts.TotalNumberOfRequests >= config.MaxRequests
 }
 
-// GetStatus checks if a request should be rate limited based on user or IP
-func (rl *RateLimiter) GetStatus(method string, route string, user string, ip string) *Status {
-	rl.mu.RLock()
-	defer rl.mu.RUnlock()
+// ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
+func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user string, ip string) *Status {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
 	rateLimitingDataForRoute, exists := rl.rateLimitingMap[endpointKey{Method: method, Route: route}]
 	if !exists {
 		return &Status{Block: false}
 	}
+
+	incrementRateLimitingCounts(rateLimitingDataForRoute.UserCounts, user)
+	incrementRateLimitingCounts(rateLimitingDataForRoute.IPCounts, ip)
 
 	if user != "" {
 		// If the user exists, we only try to rate limit by user
@@ -267,14 +256,10 @@ func Uninit() {
 	globalRateLimiter.Uninit()
 }
 
-func GetStatus(method string, route string, user string, ip string) *Status {
-	return globalRateLimiter.GetStatus(method, route, user, ip)
+func ShouldRateLimitRequest(method string, route string, user string, ip string) *Status {
+	return globalRateLimiter.ShouldRateLimitRequest(method, route, user, ip)
 }
 
 func UpdateConfig(endpoints []EndpointConfig) {
 	globalRateLimiter.UpdateConfig(endpoints)
-}
-
-func UpdateCounts(method string, route string, user string, ip string) {
-	globalRateLimiter.UpdateCounts(method, route, user, ip)
 }

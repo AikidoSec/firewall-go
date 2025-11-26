@@ -89,7 +89,7 @@ func GetRateLimitingStatus(method string, route string, user string, ip string) 
 		slog.String("user", user),
 		slog.String("ip", ip))
 
-	return ratelimiting.GetStatus(method, route, user, ip)
+	return ratelimiting.ShouldRateLimitRequest(method, route, user, ip)
 }
 
 func OnRequestShutdown(method string, route string, statusCode int, user string, ip string, apiSpec *aikido_types.APISpec) {
@@ -102,7 +102,6 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 	go storeStats()
 	go stateCollector.StoreRoute(method, route, apiSpec)
-	go ratelimiting.UpdateCounts(method, route, user, ip)
 }
 
 // OnUser records or updates user activity in the global user registry.
