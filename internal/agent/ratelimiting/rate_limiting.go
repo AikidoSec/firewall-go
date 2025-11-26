@@ -134,8 +134,8 @@ func isRateLimitingThresholdExceeded(config *rateLimitConfig, countsMap map[stri
 	return counts.TotalNumberOfRequests >= config.MaxRequests
 }
 
-// GetStatus checks if a request should be rate limited based on user or IP
-func (rl *RateLimiter) GetStatus(method string, route string, user string, ip string) *Status {
+// ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
+func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user string, ip string) *Status {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
@@ -256,8 +256,8 @@ func Uninit() {
 	globalRateLimiter.Uninit()
 }
 
-func GetStatus(method string, route string, user string, ip string) *Status {
-	return globalRateLimiter.GetStatus(method, route, user, ip)
+func ShouldRateLimitRequest(method string, route string, user string, ip string) *Status {
+	return globalRateLimiter.ShouldRateLimitRequest(method, route, user, ip)
 }
 
 func UpdateConfig(endpoints []EndpointConfig) {
