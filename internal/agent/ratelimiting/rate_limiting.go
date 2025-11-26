@@ -69,7 +69,6 @@ func (rl *RateLimiter) Uninit() {
 	utils.StopPollingRoutine(rl.channel)
 }
 
-// getOrCreateCounts gets existing counts or creates new ones
 func getOrCreateCounts(m map[string]*slidingwindow.Window, key string, windowSizeSeconds int64, maxRequests int) *slidingwindow.Window {
 	if key == "" {
 		return nil
