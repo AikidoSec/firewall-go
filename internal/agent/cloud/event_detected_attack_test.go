@@ -187,9 +187,7 @@ func TestClient_SendAttackDetectedEvent(t *testing.T) {
 		client.SendAttackDetectedEvent(agentInfo, requestInfo, attackDetails)
 
 		// Verify the event was still attempted (rate limit was incremented)
-		attackDetectedEventsSentAtMutex.Lock()
-		count := len(attackDetectedEventsSentAt)
-		attackDetectedEventsSentAtMutex.Unlock()
+		count := attackDetectedEventsWindow.Count(time.Now().UnixMilli())
 		assert.Equal(t, 1, count, "should have attempted to send event")
 	})
 }
