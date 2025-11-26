@@ -12,43 +12,26 @@ var (
 	usersMutex sync.Mutex
 )
 
-func GetUserByID(userID string) *aikido_types.User {
-	if userID == "" {
-		return nil
-	}
-
+func storeUser(id string, username string, ip string) aikido_types.User {
 	usersMutex.Lock()
 	defer usersMutex.Unlock()
 
-	user, exists := users[userID]
-	if !exists {
-		return nil
-	}
-	return &user
-}
+	now := utils.GetTime()
+	firstSeen := now
 
-func storeUser(id string, username string, ip string) {
-	usersMutex.Lock()
-	defer usersMutex.Unlock()
-
-	if _, exists := users[id]; exists {
-		users[id] = aikido_types.User{
-			ID:            id,
-			Name:          username,
-			LastIpAddress: ip,
-			FirstSeenAt:   users[id].FirstSeenAt,
-			LastSeenAt:    utils.GetTime(),
-		}
-		return
+	if existing, exists := users[id]; exists {
+		firstSeen = existing.FirstSeenAt
 	}
 
-	users[id] = aikido_types.User{
+	user := aikido_types.User{
 		ID:            id,
 		Name:          username,
 		LastIpAddress: ip,
-		FirstSeenAt:   utils.GetTime(),
-		LastSeenAt:    utils.GetTime(),
+		FirstSeenAt:   firstSeen,
+		LastSeenAt:    now,
 	}
+	users[id] = user
+	return user
 }
 
 func GetUsersAndClear() []aikido_types.User {

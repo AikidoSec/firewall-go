@@ -3,6 +3,8 @@ package request
 import (
 	"sync"
 	"sync/atomic"
+
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
 type DeferredBlock struct {
@@ -21,7 +23,7 @@ type Context struct {
 	Source             string
 	Route              string
 	executedMiddleware bool
-	user               *User
+	user               aikido_types.User
 
 	deferredAttack *DeferredAttack
 
@@ -35,21 +37,18 @@ func (ctx *Context) GetUserAgent() string {
 	return "unknown"
 }
 
-func (ctx *Context) SetUser(user *User) {
+func (ctx *Context) SetUser(user aikido_types.User) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
 
 	ctx.user = user
 }
 
-func (ctx *Context) GetUserID() string {
+func (ctx *Context) GetUser() aikido_types.User {
 	ctx.mu.RLock()
 	defer ctx.mu.RUnlock()
 
-	if ctx.user != nil {
-		return ctx.user.ID
-	}
-	return "" // Empty ID
+	return ctx.user
 }
 
 // MarkMiddlewareExecuted marks the middleware as executed.
