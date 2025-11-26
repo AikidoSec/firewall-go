@@ -125,7 +125,7 @@ func TestCleanupInactive(t *testing.T) {
 	}
 
 	now := time.Now().Unix()
-	veryOld := now - int64(inactivityThreshold.Seconds()) - 100
+	veryOld := now - int64(5*60) - 100
 	recent := now - 60
 
 	inactiveWindow := slidingwindow.New(5*60, 10)

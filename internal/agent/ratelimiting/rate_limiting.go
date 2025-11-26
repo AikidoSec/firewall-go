@@ -14,7 +14,6 @@ const (
 	minRateLimitingWindowInMs = 60000   // 1 minute
 	maxRateLimitingWindowInMs = 3600000 // 1 hour
 	inactiveCleanupInterval   = 5 * time.Minute
-	inactivityThreshold       = 1 * time.Hour
 )
 
 type rateLimitConfig struct {
