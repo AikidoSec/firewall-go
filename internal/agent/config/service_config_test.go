@@ -499,18 +499,37 @@ func TestIsIPBypassed(t *testing.T) {
 	setupTestGlobals()
 	defer resetServiceConfig()
 
-	t.Run("bypasses IP in bypass list", func(t *testing.T) {
+	t.Run("bypasses IPv4 in bypass list", func(t *testing.T) {
 		resetServiceConfig()
 
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt: time.Now().UnixMilli(),
-			BypassedIPs:     []string{"127.0.0.1", "192.168.1.100"},
+			BypassedIPs:     []string{"127.0.0.1", "192.168.1.100", "10.0.0.0/16"},
 		}
 
 		UpdateServiceConfig(cloudConfig, nil)
 
 		assert.True(t, IsIPBypassed("127.0.0.1"))
 		assert.True(t, IsIPBypassed("192.168.1.100"))
+		assert.True(t, IsIPBypassed("10.0.10.5"))
+		assert.False(t, IsIPBypassed("10.1.10.5"))
+		assert.False(t, IsIPBypassed("16.16.16.16"))
+	})
+
+	t.Run("bypasses IPv6 in bypass list", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+			BypassedIPs:     []string{"2001:db8::1", "2002:abcd::/112"},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		assert.True(t, IsIPBypassed("2001:db8::1"))
+		assert.True(t, IsIPBypassed("2002:abcd::1234"))
+		assert.False(t, IsIPBypassed("2001:db8::2"))
+		assert.False(t, IsIPBypassed("2002:abce::1234"))
 	})
 
 	t.Run("does not bypass IP not in list", func(t *testing.T) {
@@ -609,7 +628,7 @@ func TestGetCloudConfigUpdatedAt(t *testing.T) {
 func TestBuildIPBlocklist(t *testing.T) {
 	t.Run("builds IPv4 blocklist", func(t *testing.T) {
 		ips := []string{"192.168.1.1", "10.0.0.0/8"}
-		blocklist := buildIPBlocklist("test", "Test list", ips)
+		blocklist := buildIPMatchList("test", "Test list", ips)
 
 		assert.Equal(t, "Test list", blocklist.Description)
 		assert.NotNil(t, blocklist.TrieV4)
@@ -618,7 +637,7 @@ func TestBuildIPBlocklist(t *testing.T) {
 
 	t.Run("builds IPv6 blocklist", func(t *testing.T) {
 		ips := []string{"2001:db8::1", "2001:db8::/32"}
-		blocklist := buildIPBlocklist("test", "IPv6 list", ips)
+		blocklist := buildIPMatchList("test", "IPv6 list", ips)
 
 		assert.Equal(t, "IPv6 list", blocklist.Description)
 		assert.NotNil(t, blocklist.TrieV4)
@@ -627,7 +646,7 @@ func TestBuildIPBlocklist(t *testing.T) {
 
 	t.Run("handles mixed IPv4 and IPv6", func(t *testing.T) {
 		ips := []string{"192.168.1.1", "2001:db8::1"}
-		blocklist := buildIPBlocklist("mixed", "Mixed list", ips)
+		blocklist := buildIPMatchList("mixed", "Mixed list", ips)
 
 		assert.Equal(t, "Mixed list", blocklist.Description)
 		assert.NotNil(t, blocklist.TrieV4)
@@ -636,7 +655,7 @@ func TestBuildIPBlocklist(t *testing.T) {
 
 	t.Run("skips invalid IP addresses", func(t *testing.T) {
 		ips := []string{"192.168.1.1", "not-an-ip", "10.0.0.1"}
-		blocklist := buildIPBlocklist("test", "Test", ips)
+		blocklist := buildIPMatchList("test", "Test", ips)
 
 		// Should not panic and should create tries
 		assert.NotNil(t, blocklist.TrieV4)
@@ -645,7 +664,7 @@ func TestBuildIPBlocklist(t *testing.T) {
 
 	t.Run("handles empty IP list", func(t *testing.T) {
 		ips := []string{}
-		blocklist := buildIPBlocklist("empty", "Empty list", ips)
+		blocklist := buildIPMatchList("empty", "Empty list", ips)
 
 		assert.Equal(t, "Empty list", blocklist.Description)
 		assert.NotNil(t, blocklist.TrieV4)
