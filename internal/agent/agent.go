@@ -102,7 +102,6 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 	go storeStats()
 	go stateCollector.StoreRoute(method, route, apiSpec)
-	go ratelimiting.UpdateCounts(method, route, user, ip)
 }
 
 // OnUser records or updates user activity in the global user registry.
