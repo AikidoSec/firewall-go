@@ -92,7 +92,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
@@ -110,7 +110,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "POST", Route: "/api/other"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config: rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 5},
+			Config: rateLimitConfig{MaxRequests: 5, WindowSizeInMS: fiveMinutesInMS},
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
@@ -127,7 +127,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
