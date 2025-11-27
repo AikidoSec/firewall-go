@@ -49,9 +49,8 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*slidingwindow.Window),
-			IPCounts:   make(map[string]*slidingwindow.Window),
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
 		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
@@ -64,9 +63,8 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*slidingwindow.Window),
-			IPCounts:   make(map[string]*slidingwindow.Window),
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
 		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
@@ -83,9 +81,8 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config:     rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*slidingwindow.Window),
-			IPCounts:   make(map[string]*slidingwindow.Window),
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
 		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
@@ -102,9 +99,8 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "POST", Route: "/api/other"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config:     rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 5},
-			UserCounts: make(map[string]*slidingwindow.Window),
-			IPCounts:   make(map[string]*slidingwindow.Window),
+			Config: rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 5},
+			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
 		_ = rl.ShouldRateLimitRequest("POST", "/api/other", "", "192.168.1.2")
@@ -119,9 +115,8 @@ func TestCleanupInactive(t *testing.T) {
 	rl := New()
 	key := endpointKey{Method: "GET", Route: "/api/test"}
 	rl.rateLimitingMap[key] = &endpointData{
-		Config:     rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
-		UserCounts: make(map[string]*slidingwindow.Window),
-		IPCounts:   make(map[string]*slidingwindow.Window),
+		Config: rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
+		Counts: make(map[entityKey]*slidingwindow.Window),
 	}
 
 	now := time.Now().Unix()
@@ -137,17 +132,17 @@ func TestCleanupInactive(t *testing.T) {
 	emptyWindow := slidingwindow.New(5*60, 10)
 
 	// Add various states
-	rl.rateLimitingMap[key].UserCounts["inactive"] = inactiveWindow
-	rl.rateLimitingMap[key].UserCounts["active"] = activeWindow
-	rl.rateLimitingMap[key].UserCounts["empty"] = emptyWindow
+	rl.rateLimitingMap[key].Counts[entityKey{Value: "inactive"}] = inactiveWindow
+	rl.rateLimitingMap[key].Counts[entityKey{Value: "active"}] = activeWindow
+	rl.rateLimitingMap[key].Counts[entityKey{Value: "empty"}] = emptyWindow
 
 	rl.cleanupInactive()
 
 	// Inactive and empty should be removed
-	assert.NotContains(t, rl.rateLimitingMap[key].UserCounts, "inactive")
-	assert.NotContains(t, rl.rateLimitingMap[key].UserCounts, "empty")
+	assert.NotContains(t, rl.rateLimitingMap[key].Counts, entityKey{Value: "inactive"})
+	assert.NotContains(t, rl.rateLimitingMap[key].Counts, entityKey{Value: "empty"})
 	// Active should remain
-	assert.Contains(t, rl.rateLimitingMap[key].UserCounts, "active")
+	assert.Contains(t, rl.rateLimitingMap[key].Counts, entityKey{Value: "active"})
 }
 
 func TestShouldRateLimitRequest_Concurrent(t *testing.T) {
@@ -158,8 +153,7 @@ func TestShouldRateLimitRequest_Concurrent(t *testing.T) {
 			MaxRequests:         100,
 			WindowSizeInMinutes: 5,
 		},
-		UserCounts: make(map[string]*slidingwindow.Window),
-		IPCounts:   make(map[string]*slidingwindow.Window),
+		Counts: make(map[entityKey]*slidingwindow.Window),
 	}
 
 	// Concurrent updates and reads
@@ -177,7 +171,7 @@ func TestShouldRateLimitRequest_Concurrent(t *testing.T) {
 	wg.Wait()
 
 	value := rl.rateLimitingMap[key]
-	assert.Equal(t, 100, value.UserCounts["user1"].Count(time.Now().Unix()))
+	assert.Equal(t, 100, value.Counts[entityKey{Kind: entityKindUser, Value: "user1"}].Count(time.Now().Unix()))
 }
 
 func TestUpdateConfig(t *testing.T) {
@@ -210,8 +204,7 @@ func TestUpdateConfig(t *testing.T) {
 		require.NotNil(t, value1)
 		assert.Equal(t, 10, value1.Config.MaxRequests)
 		assert.Equal(t, 5, value1.Config.WindowSizeInMinutes)
-		assert.NotNil(t, value1.UserCounts)
-		assert.NotNil(t, value1.IPCounts)
+		assert.NotNil(t, value1.Counts)
 
 		key2 := endpointKey{Method: "POST", Route: "/api/create"}
 		value2 := rl.rateLimitingMap[key2]
@@ -237,21 +230,21 @@ func TestUpdateConfig(t *testing.T) {
 		for i := range 5 {
 			userWindow.TryRecord(now - int64(i))
 		}
-		originalValue.UserCounts["user1"] = userWindow
+		originalValue.Counts[entityKey{Kind: entityKindUser, Value: "user1"}] = userWindow
 
 		ipWindow := slidingwindow.New(10, 10)
 		for i := range 3 {
 			ipWindow.TryRecord(now - int64(i))
 		}
-		originalValue.IPCounts["192.168.1.1"] = ipWindow
+		originalValue.Counts[entityKey{Kind: entityKindIP, Value: "192.168.1.1"}] = ipWindow
 
 		// Update with same config
 		rl.UpdateConfig(endpoints)
 
 		updatedValue := rl.rateLimitingMap[key]
 		assert.Equal(t, originalValue, updatedValue, "should be same instance")
-		assert.Equal(t, 5, updatedValue.UserCounts["user1"].Count(now))
-		assert.Equal(t, 3, updatedValue.IPCounts["192.168.1.1"].Count(now))
+		assert.Equal(t, 5, updatedValue.Counts[entityKey{Kind: entityKindUser, Value: "user1"}].Count(now))
+		assert.Equal(t, 3, updatedValue.Counts[entityKey{Kind: entityKindIP, Value: "192.168.1.1"}].Count(now))
 	})
 
 	t.Run("resets data when config changed", func(t *testing.T) {
@@ -271,7 +264,7 @@ func TestUpdateConfig(t *testing.T) {
 			userWindow.TryRecord(now - int64(i))
 		}
 
-		rl.rateLimitingMap[key].UserCounts["user1"] = userWindow
+		rl.rateLimitingMap[key].Counts[entityKey{Kind: entityKindUser, Value: "user1"}] = userWindow
 
 		// Update with different config
 		changedEndpoints := []EndpointConfig{
@@ -282,8 +275,7 @@ func TestUpdateConfig(t *testing.T) {
 		value := rl.rateLimitingMap[key]
 		require.NotNil(t, value)
 		assert.Equal(t, 20, value.Config.MaxRequests)
-		assert.Empty(t, value.UserCounts)
-		assert.Empty(t, value.IPCounts)
+		assert.Empty(t, value.Counts)
 	})
 
 	t.Run("ignores disabled endpoints", func(t *testing.T) {
