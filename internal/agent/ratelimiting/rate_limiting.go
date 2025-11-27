@@ -107,15 +107,16 @@ func getOrCreateCounts(m map[entityKey]*slidingwindow.Window, key entityKey, win
 // ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
 func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user string, ip string, group string) *Status {
 	// Priority: group > user > ip
-	if group != "" {
+	switch {
+	case group != "":
 		return rl.checkEntity(method, route, entityKindGroup, group)
-	} else if user != "" {
+	case user != "":
 		return rl.checkEntity(method, route, entityKindUser, user)
-	} else if ip != "" {
+	case ip != "":
 		return rl.checkEntity(method, route, entityKindIP, ip)
+	default:
+		return &Status{Block: false}
 	}
-
-	return &Status{Block: false}
 }
 
 func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind, entityValue string) *Status {
