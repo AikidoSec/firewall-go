@@ -19,9 +19,8 @@ const (
 )
 
 type rateLimitConfig struct {
-	MaxRequests         int
-	WindowSizeInMinutes int
-	WindowSizeInMS      int // Store original window size in milliseconds for rate calculation
+	MaxRequests    int
+	WindowSizeInMS int
 }
 
 // endpointKey identifies a specific endpoint for rate limiting
@@ -128,12 +127,13 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 		return &Status{Block: false}
 	}
 
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	maxRequests := rateLimitingDataForRoute.Config.MaxRequests
-	windowSizeSeconds := int64(rateLimitingDataForRoute.Config.WindowSizeInMinutes * 60)
 
 	key := entityKey{Kind: kind, Value: entityValue}
-	counts := getOrCreateCounts(rateLimitingDataForRoute.Counts, key, windowSizeSeconds, maxRequests)
+	counts := getOrCreateCounts(rateLimitingDataForRoute.Counts, key,
+		int64(rateLimitingDataForRoute.Config.WindowSizeInMS), maxRequests)
+
 	if counts == nil {
 		return &Status{Block: false}
 	}
@@ -210,7 +210,7 @@ func (rl *RateLimiter) cleanupInactive() {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 
 	for _, endpoint := range rl.rateLimitingMap {
 		cleanupInactiveMap(endpoint.Counts, now)
@@ -229,11 +229,6 @@ func cleanupInactiveMap(m map[entityKey]*slidingwindow.Window, now int64) {
 	for _, key := range keysToDelete {
 		delete(m, key)
 	}
-}
-
-func millisecondsToMinutes(ms int) int {
-	duration := time.Duration(ms) * time.Millisecond
-	return int(duration.Minutes())
 }
 
 // EndpointConfig represents the rate limiting configuration for an endpoint
@@ -269,9 +264,8 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 
 		k := endpointKey{Method: endpoint.Method, Route: endpoint.Route}
 		newConfig := rateLimitConfig{
-			MaxRequests:         endpoint.RateLimiting.MaxRequests,
-			WindowSizeInMinutes: millisecondsToMinutes(endpoint.RateLimiting.WindowSizeInMS),
-			WindowSizeInMS:      endpoint.RateLimiting.WindowSizeInMS,
+			MaxRequests:    endpoint.RateLimiting.MaxRequests,
+			WindowSizeInMS: endpoint.RateLimiting.WindowSizeInMS,
 		}
 
 		// Check if we can preserve existing data

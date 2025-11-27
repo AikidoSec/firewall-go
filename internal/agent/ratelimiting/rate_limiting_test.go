@@ -10,29 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMillisecondsToMinutes(t *testing.T) {
-	testCases := []struct {
-		name     string
-		ms       int
-		expected int
-	}{
-		{"1 minute", 60000, 1},
-		{"5 minutes", 300000, 5},
-		{"10 minutes", 600000, 10},
-		{"30 minutes", 1800000, 30},
-		{"1 hour", 3600000, 60},
-		{"2 hours", 7200000, 120},
-		{"0 ms", 0, 0},
-		{"500 ms", 500, 0}, // Less than a minute rounds down
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := millisecondsToMinutes(tc.ms)
-			assert.Equal(t, tc.expected, result)
-		})
-	}
-}
+var fiveMinutesInMS = int(time.Duration(5 * time.Minute).Milliseconds())
 
 func TestShouldRateLimitRequest(t *testing.T) {
 	t.Run("non-existent route returns no block", func(t *testing.T) {
@@ -49,7 +27,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
@@ -63,7 +41,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
@@ -81,7 +59,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMinutes: 5},
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
@@ -99,7 +77,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "POST", Route: "/api/other"}
 		rl.rateLimitingMap[key] = &endpointData{
-			Config: rateLimitConfig{MaxRequests: 5, WindowSizeInMinutes: 5},
+			Config: rateLimitConfig{MaxRequests: 5, WindowSizeInMS: fiveMinutesInMS},
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
@@ -115,21 +93,21 @@ func TestCleanupInactive(t *testing.T) {
 	rl := New()
 	key := endpointKey{Method: "GET", Route: "/api/test"}
 	rl.rateLimitingMap[key] = &endpointData{
-		Config: rateLimitConfig{MaxRequests: 10, WindowSizeInMinutes: 5},
+		Config: rateLimitConfig{MaxRequests: 10, WindowSizeInMS: fiveMinutesInMS},
 		Counts: make(map[entityKey]*slidingwindow.Window),
 	}
 
-	now := time.Now().Unix()
-	veryOld := now - int64(5*60) - 100
-	recent := now - 60
+	now := time.Now().UnixMilli()
+	veryOld := now - int64(5*60*1000) - (100 * 1000)
+	recent := now - (60 * 1000)
 
-	inactiveWindow := slidingwindow.New(5*60, 10)
+	inactiveWindow := slidingwindow.New(5*60*1000, 10)
 	inactiveWindow.TryRecord(veryOld)
 
-	activeWindow := slidingwindow.New(5*60, 10)
+	activeWindow := slidingwindow.New(5*60*1000, 10)
 	activeWindow.TryRecord(recent)
 
-	emptyWindow := slidingwindow.New(5*60, 10)
+	emptyWindow := slidingwindow.New(5*60*1000, 10)
 
 	// Add various states
 	rl.rateLimitingMap[key].Counts[entityKey{Value: "inactive"}] = inactiveWindow
@@ -150,8 +128,8 @@ func TestShouldRateLimitRequest_Concurrent(t *testing.T) {
 	key := endpointKey{Method: "GET", Route: "/api/test"}
 	rl.rateLimitingMap[key] = &endpointData{
 		Config: rateLimitConfig{
-			MaxRequests:         100,
-			WindowSizeInMinutes: 5,
+			MaxRequests:    100,
+			WindowSizeInMS: fiveMinutesInMS,
 		},
 		Counts: make(map[entityKey]*slidingwindow.Window),
 	}
@@ -171,7 +149,7 @@ func TestShouldRateLimitRequest_Concurrent(t *testing.T) {
 	wg.Wait()
 
 	value := rl.rateLimitingMap[key]
-	assert.Equal(t, 100, value.Counts[entityKey{Kind: entityKindUser, Value: "user1"}].Count(time.Now().Unix()))
+	assert.Equal(t, 100, value.Counts[entityKey{Kind: entityKindUser, Value: "user1"}].Count(time.Now().UnixMilli()))
 }
 
 func TestUpdateConfig(t *testing.T) {
@@ -203,14 +181,14 @@ func TestUpdateConfig(t *testing.T) {
 		value1 := rl.rateLimitingMap[key1]
 		require.NotNil(t, value1)
 		assert.Equal(t, 10, value1.Config.MaxRequests)
-		assert.Equal(t, 5, value1.Config.WindowSizeInMinutes)
+		assert.Equal(t, 300000, value1.Config.WindowSizeInMS)
 		assert.NotNil(t, value1.Counts)
 
 		key2 := endpointKey{Method: "POST", Route: "/api/create"}
 		value2 := rl.rateLimitingMap[key2]
 		require.NotNil(t, value2)
 		assert.Equal(t, 5, value2.Config.MaxRequests)
-		assert.Equal(t, 10, value2.Config.WindowSizeInMinutes)
+		assert.Equal(t, 600000, value2.Config.WindowSizeInMS)
 	})
 
 	t.Run("preserves data when config unchanged", func(t *testing.T) {
@@ -224,7 +202,7 @@ func TestUpdateConfig(t *testing.T) {
 		originalValue := rl.rateLimitingMap[key]
 
 		// Add some data
-		now := time.Now().Unix()
+		now := time.Now().UnixMilli()
 
 		userWindow := slidingwindow.New(10, 10)
 		for i := range 5 {
@@ -258,7 +236,7 @@ func TestUpdateConfig(t *testing.T) {
 		key := endpointKey{Method: "GET", Route: "/api/test"}
 
 		// Add some data
-		now := time.Now().Unix()
+		now := time.Now().UnixMilli()
 		userWindow := slidingwindow.New(10, 10)
 		for i := range 5 {
 			userWindow.TryRecord(now - int64(i))
