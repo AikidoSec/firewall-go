@@ -5,91 +5,68 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // resetAttackDetectedEvents resets the global state for testing
 func resetAttackDetectedEvents() {
-	attackDetectedEventsSentAtMutex.Lock()
-	defer attackDetectedEventsSentAtMutex.Unlock()
-	attackDetectedEventsSentAt = []int64{}
+	attackDetectedEventsWindow = slidingwindow.New(
+		attackDetectedEventsIntervalInMs,
+		maxAttackDetectedEventsPerInterval,
+	)
 }
 
 func TestShouldSendAttackDetectedEvent(t *testing.T) {
-	t.Run("returns true and adds events when under limit", func(t *testing.T) {
+	t.Run("returns true when under limit", func(t *testing.T) {
 		resetAttackDetectedEvents()
 
 		// Test single call
 		result := shouldSendAttackEvent()
 		assert.True(t, result, "should return true when no events have been sent")
-		assert.Equal(t, 1, len(attackDetectedEventsSentAt), "should add event to list")
 
 		// Test multiple calls (under the limit of 100)
-		for i := 0; i < 50; i++ {
+		for i := range 50 {
 			result := shouldSendAttackEvent()
 			assert.True(t, result, "should return true for event %d", i+2)
 		}
-		assert.Equal(t, 51, len(attackDetectedEventsSentAt), "should have added all events")
 	})
 
-	t.Run("returns false and does not add events when limit is reached or exceeded", func(t *testing.T) {
+	t.Run("returns false when limit is reached or exceeded", func(t *testing.T) {
 		resetAttackDetectedEvents()
 
 		// Send exactly maxAttackDetectedEventsPerInterval events
-		for i := 0; i < maxAttackDetectedEventsPerInterval; i++ {
+		for i := range maxAttackDetectedEventsPerInterval {
 			result := shouldSendAttackEvent()
 			assert.True(t, result, "should return true for event %d", i+1)
 		}
-		assert.Equal(t, maxAttackDetectedEventsPerInterval, len(attackDetectedEventsSentAt), "should have added all events up to limit")
 
 		// The next call should return false and not add to the list
-		initialCount := len(attackDetectedEventsSentAt)
 		result := shouldSendAttackEvent()
 		assert.False(t, result, "should return false when limit is reached")
-		assert.Equal(t, initialCount, len(attackDetectedEventsSentAt), "should not add event when limit is exceeded")
 
 		// Verify subsequent calls also return false
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			result := shouldSendAttackEvent()
 			assert.False(t, result, "should return false for subsequent calls")
 		}
-		assert.Equal(t, initialCount, len(attackDetectedEventsSentAt), "should not add any more events")
 	})
 
 	t.Run("filters old events and keeps recent events", func(t *testing.T) {
 		resetAttackDetectedEvents()
 
 		// Manually add both old and recent events
-		attackDetectedEventsSentAtMutex.Lock()
 		currentTime := time.Now().UnixMilli()
-		oldTime := currentTime - attackDetectedEventsIntervalInMs - 1000   // 1 second older than interval
-		recentTime := currentTime - (attackDetectedEventsIntervalInMs / 2) // 30 minutes ago
-		attackDetectedEventsSentAt = []int64{oldTime, recentTime}
-		attackDetectedEventsSentAtMutex.Unlock()
+		oldTime := currentTime - attackDetectedEventsIntervalInMs - 1000 // 1 second older than interval
 
-		// Wait a bit to ensure current time is different
-		time.Sleep(10 * time.Millisecond)
+		for range 100 {
+			require.True(t, attackDetectedEventsWindow.TryRecord(oldTime))
+		}
 
 		// Should return true because old event was filtered out
 		result := shouldSendAttackEvent()
 		assert.True(t, result, "should return true after filtering out old events")
-
-		// Verify old event was removed and recent event was kept
-		attackDetectedEventsSentAtMutex.Lock()
-		hasOldEvent := false
-		hasRecentEvent := false
-		for _, eventTime := range attackDetectedEventsSentAt {
-			if eventTime == oldTime {
-				hasOldEvent = true
-			}
-			if eventTime == recentTime {
-				hasRecentEvent = true
-			}
-		}
-		attackDetectedEventsSentAtMutex.Unlock()
-		assert.False(t, hasOldEvent, "old event should have been filtered out")
-		assert.True(t, hasRecentEvent, "recent event should be kept")
-		assert.Equal(t, 2, len(attackDetectedEventsSentAt), "should have recent event plus the new one")
 	})
 
 	t.Run("thread safety with concurrent calls", func(t *testing.T) {
@@ -102,11 +79,11 @@ func TestShouldSendAttackDetectedEvent(t *testing.T) {
 		results := make(chan bool, numGoroutines*callsPerGoroutine)
 
 		// Launch multiple goroutines calling the function concurrently
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				for j := 0; j < callsPerGoroutine; j++ {
+				for range callsPerGoroutine {
 					result := shouldSendAttackEvent()
 					results <- result
 				}
@@ -129,9 +106,8 @@ func TestShouldSendAttackDetectedEvent(t *testing.T) {
 			"should not exceed limit even with concurrent calls")
 
 		// Verify final count matches
-		attackDetectedEventsSentAtMutex.Lock()
-		finalCount := len(attackDetectedEventsSentAt)
-		attackDetectedEventsSentAtMutex.Unlock()
-		assert.Equal(t, trueCount, finalCount, "final count should match number of true results")
+		assert.Equal(t, trueCount,
+			attackDetectedEventsWindow.Count(time.Now().UnixMilli()),
+			"final count should match number of true results")
 	})
 }
