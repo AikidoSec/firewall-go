@@ -8,12 +8,71 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func setupRateLimitingConfig(t *testing.T, method, route string, maxRequests int) {
+	t.Helper()
+	block := true
+	cloudConfig := &aikido_types.CloudConfigData{
+		Success:   true,
+		ServiceID: 1,
+		Endpoints: []aikido_types.Endpoint{
+			{
+				Method: method,
+				Route:  route,
+				RateLimiting: aikido_types.RateLimiting{
+					Enabled:        true,
+					MaxRequests:    maxRequests,
+					WindowSizeInMS: 100000,
+				},
+				AllowedIPAddresses: []string{},
+				ForceProtectionOff: false,
+			},
+		},
+		BlockedUserIds:   []string{},
+		BypassedIPs:      []string{},
+		ReceivedAnyStats: false,
+		Block:            &block,
+	}
+	config.UpdateServiceConfig(cloudConfig, nil)
+
+	ratelimiting.UpdateConfig([]ratelimiting.EndpointConfig{
+		{
+			Method: method,
+			Route:  route,
+			RateLimiting: struct {
+				Enabled        bool
+				MaxRequests    int
+				WindowSizeInMS int
+			}{
+				Enabled:        true,
+				MaxRequests:    maxRequests,
+				WindowSizeInMS: 100000,
+			},
+		},
+	})
+}
+
+func createRequestContext(t *testing.T, method, route, ip string, userID, userName string) context.Context {
+	t.Helper()
+	req := httptest.NewRequest(method, route, nil)
+	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         route,
+		RemoteAddress: &ip,
+	})
+	if userID != "" {
+		zen.SetUser(reqCtx, userID, userName)
+	}
+	return reqCtx
+}
 
 func TestShouldBlockRequest(t *testing.T) {
 	// Basic test to ensure function doesn't panic
@@ -41,6 +100,57 @@ func TestShouldBlockRequest_BlockedUser(t *testing.T) {
 	assert.Equal(t, "blocked", response.Type)
 	assert.Equal(t, "user", response.Trigger)
 	assert.Nil(t, response.IP)
+}
+
+func TestShouldBlockRequest_RateLimitedByUser(t *testing.T) {
+	setupRateLimitingConfig(t, "GET", "/api/test", 2)
+
+	// Update counts to exceed limit
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+
+	reqCtx := createRequestContext(t, "GET", "/api/test", "192.168.1.1", "user1", "Test User")
+
+	response := zen.ShouldBlockRequest(reqCtx)
+	require.NotNil(t, response)
+	assert.Equal(t, "rate-limited", response.Type)
+	assert.Equal(t, "user", response.Trigger)
+	assert.Nil(t, response.IP)
+}
+
+func TestShouldBlockRequest_RateLimitedByIP(t *testing.T) {
+	// Use wildcard route to match any /api/* endpoint
+	setupRateLimitingConfig(t, "POST", "/api/*", 3)
+
+	// Update counts to exceed limit (no user, so rate limit by IP)
+	// Use a specific route that matches the wildcard
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
+	ratelimiting.ShouldRateLimitRequest("POST", "/api/submit", "", "10.0.0.1")
+
+	reqCtx := createRequestContext(t, "POST", "/api/submit", "10.0.0.1", "", "")
+
+	response := zen.ShouldBlockRequest(reqCtx)
+	require.NotNil(t, response)
+	assert.Equal(t, "rate-limited", response.Type)
+	assert.Equal(t, "ip", response.Trigger)
+	assert.NotNil(t, response.IP)
+	assert.Equal(t, "10.0.0.1", *response.IP)
+}
+
+func TestShouldBlockRequest_NotRateLimited(t *testing.T) {
+	setupRateLimitingConfig(t, "GET", "/api/test", 5)
+
+	// Update counts but stay below limit
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+	ratelimiting.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+
+	reqCtx := createRequestContext(t, "GET", "/api/test", "192.168.1.1", "user1", "Test User")
+
+	response := zen.ShouldBlockRequest(reqCtx)
+	assert.Nil(t, response)
 }
 
 // ExampleShouldBlockRequest demonstrates the complete middleware pattern with auth and Zen middleware.

@@ -23,29 +23,21 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 		log.Info("User is blocked!", slog.String("user", user.ID))
 		return &BlockResponse{"blocked", "user", nil}
 	}
-	// rate-limiting :
-	matches := config.MatchEndpoints(
-		config.RouteMetadata{URL: reqCtx.URL, Method: reqCtx.Method, Route: reqCtx.Route},
+
+	rateLimitingStatus := agent.GetRateLimitingStatus(
+		reqCtx.Method, reqCtx.Route, reqCtx.GetUser().ID, reqCtx.GetIP(),
 	)
+	if rateLimitingStatus != nil && rateLimitingStatus.Block {
+		log.Info("Request is rate-limited",
+			slog.String("ip", reqCtx.GetIP()), slog.String("trigger", rateLimitingStatus.Trigger))
 
-	for _, endpoint := range matches {
-		if endpoint.RateLimiting.Enabled {
-			rateLimitingStatus := agent.GetRateLimitingStatus(
-				endpoint.Method, endpoint.Route, reqCtx.GetUser().ID, reqCtx.GetIP(),
-			)
-			if rateLimitingStatus != nil && rateLimitingStatus.Block {
-				log.Info("Request is rate-limited",
-					slog.String("ip", reqCtx.GetIP()), slog.String("trigger", rateLimitingStatus.Trigger))
-
-				if rateLimitingStatus.Trigger == "ip" {
-					return &BlockResponse{
-						"rate-limited", rateLimitingStatus.Trigger, reqCtx.RemoteAddress,
-					}
-				}
-				return &BlockResponse{
-					"rate-limited", rateLimitingStatus.Trigger, nil,
-				}
+		if rateLimitingStatus.Trigger == "ip" {
+			return &BlockResponse{
+				"rate-limited", rateLimitingStatus.Trigger, reqCtx.RemoteAddress,
 			}
+		}
+		return &BlockResponse{
+			"rate-limited", rateLimitingStatus.Trigger, nil,
 		}
 	}
 

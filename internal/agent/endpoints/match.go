@@ -1,4 +1,4 @@
-package config
+package endpoints
 
 import (
 	"regexp"
@@ -15,10 +15,9 @@ type RouteMetadata struct {
 	Route  string
 }
 
-// MatchEndpoints finds matching endpoints based on the provided context.
-func MatchEndpoints(context RouteMetadata) []aikido_types.Endpoint {
-	endpoints := GetEndpoints()
-
+// FindMatches finds matching endpoints from a provided list based on the context.
+// This is the core matching logic that can be reused with any endpoint list.
+func FindMatches(endpoints []aikido_types.Endpoint, context RouteMetadata) []aikido_types.Endpoint {
 	var matches []aikido_types.Endpoint
 
 	if context.Method == "" {
