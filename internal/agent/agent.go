@@ -87,7 +87,7 @@ func GetRateLimitingStatus(method string, route string, user string, ip string, 
 		slog.String("method", method),
 		slog.String("route", route),
 		slog.String("user", user),
-		slog.String("group", user),
+		slog.String("group", group),
 		slog.String("ip", ip))
 
 	return ratelimiting.ShouldRateLimitRequest(method, route, user, ip, group)
