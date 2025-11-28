@@ -33,3 +33,4 @@ go.work.sum
 internal/vulnerabilities/zen_internals/lib/*
 
 sample-apps/*/bin
+tools/bin
