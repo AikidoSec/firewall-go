@@ -50,7 +50,13 @@ func main() {
 func SetUserMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("user") != "" {
-			zen.SetUser(r.Context(), r.Header.Get("user"), "John Doe")
+			_, err := zen.SetUser(r.Context(), r.Header.Get("user"), "John Doe")
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				_, _ = w.Write([]byte(err.Error()))
+				return
+			}
 		}
 		next.ServeHTTP(w, r)
 	})

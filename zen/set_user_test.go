@@ -26,10 +26,11 @@ func TestSetUser(t *testing.T) {
 		})
 
 		// Execute
-		resultCtx := zen.SetUser(ctx, "user123", "John Doe")
+		resultCtx, err := zen.SetUser(ctx, "user123", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.NoError(t, err)
 
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
@@ -50,10 +51,11 @@ func TestSetUser(t *testing.T) {
 		})
 
 		// Execute
-		resultCtx := zen.SetUser(ctx, "", "John Doe")
+		resultCtx, err := zen.SetUser(ctx, "", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.ErrorIs(t, err, zen.ErrUserIDOrNameEmpty)
 
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
@@ -73,10 +75,11 @@ func TestSetUser(t *testing.T) {
 		})
 
 		// Execute
-		resultCtx := zen.SetUser(ctx, "user123", "")
+		resultCtx, err := zen.SetUser(ctx, "user123", "")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.ErrorIs(t, err, zen.ErrUserIDOrNameEmpty)
 
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
@@ -90,10 +93,11 @@ func TestSetUser(t *testing.T) {
 		ctx := context.Background()
 
 		// Execute
-		resultCtx := zen.SetUser(ctx, "user123", "John Doe")
+		resultCtx, err := zen.SetUser(ctx, "user123", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.NoError(t, err)
 
 		// Verify that the context is still the same
 		assert.Equal(t, ctx, resultCtx, "Expected context to remain unchanged when request context is nil")
@@ -115,10 +119,11 @@ func TestSetUser(t *testing.T) {
 		reqCtx.MarkMiddlewareExecuted()
 
 		// Execute
-		resultCtx := zen.SetUser(ctx, "user123", "John Doe")
+		resultCtx, err := zen.SetUser(ctx, "user123", "John Doe")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.NoError(t, err)
 
 		// User should not be set
 		userID := reqCtx.GetUser().ID
@@ -139,11 +144,12 @@ func TestSetUser(t *testing.T) {
 		userName := "John Doe"
 
 		// This would normally be called in the service middleware
-		ctx = zen.SetUser(ctx, userID, userName)
+		ctx, err := zen.SetUser(ctx, userID, userName)
 
 		// Verify the user is set on the context
 		reqCtx := request.GetContext(ctx)
 		require.NotNil(t, reqCtx, "Request context should exist")
+		require.NoError(t, err)
 		assert.Equal(t, userID, reqCtx.GetUser().ID, "User ID should be set on context")
 	})
 }
@@ -160,7 +166,11 @@ func ExampleSetUser() {
 	ctx := context.Background()
 
 	// Set user in context
-	ctx = zen.SetUser(ctx, "user123", "John Doe")
+	ctx, err = zen.SetUser(ctx, "user123", "John Doe")
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	// Use the updated context with your request
 	_ = req.WithContext(ctx)
