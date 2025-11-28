@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 )
 
 // Detector tracks suspicious requests per IP and reports attack waves
@@ -74,9 +75,8 @@ func (d *Detector) CheckRequest(ctx *request.Context) bool {
 		return false
 	}
 
-	requestCount := d.addSuspiciousRequest(ip, time.Now())
-
-	if requestCount < d.attackWaveThreshold {
+	overLimit := d.addSuspiciousRequest(ip, time.Now())
+	if !overLimit {
 		return false
 	}
 
@@ -85,22 +85,14 @@ func (d *Detector) CheckRequest(ctx *request.Context) bool {
 	return true
 }
 
-// addSuspiciousRequest adds a new request timestamp to the slice and filters out any requests past the time window
-// Returns the number of requests remaining in the time window
-func (d *Detector) addSuspiciousRequest(ip string, timestamp time.Time) int {
-	timestamps, _ := d.suspiciousRequests.Get(ip)
-
-	// Filter out old timestamps outside the time window
-	cutoff := timestamp.Add(-d.attackWaveTimeFrame)
-	validTimestamps := make([]time.Time, 0, len(timestamps)+1)
-	for _, ts := range timestamps {
-		if ts.After(cutoff) {
-			validTimestamps = append(validTimestamps, ts)
-		}
+// addSuspiciousRequest adds a new request timestamp to the sliding window for that IP
+// Returns true if request should be reported
+func (d *Detector) addSuspiciousRequest(ip string, timestamp time.Time) bool {
+	timestamps, ok := d.suspiciousRequests.Get(ip)
+	if !ok {
+		timestamps = slidingwindow.New(d.attackWaveTimeFrame.Milliseconds(), d.attackWaveThreshold-1)
+		d.suspiciousRequests.Set(ip, timestamps)
 	}
 
-	validTimestamps = append(validTimestamps, timestamp)
-	d.suspiciousRequests.Set(ip, validTimestamps)
-
-	return len(validTimestamps)
+	return !timestamps.TryRecord(timestamp.UnixMilli())
 }

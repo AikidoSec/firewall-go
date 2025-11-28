@@ -4,11 +4,13 @@ import (
 	"container/list"
 	"sync"
 	"time"
+
+	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 )
 
 type entry struct {
 	key    string
-	value  []time.Time
+	value  *slidingwindow.Window
 	expiry time.Time
 }
 
@@ -29,7 +31,7 @@ func newLRUCache(capacity int, ttl time.Duration) *lruCache {
 	}
 }
 
-func (c *lruCache) Get(key string) ([]time.Time, bool) {
+func (c *lruCache) Get(key string) (*slidingwindow.Window, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -51,7 +53,7 @@ func (c *lruCache) Get(key string) ([]time.Time, bool) {
 	return ent.value, true
 }
 
-func (c *lruCache) Set(key string, value []time.Time) {
+func (c *lruCache) Set(key string, value *slidingwindow.Window) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
