@@ -25,7 +25,7 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 	}
 
 	rateLimitingStatus := agent.GetRateLimitingStatus(
-		reqCtx.Method, reqCtx.Route, reqCtx.GetUser().ID, reqCtx.GetIP(),
+		reqCtx.Method, reqCtx.Route, reqCtx.GetUser().ID, reqCtx.GetIP(), reqCtx.GetRateLimitGroup(),
 	)
 	if rateLimitingStatus != nil && rateLimitingStatus.Block {
 		log.Info("Request is rate-limited",

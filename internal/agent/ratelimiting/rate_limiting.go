@@ -33,6 +33,7 @@ type entityKind int
 
 const (
 	entityKindUser entityKind = iota
+	entityKindGroup
 	entityKindIP
 )
 
@@ -45,6 +46,8 @@ func (et entityKind) String() string {
 	switch et {
 	case entityKindUser:
 		return "user"
+	case entityKindGroup:
+		return "group"
 	case entityKindIP:
 		return "ip"
 	default:
@@ -102,15 +105,18 @@ func getOrCreateCounts(m map[entityKey]*slidingwindow.Window, key entityKey, win
 }
 
 // ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
-func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user string, ip string) *Status {
-	// Priority: user > ip
-	if user != "" {
+func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user string, ip string, group string) *Status {
+	// Priority: group > user > ip
+	switch {
+	case group != "":
+		return rl.checkEntity(method, route, entityKindGroup, group)
+	case user != "":
 		return rl.checkEntity(method, route, entityKindUser, user)
-	} else if ip != "" {
+	case ip != "":
 		return rl.checkEntity(method, route, entityKindIP, ip)
+	default:
+		return &Status{Block: false}
 	}
-
-	return &Status{Block: false}
 }
 
 func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind, entityValue string) *Status {
@@ -309,8 +315,8 @@ func Uninit() {
 	globalRateLimiter.Uninit()
 }
 
-func ShouldRateLimitRequest(method string, route string, user string, ip string) *Status {
-	return globalRateLimiter.ShouldRateLimitRequest(method, route, user, ip)
+func ShouldRateLimitRequest(method string, route string, user string, ip string, group string) *Status {
+	return globalRateLimiter.ShouldRateLimitRequest(method, route, user, ip, group)
 }
 
 func UpdateConfig(endpoints []EndpointConfig) {

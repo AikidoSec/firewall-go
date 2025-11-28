@@ -23,7 +23,9 @@ type Context struct {
 	Source             string
 	Route              string
 	executedMiddleware bool
-	user               aikido_types.User
+
+	user           aikido_types.User
+	rateLimitGroup string
 
 	deferredAttack *DeferredAttack
 
@@ -49,6 +51,20 @@ func (ctx *Context) GetUser() aikido_types.User {
 	defer ctx.mu.RUnlock()
 
 	return ctx.user
+}
+
+func (ctx *Context) SetRateLimitGroup(id string) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	ctx.rateLimitGroup = id
+}
+
+func (ctx *Context) GetRateLimitGroup() string {
+	ctx.mu.RLock()
+	defer ctx.mu.RUnlock()
+
+	return ctx.rateLimitGroup
 }
 
 // MarkMiddlewareExecuted marks the middleware as executed.

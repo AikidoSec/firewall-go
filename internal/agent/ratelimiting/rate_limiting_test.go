@@ -16,7 +16,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 	t.Run("non-existent route returns no block", func(t *testing.T) {
 		rl := New()
 
-		status := rl.ShouldRateLimitRequest("POST", "/api/other", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("POST", "/api/other", "user1", "192.168.1.1", "")
 
 		assert.NotNil(t, status)
 		assert.False(t, status.Block)
@@ -31,8 +31,8 @@ func TestShouldRateLimitRequest(t *testing.T) {
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
-		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
 		assert.False(t, status.Block)
 	})
@@ -45,11 +45,11 @@ func TestShouldRateLimitRequest(t *testing.T) {
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
-		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "user", status.Trigger)
@@ -63,11 +63,11 @@ func TestShouldRateLimitRequest(t *testing.T) {
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
-		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
-		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
-		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1", "")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1", "")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1", "")
 
-		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", "192.168.1.1", "")
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "ip", status.Trigger)
@@ -81,11 +81,65 @@ func TestShouldRateLimitRequest(t *testing.T) {
 			Counts: make(map[entityKey]*slidingwindow.Window),
 		}
 
-		_ = rl.ShouldRateLimitRequest("POST", "/api/other", "", "192.168.1.2")
+		_ = rl.ShouldRateLimitRequest("POST", "/api/other", "", "192.168.1.2", "")
 
-		status := rl.ShouldRateLimitRequest("POST", "/api/other", "", "192.168.1.2")
+		status := rl.ShouldRateLimitRequest("POST", "/api/other", "", "192.168.1.2", "")
 
 		assert.False(t, status.Block)
+	})
+
+	t.Run("group at threshold blocked", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+
+		assert.True(t, status.Block)
+		assert.Equal(t, "group", status.Trigger)
+	})
+
+	t.Run("group below threshold not blocked", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "POST", Route: "/api/other"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 5, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		rl.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1", "group1")
+		rl.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1", "group1")
+		rl.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1", "group1")
+
+		status := rl.ShouldRateLimitRequest("POST", "/api/other", "user1", "192.168.1.2", "group1")
+
+		assert.False(t, status.Block)
+	})
+
+	t.Run("group takes precedence over user", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		// Update user counts but not group counts
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+
+		// Should block by group, not user
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
+		assert.True(t, status.Block)
+		assert.Equal(t, "group", status.Trigger)
 	})
 }
 
@@ -140,7 +194,7 @@ func TestShouldRateLimitRequest_Concurrent(t *testing.T) {
 	for range 10 {
 		go func() {
 			for range 10 {
-				rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+				rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 			}
 			wg.Done()
 		}()
@@ -381,21 +435,23 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// /api/test should match /api/*
-		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block after exceeding limit on wildcard route")
 
 		// /api/users/123 should also match /api/*
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
-		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
-		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
 
-		status2 := rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2")
+		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2", "")
+		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2", "")
+		rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2", "")
+
+		status2 := rl2.ShouldRateLimitRequest("POST", "/api/users/123", "user2", "192.168.1.2", "")
+
 		assert.True(t, status2.Block, "should block after exceeding limit on another route matching wildcard")
 	})
 
@@ -422,20 +478,21 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// POST requests should match
-		rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
-		rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1", "")
+		rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block POST requests matching wildcard")
 
 		// GET requests should not match
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
 
-		status2 := rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+
+		status2 := rl2.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.False(t, status2.Block, "should not block GET requests when wildcard is for POST only")
 	})
 
@@ -477,20 +534,21 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 			rl.UpdateConfig(endpoints)
 
 			// /api/posts/123 matches both wildcards, but should use the most restrictive one (2 requests)
-			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
-			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1", "")
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 
-			status := rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			status := rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 			assert.True(t, status.Block, "should block based on most restrictive wildcard limit (2 requests)")
 
 			// /api/users/123 only matches /api/*, so should use that limit (10 requests)
 			rl2 := New()
 			rl2.UpdateConfig(endpoints)
-			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
-			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
-			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
 
-			status2 := rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1")
+			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1", "")
+			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1", "")
+			rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1", "")
+
+			status2 := rl2.ShouldRateLimitRequest("GET", "/api/users/123", "user1", "192.168.1.1", "")
 			assert.False(t, status2.Block, "should not block based on wildcard limit (10 requests)")
 		})
 
@@ -530,10 +588,10 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 			rl.UpdateConfig(endpoints)
 
 			// /api/posts/123 matches both wildcards, should use the most restrictive one (/api/* with 2 requests)
-			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
-			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1", "")
+			rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 
-			status := rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1")
+			status := rl.ShouldRateLimitRequest("GET", "/api/posts/123", "user1", "192.168.1.1", "")
 			assert.True(t, status.Block, "should block based on most restrictive rate (2 requests from /api/*), not specificity")
 		})
 	})
@@ -574,20 +632,21 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// /api/test should match the exact route, not the wildcard
-		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block based on exact route limit (2 requests), not wildcard")
 
 		// /api/other should match the wildcard
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
-		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
-		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
 
-		status2 := rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1", "")
+		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1", "")
+		rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1", "")
+
+		status2 := rl2.ShouldRateLimitRequest("GET", "/api/other", "user1", "192.168.1.1", "")
 		assert.False(t, status2.Block, "should not block based on wildcard limit (10 requests)")
 	})
 
@@ -627,20 +686,20 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		rl.UpdateConfig(endpoints)
 
 		// GET /api/test should match the exact method (GET), not the wildcard method (*)
-		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
-		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
+		rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 
-		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1")
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "")
 		assert.True(t, status.Block, "should block based on exact method limit (2 requests), not wildcard method")
 
 		// POST /api/test should match the wildcard method (*)
 		rl2 := New()
 		rl2.UpdateConfig(endpoints)
-		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
-		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
-		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1", "")
+		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1", "")
+		rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1", "")
 
-		status2 := rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1")
+		status2 := rl2.ShouldRateLimitRequest("POST", "/api/test", "user1", "192.168.1.1", "")
 		assert.False(t, status2.Block, "should not block based on wildcard method limit (10 requests)")
 	})
 }
