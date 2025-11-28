@@ -1,17 +1,23 @@
 ZEN_INTERNALS_VERSION=v0.1.53
 
+TOOLS_BIN := $(shell pwd)/tools/bin
+
 .PHONY: install-tools
 install-tools:
 	@echo "Installing gotestsum"
-	@go install gotest.tools/gotestsum
+	@cd tools && GOBIN=$(TOOLS_BIN) go install gotest.tools/gotestsum
 	@echo "✅ gotestsum installed successfully"
 	@echo "Installing golangci-lint"
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
+	@cd tools && GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint
 	@echo "✅ golangci-lint installed successfully"
 	@echo "Installing orchestrion"
-	@go install github.com/DataDog/orchestrion
+	@GOBIN=$(TOOLS_BIN) go install github.com/DataDog/orchestrion
 	@echo "✅ tools installed successfully"
 
+.PHONY: clean-tools
+clean-tools:
+	@rm -rf $(TOOLS_BIN)
+	@echo "✅ Cleaned tools/bin"
 
 .PHONY: test
 test: test-main test-zen-go
@@ -20,7 +26,7 @@ test: test-main test-zen-go
 .PHONY: test-main
 test-main:
 	@echo "Running main module tests with gotestsum"
-	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./internal/... ./zen/...
+	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./internal/... ./zen/...
 	@echo "✅ Main module tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
@@ -28,14 +34,14 @@ test-main:
 .PHONY: test-zen-go
 test-zen-go:
 	@echo "Running zen-go CLI tests with gotestsum"
-	@cd cmd/zen-go && gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./...
+	@cd cmd/zen-go && $(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./...
 	@echo "✅ zen-go tests completed successfully"
 	@cd cmd/zen-go && go tool cover -func=coverage.out | grep total | awk '{print "cmd/zen-go coverage: " $$3}'
 
 .PHONY: test-instrumentation
 test-instrumentation:
 	@echo "Running instrumentation tests with orchestrion"
-	@gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
+	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="$(TOOLS_BIN)/orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
 	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
@@ -50,10 +56,10 @@ test-coverage-html: test
 lint:
 	@echo "🔍 Linting all Go modules..."
 	@echo "📦 Linting root module"
-	@golangci-lint run ./... $(FLAGS) || exit 1
-	@for dir in $$(find . -name go.mod -not -path "./go.mod" -exec dirname {} \;); do \
+	@$(TOOLS_BIN)/golangci-lint run ./... $(FLAGS) || exit 1
+	@for dir in $$(find . -name go.mod -not -path "./go.mod" -not -path "./tools/*" -exec dirname {} \;); do \
 		echo "📦 Linting module in $$dir"; \
-		(cd $$dir && golangci-lint run $(FLAGS) ./...) || exit 1; \
+		(cd $$dir && $(TOOLS_BIN)/golangci-lint run $(FLAGS) ./...) || exit 1; \
 	done
 	@echo "✅ All modules linted successfully"
 
@@ -62,7 +68,7 @@ lint-integration:
 	@echo "🔍 Linting modules in instrumentation/ with integration tag..."
 	@for dir in $$(find ./instrumentation -name go.mod -exec dirname {} \; 2>/dev/null); do \
 		echo "📦 Linting module in $$dir"; \
-		(cd $$dir && golangci-lint run --build-tags=integration $(FLAGS) ./...) || exit 1; \
+		(cd $$dir && $(TOOLS_BIN)/golangci-lint run --build-tags=integration $(FLAGS) ./...) || exit 1; \
 	done
 	@echo "✅ Integration linting completed successfully"
 
