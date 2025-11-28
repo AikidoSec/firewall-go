@@ -1,9 +1,10 @@
 ZEN_INTERNALS_VERSION=v0.1.53
+GOTESTSUM_VERSION=v1.13.0
 
 .PHONY: install-tools
 install-tools:
 	@echo "Installing gotestsum"
-	@go install gotest.tools/gotestsum
+	@go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 	@echo "✅ gotestsum installed successfully"
 	@echo "Installing golangci-lint"
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2
