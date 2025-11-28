@@ -4,28 +4,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLRUCache(t *testing.T) {
 	t.Run("stores and retrieves values", func(t *testing.T) {
 		cache := newLRUCache(10, 0)
-		timestamps := []time.Time{time.Now()}
+		window := slidingwindow.New(100, 10)
 
-		cache.Set("ip1", timestamps)
+		cache.Set("ip1", window)
 
 		val, ok := cache.Get("ip1")
 		assert.True(t, ok)
-		assert.Equal(t, timestamps, val)
+		assert.Equal(t, window, val)
 	})
 
 	t.Run("evicts oldest entry when capacity reached", func(t *testing.T) {
 		cache := newLRUCache(3, 0)
+		window := slidingwindow.New(100, 10)
 
-		cache.Set("ip1", []time.Time{time.Now()})
-		cache.Set("ip2", []time.Time{time.Now()})
-		cache.Set("ip3", []time.Time{time.Now()})
-		cache.Set("ip4", []time.Time{time.Now()}) // Should evict ip1
+		cache.Set("ip1", window)
+		cache.Set("ip2", window)
+		cache.Set("ip3", window)
+		cache.Set("ip4", window) // Should evict ip1
 
 		_, ok := cache.Get("ip1")
 		assert.False(t, ok, "oldest entry should be evicted")
@@ -36,13 +38,14 @@ func TestLRUCache(t *testing.T) {
 
 	t.Run("get bumps entry to most recent", func(t *testing.T) {
 		cache := newLRUCache(3, 0)
+		window := slidingwindow.New(100, 10)
 
-		cache.Set("ip1", []time.Time{time.Now()})
-		cache.Set("ip2", []time.Time{time.Now()})
-		cache.Set("ip3", []time.Time{time.Now()})
+		cache.Set("ip1", window)
+		cache.Set("ip2", window)
+		cache.Set("ip3", window)
 
-		cache.Get("ip1")                          // Bump ip1 to most recent
-		cache.Set("ip4", []time.Time{time.Now()}) // Should evict ip2, not ip1
+		cache.Get("ip1")         // Bump ip1 to most recent
+		cache.Set("ip4", window) // Should evict ip2, not ip1
 
 		_, ok := cache.Get("ip1")
 		assert.True(t, ok, "accessed entry should not be evicted")
@@ -54,7 +57,8 @@ func TestLRUCache(t *testing.T) {
 	t.Run("entries expire after TTL", func(t *testing.T) {
 		cache := newLRUCache(10, 50*time.Millisecond)
 
-		cache.Set("ip1", []time.Time{time.Now()})
+		window := slidingwindow.New(100, 10)
+		cache.Set("ip1", window)
 
 		// Should exist immediately
 		_, ok := cache.Get("ip1")
@@ -68,12 +72,13 @@ func TestLRUCache(t *testing.T) {
 
 	t.Run("updating entry refreshes TTL", func(t *testing.T) {
 		cache := newLRUCache(10, 100*time.Millisecond)
+		window := slidingwindow.New(100, 10)
 
-		cache.Set("ip1", []time.Time{time.Now()})
+		cache.Set("ip1", window)
 		time.Sleep(60 * time.Millisecond)
 
 		// Update should refresh TTL
-		cache.Set("ip1", []time.Time{time.Now(), time.Now()})
+		cache.Set("ip1", window)
 		time.Sleep(60 * time.Millisecond)
 
 		_, ok := cache.Get("ip1")

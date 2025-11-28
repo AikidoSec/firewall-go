@@ -10,10 +10,7 @@ import (
 )
 
 func TestDetectorCheck(t *testing.T) {
-	t.Helper()
-
 	t.Run("returns false when context is nil", func(t *testing.T) {
-		t.Helper()
 		detector := attackwave.NewDetector(&attackwave.Options{
 			AttackWaveThreshold: 3,
 			AttackWaveTimeFrame: 60 * time.Second,
@@ -24,7 +21,6 @@ func TestDetectorCheck(t *testing.T) {
 	})
 
 	t.Run("returns false when remote address is empty", func(t *testing.T) {
-		t.Helper()
 		detector := attackwave.NewDetector(&attackwave.Options{
 			AttackWaveThreshold: 3,
 			AttackWaveTimeFrame: 60 * time.Second,
@@ -36,7 +32,6 @@ func TestDetectorCheck(t *testing.T) {
 	})
 
 	t.Run("returns false for non-suspicious requests", func(t *testing.T) {
-		t.Helper()
 		detector := attackwave.NewDetector(&attackwave.Options{
 			AttackWaveThreshold: 3,
 			AttackWaveTimeFrame: 60 * time.Second,
@@ -54,7 +49,6 @@ func TestDetectorCheck(t *testing.T) {
 	})
 
 	t.Run("detects attack wave after threshold is exceeded", func(t *testing.T) {
-		t.Helper()
 		detector := attackwave.NewDetector(&attackwave.Options{
 			AttackWaveThreshold: 3,
 			AttackWaveTimeFrame: 60 * time.Second,
@@ -80,7 +74,6 @@ func TestDetectorCheck(t *testing.T) {
 	})
 
 	t.Run("tracks different IPs separately", func(t *testing.T) {
-		t.Helper()
 		detector := attackwave.NewDetector(&attackwave.Options{
 			AttackWaveThreshold: 3,
 			AttackWaveTimeFrame: 60 * time.Second,
@@ -116,7 +109,6 @@ func TestDetectorCheck(t *testing.T) {
 	})
 
 	t.Run("respects minTimeBetweenReports", func(t *testing.T) {
-		t.Helper()
 		detector := attackwave.NewDetector(&attackwave.Options{
 			AttackWaveThreshold:   2,
 			AttackWaveTimeFrame:   60 * time.Second,
