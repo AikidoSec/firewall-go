@@ -26,7 +26,11 @@ func main() {
 			userHeader := c.Request().Header.Get("user")
 			fmt.Println("userHeader:", userHeader)
 			if userHeader != "" {
-				zen.SetUser(c.Request().Context(), userHeader, "Bob example")
+				_, err := zen.SetUser(c.Request().Context(), userHeader, "Bob example")
+				if err != nil {
+					log.Println(err)
+					return err
+				}
 			}
 			return next(c)
 		}

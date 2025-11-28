@@ -74,10 +74,12 @@ func createRequestContextWithGroup(t *testing.T, method, route, ip string, userI
 		RemoteAddress: &ip,
 	})
 	if userID != "" {
-		zen.SetUser(reqCtx, userID, userName)
+		_, err := zen.SetUser(reqCtx, userID, userName)
+		require.NoError(t, err)
 	}
 	if groupID != "" {
-		zen.SetRateLimitGroup(reqCtx, groupID)
+		_, err := zen.SetRateLimitGroup(reqCtx, groupID)
+		require.NoError(t, err)
 	}
 	return reqCtx
 }
@@ -99,7 +101,8 @@ func TestShouldBlockRequest_BlockedUser(t *testing.T) {
 		RemoteAddress: &ip,
 	})
 
-	zen.SetUser(reqCtx, "banned", "Banned User")
+	_, err := zen.SetUser(reqCtx, "banned", "Banned User")
+	require.NoError(t, err)
 
 	config.SetUserBlocked("banned")
 
@@ -198,7 +201,12 @@ func ExampleShouldBlockRequest() {
 			})
 
 			// Set user in context
-			ctx = zen.SetUser(ctx, "user123", "John Doe")
+			ctx, err = zen.SetUser(ctx, "user123", "John Doe")
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
