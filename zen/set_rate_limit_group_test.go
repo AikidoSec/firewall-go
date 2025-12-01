@@ -25,10 +25,11 @@ func TestSetRateLimitGroup(t *testing.T) {
 		})
 
 		// Execute
-		resultCtx := zen.SetRateLimitGroup(ctx, "group123")
+		resultCtx, err := zen.SetRateLimitGroup(ctx, "group123")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.NoError(t, err)
 
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
@@ -48,10 +49,11 @@ func TestSetRateLimitGroup(t *testing.T) {
 		})
 
 		// Execute
-		resultCtx := zen.SetRateLimitGroup(ctx, "")
+		resultCtx, err := zen.SetRateLimitGroup(ctx, "")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.ErrorIs(t, err, zen.ErrRateLimitGroupIDEmpty)
 
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
@@ -65,10 +67,11 @@ func TestSetRateLimitGroup(t *testing.T) {
 		ctx := context.Background()
 
 		// Execute
-		resultCtx := zen.SetRateLimitGroup(ctx, "group123")
+		resultCtx, err := zen.SetRateLimitGroup(ctx, "group123")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.NoError(t, err)
 
 		// Verify that the context is still the same
 		assert.Equal(t, ctx, resultCtx, "Expected context to remain unchanged when request context is nil")
@@ -90,10 +93,11 @@ func TestSetRateLimitGroup(t *testing.T) {
 		reqCtx.MarkMiddlewareExecuted()
 
 		// Execute
-		resultCtx := zen.SetRateLimitGroup(ctx, "group123")
+		resultCtx, err := zen.SetRateLimitGroup(ctx, "group123")
 
 		// Verify
 		require.NotNil(t, resultCtx, "Expected context to be returned")
+		require.NoError(t, err)
 
 		// Group should not be set
 		groupID := reqCtx.GetRateLimitGroup()
@@ -113,7 +117,11 @@ func ExampleSetRateLimitGroup() {
 	ctx := context.Background()
 
 	// Set rate limit group in context
-	ctx = zen.SetRateLimitGroup(ctx, "group123")
+	ctx, err = zen.SetRateLimitGroup(ctx, "group123")
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	// Use the updated context with your request
 	_ = req.WithContext(ctx)

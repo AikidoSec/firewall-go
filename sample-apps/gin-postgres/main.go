@@ -26,7 +26,12 @@ func main() {
 
 	r.Use(func(c *gin.Context) {
 		if c.GetHeader("user") != "" {
-			zen.SetUser(c, c.GetHeader("user"), "John Doe")
+			_, err := zen.SetUser(c, c.GetHeader("user"), "John Doe")
+			if err != nil {
+				log.Println(err)
+				_ = c.AbortWithError(http.StatusInternalServerError, err)
+				return
+			}
 		}
 	})
 	r.Use(RateLimitMiddleware())
