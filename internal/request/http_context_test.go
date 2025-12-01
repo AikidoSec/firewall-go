@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testContextKey struct{}
@@ -120,6 +123,30 @@ func TestSetContext(t *testing.T) {
 			assert.Equal(t, tt.remoteAddress, reqCtx.RemoteAddress)
 		})
 	}
+}
+
+func TestSetContext_BypassedIP(t *testing.T) {
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		BypassedIPs: []string{"10.10.10.10"},
+		Block:       &block,
+	}, nil)
+
+	req, err := http.NewRequest("POST", "http://example.com/test/path?param=value", strings.NewReader("test body"))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	ctx := context.Background()
+	ip := "10.10.10.10"
+	setCtx := SetContext(ctx, req, ContextData{
+		RemoteAddress: &ip,
+	})
+
+	require.NotNil(t, setCtx)
+
+	result := GetContext(setCtx)
+	require.Nil(t, result)
 }
 
 func TestGetContext(t *testing.T) {

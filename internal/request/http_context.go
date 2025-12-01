@@ -6,6 +6,8 @@ import (
 	"maps"
 	"net/http"
 	"strings"
+
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 )
 
 type contextKey struct{}
@@ -21,6 +23,10 @@ type ContextData struct {
 }
 
 func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
+	if data.RemoteAddress != nil && config.IsIPBypassed(*data.RemoteAddress) {
+		return ctx
+	}
+
 	route := data.Route
 	if len(route) == 0 {
 		route = r.URL.Path // Use path from URL as default.
