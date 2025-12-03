@@ -29,6 +29,5 @@ func ComputeInstrumentationHash(inst *Instrumentor) string {
 
 	// Return base64-encoded hash (first 16 chars for brevity)
 	hash := h.Sum(nil)
-	return base64.URLEncoding.EncodeToString(hash[:])[:16]
+	return base64.URLEncoding.EncodeToString(hash)[:16]
 }
-
