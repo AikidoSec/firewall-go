@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/urfave/cli/v3"
 )
@@ -32,6 +35,33 @@ func newCommand() *cli.Command {
 					return initCommand(cmd.Root().Writer, cmd.Bool("force"))
 				},
 			},
+			{
+				Name:            "toolexec",
+				SkipFlagParsing: true,
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					args := cmd.Args().Slice()
+					if len(args) == 0 {
+						return fmt.Errorf("no tool specified")
+					}
+
+					tool := args[0]
+					toolArgs := args[1:]
+					toolName := filepath.Base(tool)
+
+					switch toolName {
+					case "compile":
+						return toolexecCompileCommand(
+							cmd,
+							cmd.Root().Writer,
+							cmd.Root().ErrWriter,
+							tool,
+							toolArgs,
+						)
+					default:
+						return passthrough(tool, toolArgs)
+					}
+				},
+			},
 		},
 	}
 }
@@ -39,6 +69,14 @@ func newCommand() *cli.Command {
 func main() {
 	cmd := newCommand()
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		// For toolexec, preserve exit codes from tools
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitErr.ExitCode())
+		}
 		log.Fatal(err)
 	}
+}
+
+func isDebug() bool {
+	return os.Getenv("ZENGO_DEBUG") != ""
 }
