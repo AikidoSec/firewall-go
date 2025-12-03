@@ -27,14 +27,31 @@ type RulesMeta struct {
 type Rule struct {
 	ID       string            `yaml:"id"`
 	Type     string            `yaml:"type"`
-	Match    string            `yaml:"match"`
+	Match    string            `yaml:"match"`    // For wrap rules: "pkg.Func"
+	Receiver string            `yaml:"receiver"` // For prepend rules: "*pkg.Type"
+	Function string            `yaml:"function"` // For prepend rules: "MethodName"
 	Imports  map[string]string `yaml:"imports"`
 	Template string            `yaml:"template"`
 }
 
+// InstrumentationRules holds all loaded rules
+type InstrumentationRules struct {
+	WrapRules    []WrapRule
+	PrependRules []PrependRule
+}
+
+// PrependRule prepends statements to a function body
+type PrependRule struct {
+	ID           string
+	ReceiverType string            // e.g., "*database/sql.DB"
+	FuncName     string            // e.g., "QueryContext"
+	Imports      map[string]string // alias -> import path
+	PrependTmpl  string            // template with {{ .Function.Argument N }}
+}
+
 // LoadRulesFromDir loads all zen.instrument.yml files from a directory tree
-func LoadRulesFromDir(dir string) ([]WrapRule, error) {
-	var wrapRules []WrapRule
+func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
+	result := &InstrumentationRules{}
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -50,7 +67,8 @@ func LoadRulesFromDir(dir string) ([]WrapRule, error) {
 			return fmt.Errorf("loading %s: %w", path, err)
 		}
 
-		wrapRules = append(wrapRules, rules...)
+		result.WrapRules = append(result.WrapRules, rules.WrapRules...)
+		result.PrependRules = append(result.PrependRules, rules.PrependRules...)
 		return nil
 	})
 
@@ -58,11 +76,11 @@ func LoadRulesFromDir(dir string) ([]WrapRule, error) {
 		return nil, err
 	}
 
-	return wrapRules, nil
+	return result, nil
 }
 
 // LoadRulesFromFile loads rules from a single zen.instrument.yml file
-func LoadRulesFromFile(path string) ([]WrapRule, error) {
+func LoadRulesFromFile(path string) (*InstrumentationRules, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -73,21 +91,29 @@ func LoadRulesFromFile(path string) ([]WrapRule, error) {
 		return nil, fmt.Errorf("parsing YAML: %w", err)
 	}
 
-	var wrapRules []WrapRule
-	for _, rule := range rulesFile.Rules {
-		if rule.Type != "wrap" {
-			continue // Only handle wrap rules for now
-		}
+	result := &InstrumentationRules{}
 
-		wrapRules = append(wrapRules, WrapRule{
-			ID:        rule.ID,
-			MatchCall: rule.Match,
-			Imports:   rule.Imports,
-			WrapTmpl:  strings.TrimSpace(rule.Template),
-		})
+	for _, rule := range rulesFile.Rules {
+		switch rule.Type {
+		case "wrap":
+			result.WrapRules = append(result.WrapRules, WrapRule{
+				ID:        rule.ID,
+				MatchCall: rule.Match,
+				Imports:   rule.Imports,
+				WrapTmpl:  strings.TrimSpace(rule.Template),
+			})
+		case "prepend":
+			result.PrependRules = append(result.PrependRules, PrependRule{
+				ID:           rule.ID,
+				ReceiverType: rule.Receiver,
+				FuncName:     rule.Function,
+				Imports:      rule.Imports,
+				PrependTmpl:  strings.TrimSpace(rule.Template),
+			})
+		}
 	}
 
-	return wrapRules, nil
+	return result, nil
 }
 
 // FindInstrumentationDir finds the instrumentation directory from the firewall-go module

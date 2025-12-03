@@ -234,3 +234,76 @@ func main() {
 
 	assert.Error(t, err)
 }
+
+func TestInstrumentFile_PrependRule(t *testing.T) {
+	src := `package sql
+
+import "context"
+
+type DB struct{}
+
+func (db *DB) QueryContext(ctx context.Context, query string, args ...any) (*Rows, error) {
+	return nil, nil
+}
+
+type Rows struct{}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "db.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+
+	prependRules := []PrependRule{
+		{
+			ID:           "sql.DB.QueryContext",
+			ReceiverType: "*database/sql.DB",
+			FuncName:     "QueryContext",
+			Imports: map[string]string{
+				"sink": "github.com/example/sink",
+			},
+			PrependTmpl: `if err := sink.Check({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}); err != nil {
+	return nil, err
+}`,
+		},
+	}
+
+	inst := NewInstrumentorWithAllRules(nil, prependRules)
+	result, modified, imports, err := inst.InstrumentFile(tmpFile, "database/sql")
+
+	require.NoError(t, err)
+	assert.True(t, modified)
+	assert.Contains(t, imports, "sink")
+
+	resultStr := string(result)
+	// Go printer may add newlines, so check for the key parts
+	assert.Contains(t, resultStr, "sink.Check(ctx, query")
+	assert.Contains(t, resultStr, "return nil, err")
+	assert.Contains(t, resultStr, "import")
+}
+
+func TestInstrumentFile_PrependRule_NoMatch(t *testing.T) {
+	src := `package main
+
+func DoSomething() {
+	// Not a method with receiver
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+
+	prependRules := []PrependRule{
+		{
+			ID:           "sql.DB.QueryContext",
+			ReceiverType: "*database/sql.DB",
+			FuncName:     "QueryContext",
+			Imports:      map[string]string{},
+			PrependTmpl:  `// prepended`,
+		},
+	}
+
+	inst := NewInstrumentorWithAllRules(nil, prependRules)
+	_, modified, _, err := inst.InstrumentFile(tmpFile, "main")
+
+	require.NoError(t, err)
+	assert.False(t, modified)
+}
