@@ -1,4 +1,4 @@
-package main
+package instrumentation
 
 import (
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql"

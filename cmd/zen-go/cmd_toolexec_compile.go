@@ -5,12 +5,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
-	"github.com/urfave/cli/v3"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal"
 )
 
-func toolexecCompileCommand(cmd *cli.Command, stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
+func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
 	// If has -V=full or just -V, then it's a version query
 	// Check for -V flag, with optional "full" value
 	for _, arg := range toolArgs {
@@ -34,14 +35,22 @@ func toolexecCompileCommand(cmd *cli.Command, stdout io.Writer, stderr io.Writer
 		}
 	}
 
+	// Get objdir from output path (e.g., /tmp/go-build123/b001/_pkg_.a -> /tmp/go-build123/b001)
+	var objdir string
+	if outputPath != "" {
+		objdir = filepath.Dir(outputPath)
+	}
+
 	if isDebug() {
 		fmt.Fprintf(stderr, "zen-go: compiling package %s\n", pkgPath)
-		fmt.Fprintf(stderr, "%s, %s", importcfgPath, outputPath)
 	}
 
 	// These are the arguments that we want to pass through to the compiler
 	// If we modify a file, we need to pass the modified file to the compiler instead of the original file
 	newArgs := make([]string, 0, len(toolArgs))
+	allAddedImports := make(map[string]string) // import path -> alias
+
+	instrumentor := internal.NewInstrumentor()
 
 	for _, arg := range toolArgs {
 		// If doesn't end with .go, it's not a Go file
@@ -51,9 +60,63 @@ func toolexecCompileCommand(cmd *cli.Command, stdout io.Writer, stderr io.Writer
 			continue
 		}
 
-		// It's a Go file, for now we just pass it through to the compiler
-		fmt.Fprintf(stderr, "zen-go: instrumenting file %s\n", arg)
-		newArgs = append(newArgs, arg)
+		result, modified, addedImports, err := instrumentor.InstrumentFile(arg, pkgPath)
+		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: error instrumenting file %s: %v\n", arg, err)
+			newArgs = append(newArgs, arg)
+			continue
+		}
+
+		if !modified {
+			newArgs = append(newArgs, arg)
+			continue
+		}
+
+		// Track added imports
+		for alias, path := range addedImports {
+			allAddedImports[alias] = path
+		}
+
+		tempFile, err := writeTempFile(arg, result, objdir)
+		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: error writing temp file: %v\n", err)
+			newArgs = append(newArgs, arg)
+			continue
+		}
+		newArgs = append(newArgs, tempFile)
+
+		if isDebug() {
+			fmt.Fprintf(stderr, "zen-go: transformed %s -> %s\n", arg, tempFile)
+			for alias, path := range allAddedImports {
+				fmt.Fprintf(stderr, "zen-go: added import %s -> %s\n", alias, path)
+			}
+		}
+	}
+
+	// If we added imports, we need to modify the importcfg
+	if len(allAddedImports) > 0 && importcfgPath != "" {
+		newImportcfg, err := internal.ExtendImportcfg(importcfgPath, allAddedImports, objdir, stderr, isDebug())
+		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: warning: failed to extend importcfg: %v\n", err)
+		} else if newImportcfg != "" {
+			// Replace importcfg in args
+			for i := 0; i < len(newArgs); i++ {
+				if newArgs[i] == "-importcfg" && i+1 < len(newArgs) {
+					newArgs[i+1] = newImportcfg
+					if isDebug() {
+						fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
+					}
+					break
+				}
+				if strings.HasPrefix(newArgs[i], "-importcfg=") {
+					newArgs[i] = "-importcfg=" + newImportcfg
+					if isDebug() {
+						fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
+					}
+					break
+				}
+			}
+		}
 	}
 
 	// Run the compiler
@@ -84,4 +147,22 @@ func passthrough(tool string, args []string) error {
 	cmd.Stderr = os.Stderr
 
 	return cmd.Run()
+}
+
+func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
+	// Write to objdir/zen-go/src/
+	dir := filepath.Join(objdir, "zen-go", "src")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		// Fall back to source directory
+		dir = filepath.Dir(origPath)
+	}
+
+	base := filepath.Base(origPath)
+
+	// Use predictable name in objdir
+	outPath := filepath.Join(dir, base)
+	if err := os.WriteFile(outPath, content, 0o644); err != nil {
+		return "", err
+	}
+	return outPath, nil
 }
