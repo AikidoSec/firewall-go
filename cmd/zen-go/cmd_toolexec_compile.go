@@ -161,6 +161,7 @@ func writeTempFile(origPath string, content []byte, objdir string) (string, erro
 
 	// Use predictable name in objdir
 	outPath := filepath.Join(dir, base)
+	// #nosec G306 -- transformed source files need to be readable by the compiler
 	if err := os.WriteFile(outPath, content, 0o644); err != nil {
 		return "", err
 	}
