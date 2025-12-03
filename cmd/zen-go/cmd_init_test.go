@@ -17,12 +17,7 @@ func TestInitCommand_CreatesFile(t *testing.T) {
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 
-	// Save original args
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-
-	os.Args = []string{"zen-go", "init"}
-	err = initCommand(os.Stdout)
+	err = initCommand(os.Stdout, false)
 	require.NoError(t, err)
 
 	// Verify file was created
@@ -50,12 +45,7 @@ func TestInitCommand_DoesNotOverwriteExistingFile(t *testing.T) {
 	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
-	// Save original args
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-
-	os.Args = []string{"zen-go", "init"}
-	err = initCommand(os.Stdout)
+	err = initCommand(os.Stdout, false)
 	require.NoError(t, err)
 
 	// Verify file content was not overwritten
@@ -78,12 +68,7 @@ func TestInitCommand_ForceOverwritesExistingFile(t *testing.T) {
 	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
-	// Save original args
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-
-	os.Args = []string{"zen-go", "init", "--force"}
-	err = initCommand(os.Stdout)
+	err = initCommand(os.Stdout, true)
 	require.NoError(t, err)
 
 	// Verify file content was overwritten
@@ -107,12 +92,7 @@ func TestInitCommand_ForceShortFlag(t *testing.T) {
 	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
-	// Save original args
-	oldArgs := os.Args
-	defer func() { os.Args = oldArgs }()
-
-	os.Args = []string{"zen-go", "init", "-f"}
-	err = initCommand(os.Stdout)
+	err = initCommand(os.Stdout, true)
 	require.NoError(t, err)
 
 	// Verify file content was overwritten
