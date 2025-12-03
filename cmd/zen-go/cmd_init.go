@@ -21,16 +21,7 @@ import (
 )
 `
 
-func initCommand(stdout io.Writer) error {
-	// Parse force flag: if enabled will overwrite existing files if necessary
-	force := false
-	if len(os.Args) > 2 {
-		for _, arg := range os.Args[2:] {
-			if arg == "-f" || arg == "--force" {
-				force = true
-			}
-		}
-	}
+func initCommand(stdout io.Writer, force bool) error {
 
 	filename := "orchestrion.tool.go"
 
