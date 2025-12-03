@@ -158,8 +158,8 @@ func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRu
 			continue
 		}
 
-		// Check if function name matches
-		if fn.Name.Name != rule.FuncName {
+		// Check if function name matches any in the list
+		if !matchesFuncName(fn.Name.Name, rule.FuncNames) {
 			continue
 		}
 
@@ -185,6 +185,16 @@ func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRu
 			importsToAdd[alias] = path
 		}
 	}
+}
+
+// matchesFuncName checks if a function name matches any in the list
+func matchesFuncName(name string, funcNames []string) bool {
+	for _, fn := range funcNames {
+		if name == fn {
+			return true
+		}
+	}
+	return false
 }
 
 // matchesReceiverType checks if a function's receiver matches the expected type
