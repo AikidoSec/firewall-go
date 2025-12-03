@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"slices"
 	"text/template"
 )
 
@@ -18,8 +19,8 @@ func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRu
 			continue
 		}
 
-		// Check if function name matches
-		if fn.Name.Name != rule.FuncName {
+		// Check if function name matches any in the list
+		if !matchesFuncName(fn.Name.Name, rule.FuncNames) {
 			continue
 		}
 
@@ -50,6 +51,11 @@ func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRu
 	}
 
 	return nil
+}
+
+// matchesFuncName checks if a function name matches any in the list
+func matchesFuncName(name string, funcNames []string) bool {
+	return slices.Contains(funcNames, name)
 }
 
 // matchesReceiverType checks if a function's receiver matches the expected type

@@ -71,7 +71,42 @@ rules:
 
 	assert.Equal(t, "sql.DB.QueryContext", rules.PrependRules[0].ID)
 	assert.Equal(t, "*database/sql.DB", rules.PrependRules[0].ReceiverType)
-	assert.Equal(t, "QueryContext", rules.PrependRules[0].FuncName)
+	assert.Equal(t, []string{"QueryContext"}, rules.PrependRules[0].FuncNames)
+	assert.Equal(t, map[string]string{"sink": "github.com/example/sink"}, rules.PrependRules[0].Imports)
+}
+
+func TestLoadRulesFromFile_PrependRuleMultipleFuncs(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: test-package
+rules:
+  - id: sql.DB.QueryContext
+    type: prepend
+    receiver: "*database/sql.DB"
+    functions:
+      - QueryContext
+      - ExecContext
+    imports:
+      sink: github.com/example/sink
+    template: |
+      if err := sink.Check({{ .Function.Argument 0 }}); err != nil {
+        return nil, err
+      }
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	rules, err := loadRulesFromFile(yamlPath)
+	require.NoError(t, err)
+	require.Empty(t, rules.WrapRules)
+	require.Len(t, rules.PrependRules, 1)
+
+	assert.Equal(t, "sql.DB.QueryContext", rules.PrependRules[0].ID)
+	assert.Equal(t, "*database/sql.DB", rules.PrependRules[0].ReceiverType)
+	assert.Equal(t, []string{"QueryContext", "ExecContext"}, rules.PrependRules[0].FuncNames)
 	assert.Equal(t, map[string]string{"sink": "github.com/example/sink"}, rules.PrependRules[0].Imports)
 }
 

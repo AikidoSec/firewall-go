@@ -25,13 +25,14 @@ type RulesMeta struct {
 
 // Rule represents a single instrumentation rule
 type Rule struct {
-	ID       string            `yaml:"id"`
-	Type     string            `yaml:"type"`
-	Match    string            `yaml:"match"`    // For wrap rules: "pkg.Func"
-	Receiver string            `yaml:"receiver"` // For prepend rules: "*pkg.Type"
-	Function string            `yaml:"function"` // For prepend rules: "MethodName"
-	Imports  map[string]string `yaml:"imports"`
-	Template string            `yaml:"template"`
+	ID        string            `yaml:"id"`
+	Type      string            `yaml:"type"`
+	Match     string            `yaml:"match"`     // For wrap rules: "pkg.Func"
+	Receiver  string            `yaml:"receiver"`  // For prepend rules: "*pkg.Type"
+	Function  string            `yaml:"function"`  // For prepend rules: single "MethodName"
+	Functions []string          `yaml:"functions"` // For prepend rules: multiple method names (one-of)
+	Imports   map[string]string `yaml:"imports"`
+	Template  string            `yaml:"template"`
 }
 
 // InstrumentationRules holds all loaded rules
@@ -44,7 +45,7 @@ type InstrumentationRules struct {
 type PrependRule struct {
 	ID           string
 	ReceiverType string            // e.g., "*database/sql.DB"
-	FuncName     string            // e.g., "QueryContext"
+	FuncNames    []string          // e.g., ["Run", "Start"] - matches any of these
 	Imports      map[string]string // alias -> import path
 	PrependTmpl  string            // template with {{ .Function.Argument N }}
 }
@@ -102,10 +103,15 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 				WrapTmpl:  strings.TrimSpace(rule.Template),
 			})
 		case "prepend":
+			// Support both "function" (single) and "functions" (multiple)
+			funcNames := rule.Functions
+			if len(funcNames) == 0 && rule.Function != "" {
+				funcNames = []string{rule.Function}
+			}
 			result.PrependRules = append(result.PrependRules, PrependRule{
 				ID:           rule.ID,
 				ReceiverType: rule.Receiver,
-				FuncName:     rule.Function,
+				FuncNames:    funcNames,
 				Imports:      rule.Imports,
 				PrependTmpl:  strings.TrimSpace(rule.Template),
 			})
