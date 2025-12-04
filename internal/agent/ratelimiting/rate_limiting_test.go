@@ -23,6 +23,25 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		assert.Empty(t, status.Trigger)
 	})
 
+	t.Run("no user, group or ip should not block", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "", "")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "", "")
+		_ = rl.ShouldRateLimitRequest("GET", "/api/test", "", "", "")
+
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", "", "")
+
+		assert.NotNil(t, status)
+		assert.False(t, status.Block)
+		assert.Empty(t, status.Trigger)
+	})
+
 	t.Run("user below threshold not blocked", func(t *testing.T) {
 		rl := New()
 		key := endpointKey{Method: "GET", Route: "/api/test"}
