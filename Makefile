@@ -39,13 +39,39 @@ test-zen-go:
 	@echo "✅ zen-go tests completed successfully"
 	@cd cmd/zen-go && go tool cover -func=coverage.out | grep total | awk '{print "cmd/zen-go coverage: " $$3}'
 
-.PHONY: test-instrumentation
-test-instrumentation:
+.PHONY: test-instrumentation-integration
+test-instrumentation-integration:
 	@echo "Running instrumentation tests with orchestrion"
 	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="$(TOOLS_BIN)/orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
 	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
+
+.PHONY: test-instrumentation-unit
+test-instrumentation-unit:
+	@echo "Running instrumentation unit tests"
+	@rm -f coverage-*.out coverage.out
+	@# Test subdirectories with go.mod
+	@i=0; \
+	for dir in instrumentation/sources instrumentation/sinks; do \
+		find $$dir -name go.mod -exec dirname {} \; | while read moddir; do \
+			i=$$((i+1)); \
+			echo "Testing module in $$moddir (unit tests)"; \
+			cd $$moddir && $(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=$(CURDIR)/coverage-$$i.out -covermode=atomic ./...; \
+			cd $(CURDIR); \
+		done; \
+	done
+	@# Test root module instrumentation packages (those without go.mod)
+	@if go list ./instrumentation/... 2>/dev/null | grep -q .; then \
+		echo "Testing root module instrumentation packages"; \
+		$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage-root-inst.out -covermode=atomic ./instrumentation/...; \
+	fi
+	@echo "Merging coverage reports..."
+	@echo "mode: atomic" > coverage.out
+	@find . -maxdepth 1 -name 'coverage-*.out' -exec tail -n +2 {} \; >> coverage.out
+	@rm -f coverage-*.out
+	@echo "✅ Instrumentation unit tests completed successfully"
+	@echo "Coverage report saved to coverage.out"
 
 .PHONY: test-coverage-html
 test-coverage-html: test
