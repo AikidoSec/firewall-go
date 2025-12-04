@@ -1,0 +1,48 @@
+name: 🧪 QA Tests
+permissions:
+  contents: read
+on:
+  push: {}
+  workflow_call: {}
+
+jobs:
+  qa-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout firewall-go
+        uses: actions/checkout@v5
+        with:
+          path: firewall-go
+
+      - name: Checkout zen-demo-go
+        uses: actions/checkout@v5
+        with:
+          repository: Aikido-demo-apps/zen-demo-go
+          path: zen-demo-go
+          submodules: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.24
+
+      - name: Use local firewall-go
+        run: |
+          cp -r firewall-go zen-demo-go/firewall-go-local
+          cd zen-demo-go
+          go mod edit -replace github.com/AikidoSec/firewall-go=./firewall-go-local
+          go mod tidy
+
+      - name: Patch Dockerfile for local build
+        run: |
+          cd zen-demo-go
+          # Insert the COPY command after WORKDIR and before go.mod COPY
+          sed -i '/WORKDIR \/app/a COPY firewall-go-local ./firewall-go-local' Dockerfile
+
+      - name: Run Firewall QA Tests
+        uses: AikidoSec/firewall-tester-action@v1.0.1
+        with:
+          dockerfile_path: ./zen-demo-go/Dockerfile
+          app_port: 3000
+          sleep_before_test: 10
