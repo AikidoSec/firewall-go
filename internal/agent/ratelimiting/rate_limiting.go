@@ -123,13 +123,8 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	matchingKey := rl.findMatchingRateLimitEndpoint(method, route)
-	if matchingKey == nil {
-		return &Status{Block: false}
-	}
-
-	rateLimitingDataForRoute, exists := rl.rateLimitingMap[*matchingKey]
-	if !exists {
+	rateLimitingDataForRoute := rl.findMatchingRateLimitEndpoint(method, route)
+	if rateLimitingDataForRoute == nil {
 		return &Status{Block: false}
 	}
 
@@ -163,7 +158,7 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 // It uses [endpoints.FindMatches] to find all matching endpoints, then:
 // 1. Checks for exact route match first
 // 2. If no exact match, selects the most restrictive rate (lowest maxRequests / windowSizeInMS)
-func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string) *endpointKey {
+func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string) *endpointData {
 	var endpointList []aikido_types.Endpoint
 	for key := range rl.rateLimitingMap {
 		endpointList = append(endpointList, aikido_types.Endpoint{
@@ -185,12 +180,12 @@ func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string
 	for _, match := range matches {
 		if match.Route == route {
 			key := endpointKey{Method: match.Method, Route: match.Route}
-			return &key
+			return rl.rateLimitingMap[key]
 		}
 	}
 
 	// No exact match found, find the most restrictive (lowest rate)
-	var mostRestrictive *endpointKey
+	var mostRestrictive *endpointData
 	var lowestRate float64
 
 	for _, match := range matches {
@@ -203,7 +198,7 @@ func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string
 		rate := float64(data.Config.MaxRequests) / float64(data.Config.WindowSizeInMS)
 
 		if mostRestrictive == nil || rate < lowestRate {
-			mostRestrictive = &key
+			mostRestrictive = data
 			lowestRate = rate
 		}
 	}
