@@ -44,9 +44,9 @@ func toolexecCompileCommand(cmd *cli.Command, stdout io.Writer, stderr io.Writer
 	newArgs := make([]string, 0, len(toolArgs))
 
 	for _, arg := range toolArgs {
-		// If the argument starts with a dash or doesn't end with .go, it's not a Go file
+		// If doesn't end with .go, it's not a Go file
 		// so we can pass it through to the compiler
-		if strings.HasPrefix(arg, "-") || !strings.HasSuffix(arg, ".go") {
+		if !strings.HasSuffix(arg, ".go") {
 			newArgs = append(newArgs, arg)
 			continue
 		}
