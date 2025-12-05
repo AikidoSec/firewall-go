@@ -190,15 +190,15 @@ func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string
 
 	for _, match := range matches {
 		key := endpointKey{Method: match.Method, Route: match.Route}
-		data := rl.rateLimitingMap[key]
-		if data.Config.WindowSizeInMS == 0 {
+		endpoint := rl.rateLimitingMap[key]
+		if endpoint.Config.WindowSizeInMS == 0 {
 			continue
 		}
 
-		rate := float64(data.Config.MaxRequests) / float64(data.Config.WindowSizeInMS)
+		rate := float64(endpoint.Config.MaxRequests) / float64(endpoint.Config.WindowSizeInMS)
 
 		if mostRestrictive == nil || rate < lowestRate {
-			mostRestrictive = data
+			mostRestrictive = endpoint
 			lowestRate = rate
 		}
 	}
