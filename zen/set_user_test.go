@@ -60,8 +60,8 @@ func TestSetUser(t *testing.T) {
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
 
-		userID := reqCtx.GetUser().ID
-		assert.Empty(t, userID, "Expected user ID to be empty")
+		user := reqCtx.GetUser()
+		assert.Nil(t, user, "Expected user to be nil")
 	})
 
 	t.Run("EmptyName", func(t *testing.T) {
@@ -84,8 +84,8 @@ func TestSetUser(t *testing.T) {
 		reqCtx := request.GetContext(resultCtx)
 		require.NotNil(t, reqCtx, "Expected request context to exist")
 
-		userID := reqCtx.GetUser().ID
-		assert.Empty(t, userID, "Expected user ID to be empty")
+		user := reqCtx.GetUser()
+		assert.Nil(t, user, "Expected user to be nil")
 	})
 
 	t.Run("NilRequestContext", func(t *testing.T) {
@@ -126,8 +126,8 @@ func TestSetUser(t *testing.T) {
 		require.NoError(t, err)
 
 		// User should not be set
-		userID := reqCtx.GetUser().ID
-		assert.Empty(t, userID, "Expected user ID to be empty when middleware already executed")
+		user := reqCtx.GetUser()
+		assert.Nil(t, user, "Expected user to be nil")
 	})
 
 	t.Run("UserAvailableImmediatelyForAttackDetection", func(t *testing.T) {

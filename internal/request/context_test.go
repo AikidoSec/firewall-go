@@ -58,12 +58,26 @@ func TestContext_SetUser_GetUser(t *testing.T) {
 	ctx := &Context{}
 
 	// Test initial state
-	assert.Empty(t, ctx.GetUser().ID)
+	assert.Nil(t, ctx.GetUser())
 
 	// Test setting user
-	user := aikido_types.User{ID: "user123", Name: "Test User"}
+	user := &aikido_types.User{ID: "user123", Name: "Test User"}
 	ctx.SetUser(user)
-	assert.Equal(t, aikido_types.User{ID: "user123", Name: "Test User"}, ctx.GetUser())
+	assert.Equal(t, &aikido_types.User{ID: "user123", Name: "Test User"}, ctx.GetUser())
+}
+
+func TestContext_GetUserID(t *testing.T) {
+	ctx := &Context{}
+
+	// If no user is set, then should return empty string
+	assert.Empty(t, ctx.GetUserID())
+
+	ctx.SetUser(&aikido_types.User{
+		ID:   "user123",
+		Name: "Test User",
+	})
+
+	assert.Equal(t, "user123", ctx.GetUserID())
 }
 
 func TestContext_SetRateLimitGroup_GetRateLimitGroup(t *testing.T) {

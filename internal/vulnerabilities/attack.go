@@ -77,7 +77,7 @@ func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.Detect
 			Path:      res.PathToPayload,
 			Payload:   res.Payload,
 			Metadata:  maps.Clone(res.Metadata),
-			User:      &user,
+			User:      user,
 		},
 	}
 }

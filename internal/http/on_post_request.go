@@ -35,6 +35,6 @@ func OnPostRequest(ctx context.Context, statusCode int) {
 	apiSpec := apidiscovery.GetAPIInfo(reqCtx)
 
 	go OnRequestShutdownReporting(
-		reqCtx.Method, reqCtx.Route, statusCode, reqCtx.GetUser().ID, reqCtx.GetIP(), apiSpec,
+		reqCtx.Method, reqCtx.Route, statusCode, reqCtx.GetUserID(), reqCtx.GetIP(), apiSpec,
 	)
 }

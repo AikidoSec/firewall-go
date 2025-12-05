@@ -28,7 +28,7 @@ func SetUser(ctx context.Context, id string, name string) (context.Context, erro
 	}
 
 	user := agent.OnUser(id, name, reqCtx.GetIP())
-	reqCtx.SetUser(user)
+	reqCtx.SetUser(&user)
 
 	return ctx, nil
 }
