@@ -18,14 +18,14 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 
 	agent.OnMiddlewareInstalled() // Report middleware as installed, handy for dashboard.
 	// user-blocking :
-	user := reqCtx.GetUser()
-	if config.IsUserBlocked(user.ID) {
-		log.Info("User is blocked!", slog.String("user", user.ID))
+	userID := reqCtx.GetUserID()
+	if config.IsUserBlocked(userID) {
+		log.Info("User is blocked!", slog.String("user", userID))
 		return &BlockResponse{"blocked", "user", nil}
 	}
 
 	rateLimitingStatus := agent.GetRateLimitingStatus(
-		reqCtx.Method, reqCtx.Route, reqCtx.GetUser().ID, reqCtx.GetIP(), reqCtx.GetRateLimitGroup(),
+		reqCtx.Method, reqCtx.Route, userID, reqCtx.GetIP(), reqCtx.GetRateLimitGroup(),
 	)
 	if rateLimitingStatus != nil && rateLimitingStatus.Block {
 		log.Info("Request is rate-limited",

@@ -24,7 +24,7 @@ type Context struct {
 	Route              string
 	executedMiddleware bool
 
-	user           aikido_types.User
+	user           *aikido_types.User
 	rateLimitGroup string
 
 	deferredAttack *DeferredAttack
@@ -39,18 +39,27 @@ func (ctx *Context) GetUserAgent() string {
 	return "unknown"
 }
 
-func (ctx *Context) SetUser(user aikido_types.User) {
+func (ctx *Context) SetUser(user *aikido_types.User) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
 
 	ctx.user = user
 }
 
-func (ctx *Context) GetUser() aikido_types.User {
+func (ctx *Context) GetUser() *aikido_types.User {
 	ctx.mu.RLock()
 	defer ctx.mu.RUnlock()
 
 	return ctx.user
+}
+
+func (ctx *Context) GetUserID() string {
+	user := ctx.GetUser()
+	if user == nil {
+		return ""
+	}
+
+	return user.ID
 }
 
 func (ctx *Context) SetRateLimitGroup(id string) {
