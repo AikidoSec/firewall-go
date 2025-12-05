@@ -39,8 +39,25 @@ func toolexecCompileCommand(cmd *cli.Command, stdout io.Writer, stderr io.Writer
 		fmt.Fprintf(stderr, "%s, %s", importcfgPath, outputPath)
 	}
 
+	// These are the arguments that we want to pass through to the compiler
+	// If we modify a file, we need to pass the modified file to the compiler instead of the original file
+	newArgs := make([]string, 0, len(toolArgs))
+
+	for _, arg := range toolArgs {
+		// If doesn't end with .go, it's not a Go file
+		// so we can pass it through to the compiler
+		if !strings.HasSuffix(arg, ".go") {
+			newArgs = append(newArgs, arg)
+			continue
+		}
+
+		// It's a Go file, for now we just pass it through to the compiler
+		fmt.Fprintf(stderr, "zen-go: instrumenting file %s\n", arg)
+		newArgs = append(newArgs, arg)
+	}
+
 	// Run the compiler
-	err := passthrough(tool, toolArgs)
+	err := passthrough(tool, newArgs)
 	if err != nil {
 		return err
 	}
