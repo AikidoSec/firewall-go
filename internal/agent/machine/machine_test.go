@@ -21,3 +21,12 @@ func TestGetMachineData(t *testing.T) {
 	assert.NotNil(t, parsedIP, "IPAddress should be a valid IP address")
 	assert.False(t, parsedIP.IsLoopback(), "IPAddress should not be loopback")
 }
+
+func TestInit(t *testing.T) {
+	Init()
+
+	assert.Equal(t, runtime.GOOS, Machine.OS)
+	assert.NotEmpty(t, Machine.HostName)
+	assert.NotEmpty(t, Machine.OSVersion)
+	assert.NotEmpty(t, Machine.IPAddress)
+}

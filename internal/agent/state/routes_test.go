@@ -370,3 +370,12 @@ func TestGetMergedAPISpec(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAPISpecData_NilSpec(t *testing.T) {
+	schema, bodyType, query, auth := getAPISpecData(nil)
+
+	require.Nil(t, schema)
+	require.Empty(t, bodyType)
+	require.Nil(t, query)
+	require.Nil(t, auth)
+}
