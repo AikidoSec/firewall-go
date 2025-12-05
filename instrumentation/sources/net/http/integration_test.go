@@ -22,11 +22,14 @@ func TestServeMuxIsAutomaticallyInstrumented(t *testing.T) {
 		ctx := request.GetContext(r.Context())
 		require.NotNil(t, ctx, "request context should be set")
 
-		assert.Equal(t, "ServeMux", ctx.Source)
+		assert.Equal(t, "http.ServeMux", ctx.Source)
 		assert.Equal(t, "/route/{id}", ctx.Route)
 		assert.Equal(t, map[string][]string{
 			"query": {"value"},
 		}, ctx.Query)
+		assert.Equal(t, map[string]string{
+			"id": "abc",
+		}, ctx.RouteParams)
 	})
 
 	r := httptest.NewRequest("GET", "/route/abc?query=value", nil)

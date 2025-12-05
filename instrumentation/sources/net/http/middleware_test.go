@@ -80,7 +80,7 @@ func TestMiddlewareAddsContext(t *testing.T) {
 		ctx := request.GetContext(r.Context())
 		require.NotNil(t, ctx, "request context should be set")
 
-		assert.Equal(t, "ServeMux", ctx.Source)
+		assert.Equal(t, "http.ServeMux", ctx.Source)
 		assert.Equal(t, "/route", ctx.Route)
 		assert.Equal(t, map[string][]string{
 			"query": {"value"},
@@ -88,7 +88,6 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	})
 
 	r := httptest.NewRequest("GET", "/route?query=value", nil)
-	r.SetPathValue("path", "/route")
 	w := httptest.NewRecorder()
 
 	handler(w, r)
@@ -100,12 +99,11 @@ func TestMiddlewareGLSFallback(t *testing.T) {
 		ctx := request.GetContext(context.Background())
 		require.NotNil(t, ctx, "request context should be set via GLS fallback")
 
-		assert.Equal(t, "ServeMux", ctx.Source)
+		assert.Equal(t, "http.ServeMux", ctx.Source)
 		assert.Equal(t, "/route", ctx.Route)
 	})
 
 	r := httptest.NewRequest("GET", "/route", nil)
-	r.SetPathValue("path", "/route")
 	w := httptest.NewRecorder()
 
 	handler(w, r)
@@ -198,4 +196,53 @@ func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
 
 	assert.Equal(t, originalBody, bodyReadInHandler)
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExtractRouteParams(t *testing.T) {
+	tests := []struct {
+		name     string
+		pattern  string
+		path     string
+		expected map[string]string
+	}{
+		{
+			name:     "single parameter",
+			pattern:  "/users/{id}",
+			path:     "/users/123",
+			expected: map[string]string{"id": "123"},
+		},
+		{
+			name:     "multiple parameters",
+			pattern:  "/posts/{postId}/comments/{commentId}",
+			path:     "/posts/456/comments/789",
+			expected: map[string]string{"postId": "456", "commentId": "789"},
+		},
+		{
+			name:     "no parameters",
+			pattern:  "/users",
+			path:     "/users",
+			expected: map[string]string{},
+		},
+		{
+			name:     "parameter with trailing path",
+			pattern:  "/api/{version}/users",
+			path:     "/api/v1/users",
+			expected: map[string]string{"version": "v1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.HandleFunc(tt.pattern, func(w http.ResponseWriter, r *http.Request) {})
+
+			req := httptest.NewRequest("GET", tt.path, nil)
+			w := httptest.NewRecorder()
+
+			mux.ServeHTTP(w, req)
+
+			result := extractRouteParams(req, tt.pattern)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

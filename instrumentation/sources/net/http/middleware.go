@@ -26,8 +26,13 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 			pattern = pattern[idx:]
 		}
 
-		ctx := request.SetContext(r.Context(), r, pattern, "ServeMux", &ip,
-			zenhttp.TryExtractBody(r, &requestParser{req: r}))
+		ctx := request.SetContext(r.Context(), r, request.ContextData{
+			Source:        "http.ServeMux",
+			Route:         pattern,
+			RouteParams:   extractRouteParams(r, pattern),
+			RemoteAddress: &ip,
+			Body:          zenhttp.TryExtractBody(r, &requestParser{req: r}),
+		})
 
 		wrappedR := r.WithContext(ctx)
 
@@ -90,4 +95,31 @@ func (rp *requestParser) MultipartForm() (*multipart.Form, error) {
 	}
 
 	return rp.req.MultipartForm, nil
+}
+
+func extractRouteParams(r *http.Request, pattern string) map[string]string {
+	params := make(map[string]string)
+
+	remaining := pattern
+
+	// Find all wildcard parameters in the pattern
+	// Pattern examples: "/users/{id}", "/posts/{id}/comments/{commentId}"
+	for {
+		start := strings.Index(remaining, "{")
+		if start == -1 {
+			break
+		}
+		end := strings.Index(remaining[start:], "}")
+		if end == -1 {
+			break
+		}
+
+		paramName := remaining[start+1 : start+end]
+		// Use PathValue to get the actual value from the request
+		params[paramName] = r.PathValue(paramName)
+
+		remaining = remaining[start+end+1:]
+	}
+
+	return params
 }
