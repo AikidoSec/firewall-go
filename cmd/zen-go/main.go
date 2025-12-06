@@ -50,13 +50,7 @@ func newCommand() *cli.Command {
 
 					switch toolName {
 					case "compile":
-						return toolexecCompileCommand(
-							cmd,
-							cmd.Root().Writer,
-							cmd.Root().ErrWriter,
-							tool,
-							toolArgs,
-						)
+						return toolexecCompileCommand(os.Stdout, os.Stderr, tool, toolArgs)
 					default:
 						return passthrough(tool, toolArgs)
 					}
