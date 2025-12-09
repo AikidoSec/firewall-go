@@ -25,14 +25,14 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	result, modified, imports, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
-	assert.True(t, modified)
-	assert.Contains(t, imports, "zengin")
-	assert.Equal(t, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin", imports["zengin"])
+	assert.True(t, result.Modified)
+	assert.Contains(t, result.Imports, "zengin")
+	assert.Equal(t, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin", result.Imports["zengin"])
 
-	resultStr := string(result)
+	resultStr := string(result.Code)
 	assert.Contains(t, resultStr, "GetMiddleware()")
 	assert.Contains(t, resultStr, "e.Use(zengin.")
 }
@@ -52,13 +52,13 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	result, modified, imports, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
-	assert.True(t, modified)
-	assert.Contains(t, imports, "zengin")
+	assert.True(t, result.Modified)
+	assert.Contains(t, result.Imports, "zengin")
 
-	resultStr := string(result)
+	resultStr := string(result.Code)
 	assert.Contains(t, resultStr, "GetMiddleware()")
 }
 
@@ -76,12 +76,11 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	result, modified, imports, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
-	assert.False(t, modified)
-	assert.Nil(t, result)
-	assert.Nil(t, imports)
+	assert.False(t, result.Modified)
+	assert.Empty(t, result.Imports)
 }
 
 func TestInstrumentFile_GinWithAlias(t *testing.T) {
@@ -99,13 +98,13 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	result, modified, imports, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
-	assert.True(t, modified)
-	assert.Contains(t, imports, "zengin")
+	assert.True(t, result.Modified)
+	assert.Contains(t, result.Imports, "zengin")
 
-	resultStr := string(result)
+	resultStr := string(result.Code)
 	assert.Contains(t, resultStr, "GetMiddleware()")
 }
 
@@ -126,12 +125,12 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	result, modified, _, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
-	assert.True(t, modified)
+	assert.True(t, result.Modified)
 
-	resultStr := string(result)
+	resultStr := string(result.Code)
 	// Should have two middleware insertions
 	assert.Equal(t, 2, strings.Count(resultStr, "GetMiddleware()"))
 }
@@ -153,11 +152,11 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	result, modified, _, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
-	assert.True(t, modified)
-	assert.Contains(t, string(result), "GetMiddleware()")
+	assert.True(t, result.Modified)
+	assert.Contains(t, string(result.Code), "GetMiddleware()")
 }
 
 func TestInstrumentFile_GinInFunction(t *testing.T) {
@@ -179,11 +178,11 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	result, modified, _, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
-	assert.True(t, modified)
-	assert.Contains(t, string(result), "GetMiddleware()")
+	assert.True(t, result.Modified)
+	assert.Contains(t, string(result.Code), "GetMiddleware()")
 }
 
 func TestInstrumentFile_InvalidFile(t *testing.T) {
@@ -191,9 +190,11 @@ func TestInstrumentFile_InvalidFile(t *testing.T) {
 	tmpFile := filepath.Join(tmpDir, "nonexistent.go")
 
 	inst := NewInstrumentor()
-	_, _, _, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
+	assert.False(t, result.Modified)
+	assert.Nil(t, result.Imports)
 }
 
 func TestInstrumentFile_InvalidSyntax(t *testing.T) {
@@ -208,7 +209,9 @@ func main() {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
 
 	inst := NewInstrumentor()
-	_, _, _, err := inst.InstrumentFile(tmpFile, "main")
+	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
+	assert.False(t, result.Modified)
+	assert.Nil(t, result.Imports)
 }

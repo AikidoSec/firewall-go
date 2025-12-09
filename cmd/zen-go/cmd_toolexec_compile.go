@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -60,24 +61,23 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 			continue
 		}
 
-		result, modified, addedImports, err := instrumentor.InstrumentFile(arg, pkgPath)
+		result, err := instrumentor.InstrumentFile(arg, pkgPath)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: error instrumenting file %s: %v\n", arg, err)
 			newArgs = append(newArgs, arg)
 			continue
 		}
 
-		if !modified {
+		if !result.Modified {
 			newArgs = append(newArgs, arg)
 			continue
 		}
 
-		// Track added imports
-		for alias, path := range addedImports {
-			allAddedImports[alias] = path
-		}
+		// Collect added imports (alias -> path), e.g:
+		// zengin -> github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
+		maps.Copy(allAddedImports, result.Imports)
 
-		tempFile, err := writeTempFile(arg, result, objdir)
+		tempFile, err := writeTempFile(arg, result.Code, objdir)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: error writing temp file: %v\n", err)
 			newArgs = append(newArgs, arg)

@@ -44,12 +44,18 @@ func NewInstrumentor() *Instrumentor {
 	}
 }
 
-func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) ([]byte, bool, map[string]string, error) {
+type InstrumentFileResult struct {
+	Code     []byte
+	Modified bool
+	Imports  map[string]string
+}
+
+func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (InstrumentFileResult, error) {
 	// Parse the file using go/parser
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
-		return nil, false, nil, err
+		return InstrumentFileResult{}, err
 	}
 
 	// Build map of existing imports
@@ -87,7 +93,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) ([]b
 	}
 
 	if !modified {
-		return nil, false, nil, nil
+		return InstrumentFileResult{}, nil
 	}
 
 	// Add new imports
@@ -95,8 +101,12 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) ([]b
 
 	var out bytes.Buffer
 	if err := printer.Fprint(&out, fset, file); err != nil {
-		return nil, false, nil, err
+		return InstrumentFileResult{}, err
 	}
 
-	return out.Bytes(), true, importsToAdd, nil
+	return InstrumentFileResult{
+		Code:     out.Bytes(),
+		Modified: true,
+		Imports:  importsToAdd,
+	}, nil
 }
