@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -254,4 +255,66 @@ func TestCallDetectSQLSecondAllocationFailure(t *testing.T) {
 
 	// Verify detectSQL was never called
 	assert.Equal(t, 0, mockDetectSQL.callCount, "detectSQL should not be called when allocation fails")
+}
+
+// TestCompilationAndPooling tests that:
+// 1. Init() returns quickly (doesn't block on compilation)
+// 2. Compilation happens in background and eventually completes
+// 3. After compilation, new instances use the compiled module
+func TestCompilationAndPooling(t *testing.T) {
+	// Init should return quickly without blocking on compilation
+	start := time.Now()
+	require.NoError(t, Init())
+	require.Less(t, time.Since(start), 100*time.Millisecond, "Init should not block on compilation")
+
+	// Verify it works with interpreter mode
+	result := DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(MySQL))
+	require.Equal(t, 1, result)
+
+	// Wait for compilation to complete
+	require.Eventually(t, func() bool {
+		return isCompiled() && !isCompiling()
+	}, 10*time.Second, 100*time.Millisecond, "Compilation should complete")
+
+	// After compilation, new instances should use compiled module
+	inst := newWasmInstance()
+	require.NotNil(t, inst)
+	wasmInst, ok := inst.(*wasmInstance)
+	require.True(t, ok)
+	require.True(t, wasmInst.isCompiled, "Should use compiled module after compilation")
+
+	// Verify it works
+	result = DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(MySQL))
+	require.Equal(t, 1, result)
+}
+
+// TestConcurrentAccess verifies thread safety with concurrent DetectSQLInjection calls
+func TestConcurrentAccess(t *testing.T) {
+	// Initialize if not already done
+	if interpreterRuntime == nil {
+		err := Init()
+		require.NoError(t, err, "Init should succeed")
+	}
+
+	const numGoroutines = 10
+	const callsPerGoroutine = 5
+
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < callsPerGoroutine; j++ {
+				result := DetectSQLInjection(
+					"SELECT * FROM users WHERE id = ?",
+					"123",
+					int(MySQL),
+				)
+				assert.Equal(t, 0, result, "Should not detect injection in safe query")
+			}
+		}()
+	}
+
+	wg.Wait()
 }
