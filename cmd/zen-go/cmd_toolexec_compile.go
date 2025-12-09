@@ -14,33 +14,18 @@ import (
 
 func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
 	// If has -V=full or just -V, then it's a version query
-	// Check for -V flag, with optional "full" value
-	for _, arg := range toolArgs {
-		if arg == "-V=full" || arg == "-V" {
-			return toolexecVersionQueryCommand(
-				stdout,
-				stderr,
-				tool, toolArgs,
-			)
-		}
+	if isVersionQuery(toolArgs) {
+		return toolexecVersionQueryCommand(
+			stdout,
+			stderr,
+			tool, toolArgs,
+		)
 	}
 
-	var pkgPath, importcfgPath, outputPath string
-	for i := range len(toolArgs) {
-		if val, ok := extractFlag(toolArgs, i, "-p"); ok {
-			pkgPath = val
-		} else if val, ok := extractFlag(toolArgs, i, "-importcfg"); ok {
-			importcfgPath = val
-		} else if val, ok := extractFlag(toolArgs, i, "-o"); ok {
-			outputPath = val
-		}
-	}
+	pkgPath, importcfgPath, outputPath := extractCompilerFlags(toolArgs)
 
 	// Get objdir from output path (e.g., /tmp/go-build123/b001/_pkg_.a -> /tmp/go-build123/b001)
-	var objdir string
-	if outputPath != "" {
-		objdir = filepath.Dir(outputPath)
-	}
+	objdir := getObjDir(outputPath)
 
 	if isDebug() {
 		fmt.Fprintf(stderr, "zen-go: compiling package %s\n", pkgPath)
@@ -48,9 +33,80 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 
 	// These are the arguments that we want to pass through to the compiler
 	// If we modify a file, we need to pass the modified file to the compiler instead of the original file
+	newArgs, allAddedImports, err := instrumentFiles(stderr, toolArgs, pkgPath, objdir)
+	if err != nil {
+		return err
+	}
+
+	// If we added imports, we need to modify the importcfg
+	if len(allAddedImports) > 0 && importcfgPath != "" {
+		if err := updateImportcfgInArgs(stderr, newArgs, importcfgPath, allAddedImports, objdir); err != nil {
+			fmt.Fprintf(stderr, "zen-go: warning: failed to update importcfg: %v\n", err)
+		}
+	}
+
+	// Run the compiler
+	err = passthrough(tool, newArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func extractFlag(args []string, i int, flag string) (string, bool) {
+	if args[i] == flag && i+1 < len(args) {
+		return args[i+1], true
+	}
+	if val, ok := strings.CutPrefix(args[i], flag+"="); ok {
+		return val, true
+	}
+	return "", false
+}
+
+// passthrough runs the given Golang tool
+// For example, it will run the compiler with the arguments originally passed our toolexec command
+func passthrough(tool string, args []string) error {
+	cmd := exec.Command(tool, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+func isVersionQuery(args []string) bool {
+	for _, arg := range args {
+		if arg == "-V=full" || arg == "-V" {
+			return true
+		}
+	}
+	return false
+}
+
+func extractCompilerFlags(args []string) (pkgPath, importcfgPath, outputPath string) {
+	for i := range len(args) {
+		if val, ok := extractFlag(args, i, "-p"); ok {
+			pkgPath = val
+		} else if val, ok := extractFlag(args, i, "-importcfg"); ok {
+			importcfgPath = val
+		} else if val, ok := extractFlag(args, i, "-o"); ok {
+			outputPath = val
+		}
+	}
+	return pkgPath, importcfgPath, outputPath
+}
+
+func getObjDir(outputPath string) string {
+	if outputPath == "" {
+		return ""
+	}
+	return filepath.Dir(outputPath)
+}
+
+func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string) ([]string, map[string]string, error) {
 	newArgs := make([]string, 0, len(toolArgs))
 	allAddedImports := make(map[string]string) // import path -> alias
-
 	instrumentor := internal.NewInstrumentor()
 
 	for _, arg := range toolArgs {
@@ -93,60 +149,38 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 		}
 	}
 
-	// If we added imports, we need to modify the importcfg
-	if len(allAddedImports) > 0 && importcfgPath != "" {
-		newImportcfg, err := internal.ExtendImportcfg(importcfgPath, allAddedImports, objdir, stderr, isDebug())
-		if err != nil {
-			fmt.Fprintf(stderr, "zen-go: warning: failed to extend importcfg: %v\n", err)
-		} else if newImportcfg != "" {
-			// Replace importcfg in args
-			for i := 0; i < len(newArgs); i++ {
-				if newArgs[i] == "-importcfg" && i+1 < len(newArgs) {
-					newArgs[i+1] = newImportcfg
-					if isDebug() {
-						fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
-					}
-					break
-				}
-				if strings.HasPrefix(newArgs[i], "-importcfg=") {
-					newArgs[i] = "-importcfg=" + newImportcfg
-					if isDebug() {
-						fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
-					}
-					break
-				}
-			}
-		}
-	}
+	return newArgs, allAddedImports, nil
+}
 
-	// Run the compiler
-	err := passthrough(tool, newArgs)
+func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string, addedImports map[string]string, objdir string) error {
+	newImportcfg, err := internal.ExtendImportcfg(importcfgPath, addedImports, objdir, stderr, isDebug())
 	if err != nil {
 		return err
+	}
+	if newImportcfg == "" {
+		return nil
+	}
+
+	replaceImportcfgArg(args, newImportcfg)
+
+	if isDebug() {
+		fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
 	}
 
 	return nil
 }
 
-func extractFlag(args []string, i int, flag string) (string, bool) {
-	if args[i] == flag && i+1 < len(args) {
-		return args[i+1], true
+func replaceImportcfgArg(args []string, newPath string) {
+	for i := range len(args) {
+		if args[i] == "-importcfg" && i+1 < len(args) {
+			args[i+1] = newPath
+			return
+		}
+		if strings.HasPrefix(args[i], "-importcfg=") {
+			args[i] = "-importcfg=" + newPath
+			return
+		}
 	}
-	if val, ok := strings.CutPrefix(args[i], flag+"="); ok {
-		return val, true
-	}
-	return "", false
-}
-
-// passthrough runs the given Golang tool
-// For example, it will run the compiler with the arguments originally passed our toolexec command
-func passthrough(tool string, args []string) error {
-	cmd := exec.Command(tool, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
 }
 
 func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
