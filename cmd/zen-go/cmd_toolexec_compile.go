@@ -40,7 +40,8 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 
 	// If we added imports, we need to modify the importcfg
 	if len(allAddedImports) > 0 && importcfgPath != "" {
-		if err := updateImportcfgInArgs(stderr, newArgs, importcfgPath, allAddedImports, objdir); err != nil {
+		newArgs, err = updateImportcfgInArgs(stderr, newArgs, importcfgPath, allAddedImports, objdir)
+		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: failed to update importcfg: %v\n", err)
 		}
 	}
@@ -152,35 +153,39 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 	return newArgs, allAddedImports, nil
 }
 
-func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string, addedImports map[string]string, objdir string) error {
+func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string, addedImports map[string]string, objdir string) ([]string, error) {
 	newImportcfg, err := internal.ExtendImportcfg(importcfgPath, addedImports, objdir, stderr, isDebug())
 	if err != nil {
-		return err
+		return args, err
 	}
+
 	if newImportcfg == "" {
-		return nil
+		return args, nil
 	}
 
-	replaceImportcfgArg(args, newImportcfg)
-
+	updatedArgs := replaceImportcfgArg(args, newImportcfg)
 	if isDebug() {
 		fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
 	}
 
-	return nil
+	return updatedArgs, nil
 }
 
-func replaceImportcfgArg(args []string, newPath string) {
-	for i := range len(args) {
-		if args[i] == "-importcfg" && i+1 < len(args) {
-			args[i+1] = newPath
-			return
+func replaceImportcfgArg(args []string, newPath string) []string {
+	result := make([]string, len(args))
+	copy(result, args)
+
+	for i := range len(result) {
+		if result[i] == "-importcfg" && i+1 < len(result) {
+			result[i+1] = newPath
+			return result
 		}
-		if strings.HasPrefix(args[i], "-importcfg=") {
-			args[i] = "-importcfg=" + newPath
-			return
+		if strings.HasPrefix(result[i], "-importcfg=") {
+			result[i] = "-importcfg=" + newPath
+			return result
 		}
 	}
+	return result
 }
 
 func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
