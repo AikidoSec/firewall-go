@@ -132,6 +132,7 @@ jobs:
         app:
           - gin-postgres
           - echo-postgres
+          - echo-pgx-sql
 
     steps:
       - name: Checkout code
