@@ -3,6 +3,9 @@ BINARY := bin/app
 ROOT_DIR := $(shell cd ../.. && pwd)
 ORCHESTRION := $(ROOT_DIR)/tools/bin/orchestrion
 
+export AIKIDO_BLOCK ?= true
+export AIKIDO_DEBUG ?= true
+
 .PHONY: build run dev start-database stop-database clean
 
 build: check-orchestrion

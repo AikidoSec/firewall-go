@@ -148,10 +148,6 @@ jobs:
 
       - name: Start ${{ matrix.app }} app
         working-directory: ./end2end
-        env:
-          PORT: ${{ matrix.app.port }}
-          AIKIDO_DEBUG: "true"
-          AIKIDO_BLOCK: "true"
         run: make start-app APP=${{ matrix.app }}
 
       - name: Run E2E tests
