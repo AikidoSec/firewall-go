@@ -35,7 +35,7 @@ func GetMiddleware() gin.HandlerFunc {
 		c.Request = c.Request.WithContext(reqCtx)
 
 		// Write a response using Gin :
-		res := http.OnInitRequest(c)
+		res := http.OnInitRequest(c, ip, c.FullPath(), c.Request.Method)
 		if res != nil {
 			c.String(res.StatusCode, res.Message)
 			c.Abort()

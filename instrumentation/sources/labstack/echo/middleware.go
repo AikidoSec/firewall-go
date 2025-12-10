@@ -39,7 +39,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			c.SetRequest(httpRequest.WithContext(reqCtx))
 
 			// Write a possible response (i.e. geo-blocking bot blocking)
-			res := http.OnInitRequest(c.Request().Context())
+			res := http.OnInitRequest(c.Request().Context(), ip, c.Path(), c.Request().Method)
 			if res != nil {
 				return c.String(res.StatusCode, res.Message)
 			}

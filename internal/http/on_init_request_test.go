@@ -44,7 +44,7 @@ func TestOnInitRequest(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		resp := OnInitRequest(ctx)
+		resp := OnInitRequest(ctx, ip, "/route", "GET")
 
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
@@ -63,7 +63,7 @@ func TestOnInitRequest(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		resp := OnInitRequest(ctx)
+		resp := OnInitRequest(ctx, ip, "/route", "GET")
 
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
@@ -80,7 +80,16 @@ func TestOnInitRequest(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		resp := OnInitRequest(ctx)
+		resp := OnInitRequest(ctx, ip, "/admin", "GET")
+
+		assert.NotNil(t, resp)
+		assert.Equal(t, 403, resp.StatusCode)
+		assert.Contains(t, resp.Message, "Your IP address is not allowed")
+	})
+
+	t.Run("block route with unapproved ip and nil context", func(t *testing.T) {
+		ip := "192.168.1.1"
+		resp := OnInitRequest(context.Background(), ip, "/admin", "GET")
 
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
@@ -97,13 +106,13 @@ func TestOnInitRequest(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		resp := OnInitRequest(ctx)
+		resp := OnInitRequest(ctx, ip, "/admin", "GET")
 
 		assert.Nil(t, resp)
 	})
 
 	t.Run("nil context", func(t *testing.T) {
-		resp := OnInitRequest(context.Background())
+		resp := OnInitRequest(context.Background(), "", "", "")
 
 		assert.Nil(t, resp)
 	})
@@ -118,7 +127,7 @@ func TestOnInitRequest(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		resp := OnInitRequest(ctx)
+		resp := OnInitRequest(ctx, ip, "/route", "GET")
 
 		assert.Nil(t, resp)
 	})

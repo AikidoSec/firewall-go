@@ -77,6 +77,7 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 				AllowedIPAddresses: []string{"192.168.0.1"},
 			},
 		},
+		BypassedIPs: []string{"10.0.0.1"},
 	}, &aikido_types.ListsConfigData{
 		BlockedIPAddresses: []aikido_types.BlockedIPsData{
 			{
@@ -145,6 +146,18 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 		resp := w.Result()
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("block route with unapproved & bypassed ip", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/admin", nil)
+		r.RemoteAddr = "10.0.0.1:1234"
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})
 }
 

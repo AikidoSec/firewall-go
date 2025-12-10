@@ -14,18 +14,24 @@ type Response struct {
 	Message    string
 }
 
-func OnInitRequest(ctx context.Context) *Response {
+func OnInitRequest(ctx context.Context, ip string, route string, method string) *Response {
+	matches := endpoints.FindMatches(
+		config.GetEndpoints(),
+		endpoints.RouteMetadata{Method: method, Route: route},
+	)
+	// IP Allowlists per route
+	if !ipAllowedToAccessRoute(ip, matches) {
+		msg := "Your IP address is not allowed to access this resource."
+		msg += " (Your IP: " + ip + ")"
+		return &Response{403, msg}
+	}
+
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
 	}
 
-	if config.IsIPBypassed(reqCtx.GetIP()) {
-		return nil
-	}
-
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
-	ip := reqCtx.GetIP()
 	if ipBlocked, reason := config.IsIPBlocked(ip); ipBlocked {
 		msg := fmt.Sprintf("Your IP address is blocked due to %s. (Your IP: %s)", reason, ip)
 
@@ -35,17 +41,6 @@ func OnInitRequest(ctx context.Context) *Response {
 	// Check for blocked user agents using a regex (e.g. bot blocking)
 	if userAgentBlocked, _ := config.IsUserAgentBlocked(reqCtx.GetUserAgent()); userAgentBlocked {
 		msg := "You are not allowed to access this resource because you have been identified as a bot."
-		return &Response{403, msg}
-	}
-
-	matches := endpoints.FindMatches(
-		config.GetEndpoints(),
-		endpoints.RouteMetadata{Method: reqCtx.Method, Route: reqCtx.Route},
-	)
-	// IP Allowlists per route
-	if !ipAllowedToAccessRoute(ip, matches) {
-		msg := "Your IP address is not allowed to access this resource."
-		msg += " (Your IP: " + ip + ")"
 		return &Response{403, msg}
 	}
 
