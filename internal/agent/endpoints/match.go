@@ -8,9 +8,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
-// RouteMetadata represents a limited context with URL, method, and route.
+// RouteMetadata represents a limited context with method, and route.
 type RouteMetadata struct {
-	URL    string
 	Method string
 	Route  string
 }
