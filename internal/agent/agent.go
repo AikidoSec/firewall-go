@@ -63,7 +63,6 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 
 	ratelimiting.Init()
 
-	log.Info("Aikido Agent loaded!", slog.String("version", globals.EnvironmentConfig.Version))
 	return nil
 }
 
@@ -71,8 +70,6 @@ func AgentUninit() error {
 	ratelimiting.Uninit()
 	stopPolling()
 	config.Uninit()
-
-	log.Info("Aikido Agent unloaded!", slog.String("version", globals.EnvironmentConfig.Version))
 
 	return nil
 }
