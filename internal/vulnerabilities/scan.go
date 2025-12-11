@@ -43,7 +43,6 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 	matches := endpoints.FindMatches(
 		config.GetEndpoints(),
 		endpoints.RouteMetadata{
-			URL:    reqCtx.URL,
 			Method: reqCtx.Method,
 			Route:  reqCtx.Route,
 		},
