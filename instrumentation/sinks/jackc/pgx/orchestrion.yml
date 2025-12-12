@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
+meta:
+  name: github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx
+  description: |-
+    Protection from SQL Injection for pgx v5.
+
+aspects:
+  # Conn.Query returns (pgx.Rows, error) - return rows carrying the error
+  - id: github.com/jackc/pgx/v5.Conn.Query
+    join-point:
+      function-body:
+        function:
+          - receiver: "*github.com/jackc/pgx/v5.Conn"
+          - name: Query
+    advice:
+      - prepend-statements:
+          imports:
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx
+          template: |-
+            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "pgx.Conn.Query")
+            if _aikido_block != nil {
+              return &baseRows{err: _aikido_block}, _aikido_block
+            }
+
+  # Conn.Exec returns (pgconn.CommandTag, error) - should return error
+  - id: github.com/jackc/pgx/v5.Conn.Exec
+    join-point:
+      function-body:
+        function:
+          - receiver: "*github.com/jackc/pgx/v5.Conn"
+          - name: Exec
+    advice:
+      - prepend-statements:
+          imports:
+            sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx
+          template: |-
+            _aikido_block := sink.ExamineContext({{ .Function.Argument 0}}, {{ .Function.Argument 1}}, "pgx.Conn.Exec")
+            if _aikido_block != nil {
+              var _zeroTag pgconn.CommandTag
+              return _zeroTag, _aikido_block
+            }

@@ -1,11 +1,11 @@
 module echo-pgx-sql
 
-go 1.24.2
+go 1.24.0
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
 	github.com/DataDog/orchestrion v1.6.1
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/jackc/pgx/v5 v5.7.6
 	github.com/labstack/echo/v4 v4.13.4
 )
 

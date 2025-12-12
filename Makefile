@@ -39,10 +39,34 @@ test-zen-go:
 	@echo "✅ zen-go tests completed successfully"
 	@cd cmd/zen-go && go tool cover -func=coverage.out | grep total | awk '{print "cmd/zen-go coverage: " $$3}'
 
+.PHONY: test-db-start
+test-db-start:
+	@echo "Starting test database..."
+	@cd instrumentation && docker compose -f docker-compose.test.yml up -d
+	@echo "Waiting for database to be ready..."
+	@timeout=30; \
+	while ! docker exec instrumentation_test_postgres pg_isready -U testuser -d testdb >/dev/null 2>&1; do \
+		timeout=$$((timeout - 1)); \
+		if [ $$timeout -le 0 ]; then \
+			echo "❌ Database failed to start within 30 seconds"; \
+			exit 1; \
+		fi; \
+		sleep 1; \
+	done
+	@echo "✅ Test database is ready on port 5433"
+
+.PHONY: test-db-stop
+test-db-stop:
+	@echo "Stopping test database..."
+	@cd instrumentation && docker compose -f docker-compose.test.yml down
+	@echo "✅ Test database stopped"
+
 .PHONY: test-instrumentation-integration
-test-instrumentation-integration:
+test-instrumentation-integration: test-db-start
 	@echo "Running instrumentation tests with orchestrion"
-	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="$(TOOLS_BIN)/orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/...
+	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="$(TOOLS_BIN)/orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/... || \
+		($(MAKE) test-db-stop && exit 1)
+	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
