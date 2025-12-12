@@ -15,7 +15,7 @@ import (
 func ExamineContext(ctx context.Context, query string, op string) error {
 	err := vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
 		Statement: query,
-		Dialect:   "default",
+		Dialect:   "postgres",
 	})
 	if err != nil {
 		// Extract attack kind from error if available, otherwise default to SQL injection

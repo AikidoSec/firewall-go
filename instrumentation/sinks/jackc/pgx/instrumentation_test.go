@@ -439,7 +439,7 @@ func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 		assert.Equal(t, ".query", client.capturedAttack.Path)
 		assert.Equal(t, "1' OR 1=1", client.capturedAttack.Payload)
 		assert.Equal(t, map[string]string{
-			"dialect": "default",
+			"dialect": "postgres",
 			"sql":     "SELECT * FROM users WHERE id = '1' OR 1=1",
 		}, client.capturedAttack.Metadata)
 		assert.Nil(t, nil, client.capturedAttack.User)
