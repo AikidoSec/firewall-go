@@ -22,6 +22,8 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 		pattern = strings.TrimPrefix(pattern, r.Method+" ")
 
 		// Strip host prefix (e.g., "example.com/path")
+		// In Go's ServeMux, paths always start with "/" when there's no host.
+		// If the first "/" is at position > 0, it means there's a host prefix before it.
 		if idx := strings.Index(pattern, "/"); idx > 0 {
 			pattern = pattern[idx:]
 		}
@@ -71,6 +73,8 @@ func (r *statusRecorder) Unwrap() http.ResponseWriter {
 }
 
 func (r *statusRecorder) WriteHeader(statusCode int) {
+	// Only capture the first status code written.
+	// WriteHeader can be called multiple times, but only the first call matters.
 	if r.written.CompareAndSwap(false, true) {
 		r.statusCode = statusCode
 	}
@@ -78,6 +82,7 @@ func (r *statusRecorder) WriteHeader(statusCode int) {
 }
 
 func (r *statusRecorder) Write(b []byte) (int, error) {
+	// If WriteHeader was never called, the status code defaults to 200 OK
 	if r.written.CompareAndSwap(false, true) {
 		r.statusCode = http.StatusOK
 	}
