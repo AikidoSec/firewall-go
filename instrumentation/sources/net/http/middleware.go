@@ -66,6 +66,10 @@ type statusRecorder struct {
 	written    atomic.Bool
 }
 
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.writer
+}
+
 func (r *statusRecorder) WriteHeader(statusCode int) {
 	if r.written.CompareAndSwap(false, true) {
 		r.statusCode = statusCode
