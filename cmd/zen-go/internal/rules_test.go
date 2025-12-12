@@ -71,7 +71,7 @@ rules:
 
 	assert.Equal(t, "sql.DB.QueryContext", rules.PrependRules[0].ID)
 	assert.Equal(t, "*database/sql.DB", rules.PrependRules[0].ReceiverType)
-	assert.Equal(t, "QueryContext", rules.PrependRules[0].FuncName)
+	assert.Equal(t, []string{"QueryContext"}, rules.PrependRules[0].FuncNames)
 	assert.Equal(t, map[string]string{"sink": "github.com/example/sink"}, rules.PrependRules[0].Imports)
 }
 
