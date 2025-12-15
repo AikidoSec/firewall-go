@@ -23,9 +23,10 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	addImports(f, map[string]string{
+	err = addImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
+	require.NoError(t, err)
 
 	var buf strings.Builder
 	err = printer.Fprint(&buf, fset, f)
@@ -49,9 +50,10 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	addImports(f, map[string]string{
+	err = addImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
+	require.NoError(t, err)
 
 	var buf strings.Builder
 	err = printer.Fprint(&buf, fset, f)
@@ -72,9 +74,10 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	addImports(f, map[string]string{
+	err = addImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
+	require.NoError(t, err)
 
 	var buf strings.Builder
 	err = printer.Fprint(&buf, fset, f)
@@ -95,10 +98,11 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	addImports(f, map[string]string{
+	err = addImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 		"zensql": "github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql",
 	})
+	require.NoError(t, err)
 
 	var buf strings.Builder
 	err = printer.Fprint(&buf, fset, f)
@@ -121,7 +125,8 @@ func main() {}
 	require.NoError(t, err)
 
 	originalDecls := len(f.Decls)
-	addImports(f, map[string]string{})
+	err = addImports(f, map[string]string{})
+	require.NoError(t, err)
 
 	// Should not modify the file
 	assert.Equal(t, originalDecls, len(f.Decls))
@@ -141,9 +146,10 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	addImports(f, map[string]string{
+	err = addImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
+	require.NoError(t, err)
 
 	var buf strings.Builder
 	err = printer.Fprint(&buf, fset, f)
@@ -166,9 +172,10 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	addImports(f, map[string]string{
+	err = addImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
+	require.NoError(t, err)
 
 	// Check that import decl has Lparen set (grouped imports)
 	var importDecl *ast.GenDecl
@@ -183,3 +190,84 @@ func main() {}
 	assert.True(t, importDecl.Lparen.IsValid(), "import should be grouped with parentheses")
 }
 
+func TestAddImports_ImportingSamePackageWithAnAlias(t *testing.T) {
+	src := `package main
+
+import (
+	"fmt"
+	"github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
+)
+
+func main() {}
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
+	require.NoError(t, err)
+
+	err = addImports(f, map[string]string{
+		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
+	})
+	require.NoError(t, err)
+
+	var buf strings.Builder
+	err = printer.Fprint(&buf, fset, f)
+	require.NoError(t, err)
+
+	result := buf.String()
+	assert.Contains(t, result, "zengin")
+
+	// It should leave the original import and add a new one
+	count := strings.Count(result, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
+	assert.Equal(t, 2, count)
+}
+
+func TestAddImports_ImportingSamePackageWithDifferentAlias(t *testing.T) {
+	src := `package main
+
+import (
+	"fmt"
+	ginzen "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
+)
+
+func main() {}
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
+	require.NoError(t, err)
+
+	err = addImports(f, map[string]string{
+		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
+	})
+	require.NoError(t, err)
+
+	var buf strings.Builder
+	err = printer.Fprint(&buf, fset, f)
+	require.NoError(t, err)
+
+	result := buf.String()
+	assert.Contains(t, result, "zengin")
+	assert.Contains(t, result, "ginzen")
+}
+
+func TestAddImports_ConflictingImportAlias(t *testing.T) {
+	src := `package main
+
+import (
+	"fmt"
+	zengin "github.com/AikidoSec/firewall-go/gin"
+)
+
+func main() {}
+`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
+	require.NoError(t, err)
+
+	err = addImports(f, map[string]string{
+		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
+	})
+	require.Error(t, err)
+
+	var duplicateErr *DuplicateImportAliasError
+	require.ErrorAs(t, err, &duplicateErr)
+}

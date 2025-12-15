@@ -109,7 +109,10 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 	}
 
 	// Add new imports
-	addImports(file, importsToAdd)
+	err = addImports(file, importsToAdd)
+	if err != nil {
+		return InstrumentFileResult{}, err
+	}
 
 	var out bytes.Buffer
 	if err := printer.Fprint(&out, fset, file); err != nil {
