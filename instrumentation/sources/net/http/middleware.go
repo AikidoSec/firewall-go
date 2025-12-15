@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -69,6 +70,7 @@ type statusRecorder struct {
 }
 
 func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	log.Debug("response writer unwrapped, api spec may be lost")
 	return r.writer
 }
 
@@ -98,6 +100,8 @@ type requestParser struct {
 }
 
 func (rp *requestParser) MultipartForm() (*multipart.Form, error) {
+	// Used same max memory as stdlib:
+	// https://cs.opensource.google/go/go/+/refs/tags/go1.25.5:src/net/http/request.go;l=36
 	err := rp.req.ParseMultipartForm(32 << 20)
 	if err != nil {
 		return nil, err
