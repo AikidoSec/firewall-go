@@ -10,6 +10,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/tetratelabs/wazero"
@@ -22,10 +23,20 @@ var wasmBin []byte
 //go:embed libzen_internals.wasm.sha256sum
 var checksumFile string
 
+// compiledModule wraps a wazero.CompiledModule to allow atomic storage.
+// This is needed because wazero.CompiledModule is an interface type,
+// and atomic.Pointer requires a concrete type.
+type compiledModule struct {
+	module wazero.CompiledModule
+}
+
 var (
-	wasmRuntime  wazero.Runtime
-	compiledWasm wazero.CompiledModule
-	wasmPool     sync.Pool
+	interpreterRuntime wazero.Runtime
+	compilerRuntime    wazero.Runtime
+	compiledWasm       atomic.Pointer[compiledModule]
+	wasmPool           sync.Pool
+	compileOnce        sync.Once
+	initOnce           sync.Once
 )
 
 // memoryWriter is a minimal interface for writing to memory.
@@ -41,52 +52,95 @@ type functionCaller interface {
 }
 
 type wasmInstance struct {
-	mod       api.Module
-	alloc     api.Function
-	free      api.Function
-	detectSQL api.Function
-	memory    api.Memory
+	mod        api.Module
+	alloc      api.Function
+	free       api.Function
+	detectSQL  api.Function
+	memory     api.Memory
+	isCompiled bool // Track if this instance uses the compiled module
 }
 
 // Init initializes the zen-internals library by verifying the WASM binary checksum,
-// compiling the WASM module, and setting up the instance pool for concurrent access.
+// creating interpreter and compiler runtimes, and triggering async compilation.
+// Instances can be created immediately using the interpreter runtime.
+// This function is idempotent and safe to call multiple times.
 func Init() error {
-	err := verifySHA256()
-	if err != nil {
-		return fmt.Errorf("failed to verify zen-internals: %w", err)
-	}
+	var initErr error
+	initOnce.Do(func() {
+		err := verifySHA256()
+		if err != nil {
+			initErr = fmt.Errorf("failed to verify zen-internals: %w", err)
+			return
+		}
 
-	wasmRuntime = wazero.NewRuntimeWithConfig(context.Background(), wazero.NewRuntimeConfigCompiler())
+		// Create interpreter runtime for immediate use
+		interpreterRuntime = wazero.NewRuntimeWithConfig(context.Background(), wazero.NewRuntimeConfig())
 
-	compiledWasm, err = wasmRuntime.CompileModule(context.Background(), wasmBin)
+		// Create compiler runtime for compilation
+		compilerRuntime = wazero.NewRuntimeWithConfig(context.Background(), wazero.NewRuntimeConfigCompiler())
+
+		compileOnce.Do(func() {
+			go compileModuleAsync()
+		})
+
+		wasmPool = sync.Pool{
+			New: newWasmInstance,
+		}
+
+		log.Debug("Loaded zen-internals library, compilation in progress!")
+	})
+
+	return initErr
+}
+
+func compileModuleAsync() {
+	ctx := context.Background()
+	compiled, err := compilerRuntime.CompileModule(ctx, wasmBin)
 	if err != nil {
-		log.Error("Failed to load zen-internals library",
+		log.Error("Failed to compile zen-internals library",
 			slog.Any("error", err))
-		return fmt.Errorf("failed to load zen-internals library: %w", err)
+		return
 	}
 
-	wasmPool = sync.Pool{
-		New: newWasmInstance,
-	}
+	// Switch to compiled version
+	compiledWasm.Store(&compiledModule{module: compiled})
 
-	log.Debug("Loaded zen-internals library!")
+	log.Debug("zen-internals compilation complete, now using compiled module!")
+}
 
-	return nil
+// hasCompileFinished returns whether the module has been compiled and is ready for use.
+func hasCompileFinished() bool {
+	return compiledWasm.Load() != nil
 }
 
 func newWasmInstance() any {
-	mod, err := wasmRuntime.InstantiateModule(context.Background(), compiledWasm, wazero.NewModuleConfig())
+	var mod api.Module
+	var err error
+
+	// Check if compiled module is available
+	compiled := compiledWasm.Load()
+	usingCompiled := compiled != nil
+
+	if compiled != nil {
+		// Use compiled module with compiler runtime (faster)
+		mod, err = compilerRuntime.InstantiateModule(context.Background(), compiled.module, wazero.NewModuleConfig())
+	} else {
+		// Use interpreter runtime with raw bytes (immediate availability)
+		mod, err = interpreterRuntime.Instantiate(context.Background(), wasmBin)
+	}
+
 	if err != nil {
 		log.Error("Failed to instantiate module", slog.Any("error", err))
 		return nil
 	}
 
 	return &wasmInstance{
-		mod:       mod,
-		alloc:     mod.ExportedFunction("wasm_alloc"),
-		free:      mod.ExportedFunction("wasm_free"),
-		detectSQL: mod.ExportedFunction("detect_sql_injection"),
-		memory:    mod.Memory(),
+		mod:        mod,
+		alloc:      mod.ExportedFunction("wasm_alloc"),
+		free:       mod.ExportedFunction("wasm_free"),
+		detectSQL:  mod.ExportedFunction("detect_sql_injection"),
+		memory:     mod.Memory(),
+		isCompiled: usingCompiled,
 	}
 }
 
@@ -112,9 +166,13 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 		return 0
 	}
 
-	// Only return instance to pool if cleanup succeeded
-	// If cleanup failed, let the instance be garbage collected
-	if cleanupSucceeded {
+	// Return instance to pool if cleanup succeeded AND:
+	// - Instance is compiled, OR
+	// - Compilation hasn't completed yet (still need to reuse interpreter instances)
+	// Once compilation completes, only compiled instances go back to pool
+	shouldPool := cleanupSucceeded && (inst.isCompiled || !hasCompileFinished())
+
+	if shouldPool {
 		wasmPool.Put(inst)
 	}
 
