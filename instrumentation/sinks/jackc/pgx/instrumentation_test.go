@@ -368,6 +368,36 @@ func TestTxMethodsReportOnlyOnce(t *testing.T) {
 	}
 }
 
+func TestBatchQueryReturnsError(t *testing.T) {
+	client, ctx, pool, cleanup := setupTestWithBlocking(t)
+	defer cleanup()
+
+	request.WrapWithGLS(ctx, func() {
+		batch := &pgx.Batch{}
+
+		batch.Queue("INSERT INTO users (id) VALUES ($1)", 321).Exec(func(tag pgconn.CommandTag) error {
+			t.Fatal("this should not be called")
+			return nil
+		})
+		batch.Queue("SELECT name FROM users where id = $1", 123).QueryRow(func(row pgx.Row) error {
+			t.Fatal("this should not be called")
+			return nil
+		})
+		batch.Queue("SELECT name from users where id = '1' OR 1=1").QueryRow(func(row pgx.Row) error {
+			t.Fatal("this should not be called")
+			return nil
+		})
+
+		result := pool.SendBatch(ctx, batch)
+		_, err := result.Query()
+		assertAttackBlocked(t, err)
+
+		result.Close()
+	})
+
+	waitForAttackEvent(t, client)
+}
+
 func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
