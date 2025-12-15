@@ -35,8 +35,8 @@ Zen operates autonomously on the same server as your Go app to:
 * ✅ [`Echo`](docs/echo.md) v4
 
 ### Database drivers
-We currently support all queries that are made using the built-in [`database/sql`](https://pkg.go.dev/database/sql) library.
-
+* ✅ [`database/sql`](https://pkg.go.dev/database/sql) - we support all drivers that are made using the built-in interface
+* ✅ [`jackc/pgx`](https://github.com/jackc/pgx) v5
 
 ## Installation
 > 🚧 This area is currently under construction
