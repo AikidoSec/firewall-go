@@ -20,6 +20,7 @@ func addImports(f *ast.File, imports map[string]string) error {
 		return nil
 	}
 
+	// Find the first import block to add new imports
 	var importDecl *ast.GenDecl
 	for _, decl := range f.Decls {
 		if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok == token.IMPORT {
@@ -28,6 +29,7 @@ func addImports(f *ast.File, imports map[string]string) error {
 		}
 	}
 
+	// If can't find an import block, then create one
 	if importDecl == nil {
 		importDecl = &ast.GenDecl{Tok: token.IMPORT}
 		f.Decls = append([]ast.Decl{importDecl}, f.Decls...)
