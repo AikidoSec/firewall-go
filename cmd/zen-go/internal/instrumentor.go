@@ -63,6 +63,9 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 	for _, imp := range file.Imports {
 		path, _ := strconv.Unquote(imp.Path.Value)
 		name := ""
+
+		// The import name refers to the alias
+		// If an alias isn't set, then we use the package name
 		if imp.Name != nil {
 			name = imp.Name.String()
 		} else {
@@ -77,11 +80,17 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 
 	// Apply wrap rules
 	for _, rule := range i.WrapRules {
+		// Matching is based on package.Func
+		// e.g. "github.com/gin-gonic/gin.New"
 		lastDot := strings.LastIndex(rule.MatchCall, ".")
 		if lastDot == -1 {
 			continue
 		}
+
+		// e.g. "github.com/gin-gonic/gin"
 		pkg := rule.MatchCall[:lastDot]
+
+		// e.g. "New"
 		funcName := rule.MatchCall[lastDot+1:]
 
 		localPkgName, ok := imports[pkg]
