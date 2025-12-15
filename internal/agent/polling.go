@@ -91,7 +91,7 @@ func calculateHeartbeatInterval(heartbeatIntervalInMS int, receivedAnyStats bool
 	if !receivedAnyStats {
 		return 1 * time.Minute
 	} else if heartbeatIntervalInMS >= minHeartbeatIntervalInMS {
-		log.Info("Calculating heartbeat interval!", slog.Int("interval", heartbeatIntervalInMS))
+		log.Debug("Calculating heartbeat interval", slog.Int("interval", heartbeatIntervalInMS))
 		return time.Duration(heartbeatIntervalInMS) * time.Millisecond
 	}
 	return 0
@@ -99,7 +99,7 @@ func calculateHeartbeatInterval(heartbeatIntervalInMS int, receivedAnyStats bool
 
 func resetHeartbeatTicker(newInterval time.Duration) {
 	if heartbeatTicker != nil && newInterval > 0 {
-		log.Info("Resetting HeartbeatTicker!", slog.String("interval", newInterval.String()))
+		log.Debug("Resetting HeartbeatTicker", slog.String("interval", newInterval.String()))
 		heartbeatTicker.Reset(newInterval)
 	}
 }

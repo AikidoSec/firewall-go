@@ -277,9 +277,9 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 				newMap[k] = existingData
 				continue
 			}
-			log.Info("Rate limiting config changed, resetting data", slog.Any("config", endpoint))
+			log.Debug("Rate limiting config changed, resetting data", slog.Any("config", endpoint))
 		} else {
-			log.Info("Adding new rate limiting endpoint", slog.Any("config", endpoint))
+			log.Debug("Adding new rate limiting endpoint", slog.Any("config", endpoint))
 		}
 
 		// Create new entry
@@ -291,7 +291,7 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 
 	for k := range rl.rateLimitingMap {
 		if _, exists := newMap[k]; !exists {
-			log.Info("Removing rate limiting endpoint", slog.Any("endpoint", k))
+			log.Debug("Removing rate limiting endpoint", slog.Any("endpoint", k))
 		}
 	}
 
