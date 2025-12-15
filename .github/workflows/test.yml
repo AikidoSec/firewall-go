@@ -133,6 +133,7 @@ jobs:
           - gin-postgres
           - echo-postgres
           - echo-pgx-sql
+          - gin-pgx-native
 
     steps:
       - name: Checkout code
