@@ -11,12 +11,17 @@ import (
 
 // transformDeclsWrap walks through all declarations in a file looking for function
 // declarations, then recursively transforms any matching function calls within them.
-func transformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) {
+func transformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) error {
 	for _, decl := range decls {
 		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
-			transformStmtsWrap(fn.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+			err := transformStmtsWrap(fn.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
 
 // transformStmtsWrap recursively walks the statement tree, finding all expressions
@@ -27,47 +32,77 @@ func transformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName
 // - Expression statements (pkg.Func())
 // - Return statements (return pkg.Func())
 // - Control flow blocks (if/for/switch/select bodies)
-func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) {
+func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) error {
 	for _, stmt := range stmts {
 		switch s := stmt.(type) {
 		case *ast.AssignStmt:
 			for i, rhs := range s.Rhs {
-				if newExpr := tryTransformCall(rhs, fset, pkgName, funcName, rule, modified, importsToAdd); newExpr != nil {
+				newExpr, err := tryTransformCall(rhs, fset, pkgName, funcName, rule, modified, importsToAdd)
+				if err != nil {
+					return err
+				}
+
+				if newExpr != nil {
 					s.Rhs[i] = newExpr
 				}
 			}
 		case *ast.ExprStmt:
-			if newExpr := tryTransformCall(s.X, fset, pkgName, funcName, rule, modified, importsToAdd); newExpr != nil {
+			newExpr, err := tryTransformCall(s.X, fset, pkgName, funcName, rule, modified, importsToAdd)
+			if err != nil {
+				return err
+			}
+
+			if newExpr != nil {
 				s.X = newExpr
 			}
 		case *ast.ReturnStmt:
 			for i, result := range s.Results {
-				if newExpr := tryTransformCall(result, fset, pkgName, funcName, rule, modified, importsToAdd); newExpr != nil {
+				newExpr, err := tryTransformCall(result, fset, pkgName, funcName, rule, modified, importsToAdd)
+				if err != nil {
+					return err
+				}
+
+				if newExpr != nil {
 					s.Results[i] = newExpr
 				}
 			}
 		case *ast.IfStmt:
 			if s.Body != nil {
-				transformStmtsWrap(s.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+				err := transformStmtsWrap(s.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+				if err != nil {
+					return err
+				}
 			}
 			if s.Else != nil {
 				if block, ok := s.Else.(*ast.BlockStmt); ok {
-					transformStmtsWrap(block.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+					err := transformStmtsWrap(block.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		case *ast.ForStmt:
 			if s.Body != nil {
-				transformStmtsWrap(s.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+				err := transformStmtsWrap(s.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+				if err != nil {
+					return err
+				}
 			}
 		case *ast.RangeStmt:
 			if s.Body != nil {
-				transformStmtsWrap(s.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+				err := transformStmtsWrap(s.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+				if err != nil {
+					return err
+				}
 			}
 		case *ast.SwitchStmt:
 			if s.Body != nil {
 				for _, clause := range s.Body.List {
 					if cc, ok := clause.(*ast.CaseClause); ok {
-						transformStmtsWrap(cc.Body, fset, pkgName, funcName, rule, modified, importsToAdd)
+						err := transformStmtsWrap(cc.Body, fset, pkgName, funcName, rule, modified, importsToAdd)
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -75,14 +110,22 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 			if s.Body != nil {
 				for _, clause := range s.Body.List {
 					if cc, ok := clause.(*ast.CommClause); ok {
-						transformStmtsWrap(cc.Body, fset, pkgName, funcName, rule, modified, importsToAdd)
+						err := transformStmtsWrap(cc.Body, fset, pkgName, funcName, rule, modified, importsToAdd)
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}
 		case *ast.BlockStmt:
-			transformStmtsWrap(s.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+			err := transformStmtsWrap(s.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
 
 // tryTransformCall attempts to transform a function call expression that matches
@@ -101,29 +144,28 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 // 5. If all match, wrap the call using the rule's template
 //
 // Returns the wrapped expression if transformation occurred, nil otherwise.
-func tryTransformCall(expr ast.Expr, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) ast.Expr {
+func tryTransformCall(expr ast.Expr, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) (ast.Expr, error) {
 	// Step 1: Check if this is a function call at all
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	// Step 2: Check if the call is in the form "something.method()"
 	// (as opposed to just "function()")
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
-	// Step 3: Check if "something" is a simple identifier (package name)
-	// This ensures we're dealing with pkgName.funcName, not x.y.z.funcName
+	// Step 3: Check package and func name match
 	ident, ok := sel.X.(*ast.Ident)
 	if !ok || ident.Name != pkgName || sel.Sel.Name != funcName {
-		return nil
+		return nil, nil
 	}
 
 	// Step 4: Serialize the original call expression back to source code
-	// e.g., "http.Get(url)" becomes the string "http.Get(url)"
+	// e.g., AST for "http.Get(url)" becomes the string "http.Get(url)"
 	var origBuf bytes.Buffer
 	printer.Fprint(&origBuf, fset, call)
 	origCode := origBuf.String()
@@ -135,7 +177,7 @@ func tryTransformCall(expr ast.Expr, fset *token.FileSet, pkgName, funcName stri
 	// Step 6: Parse the wrapped string back into an AST expression
 	wrappedExpr, err := parser.ParseExpr(wrapped)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	// Step 7: Mark that we modified the file and register any new imports needed
@@ -144,5 +186,5 @@ func tryTransformCall(expr ast.Expr, fset *token.FileSet, pkgName, funcName stri
 		importsToAdd[alias] = path
 	}
 
-	return wrappedExpr
+	return wrappedExpr, nil
 }

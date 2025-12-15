@@ -98,7 +98,10 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 			continue
 		}
 
-		transformDeclsWrap(file.Decls, fset, localPkgName, funcName, rule, &modified, importsToAdd)
+		err := transformDeclsWrap(file.Decls, fset, localPkgName, funcName, rule, &modified, importsToAdd)
+		if err != nil {
+			return InstrumentFileResult{}, err
+		}
 	}
 
 	if !modified {

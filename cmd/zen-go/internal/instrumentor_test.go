@@ -22,7 +22,7 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
 	result, err := inst.InstrumentFile(tmpFile, "main")
@@ -49,7 +49,7 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
 	result, err := inst.InstrumentFile(tmpFile, "main")
@@ -73,7 +73,7 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
 	result, err := inst.InstrumentFile(tmpFile, "main")
@@ -95,7 +95,7 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
 	result, err := inst.InstrumentFile(tmpFile, "main")
@@ -122,7 +122,7 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
 	result, err := inst.InstrumentFile(tmpFile, "main")
@@ -149,7 +149,7 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
 	result, err := inst.InstrumentFile(tmpFile, "main")
@@ -175,7 +175,7 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
 	result, err := inst.InstrumentFile(tmpFile, "main")
@@ -206,9 +206,41 @@ func main() {
 `
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "main.go")
-	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0600))
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	inst := NewInstrumentor()
+	result, err := inst.InstrumentFile(tmpFile, "main")
+
+	assert.Error(t, err)
+	assert.False(t, result.Modified)
+	assert.Nil(t, result.Imports)
+}
+
+func TestInstrumentFile_InvalidTemplateSyntax(t *testing.T) {
+	src := `package main
+
+import "github.com/gin-gonic/gin"
+
+func main() {
+	r := gin.Default()
+	r.Run()
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	inst := NewInstrumentor()
+	inst.WrapRules = []WrapRule{
+		{
+			ID:        "gin.Default",
+			MatchCall: "github.com/gin-gonic/gin.Default",
+			Imports: map[string]string{
+				"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
+			},
+			WrapTmpl: `{.}}`,
+		},
+	}
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
