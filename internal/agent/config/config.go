@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -70,8 +69,6 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	if globals.EnvironmentConfig.RealtimeEndpoint == "" {
 		globals.EnvironmentConfig.RealtimeEndpoint = RuntimeEndpoint
 	}
-
-	log.Info("Loaded local config", slog.Any("config", globals.EnvironmentConfig))
 
 	if globals.AikidoConfig.Token == "" {
 		log.Info("No token set!")
