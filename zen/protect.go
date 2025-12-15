@@ -14,6 +14,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 )
@@ -139,6 +140,9 @@ func doProtect(cfg *Config) {
 		protectErr = err
 		return
 	}
+
+	log.Info("Aikido Zen loaded!",
+		slog.String("version", globals.EnvironmentConfig.Version))
 }
 
 func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, realtimeEndpoint string, block bool) error {
