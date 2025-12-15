@@ -108,7 +108,10 @@ func getObjDir(outputPath string) string {
 func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string) ([]string, map[string]string, error) {
 	newArgs := make([]string, 0, len(toolArgs))
 	allAddedImports := make(map[string]string) // import path -> alias
-	instrumentor := internal.NewInstrumentor()
+	instrumentor, err := internal.NewInstrumentor()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	for _, arg := range toolArgs {
 		// If doesn't end with .go, it's not a Go file

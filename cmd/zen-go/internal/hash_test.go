@@ -4,10 +4,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestComputeInstrumentationHash(t *testing.T) {
-	inst := NewInstrumentor()
+	inst, err := NewInstrumentor()
+	require.NoError(t, err)
+
 	hash := ComputeInstrumentationHash(inst)
 
 	// Hash should be 16 characters (base64 encoded, truncated)

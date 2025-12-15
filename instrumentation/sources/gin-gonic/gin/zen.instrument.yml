@@ -1,0 +1,20 @@
+meta:
+  name: gin-gonic/gin
+  description: Gin is a web framework written in Go.
+
+rules:
+  - id: gin.Default
+    type: wrap
+    match: github.com/gin-gonic/gin.Default
+    imports:
+      zengin: github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
+    template: |
+      func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()
+
+  - id: gin.New
+    type: wrap
+    match: github.com/gin-gonic/gin.New
+    imports:
+      zengin: github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
+    template: |
+      func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()

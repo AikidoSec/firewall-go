@@ -21,27 +21,25 @@ type Instrumentor struct {
 	WrapRules []WrapRule
 }
 
-func NewInstrumentor() *Instrumentor {
-	return &Instrumentor{
-		WrapRules: []WrapRule{
-			{
-				ID:        "gin.Default",
-				MatchCall: "github.com/gin-gonic/gin.Default",
-				Imports: map[string]string{
-					"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
-				},
-				WrapTmpl: `func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()`,
-			},
-			{
-				ID:        "gin.New",
-				MatchCall: "github.com/gin-gonic/gin.New",
-				Imports: map[string]string{
-					"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
-				},
-				WrapTmpl: `func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()`,
-			},
-		},
+// NewInstrumentor creates a new Instrumentor, loading rules from YAML files
+func NewInstrumentor() (*Instrumentor, error) {
+	// Try to load rules from the instrumentation directory
+	if instDir := findInstrumentationDir(); instDir != "" {
+		rules, err := loadRulesFromDir(instDir)
+		if err != nil {
+			return nil, err
+		}
+
+		return &Instrumentor{WrapRules: rules}, nil
 	}
+
+	// No rules found
+	return &Instrumentor{}, nil
+}
+
+// NewInstrumentorWithRules creates an Instrumentor with the given rules
+func NewInstrumentorWithRules(rules []WrapRule) *Instrumentor {
+	return &Instrumentor{WrapRules: rules}
 }
 
 type InstrumentFileResult struct {

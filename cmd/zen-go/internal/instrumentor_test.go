@@ -10,6 +10,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testGinRules returns rules for testing gin instrumentation
+func testGinRules() []WrapRule {
+	return []WrapRule{
+		{
+			ID:        "gin.Default",
+			MatchCall: "github.com/gin-gonic/gin.Default",
+			Imports: map[string]string{
+				"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
+			},
+			WrapTmpl: `func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()`,
+		},
+		{
+			ID:        "gin.New",
+			MatchCall: "github.com/gin-gonic/gin.New",
+			Imports: map[string]string{
+				"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
+			},
+			WrapTmpl: `func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()`,
+		},
+	}
+}
+
 func TestInstrumentFile_GinDefault(t *testing.T) {
 	src := `package main
 
@@ -24,7 +46,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -51,7 +73,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -75,7 +97,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -97,7 +119,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -124,7 +146,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -151,7 +173,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -177,7 +199,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -189,7 +211,7 @@ func TestInstrumentFile_InvalidFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "nonexistent.go")
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
@@ -208,7 +230,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst := NewInstrumentorWithRules(testGinRules())
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
@@ -230,7 +252,9 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentor()
+	inst, err := NewInstrumentor()
+	require.NoError(t, err)
+
 	inst.WrapRules = []WrapRule{
 		{
 			ID:        "gin.Default",
