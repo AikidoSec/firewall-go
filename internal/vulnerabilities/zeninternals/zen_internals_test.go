@@ -273,7 +273,7 @@ func TestCompilationAndPooling(t *testing.T) {
 
 	// Wait for compilation to complete
 	require.Eventually(t, func() bool {
-		return isCompiled() && !isCompiling()
+		return isCompiled()
 	}, 10*time.Second, 100*time.Millisecond, "Compilation should complete")
 
 	// After compilation, new instances should use compiled module

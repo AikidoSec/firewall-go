@@ -31,13 +31,12 @@ type compiledModule struct {
 }
 
 var (
-	interpreterRuntime    wazero.Runtime
-	compilerRuntime       wazero.Runtime
-	compiledWasm          atomic.Pointer[compiledModule]
-	wasmPool              sync.Pool
-	compilationInProgress atomic.Bool
-	compileOnce           sync.Once
-	initOnce              sync.Once
+	interpreterRuntime wazero.Runtime
+	compilerRuntime    wazero.Runtime
+	compiledWasm       atomic.Pointer[compiledModule]
+	wasmPool           sync.Pool
+	compileOnce        sync.Once
+	initOnce           sync.Once
 )
 
 // memoryWriter is a minimal interface for writing to memory.
@@ -95,20 +94,16 @@ func Init() error {
 }
 
 func compileModuleAsync() {
-	compilationInProgress.Store(true)
-
 	ctx := context.Background()
 	compiled, err := compilerRuntime.CompileModule(ctx, wasmBin)
 	if err != nil {
 		log.Error("Failed to compile zen-internals library",
 			slog.Any("error", err))
-		compilationInProgress.Store(false)
 		return
 	}
 
 	// Switch to compiled version
 	compiledWasm.Store(&compiledModule{module: compiled})
-	compilationInProgress.Store(false)
 
 	log.Debug("zen-internals compilation complete, now using compiled module!")
 }
@@ -116,11 +111,6 @@ func compileModuleAsync() {
 // isCompiled returns whether the module has been compiled and is ready for use.
 func isCompiled() bool {
 	return compiledWasm.Load() != nil
-}
-
-// isCompiling returns whether compilation is currently in progress.
-func isCompiling() bool {
-	return compilationInProgress.Load()
 }
 
 func newWasmInstance() any {
