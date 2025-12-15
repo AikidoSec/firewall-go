@@ -272,9 +272,8 @@ func TestCompilationAndPooling(t *testing.T) {
 	require.Equal(t, 1, result)
 
 	// Wait for compilation to complete
-	require.Eventually(t, func() bool {
-		return isCompiled()
-	}, 10*time.Second, 100*time.Millisecond, "Compilation should complete")
+	require.Eventually(t, hasCompileFinished,
+		10*time.Second, 100*time.Millisecond, "Compilation should complete")
 
 	// After compilation, new instances should use compiled module
 	inst := newWasmInstance()

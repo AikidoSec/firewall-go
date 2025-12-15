@@ -108,8 +108,8 @@ func compileModuleAsync() {
 	log.Debug("zen-internals compilation complete, now using compiled module!")
 }
 
-// isCompiled returns whether the module has been compiled and is ready for use.
-func isCompiled() bool {
+// hasCompileFinished returns whether the module has been compiled and is ready for use.
+func hasCompileFinished() bool {
 	return compiledWasm.Load() != nil
 }
 
@@ -170,7 +170,7 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 	// - Instance is compiled, OR
 	// - Compilation hasn't completed yet (still need to reuse interpreter instances)
 	// Once compilation completes, only compiled instances go back to pool
-	shouldPool := cleanupSucceeded && (inst.isCompiled || !isCompiled())
+	shouldPool := cleanupSucceeded && (inst.isCompiled || !hasCompileFinished())
 
 	if shouldPool {
 		wasmPool.Put(inst)
