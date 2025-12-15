@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/agent"
@@ -98,8 +97,6 @@ func ProtectWithConfig(cfg *Config) error {
 // the agent. This is separated from Protect to maintain thread-safety
 // with sync.Once while preserving readability.
 func doProtect(cfg *Config) {
-	start := time.Now()
-
 	// Fallback to environment variables for empty config fields
 	mergedCfg := populateConfigFromEnv(cfg)
 
@@ -145,9 +142,7 @@ func doProtect(cfg *Config) {
 	}
 
 	log.Info("Aikido Zen loaded!",
-		slog.String("version", globals.EnvironmentConfig.Version),
-		slog.String("elapsed", fmt.Sprintf("%dms", time.Since(start).Milliseconds())),
-	)
+		slog.String("version", globals.EnvironmentConfig.Version))
 }
 
 func initAgent(collectAPISchema bool, logLevel string, token string, endpoint string, realtimeEndpoint string, block bool) error {
