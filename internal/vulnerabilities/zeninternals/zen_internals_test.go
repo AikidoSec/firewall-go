@@ -317,3 +317,31 @@ func TestConcurrentAccess(t *testing.T) {
 
 	wg.Wait()
 }
+
+// TestDetectSQLInjection_ErrorPath tests that errors are handled without panicking
+// and the system continues to work after errors
+func TestDetectSQLInjection_ErrorPath(t *testing.T) {
+	require.NoError(t, Init())
+
+	// Normal operation
+	result := DetectSQLInjection("SELECT * FROM users WHERE id = ?", "123", int(MySQL))
+	assert.Equal(t, 0, result, "Should not detect injection in safe query")
+
+	// Invalid dialect causes error
+	result = DetectSQLInjection("SELECT * FROM users", "input", 999)
+	assert.Equal(t, 0, result, "Should return 0 on error")
+
+	// Normal operation after error should still work
+	result = DetectSQLInjection("SELECT * FROM users WHERE id = ?", "123", int(MySQL))
+	assert.Equal(t, 0, result, "Should work normally after error")
+
+	// Multiple errors
+	for range 10 {
+		result = DetectSQLInjection("SELECT * FROM users", "input", 999)
+		assert.Equal(t, 0, result, "Should return 0 on error")
+	}
+
+	// System should still work
+	result = DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(MySQL))
+	assert.Equal(t, 1, result, "Should still detect SQL injection after errors")
+}
