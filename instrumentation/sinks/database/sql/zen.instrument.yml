@@ -1,0 +1,79 @@
+meta:
+  name: database/sql
+  description: Protection from SQL Injection.
+
+rules:
+  # DB methods
+  - id: database/sql.DB.QueryContext
+    type: prepend
+    receiver: "*database/sql.DB"
+    function: QueryContext
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.Query(Row)Context")
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+
+  - id: database/sql.DB.ExecContext
+    type: prepend
+    receiver: "*database/sql.DB"
+    function: ExecContext
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.ExecContext")
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+
+  - id: database/sql.DB.PrepareContext
+    type: prepend
+    receiver: "*database/sql.DB"
+    function: PrepareContext
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.PrepareContext")
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+
+  # Tx methods
+  - id: database/sql.Tx.QueryContext
+    type: prepend
+    receiver: "*database/sql.Tx"
+    function: QueryContext
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.Query(Row)Context")
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+
+  - id: database/sql.Tx.ExecContext
+    type: prepend
+    receiver: "*database/sql.Tx"
+    function: ExecContext
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.ExecContext")
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+
+  - id: database/sql.Tx.PrepareContext
+    type: prepend
+    receiver: "*database/sql.Tx"
+    function: PrepareContext
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.PrepareContext")
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+

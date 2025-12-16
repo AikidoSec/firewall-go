@@ -18,7 +18,8 @@ type WrapRule struct {
 }
 
 type Instrumentor struct {
-	WrapRules []WrapRule
+	WrapRules    []WrapRule
+	PrependRules []PrependRule
 }
 
 // NewInstrumentor creates a new Instrumentor, loading rules from YAML files
@@ -30,7 +31,7 @@ func NewInstrumentor() (*Instrumentor, error) {
 			return nil, err
 		}
 
-		return &Instrumentor{WrapRules: rules}, nil
+		return &Instrumentor{WrapRules: rules.WrapRules, PrependRules: rules.PrependRules}, nil
 	}
 
 	// No rules found
@@ -38,8 +39,8 @@ func NewInstrumentor() (*Instrumentor, error) {
 }
 
 // NewInstrumentorWithRules creates an Instrumentor with the given rules
-func NewInstrumentorWithRules(rules []WrapRule) *Instrumentor {
-	return &Instrumentor{WrapRules: rules}
+func NewInstrumentorWithRules(wrapRules []WrapRule, prependRules []PrependRule) *Instrumentor {
+	return &Instrumentor{WrapRules: wrapRules, PrependRules: prependRules}
 }
 
 type InstrumentFileResult struct {
@@ -97,6 +98,14 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 		}
 
 		err := transformDeclsWrap(file.Decls, fset, localPkgName, funcName, rule, &modified, importsToAdd)
+		if err != nil {
+			return InstrumentFileResult{}, err
+		}
+	}
+
+	// Apply prepend rules
+	for _, rule := range i.PrependRules {
+		err := transformDeclsPrepend(file.Decls, compilingPkg, rule, &modified, importsToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}

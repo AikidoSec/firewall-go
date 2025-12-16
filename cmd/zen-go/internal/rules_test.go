@@ -9,8 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadRulesFromFile(t *testing.T) {
-	// Create a temporary YAML file
+func TestLoadRulesFromFile_WrapRule(t *testing.T) {
 	tmpDir := t.TempDir()
 	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
 
@@ -33,12 +32,47 @@ rules:
 
 	rules, err := loadRulesFromFile(yamlPath)
 	require.NoError(t, err)
-	require.Len(t, rules, 1)
+	require.Len(t, rules.WrapRules, 1)
+	require.Empty(t, rules.PrependRules)
 
-	assert.Equal(t, "test.Func", rules[0].ID)
-	assert.Equal(t, "github.com/example/pkg.Func", rules[0].MatchCall)
-	assert.Equal(t, map[string]string{"mypkg": "github.com/example/mypkg"}, rules[0].Imports)
-	assert.Equal(t, "wrap({{.}})", rules[0].WrapTmpl)
+	assert.Equal(t, "test.Func", rules.WrapRules[0].ID)
+	assert.Equal(t, "github.com/example/pkg.Func", rules.WrapRules[0].MatchCall)
+	assert.Equal(t, map[string]string{"mypkg": "github.com/example/mypkg"}, rules.WrapRules[0].Imports)
+	assert.Equal(t, "wrap({{.}})", rules.WrapRules[0].WrapTmpl)
+}
+
+func TestLoadRulesFromFile_PrependRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: test-package
+
+rules:
+  - id: sql.DB.QueryContext
+    type: prepend
+    receiver: "*database/sql.DB"
+    function: QueryContext
+    imports:
+      sink: github.com/example/sink
+    template: |
+      if err := sink.Check({{ .Function.Argument 0 }}); err != nil {
+        return nil, err
+      }
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	rules, err := loadRulesFromFile(yamlPath)
+	require.NoError(t, err)
+	require.Empty(t, rules.WrapRules)
+	require.Len(t, rules.PrependRules, 1)
+
+	assert.Equal(t, "sql.DB.QueryContext", rules.PrependRules[0].ID)
+	assert.Equal(t, "*database/sql.DB", rules.PrependRules[0].ReceiverType)
+	assert.Equal(t, "QueryContext", rules.PrependRules[0].FuncName)
+	assert.Equal(t, map[string]string{"sink": "github.com/example/sink"}, rules.PrependRules[0].Imports)
 }
 
 func TestLoadRulesFromDir(t *testing.T) {
@@ -70,10 +104,10 @@ rules:
 
 	rules, err := loadRulesFromDir(tmpDir)
 	require.NoError(t, err)
-	require.Len(t, rules, 1)
+	require.Len(t, rules.WrapRules, 1)
 
-	assert.Equal(t, "example.New", rules[0].ID)
-	assert.Equal(t, "github.com/example/pkg.New", rules[0].MatchCall)
+	assert.Equal(t, "example.New", rules.WrapRules[0].ID)
+	assert.Equal(t, "github.com/example/pkg.New", rules.WrapRules[0].MatchCall)
 }
 
 func TestLoadRulesFromDir_MultipleFiles(t *testing.T) {
@@ -103,14 +137,13 @@ rules:
 
 	rules, err := loadRulesFromDir(tmpDir)
 	require.NoError(t, err)
-	require.Len(t, rules, 2)
+	require.Len(t, rules.WrapRules, 2)
 }
 
-func TestLoadRulesFromFile_OnlyWrapRules(t *testing.T) {
+func TestLoadRulesFromFile_MixedRules(t *testing.T) {
 	tmpDir := t.TempDir()
 	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
 
-	// YAML with both wrap and non-wrap rules
 	yamlContent := `
 meta:
   name: mixed-rules
@@ -122,7 +155,9 @@ rules:
     template: wrap({{.}})
   - id: prepend-rule
     type: prepend
-    match: pkg.Other
+    receiver: "*pkg.Type"
+    function: Method
+    imports: {}
     template: before()
 `
 	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
@@ -130,9 +165,10 @@ rules:
 
 	rules, err := loadRulesFromFile(yamlPath)
 	require.NoError(t, err)
-	// Only wrap rules should be loaded
-	require.Len(t, rules, 1)
-	assert.Equal(t, "wrap-rule", rules[0].ID)
+	require.Len(t, rules.WrapRules, 1)
+	require.Len(t, rules.PrependRules, 1)
+	assert.Equal(t, "wrap-rule", rules.WrapRules[0].ID)
+	assert.Equal(t, "prepend-rule", rules.PrependRules[0].ID)
 }
 
 func TestLoadRulesFromFile_InvalidYAML(t *testing.T) {
@@ -151,5 +187,6 @@ func TestLoadRulesFromDir_EmptyDir(t *testing.T) {
 
 	rules, err := loadRulesFromDir(tmpDir)
 	require.NoError(t, err)
-	assert.Empty(t, rules)
+	assert.Empty(t, rules.WrapRules)
+	assert.Empty(t, rules.PrependRules)
 }
