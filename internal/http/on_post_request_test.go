@@ -12,6 +12,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +30,7 @@ func TestOnPostRequest_AttackWave(t *testing.T) {
 	})
 
 	client := &mockCloudClient{
-		attackWaveDetectedEventSent: make(chan struct{}),
+		attackWaveDetectedEventSent: make(chan attackWaveDetails),
 	}
 
 	agent.SetCloudClient(client)
@@ -37,6 +38,8 @@ func TestOnPostRequest_AttackWave(t *testing.T) {
 	for range 100 {
 		req, _ := http.NewRequest("BADMETHOD", "/route", nil)
 		req.RemoteAddr = "10.0.0.1:1234"
+		req.Header.Set("user-agent", "user-agent")
+
 		ip := "10.0.0.1"
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
@@ -48,16 +51,24 @@ func TestOnPostRequest_AttackWave(t *testing.T) {
 	}
 
 	select {
-	case <-client.attackWaveDetectedEventSent:
+	case result := <-client.attackWaveDetectedEventSent:
 		// Success!
+		assert.Equal(t, "10.0.0.1", result.ip)
+		assert.Equal(t, "user-agent", result.userAgent)
+		assert.Equal(t, "test", result.source)
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("attack wave was never reported")
-
 	}
 }
 
 type mockCloudClient struct {
-	attackWaveDetectedEventSent chan struct{}
+	attackWaveDetectedEventSent chan attackWaveDetails
+}
+
+type attackWaveDetails struct {
+	ip        string
+	userAgent string
+	source    string
 }
 
 func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
@@ -82,5 +93,9 @@ func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 }
 
 func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
-	m.attackWaveDetectedEventSent <- struct{}{}
+	m.attackWaveDetectedEventSent <- attackWaveDetails{
+		ip:        request.IPAddress,
+		userAgent: request.UserAgent,
+		source:    request.Source,
+	}
 }
