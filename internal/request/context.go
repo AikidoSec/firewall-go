@@ -13,6 +13,7 @@ type DeferredBlock struct {
 
 type Context struct {
 	URL                string
+	Path               string
 	Method             string
 	Query              map[string][]string
 	Headers            map[string][]string

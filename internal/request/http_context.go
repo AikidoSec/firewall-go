@@ -44,6 +44,7 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 
 	c := &Context{
 		URL:                fullURL(r),
+		Path:               r.URL.Path,
 		Method:             r.Method,
 		Query:              r.URL.Query(),
 		Headers:            headersToMap(r.Header),

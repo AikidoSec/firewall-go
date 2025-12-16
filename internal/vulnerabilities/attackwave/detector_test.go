@@ -41,7 +41,7 @@ func TestDetectorCheck(t *testing.T) {
 		ctx := &request.Context{
 			RemoteAddress: &ip,
 			Method:        "GET",
-			Route:         "/api/users",
+			Path:          "/api/users",
 		}
 
 		result := detector.CheckRequest(ctx)
@@ -58,7 +58,7 @@ func TestDetectorCheck(t *testing.T) {
 		ctx := &request.Context{
 			RemoteAddress: &ip,
 			Method:        "BADMETHOD", // Suspicious method
-			Route:         "/api/users",
+			Path:          "/api/users",
 		}
 
 		// First two checks should return false
@@ -84,12 +84,12 @@ func TestDetectorCheck(t *testing.T) {
 
 		ctx1 := &request.Context{
 			RemoteAddress: &ip1,
-			Route:         "/.git/config", // Suspicious path
+			Path:          "/.git/config", // Suspicious path
 		}
 
 		ctx2 := &request.Context{
 			RemoteAddress: &ip2,
-			Route:         "/.env", // Suspicious path
+			Path:          "/.env", // Suspicious path
 		}
 
 		// IP1: 2 requests
@@ -118,7 +118,7 @@ func TestDetectorCheck(t *testing.T) {
 		ip := "192.168.1.1"
 		ctx := &request.Context{
 			RemoteAddress: &ip,
-			Route:         "/.git/config", // Suspicious path
+			Path:          "/.git/config", // Suspicious path
 		}
 
 		// Trigger attack wave
