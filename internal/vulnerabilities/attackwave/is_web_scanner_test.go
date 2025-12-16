@@ -22,7 +22,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "normal request",
 			ctx: &request.Context{
 				Method: "GET",
-				Route:  "/api/users",
+				Path:   "/api/users",
 			},
 			expected: false,
 		},
@@ -30,7 +30,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "suspicious method",
 			ctx: &request.Context{
 				Method: "BADMETHOD",
-				Route:  "/api/users",
+				Path:   "/api/users",
 			},
 			expected: true,
 		},
@@ -38,7 +38,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "suspicious path - .env",
 			ctx: &request.Context{
 				Method: "GET",
-				Route:  "/.env",
+				Path:   "/.env",
 			},
 			expected: true,
 		},
@@ -46,7 +46,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "suspicious path - .git",
 			ctx: &request.Context{
 				Method: "GET",
-				Route:  "/.git/config",
+				Path:   "/.git/config",
 			},
 			expected: true,
 		},
@@ -54,7 +54,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "suspicious path - wp-config.php",
 			ctx: &request.Context{
 				Method: "GET",
-				Route:  "/wp-config.php",
+				Path:   "/wp-config.php",
 			},
 			expected: true,
 		},
@@ -62,7 +62,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "suspicious query - SQL injection",
 			ctx: &request.Context{
 				Method: "GET",
-				Route:  "/api/search",
+				Path:   "/api/search",
 				Query: map[string][]string{
 					"q": {"SELECT * FROM users"},
 				},
@@ -73,7 +73,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "suspicious query - path traversal",
 			ctx: &request.Context{
 				Method: "GET",
-				Route:  "/api/file",
+				Path:   "/api/file",
 				Query: map[string][]string{
 					"path": {"../../etc/passwd"},
 				},
@@ -84,7 +84,7 @@ func TestIsWebScanner(t *testing.T) {
 			name: "normal query parameters",
 			ctx: &request.Context{
 				Method: "GET",
-				Route:  "/api/search",
+				Path:   "/api/search",
 				Query: map[string][]string{
 					"q":    {"hello world"},
 					"page": {"1"},

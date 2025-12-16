@@ -12,7 +12,7 @@ func isWebScanner(ctx *request.Context) bool {
 		return true
 	}
 
-	if ctx.Route != "" && isSuspiciousPath(ctx.URL) {
+	if ctx.Path != "" && isSuspiciousPath(ctx.Path) {
 		return true
 	}
 

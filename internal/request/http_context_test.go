@@ -27,6 +27,7 @@ func TestSetContext(t *testing.T) {
 		remoteAddress *string
 		body          any
 		expectedRoute string
+		expectedPath  string
 	}{
 		{
 			name:          "with custom route",
@@ -112,6 +113,9 @@ func TestSetContext(t *testing.T) {
 			} else {
 				assert.Equal(t, tt.expectedRoute, reqCtx.Route)
 			}
+
+			// Path should come from the URL
+			assert.Equal(t, "/test/path", reqCtx.Path)
 
 			assert.Equal(t, tt.routeParams, reqCtx.RouteParams)
 
