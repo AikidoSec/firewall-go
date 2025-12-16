@@ -4,6 +4,10 @@ import (
 	"go/ast"
 )
 
+// dot provides a set of methods to be used within the prepend templates
+//
+// For example, so you can get the names of the function arguments:
+// e.g. {{ .Function.Argument 2 }}
 type dot struct {
 	fn *ast.FuncDecl
 }
@@ -18,6 +22,7 @@ type function struct {
 	fn *ast.FuncDecl
 }
 
+// Argument returns the name of the argument at the index
 func (f *function) Argument(idx int) string {
 	if f.fn.Type.Params == nil {
 		return ""
