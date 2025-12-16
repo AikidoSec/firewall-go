@@ -163,6 +163,11 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 	if err != nil {
 		log.Error("Failed to call detect_sql_injection", slog.Any("error", err))
 		// Don't return instance to pool if there was an error
+
+		// Close module to free memory before returning
+		if closeErr := inst.mod.Close(ctx); closeErr != nil {
+			log.Warn("Failed to close WASM module", slog.Any("error", closeErr))
+		}
 		return 0
 	}
 
@@ -174,6 +179,11 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 
 	if shouldPool {
 		wasmPool.Put(inst)
+	} else {
+		// Close module to free memory if not returning to pool
+		if closeErr := inst.mod.Close(ctx); closeErr != nil {
+			log.Warn("Failed to close WASM module", slog.Any("error", closeErr))
+		}
 	}
 
 	return int(result)
