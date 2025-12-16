@@ -7,8 +7,8 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"html/template"
 	"strings"
+	"text/template"
 )
 
 // transformDeclsWrap walks through all declarations in a file looking for function
