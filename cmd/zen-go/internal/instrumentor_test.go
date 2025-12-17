@@ -46,7 +46,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -97,7 +97,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -119,7 +119,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -146,7 +146,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -173,7 +173,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -199,7 +199,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -211,7 +211,7 @@ func TestInstrumentFile_InvalidFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "nonexistent.go")
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
@@ -230,7 +230,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(testGinRules(), nil)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
@@ -303,7 +303,7 @@ type Rows struct{}
 		},
 	}
 
-	inst := NewInstrumentorWithRules(nil, prependRules)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "database/sql")
 
 	require.NoError(t, err)
@@ -338,7 +338,7 @@ func DoSomething() {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(nil, prependRules)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -382,7 +382,7 @@ func (c *Cmd) Wait() error {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(nil, prependRules)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "os/exec")
 
 	require.NoError(t, err)
@@ -418,7 +418,7 @@ type File struct{}
 		},
 	}
 
-	inst := NewInstrumentorWithRules(nil, prependRules)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "os")
 
 	require.NoError(t, err)
@@ -451,7 +451,7 @@ func OpenFile(name string) error {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(nil, prependRules)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "main") // Compiling "main" package
 
 	require.NoError(t, err)
@@ -481,10 +481,78 @@ func (f *File) OpenFile(name string) error {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(nil, prependRules)
+	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "os")
 
 	require.NoError(t, err)
 	// Should NOT match because OpenFile is a method, not a standalone function
+	assert.False(t, result.Modified)
+}
+
+func TestInstrumentFile_InjectDeclRule(t *testing.T) {
+	src := `package os
+
+func Getpid() int {
+	return 0
+}
+
+func OpenFile(name string) error {
+	return nil
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "proc.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	injectDeclRules := []InjectDeclRule{
+		{
+			ID:         "os.linkname",
+			Package:    "os",
+			AnchorFunc: "Getpid",
+			Links:      []string{"github.com/example/sink"},
+			DeclTemplate: `//go:linkname __example_check github.com/example/sink.Check
+func __example_check(string) error`,
+		},
+	}
+
+	inst := NewInstrumentorWithRules(&InstrumentationRules{InjectDeclRules: injectDeclRules})
+	result, err := inst.InstrumentFile(tmpFile, "os")
+
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+
+	// Check that link dependency is added
+	assert.Contains(t, result.LinkDeps, "github.com/example/sink")
+
+	resultStr := string(result.Code)
+	assert.Contains(t, resultStr, "go:linkname")
+	assert.Contains(t, resultStr, "__example_check")
+	assert.Contains(t, resultStr, `"unsafe"`)
+}
+
+func TestInstrumentFile_InjectDeclRule_NoAnchor(t *testing.T) {
+	src := `package os
+
+func SomeOtherFunc() {
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "other.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	injectDeclRules := []InjectDeclRule{
+		{
+			ID:           "os.linkname",
+			Package:      "os",
+			AnchorFunc:   "Getpid", // Not in this file
+			Links:        []string{},
+			DeclTemplate: `func __test() {}`,
+		},
+	}
+
+	inst := NewInstrumentorWithRules(&InstrumentationRules{InjectDeclRules: injectDeclRules})
+	result, err := inst.InstrumentFile(tmpFile, "os")
+
+	require.NoError(t, err)
 	assert.False(t, result.Modified)
 }
