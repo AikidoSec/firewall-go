@@ -293,7 +293,7 @@ type Rows struct{}
 		{
 			ID:           "sql.DB.QueryContext",
 			ReceiverType: "*database/sql.DB",
-			FuncName:     "QueryContext",
+			FuncNames:    []string{"QueryContext"},
 			Imports: map[string]string{
 				"sink": "github.com/example/sink",
 			},
@@ -332,7 +332,7 @@ func DoSomething() {
 		{
 			ID:           "sql.DB.QueryContext",
 			ReceiverType: "*database/sql.DB",
-			FuncName:     "QueryContext",
+			FuncNames:    []string{"QueryContext"},
 			Imports:      map[string]string{},
 			PrependTmpl:  `// prepended`,
 		},
@@ -343,4 +343,52 @@ func DoSomething() {
 
 	require.NoError(t, err)
 	assert.False(t, result.Modified)
+}
+
+func TestInstrumentFile_PrependRule_MultipleFunctions(t *testing.T) {
+	// Test that a single rule can match multiple function names (one-of)
+	src := `package exec
+
+import "context"
+
+type Cmd struct {
+	ctx context.Context
+}
+
+func (c *Cmd) Run() error {
+	return nil
+}
+
+func (c *Cmd) Start() error {
+	return nil
+}
+
+func (c *Cmd) Wait() error {
+	return nil
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "cmd.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	// Single rule that matches both Run and Start, but not Wait
+	prependRules := []PrependRule{
+		{
+			ID:           "exec.Cmd.RunOrStart",
+			ReceiverType: "*os/exec.Cmd",
+			FuncNames:    []string{"Run", "Start"}, // one-of
+			Imports:      map[string]string{},
+			PrependTmpl:  `_ = "instrumented"`, // Use actual statement, not just comment
+		},
+	}
+
+	inst := NewInstrumentorWithRules(nil, prependRules)
+	result, err := inst.InstrumentFile(tmpFile, "os/exec")
+
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+
+	resultStr := string(result.Code)
+	// Should have instrumented both Run and Start
+	assert.Equal(t, 2, strings.Count(resultStr, `"instrumented"`))
 }
