@@ -41,7 +41,7 @@ jobs:
           sed -i '/WORKDIR \/app/a COPY firewall-go-local ./firewall-go-local' Dockerfile
 
       - name: Run Firewall QA Tests
-        uses: AikidoSec/firewall-tester-action@v1.0.1
+        uses: AikidoSec/firewall-tester-action@v1.0.3
         with:
           dockerfile_path: ./zen-demo-go/Dockerfile
           app_port: 3000
