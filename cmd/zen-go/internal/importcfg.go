@@ -41,7 +41,7 @@ func ExtendImportcfg(origPath string, addedImports map[string]string, objdir str
 		}
 
 		var exportPath string
-		exportPath, err = getPackageExport(importPath)
+		exportPath, err = GetPackageExport(importPath)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: could not find export for %s: %v\n", importPath, err)
 			continue
@@ -98,7 +98,7 @@ func createTempFile(objdir string) (*os.File, error) {
 	return os.CreateTemp("", "importcfg_*.txt")
 }
 
-func getPackageExport(importPath string) (string, error) {
+func GetPackageExport(importPath string) (string, error) {
 	dir := findModuleRoot()
 
 	// Pass original build flags to packages.Load to prevent cache misses and fingerprint errors.

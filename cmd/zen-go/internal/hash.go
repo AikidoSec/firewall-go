@@ -49,6 +49,19 @@ func ComputeInstrumentationHash(inst *Instrumentor) string {
 		fmt.Fprintf(h, "%s\n", rule.PrependTmpl)
 	}
 
+	// Hash inject decl rules
+	for _, rule := range inst.InjectDeclRules {
+		fmt.Fprintf(h, "inject-decl:%s:%s:%s:", rule.ID, rule.Package, rule.AnchorFunc)
+		// Sort links for consistent hashing
+		links := make([]string, len(rule.Links))
+		copy(links, rule.Links)
+		sort.Strings(links)
+		for _, link := range links {
+			fmt.Fprintf(h, "%s:", link)
+		}
+		fmt.Fprintf(h, "%s\n", rule.DeclTemplate)
+	}
+
 	// Return base64-encoded hash (first 16 chars for brevity)
 	hash := h.Sum(nil)
 	return base64.URLEncoding.EncodeToString(hash)[:16]

@@ -9,17 +9,10 @@ import (
 	"strings"
 )
 
-// WrapRule wraps a function call expression
-type WrapRule struct {
-	ID        string
-	MatchCall string
-	Imports   map[string]string
-	WrapTmpl  string
-}
-
 type Instrumentor struct {
-	WrapRules    []WrapRule
-	PrependRules []PrependRule
+	WrapRules       []WrapRule
+	PrependRules    []PrependRule
+	InjectDeclRules []InjectDeclRule
 }
 
 // NewInstrumentor creates a new Instrumentor, loading rules from YAML files
@@ -31,7 +24,11 @@ func NewInstrumentor() (*Instrumentor, error) {
 			return nil, err
 		}
 
-		return &Instrumentor{WrapRules: rules.WrapRules, PrependRules: rules.PrependRules}, nil
+		return &Instrumentor{
+			WrapRules:       rules.WrapRules,
+			PrependRules:    rules.PrependRules,
+			InjectDeclRules: rules.InjectDeclRules,
+		}, nil
 	}
 
 	// No rules found
@@ -39,14 +36,19 @@ func NewInstrumentor() (*Instrumentor, error) {
 }
 
 // NewInstrumentorWithRules creates an Instrumentor with the given rules
-func NewInstrumentorWithRules(wrapRules []WrapRule, prependRules []PrependRule) *Instrumentor {
-	return &Instrumentor{WrapRules: wrapRules, PrependRules: prependRules}
+func NewInstrumentorWithRules(rules *InstrumentationRules) *Instrumentor {
+	return &Instrumentor{
+		WrapRules:       rules.WrapRules,
+		PrependRules:    rules.PrependRules,
+		InjectDeclRules: rules.InjectDeclRules,
+	}
 }
 
 type InstrumentFileResult struct {
 	Code     []byte
 	Modified bool
-	Imports  map[string]string
+	Imports  map[string]string // alias -> import path (for compile-time imports)
+	LinkDeps []string          // import paths (for link-time dependencies via go:linkname)
 }
 
 func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (InstrumentFileResult, error) {
@@ -103,9 +105,25 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 		}
 	}
 
-	// Apply prepend rules
+	// Apply prepend rules (for methods and standalone functions)
 	for _, rule := range i.PrependRules {
 		err = transformDeclsPrepend(file.Decls, compilingPkg, rule, &modified, importsToAdd)
+		if err != nil {
+			return InstrumentFileResult{}, err
+		}
+	}
+
+	// Track links to add (for go:linkname dependencies)
+	var linksToAdd []string
+
+	// Apply inject decl rules (for go:linkname declarations)
+	for _, rule := range i.InjectDeclRules {
+		// Only apply if we're compiling the target package
+		if rule.Package != "" && rule.Package != compilingPkg {
+			continue
+		}
+
+		err := transformDeclsInjectDecl(file, fset, rule, &modified, &linksToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}
@@ -130,5 +148,6 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 		Code:     out.Bytes(),
 		Modified: true,
 		Imports:  importsToAdd,
+		LinkDeps: linksToAdd,
 	}, nil
 }

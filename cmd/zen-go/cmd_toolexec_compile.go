@@ -33,7 +33,7 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 
 	// These are the arguments that we want to pass through to the compiler
 	// If we modify a file, we need to pass the modified file to the compiler instead of the original file
-	newArgs, allAddedImports, err := instrumentFiles(stderr, toolArgs, pkgPath, objdir)
+	newArgs, allAddedImports, allLinkDeps, err := instrumentFiles(stderr, toolArgs, pkgPath, objdir)
 	if err != nil {
 		return err
 	}
@@ -50,6 +50,12 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 	err = passthrough(tool, newArgs)
 	if err != nil {
 		return err
+	}
+
+	// After successful compile, if we have link-time dependencies, record them
+	// in a sidecar file next to the archive. The linker will read these later.
+	if len(allLinkDeps) > 0 {
+		writeLinkDepsForArchive(stderr, outputPath, allLinkDeps)
 	}
 
 	return nil
@@ -105,12 +111,13 @@ func getObjDir(outputPath string) string {
 	return filepath.Dir(outputPath)
 }
 
-func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string) ([]string, map[string]string, error) {
+func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string) ([]string, map[string]string, []string, error) {
 	newArgs := make([]string, 0, len(toolArgs))
-	allAddedImports := make(map[string]string) // import path -> alias
+	allAddedImports := make(map[string]string) // alias -> import path
+	var allLinkDeps []string
 	instrumentor, err := internal.NewInstrumentor()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	for _, arg := range toolArgs {
@@ -137,6 +144,9 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 		// zengin -> github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
 		maps.Copy(allAddedImports, result.Imports)
 
+		// Collect link dependencies
+		allLinkDeps = append(allLinkDeps, result.LinkDeps...)
+
 		tempFile, err := writeTempFile(arg, result.Code, objdir)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: error writing temp file: %v\n", err)
@@ -147,13 +157,16 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 
 		if isDebug() {
 			fmt.Fprintf(stderr, "zen-go: transformed %s -> %s\n", arg, tempFile)
-			for alias, path := range allAddedImports {
+			for alias, path := range result.Imports {
 				fmt.Fprintf(stderr, "zen-go: added import %s -> %s\n", alias, path)
+			}
+			for _, dep := range result.LinkDeps {
+				fmt.Fprintf(stderr, "zen-go: added link dep %s\n", dep)
 			}
 		}
 	}
 
-	return newArgs, allAddedImports, nil
+	return newArgs, allAddedImports, allLinkDeps, nil
 }
 
 func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string, addedImports map[string]string, objdir string) ([]string, error) {
