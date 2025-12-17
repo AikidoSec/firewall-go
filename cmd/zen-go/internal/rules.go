@@ -28,7 +28,8 @@ type Rule struct {
 	ID        string            `yaml:"id"`
 	Type      string            `yaml:"type"`
 	Match     string            `yaml:"match"`     // For wrap rules: "pkg.Func"
-	Receiver  string            `yaml:"receiver"`  // For prepend rules: "*pkg.Type"
+	Receiver  string            `yaml:"receiver"`  // For prepend rules with receiver: "*pkg.Type"
+	Package   string            `yaml:"package"`   // For prepend rules without receiver: target package (e.g., "os")
 	Function  string            `yaml:"function"`  // For prepend rules: single "MethodName"
 	Functions []string          `yaml:"functions"` // For prepend rules: multiple method names (one-of)
 	Imports   map[string]string `yaml:"imports"`
@@ -41,10 +42,13 @@ type InstrumentationRules struct {
 	PrependRules []PrependRule
 }
 
-// PrependRule prepends statements to a function body
+// PrependRule prepends statements to a function body.
+// For methods: set ReceiverType (e.g., "*database/sql.DB")
+// For standalone functions: set Package (e.g., "os") and leave ReceiverType empty
 type PrependRule struct {
 	ID           string
 	ReceiverType string            // e.g., "*database/sql.DB"
+	Package      string            // e.g., "os" (for standalone functions without receiver)
 	FuncNames    []string          // e.g., ["Run", "Start"] - matches any of these
 	Imports      map[string]string // alias -> import path
 	PrependTmpl  string            // template with {{ .Function.Argument N }}
@@ -111,6 +115,7 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 			result.PrependRules = append(result.PrependRules, PrependRule{
 				ID:           rule.ID,
 				ReceiverType: rule.Receiver,
+				Package:      rule.Package,
 				FuncNames:    funcNames,
 				Imports:      rule.Imports,
 				PrependTmpl:  strings.TrimSpace(rule.Template),

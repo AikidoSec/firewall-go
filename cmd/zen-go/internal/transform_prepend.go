@@ -12,10 +12,11 @@ import (
 
 // transformDeclsPrepend finds function declarations matching the prepend rule
 // and prepends statements to the function body
+// Supports both methods (with receiver) and standalone functions (without receiver).
 func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRule, modified *bool, importsToAdd map[string]string) error {
 	for _, decl := range decls {
 		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Body == nil || fn.Recv == nil {
+		if !ok || fn.Body == nil {
 			continue
 		}
 
@@ -24,8 +25,27 @@ func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRu
 			continue
 		}
 
-		// Check if receiver type matches
-		if !matchesReceiverType(fn.Recv, compilingPkg, rule.ReceiverType) {
+		// Determine if this rule matches methods or standalone functions
+		switch {
+		case rule.ReceiverType != "":
+			// Rule is for methods, so must have a receiver
+			if fn.Recv == nil {
+				continue
+			}
+			if !matchesReceiverType(fn.Recv, compilingPkg, rule.ReceiverType) {
+				continue
+			}
+		case rule.Package != "":
+			// Rule is for standalone functions, so must NOT have a receiver
+			// and must be compiling the target package
+			if fn.Recv != nil {
+				continue
+			}
+			if rule.Package != compilingPkg {
+				continue
+			}
+		default:
+			// No receiver type or package specified, so skip
 			continue
 		}
 
