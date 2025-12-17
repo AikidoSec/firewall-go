@@ -23,20 +23,23 @@ type RateLimiting struct {
 	WindowSizeInMS int
 }
 
-type EndpointData struct {
-	ForceProtectionOff bool
-	RateLimiting       RateLimiting
-	AllowedIPAddresses map[string]bool
-}
-
 type EndpointKey struct {
 	Method string
 	Route  string
 }
 
+type Endpoint struct {
+	Method             string                    `json:"method"`
+	Route              string                    `json:"route"`
+	ForceProtectionOff bool                      `json:"forceProtectionOff"`
+	Graphql            any                       `json:"graphql"`
+	AllowedIPAddresses ipaddr.MatchList          `json:"allowedIPAddresses"`
+	RateLimiting       aikido_types.RateLimiting `json:"rateLimiting"`
+}
+
 type ServiceConfigData struct {
 	ConfigUpdatedAt   time.Time
-	Endpoints         []aikido_types.Endpoint
+	Endpoints         []Endpoint
 	BlockedUserIDs    map[string]bool
 	BypassedIPs       ipaddr.MatchList
 	BlockedIPs        map[string]ipaddr.MatchList
@@ -54,13 +57,13 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockL
 
 	serviceConfig.ConfigUpdatedAt = time.UnixMilli(cloudConfigFromAgent.ConfigUpdatedAt)
 
-	var endpoints []aikido_types.Endpoint
+	var endpoints []Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
-		endpoints = append(endpoints, aikido_types.Endpoint{
+		endpoints = append(endpoints, Endpoint{
 			Method:             ep.Method,
 			Route:              ep.Route,
 			ForceProtectionOff: ep.ForceProtectionOff,
-			AllowedIPAddresses: ep.AllowedIPAddresses,
+			AllowedIPAddresses: ipaddr.BuildMatchList("allowedIPs", "allowed", ep.AllowedIPAddresses),
 			RateLimiting: aikido_types.RateLimiting{
 				Enabled: ep.RateLimiting.Enabled,
 			},
@@ -178,7 +181,7 @@ func IsIPBypassed(ip string) bool {
 	return serviceConfig.BypassedIPs.Matches(ipAddress)
 }
 
-func GetEndpoints() []aikido_types.Endpoint {
+func GetEndpoints() []Endpoint {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()
 

@@ -11,6 +11,7 @@ type MatchList struct {
 	Description string
 	TrieV4      *ipaddr.IPv4AddressTrie
 	TrieV6      *ipaddr.IPv6AddressTrie
+	Count       int
 }
 
 func (list *MatchList) Matches(ip *ipaddr.IPAddress) bool {
@@ -33,6 +34,8 @@ func BuildMatchList(name, description string, ipsList []string) MatchList {
 		TrieV6:      &ipaddr.IPv6AddressTrie{},
 	}
 
+	count := 0
+
 	for _, ip := range ipsList {
 		ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
 		if err != nil {
@@ -45,7 +48,10 @@ func BuildMatchList(name, description string, ipsList []string) MatchList {
 		} else if ipAddress.IsIPv6() {
 			ipBlocklist.TrieV6.Add(ipAddress.ToIPv6())
 		}
+		count++
 	}
+
+	ipBlocklist.Count = count
 
 	return ipBlocklist
 }

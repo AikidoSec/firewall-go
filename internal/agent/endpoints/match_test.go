@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/ipaddr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,17 +19,17 @@ func sampleRouteMetadata(method, route string) RouteMetadata {
 
 func TestFindMatches(t *testing.T) {
 	t.Run("testInvalidUrlAndNoRoute", func(t *testing.T) {
-		result := FindMatches([]aikido_types.Endpoint{}, sampleRouteMetadata("", ""))
+		result := FindMatches([]config.Endpoint{}, sampleRouteMetadata("", ""))
 		assert.Nil(t, result)
 	})
 
 	t.Run("testNoUrlAndNoRoute", func(t *testing.T) {
-		result := FindMatches([]aikido_types.Endpoint{}, sampleRouteMetadata("POST", ""))
+		result := FindMatches([]config.Endpoint{}, sampleRouteMetadata("POST", ""))
 		assert.Nil(t, result)
 	})
 
 	t.Run("testNoMethod", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/:number",
@@ -36,7 +38,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
@@ -45,12 +47,12 @@ func TestFindMatches(t *testing.T) {
 	})
 
 	t.Run("testItReturnsUndefinedIfNothingFound", func(t *testing.T) {
-		result := FindMatches([]aikido_types.Endpoint{}, sampleRouteMetadata("", ""))
+		result := FindMatches([]config.Endpoint{}, sampleRouteMetadata("", ""))
 		assert.Nil(t, result)
 	})
 
 	t.Run("testItReturnsEndpointBasedOnRoute", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/:number",
@@ -59,7 +61,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
@@ -69,7 +71,7 @@ func TestFindMatches(t *testing.T) {
 	})
 
 	t.Run("testItReturnsEndpointBasedOnRelativeUrl", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/:number",
@@ -78,7 +80,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
@@ -87,7 +89,7 @@ func TestFindMatches(t *testing.T) {
 	})
 
 	t.Run("testItReturnsEndpointBasedOnWildcard", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
@@ -96,7 +98,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
@@ -105,7 +107,7 @@ func TestFindMatches(t *testing.T) {
 	})
 
 	t.Run("testItReturnsEndpointBasedOnWildcardWithRelativeUrl", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
@@ -114,7 +116,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
@@ -123,7 +125,7 @@ func TestFindMatches(t *testing.T) {
 	})
 
 	t.Run("testItFavorsMoreSpecificWildcard", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "*",
 				Route:  "/posts/*",
@@ -132,7 +134,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 			{
@@ -143,12 +145,12 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
 
-		expected := []aikido_types.Endpoint{
+		expected := []config.Endpoint{
 			endpoints[1],
 			endpoints[0],
 		}
@@ -157,7 +159,7 @@ func TestFindMatches(t *testing.T) {
 	})
 
 	t.Run("testItMatchesWildcardRouteWithSpecificMethod", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/posts/*/comments/*",
@@ -166,7 +168,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    10,
 					WindowSizeInMS: 1000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
@@ -175,7 +177,7 @@ func TestFindMatches(t *testing.T) {
 	})
 
 	t.Run("testItPrefersSpecificRouteOverWildcard", func(t *testing.T) {
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "*",
 				Route:  "/api/*",
@@ -184,7 +186,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    20,
 					WindowSizeInMS: 60000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 			{
@@ -195,12 +197,12 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    100,
 					WindowSizeInMS: 60000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
 
-		expected := []aikido_types.Endpoint{
+		expected := []config.Endpoint{
 			endpoints[1],
 			endpoints[0],
 		}
@@ -212,7 +214,7 @@ func TestFindMatches(t *testing.T) {
 	t.Run("testItPrefersSpecificMethodOverWildcardFirstCase", func(t *testing.T) {
 		routeMetadata := sampleRouteMetadata("POST", "/api/test")
 
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "*",
 				Route:  "/api/test",
@@ -221,7 +223,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    20,
 					WindowSizeInMS: 60000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 			{
@@ -232,12 +234,12 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    100,
 					WindowSizeInMS: 60000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
 
-		expected := []aikido_types.Endpoint{
+		expected := []config.Endpoint{
 			endpoints[1],
 			endpoints[0],
 		}
@@ -248,7 +250,7 @@ func TestFindMatches(t *testing.T) {
 	t.Run("testItPrefersSpecificMethodOverWildcardSecondCase", func(t *testing.T) {
 		routeMetadata := sampleRouteMetadata("POST", "/api/test")
 
-		endpoints := []aikido_types.Endpoint{
+		endpoints := []config.Endpoint{
 			{
 				Method: "POST",
 				Route:  "/api/test",
@@ -257,7 +259,7 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    100,
 					WindowSizeInMS: 60000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 			{
@@ -268,12 +270,12 @@ func TestFindMatches(t *testing.T) {
 					MaxRequests:    20,
 					WindowSizeInMS: 60000,
 				},
-				AllowedIPAddresses: []string{},
+				AllowedIPAddresses: ipaddr.MatchList{},
 				ForceProtectionOff: false,
 			},
 		}
 
-		expected := []aikido_types.Endpoint{
+		expected := []config.Endpoint{
 			endpoints[0],
 			endpoints[1],
 		}

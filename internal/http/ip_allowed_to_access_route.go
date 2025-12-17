@@ -2,13 +2,13 @@ package http
 
 import (
 	"net"
-	"slices"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/ipaddr"
 )
 
 // ipAllowedToAccessRoute checks if the IP address is allowed to access the route.
-func ipAllowedToAccessRoute(ip string, matches []aikido_types.Endpoint) bool {
+func ipAllowedToAccessRoute(ip string, matches []config.Endpoint) bool {
 	if ip != "" && isLocalhostIP(ip) {
 		return true
 	}
@@ -18,10 +18,6 @@ func ipAllowedToAccessRoute(ip string, matches []aikido_types.Endpoint) bool {
 	}
 
 	for _, endpoint := range matches {
-		if len(endpoint.AllowedIPAddresses) == 0 {
-			continue
-		}
-
 		if ip == "" {
 			return false // No IP was recognized.
 		}
@@ -34,8 +30,17 @@ func ipAllowedToAccessRoute(ip string, matches []aikido_types.Endpoint) bool {
 	return true
 }
 
-func ipAllowed(remoteAddress string, endpoint aikido_types.Endpoint) bool {
-	return slices.Contains(endpoint.AllowedIPAddresses, remoteAddress)
+func ipAllowed(remoteAddress string, endpoint config.Endpoint) bool {
+	ip, err := ipaddr.Parse(remoteAddress)
+	if err != nil {
+		return false
+	}
+
+	if endpoint.AllowedIPAddresses.Count == 0 {
+		return true
+	}
+
+	return endpoint.AllowedIPAddresses.Matches(ip)
 }
 
 func isLocalhostIP(ip string) bool {
