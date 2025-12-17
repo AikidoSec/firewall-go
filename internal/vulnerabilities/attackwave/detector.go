@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
-	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 )
 
 // Detector tracks suspicious requests per IP and reports attack waves
@@ -75,24 +74,21 @@ func (d *Detector) CheckRequest(ctx *request.Context) bool {
 		return false
 	}
 
-	overLimit := d.addSuspiciousRequest(ip, time.Now())
+	overLimit := d.addSuspiciousRequest(ip)
 	if !overLimit {
 		return false
 	}
 
-	d.recentReports.Set(ip, nil)
+	d.recentReports.Set(ip, 1)
 
 	return true
 }
 
 // addSuspiciousRequest adds a new request timestamp to the sliding window for that IP
 // Returns true if request should be reported
-func (d *Detector) addSuspiciousRequest(ip string, timestamp time.Time) bool {
-	timestamps, ok := d.suspiciousRequests.Get(ip)
-	if !ok {
-		timestamps = slidingwindow.New(d.attackWaveTimeFrame.Milliseconds(), d.attackWaveThreshold-1)
-		d.suspiciousRequests.Set(ip, timestamps)
-	}
+func (d *Detector) addSuspiciousRequest(ip string) bool {
+	timestamps, _ := d.suspiciousRequests.Get(ip)
+	d.suspiciousRequests.Set(ip, timestamps+1)
 
-	return !timestamps.TryRecord(timestamp.UnixMilli())
+	return timestamps+1 >= d.attackWaveThreshold
 }
