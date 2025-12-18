@@ -10,19 +10,7 @@ import (
 // transformDeclsInjectDecl injects declarations (like go:linkname) into a file.
 // The declaration is inserted immediately before the anchor function.
 func transformDeclsInjectDecl(f *ast.File, fset *token.FileSet, rule InjectDeclRule, modified *bool, linksToAdd *[]string) error {
-	// Find the anchor function
-	anchorIndex := -1
-	for i, decl := range f.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok {
-			continue
-		}
-		if fn.Name.Name == rule.AnchorFunc {
-			anchorIndex = i
-			break
-		}
-	}
-
+	anchorIndex := findAnchorFunction(f, rule.AnchorFunc)
 	if anchorIndex == -1 {
 		return nil // Anchor function not found, skip
 	}
@@ -76,6 +64,22 @@ func transformDeclsInjectDecl(f *ast.File, fset *token.FileSet, rule InjectDeclR
 	return nil
 }
 
+func findAnchorFunction(f *ast.File, anchor string) int {
+	anchorIndex := -1
+	for i, decl := range f.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		if fn.Name.Name == anchor {
+			anchorIndex = i
+			break
+		}
+	}
+
+	return anchorIndex
+}
+
 // addUnsafeImport adds an import for "unsafe" package if not already present.
 // This is required for go:linkname directives.
 func addUnsafeImport(f *ast.File) {
@@ -114,4 +118,3 @@ func addUnsafeImport(f *ast.File) {
 		f.Decls = append([]ast.Decl{newImport}, f.Decls...)
 	}
 }
-
