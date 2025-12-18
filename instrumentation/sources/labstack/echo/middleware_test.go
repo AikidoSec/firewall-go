@@ -79,6 +79,13 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 			},
 		},
 	}, &aikido_types.ListsConfigData{
+		AllowedIPAddresses: []aikido_types.IPList{
+			{
+				Source:      "test-allowed",
+				Description: "Test allowed IPs",
+				IPs:         []string{"8.8.8.0/24"},
+			},
+		},
 		BlockedIPAddresses: []aikido_types.IPList{
 			{
 				Source:      "test",
@@ -86,7 +93,6 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 				IPs:         []string{"127.0.0.1"},
 			},
 		},
-
 		BlockedUserAgents: "bot.*",
 	})
 
@@ -95,6 +101,10 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 
 	router.GET("/route", func(c echo.Context) error {
 		t.Fatal("request should have been blocked")
+		return nil
+	})
+
+	router.GET("/allowed-route", func(c echo.Context) error {
 		return nil
 	})
 
@@ -151,18 +161,6 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 	})
 
 	t.Run("blocked by global allow list", func(t *testing.T) {
-		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
-			Block: &block,
-		}, &aikido_types.ListsConfigData{
-			AllowedIPAddresses: []aikido_types.IPList{
-				{
-					Source:      "geo-allowed",
-					Description: "Allowed countries",
-					IPs:         []string{"8.8.8.0/24"},
-				},
-			},
-		})
-
 		r := httptest.NewRequest("GET", "/route", nil)
 		r.RemoteAddr = "203.0.114.1:1234"
 		w := httptest.NewRecorder()
@@ -175,19 +173,7 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 	})
 
 	t.Run("allowed by global allow list", func(t *testing.T) {
-		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
-			Block: &block,
-		}, &aikido_types.ListsConfigData{
-			AllowedIPAddresses: []aikido_types.IPList{
-				{
-					Source:      "geo-allowed",
-					Description: "Allowed countries",
-					IPs:         []string{"8.8.8.0/24"},
-				},
-			},
-		})
-
-		r := httptest.NewRequest("GET", "/route", nil)
+		r := httptest.NewRequest("GET", "/allowed-route", nil)
 		r.RemoteAddr = "8.8.8.100:1234"
 		w := httptest.NewRecorder()
 
