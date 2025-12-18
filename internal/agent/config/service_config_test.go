@@ -74,7 +74,7 @@ func TestUpdateServiceConfig(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			Success:   true,
 			ServiceID: 123,
-			BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			BlockedIPAddresses: []aikido_types.IPList{
 				{
 					Source:      "threat-intel",
 					Description: "Known malicious IPs",
@@ -189,7 +189,7 @@ func TestIsIPBlocked(t *testing.T) {
 		resetServiceConfig()
 
 		listsConfig := &aikido_types.ListsConfigData{
-			BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			BlockedIPAddresses: []aikido_types.IPList{
 				{
 					Source:      "manual",
 					Description: "Manually blocked",
@@ -216,7 +216,7 @@ func TestIsIPBlocked(t *testing.T) {
 		resetServiceConfig()
 
 		listsConfig := &aikido_types.ListsConfigData{
-			BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			BlockedIPAddresses: []aikido_types.IPList{
 				{
 					Source:      "ipv6-test",
 					Description: "IPv6 blocklist",
@@ -243,7 +243,7 @@ func TestIsIPBlocked(t *testing.T) {
 		resetServiceConfig()
 
 		listsConfig := &aikido_types.ListsConfigData{
-			BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			BlockedIPAddresses: []aikido_types.IPList{
 				{
 					Source:      "test",
 					Description: "Test blocklist",
@@ -257,14 +257,6 @@ func TestIsIPBlocked(t *testing.T) {
 		}, listsConfig)
 
 		blocked, desc := IsIPBlocked("192.168.1.200")
-		assert.False(t, blocked)
-		assert.Empty(t, desc)
-	})
-
-	t.Run("handles invalid IP address", func(t *testing.T) {
-		resetServiceConfig()
-
-		blocked, desc := IsIPBlocked("not-an-ip")
 		assert.False(t, blocked)
 		assert.Empty(t, desc)
 	})
@@ -285,7 +277,7 @@ func TestIsIPBlocked(t *testing.T) {
 		resetServiceConfig()
 
 		listsConfig := &aikido_types.ListsConfigData{
-			BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			BlockedIPAddresses: []aikido_types.IPList{
 				{
 					Source:      "list1",
 					Description: "First list",
@@ -310,6 +302,242 @@ func TestIsIPBlocked(t *testing.T) {
 		blocked, desc = IsIPBlocked("10.0.0.2")
 		assert.True(t, blocked)
 		assert.Equal(t, "Second list", desc)
+	})
+}
+
+func TestIsIPAllowed(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+
+	t.Run("allows all IPs when allow list is not set", func(t *testing.T) {
+		resetServiceConfig()
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, nil)
+
+		// When no allow list is configured, all IPs should be allowed (both public and private)
+		assert.True(t, IsIPAllowed("8.8.8.8"))     // Public IP
+		assert.True(t, IsIPAllowed("203.0.114.1")) // Public IP
+		assert.True(t, IsIPAllowed("192.168.1.1")) // Private IP (always allowed anyway)
+		assert.True(t, IsIPAllowed("10.0.0.1"))    // Private IP (always allowed anyway)
+	})
+
+	t.Run("allows all IPs when allow list is empty", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// When allow list is empty, all IPs should be allowed (both public and private)
+		assert.True(t, IsIPAllowed("8.8.8.8"))     // Public IP
+		assert.True(t, IsIPAllowed("203.0.114.1")) // Public IP
+		assert.True(t, IsIPAllowed("192.168.1.1")) // Private IP (always allowed anyway)
+		assert.True(t, IsIPAllowed("10.0.0.1"))    // Private IP (always allowed anyway)
+	})
+
+	t.Run("allows and blocks IPv4 addresses based on allowlist", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "manual",
+					Description: "Manually allowed",
+					IPs:         []string{"8.8.8.8", "1.1.1.0/24"},
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// IPs in the allow list should be allowed
+		assert.True(t, IsIPAllowed("8.8.8.8"))
+		// Test CIDR range
+		assert.True(t, IsIPAllowed("1.1.1.50"))
+		assert.True(t, IsIPAllowed("1.1.1.1"))
+		assert.True(t, IsIPAllowed("1.1.1.254"))
+
+		// IPs not in the allow list should be blocked
+		assert.False(t, IsIPAllowed("8.8.4.4"))
+		assert.False(t, IsIPAllowed("1.1.2.1")) // Outside CIDR range
+		assert.False(t, IsIPAllowed("203.0.114.1"))
+	})
+
+	t.Run("always allows private IPs even when allowlist is set", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "geo-allowed",
+					Description: "Allowed countries",
+					IPs:         []string{"8.8.8.8"}, // Only allow this public IP
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// Private IPs should always be allowed, even when not in the allow list
+		assert.True(t, IsIPAllowed("127.0.0.1"))   // Loopback
+		assert.True(t, IsIPAllowed("192.168.1.1")) // RFC 1918
+		assert.True(t, IsIPAllowed("10.0.0.1"))    // RFC 1918
+		assert.True(t, IsIPAllowed("172.16.0.1"))  // RFC 1918
+		assert.True(t, IsIPAllowed("169.254.0.1")) // Link local
+		assert.True(t, IsIPAllowed("::1"))         // IPv6 loopback
+		assert.True(t, IsIPAllowed("fc00::1"))     // IPv6 ULA
+		assert.True(t, IsIPAllowed("fe80::1"))     // IPv6 link-local
+
+		// Public IP in allow list should be allowed
+		assert.True(t, IsIPAllowed("8.8.8.8"))
+
+		// Public IP not in allow list should be blocked
+		assert.False(t, IsIPAllowed("8.8.4.4"))
+	})
+
+	t.Run("allows and blocks IPv6 addresses based on allowlist", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "ipv6-test",
+					Description: "IPv6 allowlist",
+					IPs:         []string{"2001:4860:4860::8888", "2606:4700:4700::1111"},
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// IPv6 addresses in the allow list should be allowed
+		assert.True(t, IsIPAllowed("2001:4860:4860::8888"))
+		assert.True(t, IsIPAllowed("2606:4700:4700::1111"))
+
+		// IPv6 addresses not in the allow list should be blocked
+		assert.False(t, IsIPAllowed("2001:4860:4860::8844"))
+		assert.False(t, IsIPAllowed("2001:4860:4860::9999"))
+	})
+
+	t.Run("handles invalid IP address", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "test",
+					Description: "Test allowlist",
+					IPs:         []string{"8.8.8.8"}, // Public IP in allow list
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// Invalid IPs should be blocked (return false)
+		assert.False(t, IsIPAllowed("not-an-ip"))
+		assert.False(t, IsIPAllowed(""))
+		// Valid public IP not in allow list should also be blocked
+		assert.False(t, IsIPAllowed("8.8.4.4"))
+	})
+
+	t.Run("checks multiple allowlists", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "list1",
+					Description: "First list",
+					IPs:         []string{"8.8.8.8"},
+				},
+				{
+					Source:      "list2",
+					Description: "Second list",
+					IPs:         []string{"1.1.1.1"},
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// Public IPs in either list should be allowed
+		assert.True(t, IsIPAllowed("8.8.8.8"))
+		assert.True(t, IsIPAllowed("1.1.1.1"))
+		// Public IPs not in any list should be blocked
+		assert.False(t, IsIPAllowed("8.8.4.4"))
+	})
+
+	t.Run("handles allowlist with empty IPs array", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "empty",
+					Description: "Empty list",
+					IPs:         []string{},
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// Empty IPs array should be skipped, so allow list should be empty
+		// and all IPs should be allowed (both public and private)
+		assert.True(t, IsIPAllowed("8.8.8.8"))     // Public IP
+		assert.True(t, IsIPAllowed("203.0.114.1")) // Public IP
+		assert.True(t, IsIPAllowed("192.168.1.1")) // Private IP (always allowed anyway)
+		assert.True(t, IsIPAllowed("10.0.0.1"))    // Private IP (always allowed anyway)
+	})
+
+	t.Run("allows when IP matches any list in multiple allowlists", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "geo-us",
+					Description: "US IPs",
+					IPs:         []string{"8.8.8.0/24"},
+				},
+				{
+					Source:      "geo-eu",
+					Description: "EU IPs",
+					IPs:         []string{"1.1.1.0/24"},
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		// Public IPs from either list should be allowed
+		assert.True(t, IsIPAllowed("8.8.8.10"))
+		assert.True(t, IsIPAllowed("1.1.1.50"))
+		// Public IPs from neither list should be blocked
+		assert.False(t, IsIPAllowed("203.0.114.1"))
+		// Private IPs should always be allowed regardless
+		assert.True(t, IsIPAllowed("192.168.1.1"))
 	})
 }
 

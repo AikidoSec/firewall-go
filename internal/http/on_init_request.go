@@ -24,8 +24,16 @@ func OnInitRequest(ctx context.Context) *Response {
 		return nil
 	}
 
-	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
 	ip := reqCtx.GetIP()
+
+	// Allowed IP list, global list for allowing traffic by country
+	if ipAllowed := config.IsIPAllowed(ip); !ipAllowed {
+		msg := fmt.Sprintf("Your IP address is not allowed to access this resource. (Your IP: %s)", ip)
+
+		return &Response{403, msg}
+	}
+
+	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
 	if ipBlocked, reason := config.IsIPBlocked(ip); ipBlocked {
 		msg := fmt.Sprintf("Your IP address is blocked due to %s. (Your IP: %s)", reason, ip)
 

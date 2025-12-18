@@ -303,11 +303,18 @@ func TestFetchListsConfig(t *testing.T) {
 		expectedLists := &aikido_types.ListsConfigData{
 			Success:   true,
 			ServiceID: 999,
-			BlockedIPAddresses: []aikido_types.BlockedIPsData{
+			BlockedIPAddresses: []aikido_types.IPList{
 				{
 					Source:      "threat-intel",
 					Description: "Known malicious IPs",
 					IPs:         []string{"10.0.0.1", "10.0.0.2"},
+				},
+			},
+			AllowedIPAddresses: []aikido_types.IPList{
+				{
+					Source:      "geo-allowed",
+					Description: "Allowed countries",
+					IPs:         []string{"8.8.8.0/24", "1.1.1.1"},
 				},
 			},
 			BlockedUserAgents: "BadBot|EvilCrawler",
@@ -334,6 +341,10 @@ func TestFetchListsConfig(t *testing.T) {
 		assert.Equal(t, expectedLists.ServiceID, result.ServiceID)
 		assert.Len(t, result.BlockedIPAddresses, 1)
 		assert.Equal(t, "threat-intel", result.BlockedIPAddresses[0].Source)
+		assert.Len(t, result.AllowedIPAddresses, 1)
+		assert.Equal(t, "geo-allowed", result.AllowedIPAddresses[0].Source)
+		assert.Equal(t, "Allowed countries", result.AllowedIPAddresses[0].Description)
+		assert.Equal(t, []string{"8.8.8.0/24", "1.1.1.1"}, result.AllowedIPAddresses[0].IPs)
 		assert.Equal(t, "BadBot|EvilCrawler", result.BlockedUserAgents)
 	})
 
@@ -388,7 +399,8 @@ func TestFetchListsConfig(t *testing.T) {
 		emptyLists := &aikido_types.ListsConfigData{
 			Success:            true,
 			ServiceID:          111,
-			BlockedIPAddresses: []aikido_types.BlockedIPsData{},
+			BlockedIPAddresses: []aikido_types.IPList{},
+			AllowedIPAddresses: []aikido_types.IPList{},
 			BlockedUserAgents:  "",
 		}
 
@@ -408,6 +420,7 @@ func TestFetchListsConfig(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Success)
 		assert.Len(t, result.BlockedIPAddresses, 0)
+		assert.Len(t, result.AllowedIPAddresses, 0)
 		assert.Empty(t, result.BlockedUserAgents)
 	})
 }
