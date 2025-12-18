@@ -74,6 +74,7 @@ func sendHeartbeatEvent() {
 			Hostnames:           stateCollector.GetAndClearHostnames(),
 			Routes:              stateCollector.GetRoutesAndClear(),
 			Users:               GetUsersAndClear(),
+			Stats:               stateCollector.Stats().GetAndClear(),
 			MiddlewareInstalled: stateCollector.IsMiddlewareInstalled(),
 		})
 	if err != nil {

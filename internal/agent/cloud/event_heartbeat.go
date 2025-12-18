@@ -1,69 +1,9 @@
 package cloud
 
 import (
-	"slices"
-
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
-
-const (
-	minStatsCollectedForRelevantMetrics = 10000
-)
-
-func GetMonitoredSinkStatsAndClear() map[string]aikido_types.MonitoredSinkStats {
-	monitoredSinkStats := make(map[string]aikido_types.MonitoredSinkStats)
-	for sink, stats := range globals.StatsData.MonitoredSinkTimings {
-		if stats.Total <= minStatsCollectedForRelevantMetrics {
-			continue
-		}
-
-		monitoredSinkStats[sink] = aikido_types.MonitoredSinkStats{
-			AttacksDetected:       stats.AttacksDetected,
-			InterceptorThrewError: stats.InterceptorThrewError,
-			WithoutContext:        stats.WithoutContext,
-			Total:                 stats.Total,
-			CompressedTimings: []aikido_types.CompressedTiming{
-				{
-					AverageInMS:  computeAverage(stats.Timings),
-					Percentiles:  computePercentiles(stats.Timings),
-					CompressedAt: utils.GetTime(),
-				},
-			},
-		}
-
-		delete(globals.StatsData.MonitoredSinkTimings, sink)
-	}
-	return monitoredSinkStats
-}
-
-func GetStatsAndClear() aikido_types.Stats {
-	globals.StatsData.StatsMutex.Lock()
-	defer globals.StatsData.StatsMutex.Unlock()
-
-	stats := aikido_types.Stats{
-		Sinks:     GetMonitoredSinkStatsAndClear(),
-		StartedAt: globals.StatsData.StartedAt,
-		EndedAt:   utils.GetTime(),
-		Requests: aikido_types.Requests{
-			Total:   globals.StatsData.Requests,
-			Aborted: globals.StatsData.RequestsAborted,
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   globals.StatsData.Attacks,
-				Blocked: globals.StatsData.AttacksBlocked,
-			},
-		},
-	}
-
-	globals.StatsData.StartedAt = utils.GetTime()
-	globals.StatsData.Requests = 0
-	globals.StatsData.RequestsAborted = 0
-	globals.StatsData.Attacks = 0
-	globals.StatsData.AttacksBlocked = 0
-
-	return stats
-}
 
 type HeartbeatEvent struct {
 	Type                string                  `json:"type"`
@@ -80,6 +20,7 @@ type HeartbeatData struct {
 	Hostnames           []aikido_types.Hostname
 	Routes              []aikido_types.Route
 	Users               []aikido_types.User
+	Stats               aikido_types.Stats
 	MiddlewareInstalled bool
 }
 
@@ -89,7 +30,7 @@ func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) (*a
 		Type:                "heartbeat",
 		Agent:               agentInfo,
 		Time:                utils.GetTime(),
-		Stats:               GetStatsAndClear(),
+		Stats:               data.Stats,
 		Hostnames:           data.Hostnames,
 		Routes:              data.Routes,
 		Users:               data.Users,
@@ -103,40 +44,4 @@ func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) (*a
 	}
 
 	return parseCloudConfigResponse(response)
-}
-
-func computeAverage(times []int64) float64 {
-	if len(times) == 0 {
-		return 0
-	}
-	var total int64
-	for _, t := range times {
-		total += t
-	}
-
-	return float64(total) / float64(len(times)) / 1e6
-}
-
-func computePercentiles(times []int64) map[string]float64 {
-	if len(times) == 0 {
-		return map[string]float64{
-			"P50": 0,
-			"P90": 0,
-			"P95": 0,
-			"P99": 0,
-		}
-	}
-
-	// Make a copy to avoid mutating the input slice
-	sorted := make([]int64, len(times))
-	copy(sorted, times)
-	slices.Sort(sorted)
-
-	percentiles := map[string]float64{}
-	percentiles["P50"] = float64(sorted[len(sorted)/2]) / 1e6
-	percentiles["P90"] = float64(sorted[int(0.9*float64(len(sorted)))]) / 1e6
-	percentiles["P95"] = float64(sorted[int(0.95*float64(len(sorted)))]) / 1e6
-	percentiles["P99"] = float64(sorted[int(0.99*float64(len(sorted)))]) / 1e6
-
-	return percentiles
 }

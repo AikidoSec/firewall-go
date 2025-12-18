@@ -12,6 +12,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/machine"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
 	"github.com/AikidoSec/firewall-go/internal/agent/state"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
@@ -39,8 +40,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		return err
 	}
 
-	globals.StatsData.StartedAt = utils.GetTime()
-	globals.StatsData.MonitoredSinkTimings = make(map[string]aikido_types.MonitoredSinkTimings)
+	Stats().SetStartedAt(utils.GetTime())
 
 	client := cloud.NewClient(&cloud.ClientConfig{
 		Token:            aikidoConfig.Token,
@@ -98,7 +98,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 		slog.String("user", user),
 		slog.String("ip", ip))
 
-	go storeStats()
+	go stateCollector.Stats().OnRequest()
 	go stateCollector.StoreRoute(method, route, apiSpec)
 }
 
@@ -122,11 +122,11 @@ func OnAttackDetected(attack *DetectedAttack) {
 		client.SendAttackDetectedEvent(getAgentInfo(), attack.Request, attack.Attack)
 	}
 
-	storeAttackStats(attack.Attack.Blocked)
+	Stats().OnAttackDetected(attack.Attack.Blocked)
 }
 
 func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings) {
-	storeSinkStats(sink, stats)
+	Stats().OnSinkStats(sink, stats)
 }
 
 func OnMiddlewareInstalled() {
@@ -148,4 +148,8 @@ func SetCloudClient(client CloudClient) {
 	defer cloudClientMutex.Unlock()
 
 	cloudClient = client
+}
+
+func Stats() *stats.Stats {
+	return stateCollector.Stats()
 }
