@@ -36,6 +36,8 @@ func ipAllowed(remoteAddress string, endpoint config.Endpoint) bool {
 		return false
 	}
 
+	// If there are no allowed IPs configured (or they are all invalid)
+	// then, all IPs are allowed to access this endpoint.
 	if endpoint.AllowedIPAddresses.Count == 0 {
 		return true
 	}
