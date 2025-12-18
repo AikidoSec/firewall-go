@@ -9,6 +9,3 @@ var EnvironmentConfig *aikido_types.EnvironmentConfigData
 
 // Aikido config that contains info about endpoint, log_level, token, ...
 var AikidoConfig *aikido_types.AikidoConfigData
-
-// Global stats data, including mutex used to sync access to stats data across the go routines
-var StatsData aikido_types.StatsDataType

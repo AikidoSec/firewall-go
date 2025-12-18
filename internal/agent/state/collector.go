@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 )
 
 type Collector struct {
@@ -19,12 +20,15 @@ type Collector struct {
 	routes map[string]map[string]*aikido_types.Route
 
 	middlewareInstalled atomic.Bool
+
+	stats *stats.Stats
 }
 
 func NewCollector() *Collector {
 	return &Collector{
 		hostnames: make(map[string]map[uint32]uint64),
 		routes:    make(map[string]map[string]*aikido_types.Route),
+		stats:     stats.New(),
 	}
 }
 
@@ -34,4 +38,8 @@ func (c *Collector) SetMiddlewareInstalled(val bool) {
 
 func (c *Collector) IsMiddlewareInstalled() bool {
 	return c.middlewareInstalled.Load()
+}
+
+func (c *Collector) Stats() *stats.Stats {
+	return c.stats
 }
