@@ -266,3 +266,27 @@ func TestOnSinkStats(t *testing.T) {
 		assert.Equal(t, 3.0, sinkStats.CompressedTimings[0].AverageInMS, "Average should be calculated from all timings")
 	})
 }
+
+func TestOnRateLimited(t *testing.T) {
+	t.Run("increments rate limited count", func(t *testing.T) {
+		stats := New()
+
+		stats.OnRateLimit()
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 1, data.Requests.RateLimited, "rate limited should be incremented to 1")
+	})
+
+	t.Run("increments rate limited count multiple times", func(t *testing.T) {
+		stats := New()
+
+		stats.OnRateLimit()
+		stats.OnRateLimit()
+		stats.OnRateLimit()
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 3, data.Requests.RateLimited, "rate limited should be incremented to 3")
+	})
+}

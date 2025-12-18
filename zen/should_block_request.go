@@ -28,6 +28,8 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 		reqCtx.Method, reqCtx.Route, userID, reqCtx.GetIP(), reqCtx.GetRateLimitGroup(),
 	)
 	if rateLimitingStatus != nil && rateLimitingStatus.Block {
+		go agent.Stats().OnRateLimit()
+
 		log.Info("Request is rate-limited",
 			slog.String("ip", reqCtx.GetIP()), slog.String("trigger", rateLimitingStatus.Trigger))
 
