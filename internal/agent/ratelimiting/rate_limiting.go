@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
@@ -159,9 +159,9 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 // 1. Checks for exact route match first
 // 2. If no exact match, selects the most restrictive rate (lowest maxRequests / windowSizeInMS)
 func (rl *RateLimiter) findMatchingRateLimitEndpoint(method string, route string) *endpointData {
-	var endpointList []aikido_types.Endpoint
+	var endpointList []config.Endpoint
 	for key := range rl.rateLimitingMap {
-		endpointList = append(endpointList, aikido_types.Endpoint{
+		endpointList = append(endpointList, config.Endpoint{
 			Method: key.Method,
 			Route:  key.Route,
 		})

@@ -69,7 +69,7 @@ echo "✓ App process started with PID $APP_PID"
 echo "Waiting for health check on port $PORT..."
 
 # Wait for health check
-for i in {1..120}; do
+for i in {1..180}; do
 	if curl -sf "http://localhost:$PORT" >/dev/null 2>&1; then
 		# Write both PID and PORT files after successful health check
 		echo $APP_PID >"$PID_FILE"

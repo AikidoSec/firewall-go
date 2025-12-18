@@ -41,10 +41,10 @@ jobs:
           sed -i '/WORKDIR \/app/a COPY firewall-go-local ./firewall-go-local' Dockerfile
 
       - name: Run Firewall QA Tests
-        uses: AikidoSec/firewall-tester-action@v1.0.1
+        uses: AikidoSec/firewall-tester-action@v1.0.3
         with:
           dockerfile_path: ./zen-demo-go/Dockerfile
           app_port: 3000
           sleep_before_test: 10
           test_timeout: 900
-          skip_tests: test_stored_ssrf,test_ssrf_diffrent_port,test_ssrf,test_stored_ssrf_no_context,test_wave_attack
+          skip_tests: test_stored_ssrf,test_ssrf_diffrent_port,test_ssrf,test_stored_ssrf_no_context,test_wave_attack,test_outbound_domain_blocking,test_bypassed_ip

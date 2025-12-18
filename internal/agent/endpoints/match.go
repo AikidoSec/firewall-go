@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 )
 
 // RouteMetadata represents a limited context with method, and route.
@@ -16,15 +16,15 @@ type RouteMetadata struct {
 
 // FindMatches finds matching endpoints from a provided list based on the context.
 // This is the core matching logic that can be reused with any endpoint list.
-func FindMatches(endpoints []aikido_types.Endpoint, context RouteMetadata) []aikido_types.Endpoint {
-	var matches []aikido_types.Endpoint
+func FindMatches(endpoints []config.Endpoint, context RouteMetadata) []config.Endpoint {
+	var matches []config.Endpoint
 
 	if context.Method == "" {
 		return matches
 	}
 
 	// Filter possible endpoints based on method
-	var possible []aikido_types.Endpoint
+	var possible []config.Endpoint
 	for _, endpoint := range endpoints {
 		if endpoint.Method == "*" || endpoint.Method == context.Method {
 			possible = append(possible, endpoint)
@@ -46,7 +46,7 @@ func FindMatches(endpoints []aikido_types.Endpoint, context RouteMetadata) []aik
 		}
 	}
 
-	var wildcards []aikido_types.Endpoint
+	var wildcards []config.Endpoint
 
 	// Filter wildcards and sort by the number of '*' in the route
 	for _, endpoint := range possible {

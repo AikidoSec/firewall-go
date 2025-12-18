@@ -8,8 +8,8 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
+	"github.com/AikidoSec/firewall-go/internal/agent/ipaddr"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
 var (
@@ -23,68 +23,28 @@ type RateLimiting struct {
 	WindowSizeInMS int
 }
 
-type EndpointData struct {
-	ForceProtectionOff bool
-	RateLimiting       RateLimiting
-	AllowedIPAddresses map[string]bool
-}
-
 type EndpointKey struct {
 	Method string
 	Route  string
 }
 
-type IPMatchList struct {
-	Description string
-	TrieV4      *ipaddr.IPv4AddressTrie
-	TrieV6      *ipaddr.IPv6AddressTrie
-}
-
-func (list *IPMatchList) Matches(ip *ipaddr.IPAddress) bool {
-	if list.TrieV4 == nil || list.TrieV6 == nil {
-		return false
-	}
-
-	if (ip.IsIPv4() && list.TrieV4.ElementContains(ip.ToIPv4())) ||
-		(ip.IsIPv6() && list.TrieV6.ElementContains(ip.ToIPv6())) {
-		return true
-	}
-
-	return false
+type Endpoint struct {
+	Method             string                    `json:"method"`
+	Route              string                    `json:"route"`
+	ForceProtectionOff bool                      `json:"forceProtectionOff"`
+	Graphql            any                       `json:"graphql"`
+	AllowedIPAddresses ipaddr.MatchList          `json:"allowedIPAddresses"`
+	RateLimiting       aikido_types.RateLimiting `json:"rateLimiting"`
 }
 
 type ServiceConfigData struct {
 	ConfigUpdatedAt   time.Time
-	Endpoints         []aikido_types.Endpoint
+	Endpoints         []Endpoint
 	BlockedUserIDs    map[string]bool
-	BypassedIPs       IPMatchList
-	BlockedIPs        map[string]IPMatchList
+	BypassedIPs       ipaddr.MatchList
+	BlockedIPs        map[string]ipaddr.MatchList
 	BlockedUserAgents *regexp.Regexp
 	Block             bool
-}
-
-func buildIPMatchList(name, description string, ipsList []string) IPMatchList {
-	ipBlocklist := IPMatchList{
-		Description: description,
-		TrieV4:      &ipaddr.IPv4AddressTrie{},
-		TrieV6:      &ipaddr.IPv6AddressTrie{},
-	}
-
-	for _, ip := range ipsList {
-		ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
-		if err != nil {
-			log.Info("Invalid address", slog.String("name", name), slog.String("ip", ip))
-			continue
-		}
-
-		if ipAddress.IsIPv4() {
-			ipBlocklist.TrieV4.Add(ipAddress.ToIPv4())
-		} else if ipAddress.IsIPv6() {
-			ipBlocklist.TrieV6.Add(ipAddress.ToIPv6())
-		}
-	}
-
-	return ipBlocklist
 }
 
 func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockListConfig *aikido_types.ListsConfigData) {
@@ -97,13 +57,13 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockL
 
 	serviceConfig.ConfigUpdatedAt = time.UnixMilli(cloudConfigFromAgent.ConfigUpdatedAt)
 
-	var endpoints []aikido_types.Endpoint
+	var endpoints []Endpoint
 	for _, ep := range cloudConfigFromAgent.Endpoints {
-		endpoints = append(endpoints, aikido_types.Endpoint{
+		endpoints = append(endpoints, Endpoint{
 			Method:             ep.Method,
 			Route:              ep.Route,
 			ForceProtectionOff: ep.ForceProtectionOff,
-			AllowedIPAddresses: ep.AllowedIPAddresses,
+			AllowedIPAddresses: ipaddr.BuildMatchList("allowedIPs", "allowed", ep.AllowedIPAddresses),
 			RateLimiting: aikido_types.RateLimiting{
 				Enabled: ep.RateLimiting.Enabled,
 			},
@@ -116,7 +76,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockL
 		serviceConfig.BlockedUserIDs[userID] = true
 	}
 
-	serviceConfig.BypassedIPs = buildIPMatchList("bypassedIPs", "bypassed", cloudConfigFromAgent.BypassedIPs)
+	serviceConfig.BypassedIPs = ipaddr.BuildMatchList("bypassedIPs", "bypassed", cloudConfigFromAgent.BypassedIPs)
 
 	if cloudConfigFromAgent.Block == nil {
 		globals.AikidoConfig.ConfigMutex.Lock()
@@ -127,9 +87,9 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockL
 	}
 
 	if blockListConfig != nil {
-		serviceConfig.BlockedIPs = map[string]IPMatchList{}
+		serviceConfig.BlockedIPs = map[string]ipaddr.MatchList{}
 		for _, ipBlocklist := range blockListConfig.BlockedIPAddresses {
-			serviceConfig.BlockedIPs[ipBlocklist.Source] = buildIPMatchList(ipBlocklist.Source, ipBlocklist.Description, ipBlocklist.IPs)
+			serviceConfig.BlockedIPs[ipBlocklist.Source] = ipaddr.BuildMatchList(ipBlocklist.Source, ipBlocklist.Description, ipBlocklist.IPs)
 		}
 
 		if blockListConfig.BlockedUserAgents != "" {
@@ -159,7 +119,7 @@ func IsIPBlocked(ip string) (bool, string) {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()
 
-	ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
+	ipAddress, err := ipaddr.Parse(ip)
 	if err != nil {
 		log.Info("Invalid ip address", slog.String("ip", ip))
 		return false, ""
@@ -212,7 +172,7 @@ func IsIPBypassed(ip string) bool {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()
 
-	ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
+	ipAddress, err := ipaddr.Parse(ip)
 	if err != nil {
 		log.Debug("Invalid ip address", slog.String("ip", ip))
 		return false
@@ -221,7 +181,7 @@ func IsIPBypassed(ip string) bool {
 	return serviceConfig.BypassedIPs.Matches(ipAddress)
 }
 
-func GetEndpoints() []aikido_types.Endpoint {
+func GetEndpoints() []Endpoint {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()
 

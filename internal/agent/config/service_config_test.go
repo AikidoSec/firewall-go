@@ -625,53 +625,6 @@ func TestGetCloudConfigUpdatedAt(t *testing.T) {
 	})
 }
 
-func TestBuildIPBlocklist(t *testing.T) {
-	t.Run("builds IPv4 blocklist", func(t *testing.T) {
-		ips := []string{"192.168.1.1", "10.0.0.0/8"}
-		blocklist := buildIPMatchList("test", "Test list", ips)
-
-		assert.Equal(t, "Test list", blocklist.Description)
-		assert.NotNil(t, blocklist.TrieV4)
-		assert.NotNil(t, blocklist.TrieV6)
-	})
-
-	t.Run("builds IPv6 blocklist", func(t *testing.T) {
-		ips := []string{"2001:db8::1", "2001:db8::/32"}
-		blocklist := buildIPMatchList("test", "IPv6 list", ips)
-
-		assert.Equal(t, "IPv6 list", blocklist.Description)
-		assert.NotNil(t, blocklist.TrieV4)
-		assert.NotNil(t, blocklist.TrieV6)
-	})
-
-	t.Run("handles mixed IPv4 and IPv6", func(t *testing.T) {
-		ips := []string{"192.168.1.1", "2001:db8::1"}
-		blocklist := buildIPMatchList("mixed", "Mixed list", ips)
-
-		assert.Equal(t, "Mixed list", blocklist.Description)
-		assert.NotNil(t, blocklist.TrieV4)
-		assert.NotNil(t, blocklist.TrieV6)
-	})
-
-	t.Run("skips invalid IP addresses", func(t *testing.T) {
-		ips := []string{"192.168.1.1", "not-an-ip", "10.0.0.1"}
-		blocklist := buildIPMatchList("test", "Test", ips)
-
-		// Should not panic and should create tries
-		assert.NotNil(t, blocklist.TrieV4)
-		assert.NotNil(t, blocklist.TrieV6)
-	})
-
-	t.Run("handles empty IP list", func(t *testing.T) {
-		ips := []string{}
-		blocklist := buildIPMatchList("empty", "Empty list", ips)
-
-		assert.Equal(t, "Empty list", blocklist.Description)
-		assert.NotNil(t, blocklist.TrieV4)
-		assert.NotNil(t, blocklist.TrieV6)
-	})
-}
-
 func TestConcurrency(t *testing.T) {
 	setupTestGlobals()
 	defer resetServiceConfig()
