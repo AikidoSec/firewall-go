@@ -77,6 +77,7 @@ func collectLinkDeps(importcfgContent []byte, stderr io.Writer) map[string]bool 
 		archivePath := parts[1]
 		deps, err := internal.ReadLinkDeps(archivePath)
 		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: warning: could not read linkdeps: %v\n", err)
 			continue
 		}
 
