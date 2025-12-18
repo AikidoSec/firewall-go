@@ -15,6 +15,7 @@ type Stats struct {
 	startedAt            int64
 	requests             int
 	requestsAborted      int
+	requestsRateLimited  int
 	attacks              int
 	attacksBlocked       int
 	monitoredSinkTimings map[string]aikido_types.MonitoredSinkTimings
@@ -42,6 +43,7 @@ func (s *Stats) GetAndClear() aikido_types.Stats {
 				Total:   s.attacks,
 				Blocked: s.attacksBlocked,
 			},
+			RateLimited: s.requestsRateLimited,
 		},
 		Sinks: s.getAndClearSinks(),
 	}
@@ -49,6 +51,7 @@ func (s *Stats) GetAndClear() aikido_types.Stats {
 	s.startedAt = utils.GetTime()
 	s.requests = 0
 	s.requestsAborted = 0
+	s.requestsRateLimited = 0
 	s.attacks = 0
 	s.attacksBlocked = 0
 
@@ -122,4 +125,11 @@ func (s *Stats) OnSinkStats(sink string, stats *aikido_types.MonitoredSinkTiming
 	monitoredSinkTimings.Timings = append(monitoredSinkTimings.Timings, stats.Timings...)
 
 	s.monitoredSinkTimings[sink] = monitoredSinkTimings
+}
+
+func (s *Stats) OnRateLimit() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.requestsRateLimited++
 }
