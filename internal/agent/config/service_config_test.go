@@ -261,6 +261,14 @@ func TestIsIPBlocked(t *testing.T) {
 		assert.Empty(t, desc)
 	})
 
+	t.Run("handles invalid IP address", func(t *testing.T) {
+		resetServiceConfig()
+
+		blocked, desc := IsIPBlocked("not-an-ip")
+		assert.False(t, blocked)
+		assert.Empty(t, desc)
+	})
+
 	t.Run("handles empty blocklist", func(t *testing.T) {
 		resetServiceConfig()
 
