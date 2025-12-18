@@ -392,3 +392,99 @@ func (c *Cmd) Wait() error {
 	// Should have instrumented both Run and Start
 	assert.Equal(t, 2, strings.Count(resultStr, `"instrumented"`))
 }
+
+func TestInstrumentFile_PrependRule_StandaloneFunction(t *testing.T) {
+	src := `package os
+
+func OpenFile(name string, flag int, perm uint32) (*File, error) {
+	return nil, nil
+}
+
+type File struct{}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "file.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	prependRules := []PrependRule{
+		{
+			ID:        "os.OpenFile",
+			Package:   "os",
+			FuncNames: []string{"OpenFile"},
+			Imports: map[string]string{
+				"sink": "github.com/example/sink",
+			},
+			PrependTmpl: `if err := sink.Check({{ .Function.Argument 0 }}); err != nil { return nil, err }`,
+		},
+	}
+
+	inst := NewInstrumentorWithRules(nil, prependRules)
+	result, err := inst.InstrumentFile(tmpFile, "os")
+
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+	assert.Contains(t, result.Imports, "sink")
+
+	resultStr := string(result.Code)
+	assert.Contains(t, resultStr, "sink.Check(name)")
+	assert.Contains(t, resultStr, "return nil, err")
+}
+
+func TestInstrumentFile_PrependRule_StandaloneFunction_WrongPackage(t *testing.T) {
+	src := `package main
+
+func OpenFile(name string) error {
+	return nil
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	prependRules := []PrependRule{
+		{
+			ID:          "os.OpenFile",
+			Package:     "os", // Rule targets "os" package
+			FuncNames:   []string{"OpenFile"},
+			Imports:     map[string]string{},
+			PrependTmpl: `// prepended`,
+		},
+	}
+
+	inst := NewInstrumentorWithRules(nil, prependRules)
+	result, err := inst.InstrumentFile(tmpFile, "main") // Compiling "main" package
+
+	require.NoError(t, err)
+	assert.False(t, result.Modified)
+}
+
+func TestInstrumentFile_PrependRule_MethodNotMatchedByStandaloneFuncRule(t *testing.T) {
+	src := `package os
+
+type File struct{}
+
+func (f *File) OpenFile(name string) error {
+	return nil
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "file.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	prependRules := []PrependRule{
+		{
+			ID:          "os.OpenFile",
+			Package:     "os", // Standalone function rule
+			FuncNames:   []string{"OpenFile"},
+			Imports:     map[string]string{},
+			PrependTmpl: `// prepended`,
+		},
+	}
+
+	inst := NewInstrumentorWithRules(nil, prependRules)
+	result, err := inst.InstrumentFile(tmpFile, "os")
+
+	require.NoError(t, err)
+	// Should NOT match because OpenFile is a method, not a standalone function
+	assert.False(t, result.Modified)
+}

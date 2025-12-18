@@ -225,3 +225,36 @@ func TestLoadRulesFromDir_EmptyDir(t *testing.T) {
 	assert.Empty(t, rules.WrapRules)
 	assert.Empty(t, rules.PrependRules)
 }
+
+func TestLoadRulesFromFile_PrependRuleWithPackage(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: os
+  description: OS instrumentation
+
+rules:
+  - id: os.OpenFile
+    type: prepend
+    package: os
+    function: OpenFile
+    imports:
+      sink: github.com/example/sink
+    template: |
+      if err := sink.Check({{ .Function.Argument 0 }}); err != nil { return nil, err }
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	rules, err := loadRulesFromFile(yamlPath)
+	require.NoError(t, err)
+	require.Len(t, rules.PrependRules, 1)
+
+	assert.Equal(t, "os.OpenFile", rules.PrependRules[0].ID)
+	assert.Equal(t, "os", rules.PrependRules[0].Package)
+	assert.Equal(t, []string{"OpenFile"}, rules.PrependRules[0].FuncNames)
+	assert.Empty(t, rules.PrependRules[0].ReceiverType)
+	assert.Equal(t, map[string]string{"sink": "github.com/example/sink"}, rules.PrependRules[0].Imports)
+}
