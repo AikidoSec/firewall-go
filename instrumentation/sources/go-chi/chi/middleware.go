@@ -1,11 +1,13 @@
 package chi
 
 import (
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"net/netip"
 
 	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,7 +24,9 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 
 			var ip string
 			addrPort, err := netip.ParseAddrPort(r.RemoteAddr)
-			if err == nil {
+			if err != nil {
+				log.Debug("could not parse ip", slog.Any("error", err))
+			} else {
 				ip = addrPort.Addr().String()
 			}
 
