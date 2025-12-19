@@ -5,19 +5,30 @@ import (
 	"strconv"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/zen"
 )
 
-func Examine(r *http.Request) {
+func Examine(r *http.Request) error {
 	if r.URL == nil {
-		return
+		return nil
 	}
 
 	hostname := r.URL.Hostname()
 	port := getPort(r)
 
+	// Report any hostnames to the dashboard
 	go agent.OnDomain(hostname, uint32(port))
+
+	if config.ShouldBlockHostname(hostname) {
+		return zen.ErrOutboundBlocked(hostname)
+	}
+
+	return nil
 }
 
+// getPort number from [*http.Request]
+// Returns 0 for unsupported protocols
 func getPort(r *http.Request) uint32 {
 	portStr := r.URL.Port()
 	if portStr == "" {
