@@ -18,7 +18,10 @@ aspects:
             - github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http
           template: |-
             //go:linkname __aikido_http_do github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http.Examine
-            func __aikido_http_do(*Request)
+            func __aikido_http_do(*Request) error
       - prepend-statements:
           template: |-
-            __aikido_http_do({{ .Function.Argument 0 }})
+            err :=__aikido_http_do({{ .Function.Argument 0 }})
+            if err != nil {
+              return nil, err
+            }
