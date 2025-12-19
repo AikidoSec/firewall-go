@@ -150,6 +150,10 @@ func SetCloudClient(client CloudClient) {
 	cloudClient = client
 }
 
+func State() *state.Collector {
+	return stateCollector
+}
+
 func Stats() *stats.Stats {
 	return stateCollector.Stats()
 }
