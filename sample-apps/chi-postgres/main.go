@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/go-chi/chi/v5"
@@ -41,11 +43,16 @@ func main() {
 
 	// Start the server
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadHeaderTimeout: 2 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
-	err = http.ListenAndServe(":"+port, r)
-	if err != nil {
+
+	log.Printf("Starting HTTP server on :%s\n", port)
+	if err = server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }

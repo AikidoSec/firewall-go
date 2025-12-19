@@ -28,7 +28,7 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(pets)
+		_ = json.NewEncoder(w).Encode(pets)
 	})
 
 	r.Post("/api/create", func(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +44,7 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(fmt.Sprintf("%d", rowsCreated)))
+		_, _ = w.Write([]byte(fmt.Sprintf("%d", rowsCreated)))
 	})
 
 	r.Post("/api/execute", func(w http.ResponseWriter, r *http.Request) {
@@ -57,14 +57,14 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 
 		result := executeShellCommand(userCommand)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(result))
+		_, _ = w.Write([]byte(result))
 	})
 
 	r.Get("/api/execute/{command}", func(w http.ResponseWriter, r *http.Request) {
 		userCommand := chi.URLParam(r, "command")
 		result := executeShellCommand(userCommand)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(result))
+		_, _ = w.Write([]byte(result))
 	})
 
 	r.Post("/api/request", func(w http.ResponseWriter, r *http.Request) {
@@ -75,14 +75,13 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 		}
 		response := makeHTTPRequest(req.URL)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	})
 
 	r.Get("/api/read", func(w http.ResponseWriter, r *http.Request) {
 		filePath := r.URL.Query().Get("path")
 		content := readFile(filePath)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(content))
+		_, _ = w.Write([]byte(content))
 	})
 }
-

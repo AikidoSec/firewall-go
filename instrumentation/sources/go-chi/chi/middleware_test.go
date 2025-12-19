@@ -174,7 +174,7 @@ func TestMiddlewarePreservesBodyForJSON(t *testing.T) {
 		bodyReadInHandler = data["username"].(string)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(data)
+		_ = json.NewEncoder(w).Encode(data)
 	})
 
 	jsonBody := `{"username":"bob","email":"bob@example.com"}`
@@ -199,7 +199,7 @@ func TestMiddlewarePreservesBodyForURLEncoded(t *testing.T) {
 		username := r.FormValue("username")
 		bodyReadInHandler = username
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	formData := "username=bob&password=secret"
@@ -224,7 +224,7 @@ func TestMiddlewarePreservesBodyForMultipart(t *testing.T) {
 		field1 := r.FormValue("field1")
 		fieldReadInHandler = field1
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	body := &bytes.Buffer{}
@@ -254,7 +254,7 @@ func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
 		require.NoError(t, err, "Should be able to read raw body after form parsing in middleware")
 		bodyReadInHandler = string(bodyBytes)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	originalBody := "username=bob&password=secret"
@@ -267,4 +267,3 @@ func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
 	assert.Equal(t, originalBody, bodyReadInHandler)
 	assert.Equal(t, 200, w.Code)
 }
-

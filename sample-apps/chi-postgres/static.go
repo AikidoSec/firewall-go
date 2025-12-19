@@ -14,7 +14,7 @@ func defineStaticRoutes(r *chi.Mux) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+		_ = tmpl.Execute(w, nil)
 	})
 
 	r.Get("/pages/execute", func(w http.ResponseWriter, r *http.Request) {
@@ -23,7 +23,7 @@ func defineStaticRoutes(r *chi.Mux) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+		_ = tmpl.Execute(w, nil)
 	})
 
 	r.Get("/pages/create", func(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +32,7 @@ func defineStaticRoutes(r *chi.Mux) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+		_ = tmpl.Execute(w, nil)
 	})
 
 	r.Get("/pages/request", func(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +41,7 @@ func defineStaticRoutes(r *chi.Mux) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+		_ = tmpl.Execute(w, nil)
 	})
 
 	r.Get("/pages/read", func(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +50,6 @@ func defineStaticRoutes(r *chi.Mux) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tmpl.Execute(w, nil)
+		_ = tmpl.Execute(w, nil)
 	})
 }
-
