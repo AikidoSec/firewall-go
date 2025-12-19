@@ -135,6 +135,7 @@ jobs:
           - echo-pgx-sql
           - gin-pgx-native
           - gin-sqlx
+          - chi-postgres
 
     steps:
       - name: Checkout code
