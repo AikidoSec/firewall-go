@@ -42,11 +42,15 @@ func GetMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Run post request in defer to still trigger it on panics
+		// It may not run depending where the recovery middleware sits in the middleware chain
+		defer func() {
+			statusCode := c.Writer.Status()
+			http.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
+		}()
+
 		request.WrapWithGLS(reqCtx, func() {
 			c.Next()
 		})
-
-		statusCode := c.Writer.Status()
-		http.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
 	}
 }
