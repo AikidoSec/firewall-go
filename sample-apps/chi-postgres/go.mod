@@ -1,10 +1,11 @@
-module http-postgres
+module chi-postgres
 
 go 1.24.2
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
 	github.com/DataDog/orchestrion v1.6.1
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/jackc/pgx/v4 v4.18.3
 )
 
@@ -19,7 +20,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/scrubber v0.72.3 // indirect
 	github.com/DataDog/datadog-agent/pkg/version v0.72.3 // indirect
 	github.com/DataDog/datadog-go/v5 v5.8.1 // indirect
-	github.com/DataDog/dd-trace-go/v2 v2.4.0 // indirect
+	github.com/DataDog/dd-trace-go/v2 v2.4.0-dev.0.20251125184406-f68b7377d731 // indirect
 	github.com/DataDog/go-libddwaf/v4 v4.7.0 // indirect
 	github.com/DataDog/go-runtime-metrics-internal v0.0.4-0.20250806100345-ca5e7fdaf7b6 // indirect
 	github.com/DataDog/go-sqllexer v0.1.10 // indirect
@@ -53,7 +54,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/gin-gonic/gin v1.11.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -131,6 +131,7 @@ require (
 	go.opentelemetry.io/collector/component v1.46.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.46.0 // indirect
 	go.opentelemetry.io/collector/pdata v1.46.0 // indirect
+	go.opentelemetry.io/collector/pdata/pprofile v0.140.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect

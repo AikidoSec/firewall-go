@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://datadoghq.dev/orchestrion/schema.json
+meta:
+  name: github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi
+  description: Chi is a lightweight, idiomatic and composable router for building Go HTTP services.
+
+aspects:
+  - id: NewMux
+    join-point:
+      function-call: github.com/go-chi/chi/v5.NewMux
+    advice:
+      - wrap-expression:
+          imports:
+            chi: github.com/go-chi/chi/v5
+            zenchi: github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi
+          template: |-
+            func() *chi.Mux {
+              r := {{ . }}
+              r.Use(zenchi.GetMiddleware())
+              return r
+            }()
+  - id: NewRouter
+    join-point:
+      function-call: github.com/go-chi/chi/v5.NewRouter
+    advice:
+      - wrap-expression:
+          imports:
+            chi: github.com/go-chi/chi/v5
+            zenchi: github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi
+          template: |-
+            func() *chi.Mux {
+              r := {{ . }}
+              r.Use(zenchi.GetMiddleware())
+              return r
+            }()
