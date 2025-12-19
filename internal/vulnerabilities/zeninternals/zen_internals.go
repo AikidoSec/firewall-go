@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/tetratelabs/wazero"
@@ -34,7 +35,7 @@ var (
 	interpreterRuntime wazero.Runtime
 	compilerRuntime    wazero.Runtime
 	compiledWasm       atomic.Pointer[compiledModule]
-	wasmPool           sync.Pool
+	wasmPool           *Pool
 	compileOnce        sync.Once
 	initOnce           sync.Once
 )
@@ -58,6 +59,7 @@ type wasmInstance struct {
 	detectSQL  api.Function
 	memory     api.Memory
 	isCompiled bool // Track if this instance uses the compiled module
+	createdAt  time.Time
 }
 
 // Init initializes the zen-internals library by verifying the WASM binary checksum,
@@ -83,9 +85,9 @@ func Init() error {
 			go compileModuleAsync()
 		})
 
-		wasmPool = sync.Pool{
-			New: newWasmInstance,
-		}
+		wasmPool = NewPool(
+			newWasmInstance,
+		)
 
 		log.Debug("Loaded zen-internals library, compilation in progress!")
 	})
@@ -113,7 +115,7 @@ func hasCompileFinished() bool {
 	return compiledWasm.Load() != nil
 }
 
-func newWasmInstance() any {
+func newWasmInstance() *wasmInstance {
 	var mod api.Module
 	var err error
 
@@ -141,6 +143,7 @@ func newWasmInstance() any {
 		detectSQL:  mod.ExportedFunction("detect_sql_injection"),
 		memory:     mod.Memory(),
 		isCompiled: usingCompiled,
+		createdAt:  time.Now(),
 	}
 }
 
@@ -148,8 +151,8 @@ func newWasmInstance() any {
 func DetectSQLInjection(query string, userInput string, dialect int) int {
 	ctx := context.Background()
 
-	inst, ok := wasmPool.Get().(*wasmInstance)
-	if !ok || inst == nil {
+	inst, err := wasmPool.Get()
+	if err != nil {
 		log.Error("Failed to get WASM instance from pool")
 		return 0
 	}

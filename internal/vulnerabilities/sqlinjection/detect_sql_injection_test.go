@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/zeninternals"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -245,7 +246,11 @@ func TestShouldReturnEarly(t *testing.T) {
 }
 
 func BenchmarkDetectSQLInjection(b *testing.B) {
+	require.NoError(b, zeninternals.Init())
+
 	tests := getBenchmarkTests()
+
+	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
