@@ -4,12 +4,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/netip"
-	"sync/atomic"
 
 	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
-	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // GetMiddleware returns middleware that will create contexts of incoming requests.
@@ -62,15 +61,13 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 			}
 
 			// Wrap the ResponseWriter to capture the status code
-			recorder := &statusRecorder{
-				writer: w,
-			}
+			recorder := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
 			request.WrapWithGLS(reqCtx, func() {
 				next.ServeHTTP(recorder, wrappedR)
 			})
 
-			zenhttp.OnPostRequest(reqCtx, recorder.statusCode)
+			zenhttp.OnPostRequest(reqCtx, recorder.Status())
 		})
 	}
 }
@@ -97,38 +94,6 @@ func getRoutePattern(r *http.Request) (string, chi.RouteParams) {
 
 	// tctx has the updated pattern, since Match mutates it
 	return tctx.RoutePattern(), tctx.URLParams
-}
-
-type statusRecorder struct {
-	writer     http.ResponseWriter
-	statusCode int
-	written    atomic.Bool
-}
-
-func (r *statusRecorder) Unwrap() http.ResponseWriter {
-	log.Debug("response writer unwrapped, api spec may be lost")
-	return r.writer
-}
-
-func (r *statusRecorder) WriteHeader(statusCode int) {
-	// Only capture the first status code written.
-	// WriteHeader can be called multiple times, but only the first call matters.
-	if r.written.CompareAndSwap(false, true) {
-		r.statusCode = statusCode
-	}
-	r.writer.WriteHeader(statusCode)
-}
-
-func (r *statusRecorder) Write(b []byte) (int, error) {
-	// If WriteHeader was never called, the status code defaults to 200 OK
-	if r.written.CompareAndSwap(false, true) {
-		r.statusCode = http.StatusOK
-	}
-	return r.writer.Write(b)
-}
-
-func (r *statusRecorder) Header() http.Header {
-	return r.writer.Header()
 }
 
 type requestParser struct {
