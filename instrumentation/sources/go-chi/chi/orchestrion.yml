@@ -6,21 +6,14 @@ meta:
 aspects:
   - id: NewMux
     join-point:
-      function-call: github.com/go-chi/chi/v5.NewMux
-    advice:
-      - wrap-expression:
-          imports:
-            chi: github.com/go-chi/chi/v5
-            zenchi: github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi
-          template: |-
-            func() *chi.Mux {
-              r := {{ . }}
-              r.Use(zenchi.GetMiddleware())
-              return r
-            }()
-  - id: NewRouter
-    join-point:
-      function-call: github.com/go-chi/chi/v5.NewRouter
+      all-of:
+        - one-of:
+            - function-call: github.com/go-chi/chi/v5.NewMux
+            - function-call: github.com/go-chi/chi/v5.NewRouter
+        - not:
+            one-of:
+              - import-path: github.com/go-chi/chi/v5
+              - import-path: github.com/go-chi/chi/v5/middleware
     advice:
       - wrap-expression:
           imports:
