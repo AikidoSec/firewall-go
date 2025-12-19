@@ -3,6 +3,7 @@ package gin
 import (
 	"github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,6 +13,11 @@ func GetMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c == nil {
 			return // Don't investigate empty requests.
+		}
+
+		if zen.IsDisabled() {
+			c.Next()
+			return
 		}
 
 		ip := c.ClientIP()

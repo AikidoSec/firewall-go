@@ -11,6 +11,10 @@ import (
 )
 
 func ShouldBlockRequest(ctx context.Context) *BlockResponse {
+	if IsDisabled() {
+		return nil
+	}
+
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil || !reqCtx.MarkMiddlewareExecuted() {
 		return nil // Do not run middleware twice.

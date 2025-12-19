@@ -19,6 +19,10 @@ func Examine(query string, op string) error {
 // This function is called by the instrumentation framework to scan SQL queries
 // before they are executed against the database.
 func ExamineContext(ctx context.Context, query string, op string) error {
+	if zen.IsDisabled() {
+		return nil
+	}
+
 	err := vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
 		Statement: query,
 		Dialect:   "default",

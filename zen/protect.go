@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/agent"
@@ -50,9 +51,27 @@ func ErrAttackBlocked(kind vulnerabilities.AttackKind) error {
 }
 
 var (
-	protectOnce sync.Once
-	protectErr  error
+	protectOnce   sync.Once
+	protectErr    error
+	isZenDisabled atomic.Bool
 )
+
+func init() {
+	// Initialize the disabled flag based on environment variable at package load time
+	isZenDisabled.Store(getEnvBool("AIKIDO_DISABLE"))
+}
+
+// setDisabledForTesting sets the disabled state for testing purposes.
+// This should only be used in tests within the zen package.
+func setDisabledForTesting(disabled bool) {
+	isZenDisabled.Store(disabled)
+}
+
+// SetDisabled overrides the disabled state.
+// This is intended for testing scenarios where you need to test disabled behavior.
+func SetDisabled(disabled bool) {
+	isZenDisabled.Store(disabled)
+}
 
 // Config holds configuration options for the Zen firewall
 type Config struct {
@@ -86,6 +105,10 @@ func Protect() error {
 // Empty config fields fall back to environment variables.
 func ProtectWithConfig(cfg *Config) error {
 	protectOnce.Do(func() {
+		if IsDisabled() {
+			// Do not run any Zen features when the disabled flag is on
+			return
+		}
 		doProtect(cfg)
 	})
 
@@ -203,4 +226,10 @@ func populateConfigFromEnv(cfg *Config) *Config {
 func getEnvBool(name string) bool {
 	v := strings.ToLower(os.Getenv(name))
 	return v == "true" || v == "1"
+}
+
+// IsDisabled returns true if zen processing is disabled via the AIKIDO_DISABLE environment variable.
+// This is used by the instrumentation to conditionally skip processing when Zen is disabled.
+func IsDisabled() bool {
+	return isZenDisabled.Load()
 }
