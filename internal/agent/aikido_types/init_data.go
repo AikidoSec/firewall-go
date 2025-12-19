@@ -6,12 +6,13 @@ import (
 )
 
 type EnvironmentConfigData struct {
-	PlatformName     string `json:"platform_name"`               // Platform name (fpm-fcgi, cli-server, ...)
-	PlatformVersion  string `json:"platform_version"`            // Language version
-	Endpoint         string `json:"endpoint,omitempty"`          // default: 'https://guard.aikido.dev/'
-	RealtimeEndpoint string `json:"realtime_endpoint,omitempty"` // default: 'https://runtime.aikido.dev/'
-	Library          string `json:"library,omitempty"`           // default: 'firewall-php'
-	Version          string `json:"version,omitempty"`           // Version of the agent
+	PlatformName     string // Platform name (fpm-fcgi, cli-server, ...)
+	PlatformVersion  string // Language version
+	Endpoint         string // default: 'https://guard.aikido.dev/'
+	RealtimeEndpoint string // default: 'https://runtime.aikido.dev/'
+	Library          string // default: 'firewall-php'
+	Version          string // Version of the agent
+	ZenDisabled      bool
 }
 
 type AikidoConfigData struct {
