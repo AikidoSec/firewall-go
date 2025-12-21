@@ -11,8 +11,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	zengin "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -264,4 +266,47 @@ func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
 
 	assert.Equal(t, originalBody, bodyReadInHandler)
 	assert.Equal(t, 200, w.Code)
+}
+
+func TestMiddlewareCallsOnPostRequest(t *testing.T) {
+	router := gin.New()
+	router.ContextWithFallback = true
+	router.Use(zengin.GetMiddleware())
+
+	router.GET("/route/:id", func(c *gin.Context) {
+	})
+
+	r := httptest.NewRequest("GET", "/route/foo?query=value", nil)
+	w := httptest.NewRecorder()
+
+	agent.Stats().GetAndClear()
+
+	router.ServeHTTP(w, r)
+
+	require.Eventually(t, func() bool {
+		stats := agent.Stats().GetAndClear()
+		return stats.Requests.Total == 1
+	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestMiddlewareCallsOnPostRequestOnPanic(t *testing.T) {
+	router := gin.Default()
+	router.ContextWithFallback = true
+	router.Use(zengin.GetMiddleware())
+
+	router.GET("/route/:id", func(c *gin.Context) {
+		panic("error")
+	})
+
+	r := httptest.NewRequest("GET", "/route/foo?query=value", nil)
+	w := httptest.NewRecorder()
+
+	agent.Stats().GetAndClear()
+
+	router.ServeHTTP(w, r)
+
+	require.Eventually(t, func() bool {
+		stats := agent.Stats().GetAndClear()
+		return stats.Requests.Total == 1
+	}, 100*time.Millisecond, 10*time.Millisecond)
 }

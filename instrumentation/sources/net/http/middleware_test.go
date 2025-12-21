@@ -12,7 +12,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -245,4 +247,22 @@ func TestExtractRouteParams(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestMiddlewareCallsOnPostRequest(t *testing.T) {
+	handler := Middleware(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	w := httptest.NewRecorder()
+
+	agent.Stats().GetAndClear()
+
+	handler(w, r)
+
+	require.Eventually(t, func() bool {
+		stats := agent.Stats().GetAndClear()
+		return stats.Requests.Total == 1
+	}, 100*time.Millisecond, 10*time.Millisecond)
 }
