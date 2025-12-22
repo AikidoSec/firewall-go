@@ -49,23 +49,21 @@ func (p *Pool) Get() (*wasmInstance, error) {
 //
 // WARNING: caller must hold the pool mutex.
 func (p *Pool) tryGetInstance() *wasmInstance {
-	if len(p.idleInstances) > 0 {
-		instance := p.idleInstances[len(p.idleInstances)-1]
-		p.idleInstances = p.idleInstances[:len(p.idleInstances)-1]
-
-		// Check age of instance, if it's too old, we should discard it
-		if instance.createdAt.Before(time.Now().Add(-instanceMaxAge)) {
-			if instance.mod != nil {
-				instance.mod.Close(context.Background())
-			}
-
-			return nil
-		}
-
-		return instance
+	if len(p.idleInstances) == 0 {
+		return p.newInstance()
 	}
 
-	instance := p.newInstance()
+	instance := p.idleInstances[len(p.idleInstances)-1]
+	p.idleInstances = p.idleInstances[:len(p.idleInstances)-1]
+
+	// Discard if too old
+	if time.Since(instance.createdAt) > instanceMaxAge {
+		if instance.mod != nil {
+			instance.mod.Close(context.Background())
+		}
+		return nil
+	}
+
 	return instance
 }
 
