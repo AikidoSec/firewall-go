@@ -15,6 +15,7 @@ func Examine(r *http.Request) {
 	hostname := r.URL.Hostname()
 	port := getPort(r)
 
+	// Unsupported protocol
 	if port == 0 {
 		return
 	}
