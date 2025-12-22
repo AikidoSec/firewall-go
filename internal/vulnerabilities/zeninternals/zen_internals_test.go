@@ -35,10 +35,6 @@ func TestNewWasmInstance(t *testing.T) {
 	// Test that newWasmInstance returns the correct type
 	instance := newWasmInstance()
 	require.NotNil(t, instance, "newWasmInstance should not return nil")
-
-	// Type assertion to verify it's a *wasmInstance
-	_, ok := instance.(*wasmInstance)
-	require.True(t, ok, "newWasmInstance should return *wasmInstance")
 }
 
 func TestDetectSQLInjection(t *testing.T) {
@@ -278,9 +274,7 @@ func TestCompilationAndPooling(t *testing.T) {
 	// After compilation, new instances should use compiled module
 	inst := newWasmInstance()
 	require.NotNil(t, inst)
-	wasmInst, ok := inst.(*wasmInstance)
-	require.True(t, ok)
-	require.True(t, wasmInst.isCompiled, "Should use compiled module after compilation")
+	require.True(t, inst.isCompiled, "Should use compiled module after compilation")
 
 	// Verify it works
 	result = DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(MySQL))
