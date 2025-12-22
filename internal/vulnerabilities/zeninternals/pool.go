@@ -30,7 +30,8 @@ func (p *Pool) Get() (*wasmInstance, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	// Loop through max idle + 1 to ensure run through all available instances
+	// Loop through max idle + 1 to ensure we can loop through all potentially expired instances,
+	// and still get a new instance.
 	for range maxIdleInstances + 1 {
 		instance := p.tryGetInstance()
 		if instance != nil {
