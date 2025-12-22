@@ -1,6 +1,7 @@
 package zeninternals
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -40,13 +41,20 @@ func (p *Pool) Get() (*wasmInstance, error) {
 	return nil, errors.New("could not acquire instance")
 }
 
+// tryGetInstance checks if there's an available idle instance. If there is,
+// it will remove it from the idle list and return it. If not, it will create a new instance.
+//
+// This is an internal method and should not be used by consumers of the pool, use [Pool.Get].
+//
+// WARNING: caller must hold the pool mutex.
 func (p *Pool) tryGetInstance() *wasmInstance {
 	if len(p.idleInstances) > 0 {
 		instance := p.idleInstances[len(p.idleInstances)-1]
 		p.idleInstances = p.idleInstances[:len(p.idleInstances)-1]
 
-		// Check health of instance
+		// Check age of instance, if it's too old, we should discard it
 		if instance.createdAt.Before(time.Now().Add(-instanceMaxAge)) {
+			instance.mod.Close(context.Background())
 			return nil
 		}
 
