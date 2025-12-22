@@ -54,7 +54,10 @@ func (p *Pool) tryGetInstance() *wasmInstance {
 
 		// Check age of instance, if it's too old, we should discard it
 		if instance.createdAt.Before(time.Now().Add(-instanceMaxAge)) {
-			instance.mod.Close(context.Background())
+			if instance.mod != nil {
+				instance.mod.Close(context.Background())
+			}
+
 			return nil
 		}
 
