@@ -29,7 +29,7 @@ func TestMiddleware_Disabled(t *testing.T) {
 		require.Nil(t, reqCtx, "Request context should not be created when zen is disabled")
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	wrappedHandler := zenhttp.WrapHandler(handler)
