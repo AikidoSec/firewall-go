@@ -55,7 +55,7 @@ type OutboundConnectionBlocked struct {
 }
 
 func (e *OutboundConnectionBlocked) Error() string {
-	return fmt.Sprintf("zen blocked outbound connection to %s", e.Hostname)
+	return fmt.Sprintf("zen has blocked an outbound connection to %s", e.Hostname)
 }
 
 // ErrOutboundBlocked returns an error indicating that an outbound connection was blocked.
