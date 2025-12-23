@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"strings"
-	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
@@ -51,8 +50,6 @@ func getEndpointURL(token string) string {
 	}
 }
 
-var zenDisabled atomic.Bool
-
 // Init initializes the configuration system, extracting region from token to determine default endpoint URL if not set.
 // Returns an error if setting the log level fails.
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
@@ -84,8 +81,6 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		serviceConfig.Block = true
 	}
 
-	zenDisabled.Store(environmentConfig.ZenDisabled)
-
 	return nil
 }
 
@@ -103,8 +98,4 @@ func SetBlocking(blocking bool) {
 	defer serviceConfigMutex.Unlock()
 
 	serviceConfig.Block = blocking
-}
-
-func IsZenDisabled() bool {
-	return zenDisabled.Load()
 }
