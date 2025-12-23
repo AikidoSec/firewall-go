@@ -1,6 +1,6 @@
 //go:build !integration
 
-package exec_test
+package pgx_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec"
+	"github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExamine_Disabled(t *testing.T) {
+func TestExamineContext_Disabled(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
 
@@ -34,7 +34,7 @@ func TestExamine_Disabled(t *testing.T) {
 	mockClient := testutil.NewMockCloudClient()
 	agent.SetCloudClient(mockClient)
 
-	req := httptest.NewRequest("GET", "/test?cmd=rm%20-rf%20%2F", nil)
+	req := httptest.NewRequest("GET", "/test?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -45,11 +45,11 @@ func TestExamine_Disabled(t *testing.T) {
 	zen.SetDisabled(true)
 	require.True(t, zen.IsDisabled(), "zen should be disabled")
 
-	maliciousArgs := []string{"sh", "-c", "echo hello; rm -rf /"}
+	maliciousQuery := "SELECT * FROM users WHERE id = '1' OR 1=1"
 
-	err := exec.Examine(ctx, maliciousArgs, "os/exec.Command")
+	err := pgx.ExamineContext(ctx, maliciousQuery, "github.com/jackc/pgx/v5.Query")
 
-	require.NoError(t, err, "Examine should return early with no error when zen is disabled")
+	require.NoError(t, err, "ExamineContext should return early with no error when zen is disabled")
 
 	select {
 	case <-mockClient.AttackDetectedEventSent:
