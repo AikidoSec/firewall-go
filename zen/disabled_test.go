@@ -10,10 +10,10 @@ import (
 )
 
 func TestDisabledAPI(t *testing.T) {
-	originalDisabled := isZenDisabled.Load()
-	defer setDisabledForTesting(originalDisabled)
+	originalDisabled := IsDisabled()
+	defer SetDisabled(originalDisabled)
 
-	setDisabledForTesting(true)
+	SetDisabled(true)
 
 	t.Run("IsDisabled returns true", func(t *testing.T) {
 		require.True(t, IsDisabled())

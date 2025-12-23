@@ -1,16 +1,16 @@
 //go:build !integration
 
-package gin_test
+package echo_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	zengin "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
+	zenecho "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,24 +22,23 @@ func TestMiddleware_Disabled(t *testing.T) {
 
 	require.True(t, zen.IsDisabled())
 
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-	router.Use(zengin.GetMiddleware())
+	e := echo.New()
+	e.Use(zenecho.GetMiddleware())
 
 	handlerCalled := false
-	router.GET("/test", func(c *gin.Context) {
+	e.GET("/test", func(c echo.Context) error {
 		handlerCalled = true
 
-		reqCtx := request.GetContext(c.Request.Context())
+		reqCtx := request.GetContext(c.Request().Context())
 		require.Nil(t, reqCtx, "Request context should not be created when zen is disabled")
 
-		c.String(http.StatusOK, "ok")
+		return c.String(http.StatusOK, "ok")
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	e.ServeHTTP(w, req)
 
 	require.True(t, handlerCalled)
 	require.Equal(t, http.StatusOK, w.Code)

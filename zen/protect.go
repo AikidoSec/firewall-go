@@ -61,14 +61,11 @@ func init() {
 	isZenDisabled.Store(getEnvBool("AIKIDO_DISABLE"))
 }
 
-// setDisabledForTesting sets the disabled state for testing purposes.
-// This should only be used in tests within the zen package.
-func setDisabledForTesting(disabled bool) {
-	isZenDisabled.Store(disabled)
-}
-
-// SetDisabled overrides the disabled state.
-// This is intended for testing scenarios where you need to test disabled behavior.
+// SetDisabled controls whether Zen firewall processing is enabled or disabled.
+// When disabled is true, all Zen security checks are bypassed, including instrumentation
+// and middleware processing. This overrides the AIKIDO_DISABLE environment variable.
+//
+// This is commonly used in testing to verify application behavior with the firewall disabled.
 func SetDisabled(disabled bool) {
 	isZenDisabled.Store(disabled)
 }
@@ -228,8 +225,8 @@ func getEnvBool(name string) bool {
 	return v == "true" || v == "1"
 }
 
-// IsDisabled returns true if zen processing is disabled via the AIKIDO_DISABLE environment variable.
-// This is used by the instrumentation to conditionally skip processing when Zen is disabled.
+// IsDisabled returns true if Zen firewall processing is currently disabled.
+// The disabled state is determined by the AIKIDO_DISABLE environment variable at startup.
 func IsDisabled() bool {
 	return isZenDisabled.Load()
 }

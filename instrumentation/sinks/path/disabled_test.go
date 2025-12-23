@@ -1,20 +1,20 @@
-package internal
+//go:build !integration
+
+package path_test
 
 import (
-	"context"
-	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/instrumentation/sinks/path"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/require"
 )
 
-func TestExamineCommand_Disabled(t *testing.T) {
+func TestExamine_Disabled(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
 
@@ -31,22 +31,12 @@ func TestExamineCommand_Disabled(t *testing.T) {
 	mockClient := testutil.NewMockCloudClient()
 	agent.SetCloudClient(mockClient)
 
-	req := httptest.NewRequest("GET", "/test?cmd=rm%20-rf%20%2F", nil)
-	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-	})
-
 	zen.SetDisabled(true)
 	require.True(t, zen.IsDisabled(), "zen should be disabled")
 
-	maliciousArgs := []string{"sh", "-c", "echo hello; rm -rf /"}
+	maliciousArgs := []string{"../../", "etc/", "passwd"}
 
-	err := examineCommand(ctx, "os/exec.Command", maliciousArgs)
-
-	require.NoError(t, err, "Should not detect shell injection when zen is disabled")
+	path.Examine(maliciousArgs)
 
 	select {
 	case <-mockClient.AttackDetectedEventSent:
