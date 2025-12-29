@@ -9,8 +9,6 @@ import (
 )
 
 func TestMergeDataSchemas(t *testing.T) {
-	assert := assert.New(t)
-
 	// Example 1
 	schema1 := GetDataSchema(map[string]any{"test": "abc"}, 0)
 	schema2 := GetDataSchema(map[string]any{"test2": "abc"}, 0)
@@ -27,7 +25,7 @@ func TestMergeDataSchemas(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected1, MergeDataSchemas(schema1, schema2))
+	assert.Equal(t, expected1, MergeDataSchemas(schema1, schema2))
 
 	// Example 2
 	schema3 := GetDataSchema(map[string]any{"test": "abc", "x": map[string]any{"a": 1}}, 0)
@@ -53,7 +51,7 @@ func TestMergeDataSchemas(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected2, MergeDataSchemas(schema3, schema4))
+	assert.Equal(t, expected2, MergeDataSchemas(schema3, schema4))
 
 	// Example 3
 	schema5 := GetDataSchema(map[string]any{"test": "abc", "x": map[string]any{"a": 1}, "arr": []int{1, 2}}, 0)
@@ -84,12 +82,10 @@ func TestMergeDataSchemas(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected3, MergeDataSchemas(schema5, schema6))
+	assert.Equal(t, expected3, MergeDataSchemas(schema5, schema6))
 }
 
 func TestPreferNonNullType(t *testing.T) {
-	assert := assert.New(t)
-
 	schema1 := GetDataSchema(map[string]any{"test": "abc"}, 0)
 	schema2 := GetDataSchema(nil, 0)
 	expected1 := &aikido_types.DataSchema{
@@ -100,31 +96,27 @@ func TestPreferNonNullType(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected1, MergeDataSchemas(schema1, schema2))
-	assert.Equal(expected1, MergeDataSchemas(schema2, schema1))
+	assert.Equal(t, expected1, MergeDataSchemas(schema1, schema2))
+	assert.Equal(t, expected1, MergeDataSchemas(schema2, schema1))
 }
 
 func TestEmptyArray(t *testing.T) {
-	assert := assert.New(t)
-
 	schema1 := GetDataSchema([]any{}, 0)
 	expected := &aikido_types.DataSchema{
 		Type:  []string{"array"},
 		Items: nil,
 	}
-	assert.Equal(expected, MergeDataSchemas(schema1, schema1))
+	assert.Equal(t, expected, MergeDataSchemas(schema1, schema1))
 }
 
 func TestMergeTypes(t *testing.T) {
-	assert := assert.New(t)
-
 	// Example 1
 	schema1 := GetDataSchema("str", 0)
 	schema2 := GetDataSchema(15, 0)
 	expected := &aikido_types.DataSchema{
 		Type: []string{"string", "number"},
 	}
-	assert.Equal(expected, MergeDataSchemas(schema1, schema2))
+	assert.Equal(t, expected, MergeDataSchemas(schema1, schema2))
 
 	// Example 2: Cannot merge object with primitive type
 	schema3 := GetDataSchema(map[string]any{"test": "abc"}, 0)
@@ -137,7 +129,7 @@ func TestMergeTypes(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected2, MergeDataSchemas(schema3, schema4))
+	assert.Equal(t, expected2, MergeDataSchemas(schema3, schema4))
 
 	// Example 3: Merge string and boolean types
 	schema5 := GetDataSchema(map[string]any{"test": "abc"}, 0)
@@ -150,10 +142,10 @@ func TestMergeTypes(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected3, MergeDataSchemas(schema5, schema6))
+	assert.Equal(t, expected3, MergeDataSchemas(schema5, schema6))
 
 	// Additional nested merges
-	assert.Equal(expected3, MergeDataSchemas(schema5, MergeDataSchemas(schema5, schema6)))
+	assert.Equal(t, expected3, MergeDataSchemas(schema5, MergeDataSchemas(schema5, schema6)))
 
 	expected4 := &aikido_types.DataSchema{
 		Type: []string{"object"},
@@ -163,7 +155,7 @@ func TestMergeTypes(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected4, MergeDataSchemas(MergeDataSchemas(GetDataSchema(map[string]any{"test": true}, 0), GetDataSchema(map[string]any{"test": "test"}, 0)), GetDataSchema(map[string]any{"test": "abc"}, 0)))
+	assert.Equal(t, expected4, MergeDataSchemas(MergeDataSchemas(GetDataSchema(map[string]any{"test": true}, 0), GetDataSchema(map[string]any{"test": "test"}, 0)), GetDataSchema(map[string]any{"test": "abc"}, 0)))
 
 	expected5 := &aikido_types.DataSchema{
 		Type: []string{"object"},
@@ -173,5 +165,5 @@ func TestMergeTypes(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expected5, MergeDataSchemas(schema5, MergeDataSchemas(GetDataSchema(map[string]any{"test": 123}, 0), GetDataSchema(map[string]any{"test": true}, 0))))
+	assert.Equal(t, expected5, MergeDataSchemas(schema5, MergeDataSchemas(GetDataSchema(map[string]any{"test": 123}, 0), GetDataSchema(map[string]any{"test": true}, 0))))
 }
