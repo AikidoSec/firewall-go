@@ -1,7 +1,6 @@
 package zen
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,20 +8,12 @@ import (
 
 func TestPopulateConfigFromEnv(t *testing.T) {
 	// Set up test environment
-	os.Setenv("AIKIDO_LOG_LEVEL", "DEBUG")
-	os.Setenv("AIKIDO_LOG_FORMAT", "json")
-	os.Setenv("AIKIDO_DEBUG", "true")
-	os.Setenv("AIKIDO_TOKEN", "test-token")
-	os.Setenv("AIKIDO_ENDPOINT", "https://test.example.com")
-	os.Setenv("AIKIDO_REALTIME_ENDPOINT", "https://runtime.test.example.com")
-	defer func() {
-		os.Unsetenv("AIKIDO_LOG_LEVEL")
-		os.Unsetenv("AIKIDO_LOG_FORMAT")
-		os.Unsetenv("AIKIDO_DEBUG")
-		os.Unsetenv("AIKIDO_TOKEN")
-		os.Unsetenv("AIKIDO_ENDPOINT")
-		os.Unsetenv("AIKIDO_REALTIME_ENDPOINT")
-	}()
+	t.Setenv("AIKIDO_LOG_LEVEL", "DEBUG")
+	t.Setenv("AIKIDO_LOG_FORMAT", "json")
+	t.Setenv("AIKIDO_DEBUG", "true")
+	t.Setenv("AIKIDO_TOKEN", "test-token")
+	t.Setenv("AIKIDO_ENDPOINT", "https://test.example.com")
+	t.Setenv("AIKIDO_REALTIME_ENDPOINT", "https://runtime.test.example.com")
 
 	t.Run("nil config", func(t *testing.T) {
 		result := populateConfigFromEnv(nil)
