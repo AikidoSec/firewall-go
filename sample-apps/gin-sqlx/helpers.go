@@ -46,4 +46,3 @@ func readFile(filePath string) string {
 	}
 	return string(content)
 }
-

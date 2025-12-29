@@ -93,4 +93,3 @@ func connectToDb() *sql.DB {
 
 	return db
 }
-
