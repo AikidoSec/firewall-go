@@ -19,12 +19,12 @@ func isSafelyEncapsulated(command, userInput string) bool {
 
 		// Get the character before and after the user input
 		charBeforeUserInput := ""
-		if len(currentSegment) > 0 {
+		if currentSegment != "" {
 			charBeforeUserInput = currentSegment[len(currentSegment)-1:]
 		}
 
 		charAfterUserInput := ""
-		if len(nextSegment) > 0 {
+		if nextSegment != "" {
 			charAfterUserInput = nextSegment[:1]
 		}
 

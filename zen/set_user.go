@@ -15,12 +15,10 @@ var ErrUserIDOrNameEmpty = errors.New("user id or name cannot be empty")
 // blocking and rate limiting. This function must be called before the Zen
 // middleware is executed.
 func SetUser(ctx context.Context, id string, name string) (context.Context, error) {
-	// Validate :
-	if len(id) == 0 || len(name) == 0 {
+	if id == "" || name == "" {
 		return ctx, ErrUserIDOrNameEmpty
 	}
 
-	// Get context :
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil || reqCtx.HasMiddlewareExecuted() {
 		log.Info("zen.SetUser(...) must be called before the Zen middleware is executed.")
