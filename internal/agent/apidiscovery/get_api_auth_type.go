@@ -47,9 +47,10 @@ func GetApiAuthType(headers map[string][]string, cookies map[string]string) []*a
 
 // getAuthorizationHeaderType returns the authentication type from the Authorization header.
 func getAuthorizationHeaderType(authHeader string) *aikido_types.APIAuthType {
-	if len(authHeader) == 0 {
+	if authHeader == "" {
 		return nil
 	}
+
 	if strings.Contains(authHeader, " ") {
 		parts := strings.Split(authHeader, " ")
 		if len(parts) == 2 {

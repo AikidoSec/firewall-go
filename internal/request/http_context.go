@@ -28,7 +28,7 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 	}
 
 	route := data.Route
-	if len(route) == 0 {
+	if route == "" {
 		route = r.URL.Path // Use path from URL as default.
 	}
 
