@@ -3,6 +3,7 @@
 package echo_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestEchoIsAutomaticallyInstrumented(t *testing.T) {
 		return nil
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)

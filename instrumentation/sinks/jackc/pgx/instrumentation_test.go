@@ -4,6 +4,7 @@ package pgx_test
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
@@ -36,7 +37,7 @@ func setupTestWithBlocking(t *testing.T) (*mockCloudClient, context.Context, *pg
 	}
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
+	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -80,7 +81,7 @@ func setupTestWithoutBlocking(t *testing.T) (*mockCloudClient, context.Context, 
 	}
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
+	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -417,7 +418,7 @@ func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 	}
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", nil)
+	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",

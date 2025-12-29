@@ -71,7 +71,7 @@ func TestTryExtractFormBody(t *testing.T) {
 
 func TestTryExtractFormBody_EmptyData(t *testing.T) {
 	t.Run("nil body with populated PostForm returns PostForm", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", http.NoBody)
 		req.PostForm = url.Values{"username": []string{"alice"}}
 
 		parser := &mockParser{req: req}
@@ -82,7 +82,7 @@ func TestTryExtractFormBody_EmptyData(t *testing.T) {
 	})
 
 	t.Run("nil body with nil PostForm returns nil", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", http.NoBody)
 
 		parser := &mockParser{req: req}
 		result := tryExtractFormBody(req, parser)
@@ -130,7 +130,7 @@ func TestTryExtractBody(t *testing.T) {
 	})
 
 	t.Run("returns nil when no body", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", http.NoBody)
 
 		parser := &mockParser{req: req}
 		result := TryExtractBody(req, parser)

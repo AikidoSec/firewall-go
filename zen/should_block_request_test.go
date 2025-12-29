@@ -67,7 +67,7 @@ func createRequestContext(t *testing.T, method, route, ip string, userID, userNa
 
 func createRequestContextWithGroup(t *testing.T, method, route, ip string, userID, userName, groupID string) context.Context {
 	t.Helper()
-	req := httptest.NewRequest(method, route, nil)
+	req := httptest.NewRequest(method, route, http.NoBody)
 	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
 		Route:         route,
@@ -93,7 +93,7 @@ func TestShouldBlockRequest(t *testing.T) {
 }
 
 func TestShouldBlockRequest_BlockedUser(t *testing.T) {
-	req := httptest.NewRequest("GET", "/route", nil)
+	req := httptest.NewRequest("GET", "/route", http.NoBody)
 	ip := "127.0.0.1"
 	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -232,7 +232,7 @@ func ExampleShouldBlockRequest() {
 	mux := authMiddleware(zenMiddleware(handler))
 
 	// Test the middleware chain
-	req, _ := http.NewRequest("GET", "/", nil)
+	req, _ := http.NewRequest("GET", "/", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 

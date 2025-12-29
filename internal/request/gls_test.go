@@ -19,7 +19,7 @@ func TestWrapWithGLS(t *testing.T) {
 		{
 			name: "context with request context",
 			setupCtx: func() context.Context {
-				req, _ := http.NewRequest("GET", "https://example.com/test", nil)
+				req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
 				req.Header.Set("User-Agent", "test-agent")
 				req.RemoteAddr = "192.168.1.1:8080"
 
@@ -94,7 +94,7 @@ func TestWrapWithGLS_ConcurrentAccess(t *testing.T) {
 		blockers[i] = make(chan struct{})
 
 		go func(id int) {
-			req, _ := http.NewRequest("GET", fmt.Sprintf("https://example.com/req%d", id), nil)
+			req, _ := http.NewRequest("GET", fmt.Sprintf("https://example.com/req%d", id), http.NoBody)
 			req.RemoteAddr = fmt.Sprintf("192.168.1.%d:8080", id)
 			ctx := SetContext(context.Background(), req, ContextData{
 				Source:        fmt.Sprintf("source%d", id),

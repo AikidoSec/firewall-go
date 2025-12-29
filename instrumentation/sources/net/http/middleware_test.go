@@ -89,7 +89,7 @@ func TestMiddlewareAddsContext(t *testing.T) {
 		}, ctx.Query)
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler(w, r)
@@ -105,7 +105,7 @@ func TestMiddlewareGLSFallback(t *testing.T) {
 		assert.Equal(t, "/route", ctx.Route)
 	})
 
-	r := httptest.NewRequest("GET", "/route", nil)
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler(w, r)
@@ -238,7 +238,7 @@ func TestExtractRouteParams(t *testing.T) {
 			mux := http.NewServeMux()
 			mux.HandleFunc(tt.pattern, func(w http.ResponseWriter, r *http.Request) {})
 
-			req := httptest.NewRequest("GET", tt.path, nil)
+			req := httptest.NewRequest("GET", tt.path, http.NoBody)
 			w := httptest.NewRecorder()
 
 			mux.ServeHTTP(w, req)
@@ -254,7 +254,7 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	agent.Stats().GetAndClear()

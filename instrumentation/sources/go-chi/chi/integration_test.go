@@ -30,7 +30,7 @@ func TestChiNewRouterIsAutomaticallyInstrumented(t *testing.T) {
 		}, ctx.Query)
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -52,7 +52,7 @@ func TestChiNewMuxIsAutomaticallyInstrumented(t *testing.T) {
 		}, ctx.Query)
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)

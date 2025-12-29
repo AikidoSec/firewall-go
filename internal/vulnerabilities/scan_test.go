@@ -54,7 +54,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "query parameters are scanned",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("GET", "/test?param1=attack&param2=safe", nil)
+				return httptest.NewRequest("GET", "/test?param1=attack&param2=safe", http.NoBody)
 			},
 			body:        nil,
 			expectError: true,
@@ -63,7 +63,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "headers are scanned",
 			setupReq: func() *http.Request {
-				req := httptest.NewRequest("GET", "/test", nil)
+				req := httptest.NewRequest("GET", "/test", http.NoBody)
 				req.Header.Set("X-Custom-Header", "attack")
 				return req
 			},
@@ -74,7 +74,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "cookies are scanned",
 			setupReq: func() *http.Request {
-				req := httptest.NewRequest("GET", "/test", nil)
+				req := httptest.NewRequest("GET", "/test", http.NoBody)
 				req.AddCookie(&http.Cookie{Name: "session", Value: "attack"})
 				return req
 			},
@@ -85,7 +85,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "route params are scanned",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("GET", "/test", nil)
+				return httptest.NewRequest("GET", "/test", http.NoBody)
 			},
 			body:        nil,
 			routeParams: map[string]string{"id": "attack"},
@@ -95,7 +95,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "body is scanned - string",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("POST", "/test", nil)
+				return httptest.NewRequest("POST", "/test", http.NoBody)
 			},
 			body:        "attack",
 			expectError: true,
@@ -104,7 +104,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "body is scanned - map",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("POST", "/test", nil)
+				return httptest.NewRequest("POST", "/test", http.NoBody)
 			},
 			body:        map[string]any{"field": "attack"},
 			expectError: true,
@@ -113,7 +113,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "body is scanned - nested map",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("POST", "/test", nil)
+				return httptest.NewRequest("POST", "/test", http.NoBody)
 			},
 			body: map[string]any{
 				"user": map[string]any{
@@ -126,7 +126,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "body is scanned - array",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("POST", "/test", nil)
+				return httptest.NewRequest("POST", "/test", http.NoBody)
 			},
 			body:        []any{"attack", "safe"},
 			expectError: true,
@@ -135,7 +135,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "query with multiple values per key",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("GET", "/test?param=value1&param=value2&param=attack", nil)
+				return httptest.NewRequest("GET", "/test?param=value1&param=value2&param=attack", http.NoBody)
 			},
 			body:        nil,
 			expectError: true,
@@ -144,7 +144,7 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 		{
 			name: "headers with multiple values",
 			setupReq: func() *http.Request {
-				req := httptest.NewRequest("GET", "/test", nil)
+				req := httptest.NewRequest("GET", "/test", http.NoBody)
 				req.Header.Add("X-Header", "value1")
 				req.Header.Add("X-Header", "attack")
 				return req
@@ -194,7 +194,7 @@ func TestScanWithOptions_AllSourcesScannedWhenNoAttack(t *testing.T) {
 	}
 
 	// Use unique values for each source to verify they're all scanned
-	req := httptest.NewRequest("GET", "/test?queryParam=queryValue", nil)
+	req := httptest.NewRequest("GET", "/test?queryParam=queryValue", http.NoBody)
 	req.Header.Set("X-Header", "headerValue")
 	req.AddCookie(&http.Cookie{Name: "cookie1", Value: "cookieValue"})
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
@@ -266,7 +266,7 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 		{
 			name: "force protection off should not scan",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("POST", "/api/danger?param1=attack&param2=safe", nil)
+				return httptest.NewRequest("POST", "/api/danger?param1=attack&param2=safe", http.NoBody)
 			},
 			body:        nil,
 			expectError: false,
@@ -275,7 +275,7 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 		{
 			name: "wildcards should be respected",
 			setupReq: func() *http.Request {
-				req := httptest.NewRequest("GET", "/api/wildcard", nil)
+				req := httptest.NewRequest("GET", "/api/wildcard", http.NoBody)
 				req.Header.Set("X-Custom-Header", "attack")
 				return req
 			},
@@ -286,7 +286,7 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 		{
 			name: "force protection off should still scan",
 			setupReq: func() *http.Request {
-				req := httptest.NewRequest("GET", "/api/safe", nil)
+				req := httptest.NewRequest("GET", "/api/safe", http.NoBody)
 				req.AddCookie(&http.Cookie{Name: "session", Value: "attack"})
 				return req
 			},
@@ -296,7 +296,7 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 		{
 			name: "unmatched routes should scan",
 			setupReq: func() *http.Request {
-				return httptest.NewRequest("GET", "/api/danger?param1=attack&param2=safe", nil)
+				return httptest.NewRequest("GET", "/api/danger?param1=attack&param2=safe", http.NoBody)
 			},
 			body:        nil,
 			expectError: true,
