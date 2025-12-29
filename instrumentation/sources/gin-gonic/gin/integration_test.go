@@ -3,6 +3,7 @@
 package gin_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestGinIsAutomaticallyInstrumented(t *testing.T) {
 		}, ctx.Query)
 	})
 
-	r := httptest.NewRequest("GET", "/route?query=value", nil)
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)

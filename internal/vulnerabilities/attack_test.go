@@ -3,6 +3,7 @@ package vulnerabilities
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
@@ -92,7 +93,7 @@ func TestBuildAttackDetectedError(t *testing.T) {
 
 func TestGetAttackDetected(t *testing.T) {
 	ip := "127.0.0.1"
-	req := httptest.NewRequest("POST", "/api/users", nil)
+	req := httptest.NewRequest("POST", "/api/users", http.NoBody)
 	req.Header.Set("Content-Type", "application/json")
 
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
@@ -159,7 +160,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 
 	t.Run("stores attack and error in context", func(t *testing.T) {
 		ip := "127.0.0.1"
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequest("GET", "/test", http.NoBody)
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
 			Route:         "/test",
@@ -196,7 +197,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 
 	t.Run("does not store error when blocking is disabled", func(t *testing.T) {
 		ip := "127.0.0.1"
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequest("GET", "/test", http.NoBody)
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
 			Route:         "/test",
@@ -265,7 +266,7 @@ func TestReportDeferredAttack(t *testing.T) {
 		agent.SetCloudClient(client)
 
 		ip := "127.0.0.1"
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequest("GET", "/test", http.NoBody)
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
 			Route:         "/test",
@@ -296,7 +297,7 @@ func TestReportDeferredAttack(t *testing.T) {
 		agent.SetCloudClient(client)
 
 		ip := "127.0.0.1"
-		req := httptest.NewRequest("GET", "/test", nil)
+		req := httptest.NewRequest("GET", "/test", http.NoBody)
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
 			Route:         "/test",

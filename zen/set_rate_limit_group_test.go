@@ -16,7 +16,7 @@ import (
 func TestSetRateLimitGroup(t *testing.T) {
 	t.Run("ValidInput", func(t *testing.T) {
 		// Setup
-		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
@@ -40,7 +40,7 @@ func TestSetRateLimitGroup(t *testing.T) {
 
 	t.Run("EmptyID", func(t *testing.T) {
 		// Setup
-		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
@@ -79,7 +79,7 @@ func TestSetRateLimitGroup(t *testing.T) {
 
 	t.Run("MiddlewareAlreadyExecuted", func(t *testing.T) {
 		// Setup
-		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
@@ -113,7 +113,7 @@ func ExampleSetRateLimitGroup() {
 	}
 
 	// Create a test request
-	req, _ := http.NewRequest("GET", "/test", nil)
+	req, _ := http.NewRequest("GET", "/test", http.NoBody)
 	ctx := context.Background()
 
 	// Set rate limit group in context

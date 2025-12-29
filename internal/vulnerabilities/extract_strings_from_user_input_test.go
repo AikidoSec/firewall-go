@@ -87,7 +87,6 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
-
 	})
 
 	t.Run("it can extract cookie objects", func(t *testing.T) {
@@ -289,5 +288,4 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
 	})
-
 }

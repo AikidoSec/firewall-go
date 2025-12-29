@@ -22,7 +22,7 @@ func TestGetPort(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		req, _ := http.NewRequest("GET", tt.url, nil)
+		req, _ := http.NewRequest("GET", tt.url, http.NoBody)
 		assert.Equal(t, tt.expected, getPort(req), tt.url)
 	}
 }

@@ -5,6 +5,7 @@ package os_test
 import (
 	"context"
 	"io/fs"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -71,7 +72,7 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 	}
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -135,7 +136,7 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 	}
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",

@@ -40,7 +40,7 @@ func TestMiddlewareAddsContext(t *testing.T) {
 		}, ctx.RouteParams)
 	})
 
-	r := httptest.NewRequest("GET", "/route/foo?query=value", nil)
+	r := httptest.NewRequest("GET", "/route/foo?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -59,7 +59,7 @@ func TestMiddlewareGLSFallback(t *testing.T) {
 		assert.Equal(t, "/route", ctx.Route)
 	})
 
-	r := httptest.NewRequest("GET", "/route", nil)
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -98,7 +98,7 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 	router.Get("/admin", func(w http.ResponseWriter, r *http.Request) {})
 
 	t.Run("blocked ip", func(t *testing.T) {
-		r := httptest.NewRequest("GET", "/route", nil)
+		r := httptest.NewRequest("GET", "/route", http.NoBody)
 		r.RemoteAddr = "127.0.0.1:1234"
 		w := httptest.NewRecorder()
 
@@ -110,7 +110,7 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 	})
 
 	t.Run("blocked user agent", func(t *testing.T) {
-		r := httptest.NewRequest("GET", "/route", nil)
+		r := httptest.NewRequest("GET", "/route", http.NoBody)
 		r.Header.Set("User-Agent", "bot-test")
 		w := httptest.NewRecorder()
 
@@ -122,7 +122,7 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 	})
 
 	t.Run("block route with unapproved ip", func(t *testing.T) {
-		r := httptest.NewRequest("GET", "/admin", nil)
+		r := httptest.NewRequest("GET", "/admin", http.NoBody)
 		r.RemoteAddr = "192.168.1.1:1234"
 		w := httptest.NewRecorder()
 
@@ -134,7 +134,7 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 	})
 
 	t.Run("allow route with approved ip", func(t *testing.T) {
-		r := httptest.NewRequest("GET", "/admin", nil)
+		r := httptest.NewRequest("GET", "/admin", http.NoBody)
 		r.RemoteAddr = "192.168.0.1:4321"
 		w := httptest.NewRecorder()
 
@@ -154,7 +154,7 @@ func BenchmarkMiddleware(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			r := httptest.NewRequest("GET", "/route", nil)
+			r := httptest.NewRequest("GET", "/route", http.NoBody)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
 		}

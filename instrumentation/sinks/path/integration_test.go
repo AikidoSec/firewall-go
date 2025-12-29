@@ -5,6 +5,7 @@ package path_test
 import (
 	"context"
 	"io/fs"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path"
@@ -84,7 +85,7 @@ func TestJoinPathInjectionBlockIsDeferred(t *testing.T) {
 	client := newMockClient()
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -147,7 +148,7 @@ func TestJoinPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 	client := newMockClient()
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -209,7 +210,7 @@ func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 	client := newMockClient()
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",
@@ -250,7 +251,7 @@ func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
 	}
 	agent.SetCloudClient(client)
 
-	req := httptest.NewRequest("GET", "/route?path=../test.txt", nil)
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
 	ctx := request.SetContext(context.Background(), req, request.ContextData{
 		Source:        "test",

@@ -4,6 +4,7 @@ package exec_test
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"os/exec"
 	"testing"
@@ -25,7 +26,7 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 
 	t.Run("MethodCoverage", func(t *testing.T) {
 		// Simple test to verify each exec method is instrumented
-		req := httptest.NewRequest("GET", "/route?cmd=ls%20.", nil)
+		req := httptest.NewRequest("GET", "/route?cmd=ls%20.", http.NoBody)
 		ip := "127.0.0.1"
 		ctx := request.SetContext(context.Background(), req, request.ContextData{
 			Source:        "test",
@@ -124,7 +125,7 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				req := httptest.NewRequest("GET", "/route?"+tc.queryParam, nil)
+				req := httptest.NewRequest("GET", "/route?"+tc.queryParam, http.NoBody)
 				ip := "127.0.0.1"
 				ctx := request.SetContext(context.Background(), req, request.ContextData{
 					Source:        "test",
@@ -147,7 +148,7 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 		}
 
 		t.Run("shell injection via positional parameters", func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/route?target=8.8.8.8%3Bcat%20/etc/passwd", nil)
+			req := httptest.NewRequest("GET", "/route?target=8.8.8.8%3Bcat%20/etc/passwd", http.NoBody)
 			ip := "127.0.0.1"
 			ctx := request.SetContext(context.Background(), req, request.ContextData{
 				Source:        "test",
@@ -167,7 +168,7 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 		})
 
 		t.Run("multiple positional parameters with injection", func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/route?arg1=safe&arg2=malicious%3Brm%20-rf%20/", nil)
+			req := httptest.NewRequest("GET", "/route?arg1=safe&arg2=malicious%3Brm%20-rf%20/", http.NoBody)
 			ip := "127.0.0.1"
 			ctx := request.SetContext(context.Background(), req, request.ContextData{
 				Source:        "test",
@@ -188,7 +189,7 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 		})
 
 		t.Run("safe positional parameter not referenced", func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/route?unused=malicious%3Brm%20-rf%20/", nil)
+			req := httptest.NewRequest("GET", "/route?unused=malicious%3Brm%20-rf%20/", http.NoBody)
 			ip := "127.0.0.1"
 			ctx := request.SetContext(context.Background(), req, request.ContextData{
 				Source:        "test",

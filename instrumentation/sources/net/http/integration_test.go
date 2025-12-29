@@ -32,7 +32,7 @@ func TestServeMuxIsAutomaticallyInstrumented(t *testing.T) {
 		}, ctx.RouteParams)
 	})
 
-	r := httptest.NewRequest("GET", "/route/abc?query=value", nil)
+	r := httptest.NewRequest("GET", "/route/abc?query=value", http.NoBody)
 	w := httptest.NewRecorder()
 
 	mux.ServeHTTP(w, r)
