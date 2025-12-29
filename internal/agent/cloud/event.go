@@ -57,7 +57,8 @@ func (c *Client) sendCloudRequest(endpoint string, route string, method string, 
 	var body io.Reader
 
 	if payload != nil {
-		jsonData, err := json.Marshal(payload)
+		var jsonData []byte
+		jsonData, err = json.Marshal(payload)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal payload: %v", err)
 		}
@@ -77,8 +78,8 @@ func (c *Client) sendCloudRequest(endpoint string, route string, method string, 
 		return nil, fmt.Errorf("failed to make request: %v", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Warn("failed to close response body", slog.Any("error", err))
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Warn("failed to close response body", slog.Any("error", closeErr))
 		}
 	}()
 
