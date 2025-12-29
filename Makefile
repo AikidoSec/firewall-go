@@ -1,5 +1,6 @@
 ZEN_INTERNALS_VERSION=v0.1.55
 ORCHESTRION_VERSION=v1.6.1
+GOLANGCI_LINT_VERSION=v2.7.1
 
 TOOLS_BIN := $(shell pwd)/tools/bin
 
@@ -9,7 +10,7 @@ install-tools:
 	@cd tools && GOBIN=$(TOOLS_BIN) go install gotest.tools/gotestsum
 	@echo "✅ gotestsum installed successfully"
 	@echo "Installing golangci-lint"
-	@cd tools && GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	@GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	@echo "✅ golangci-lint installed successfully"
 	@echo "Installing orchestrion"
 	@GOBIN=$(TOOLS_BIN) go install github.com/DataDog/orchestrion
