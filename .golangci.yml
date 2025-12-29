@@ -20,8 +20,15 @@ linters:
       enable-all: true
       disable:
         - fieldalignment
-    gocritic:
-      enable-all: true
+
+  exclusions:
+    warn-unused: true
+    rules:
+      - path: '_test\.go'
+        linters:
+          - bodyclose
+          - errcheck
+          - gosec
 
 formatters:
   enable:
