@@ -3,8 +3,11 @@ package zeninternals
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 const (
@@ -59,7 +62,10 @@ func (p *Pool) tryGetInstance() *wasmInstance {
 	// Discard if too old
 	if time.Since(instance.createdAt) > instanceMaxAge {
 		if instance.mod != nil {
-			instance.mod.Close(context.Background())
+			err := instance.mod.Close(context.Background())
+			if err != nil {
+				log.Debug("instance could not be closed", slog.Any("error", err))
+			}
 		}
 		return nil
 	}
