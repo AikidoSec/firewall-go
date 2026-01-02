@@ -128,6 +128,17 @@ lint-fix:
 	@$(MAKE) lint FLAGS=--fix
 	@$(MAKE) lint-integration FLAGS=--fix
 
+.PHONY: tidy
+tidy:
+	@echo "🧹 Running go mod tidy in all modules..."
+	@echo "📦 Tidying root module"
+	@go mod tidy
+	@for dir in $$(find . -name go.mod -not -path "./go.mod" -exec dirname {} \;); do \
+		echo "📦 Tidying module in $$dir"; \
+		(cd $$dir && go mod tidy) || exit 1; \
+	done
+	@echo "✅ All modules tidied successfully"
+
 BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/$(ZEN_INTERNALS_VERSION)
 FILES = \
 		libzen_internals.wasm \

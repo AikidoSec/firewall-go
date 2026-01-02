@@ -2,60 +2,74 @@ package ipaddr
 
 import (
 	"log/slog"
+	"net/netip"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/seancfoley/ipaddress-go/ipaddr"
+	"go4.org/netipx"
 )
 
 type MatchList struct {
 	Description string
-	TrieV4      *ipaddr.IPv4AddressTrie
-	TrieV6      *ipaddr.IPv6AddressTrie
+	ipSet       *netipx.IPSet
 	Count       int
 }
 
-func (list *MatchList) Matches(ip *ipaddr.IPAddress) bool {
-	if list.TrieV4 == nil || list.TrieV6 == nil {
+func (list *MatchList) Matches(ip netip.Addr) bool {
+	if list.ipSet == nil {
 		return false
 	}
 
-	if (ip.IsIPv4() && list.TrieV4.ElementContains(ip.ToIPv4())) ||
-		(ip.IsIPv6() && list.TrieV6.ElementContains(ip.ToIPv6())) {
-		return true
-	}
-
-	return false
+	return list.ipSet.Contains(ip)
 }
 
 func BuildMatchList(name, description string, ipsList []string) MatchList {
-	ipBlocklist := MatchList{
-		Description: description,
-		TrieV4:      &ipaddr.IPv4AddressTrie{},
-		TrieV6:      &ipaddr.IPv6AddressTrie{},
-	}
-
 	count := 0
+	builder := &netipx.IPSetBuilder{}
 
 	for _, ip := range ipsList {
-		ipAddress, err := ipaddr.NewIPAddressString(ip).ToAddress()
-		if err != nil {
-			log.Info("Invalid address", slog.String("name", name), slog.String("ip", ip))
+		prefix, err := netip.ParsePrefix(ip)
+		if err == nil {
+			builder.AddPrefix(prefix)
+			count++
 			continue
 		}
 
-		if ipAddress.IsIPv4() {
-			ipBlocklist.TrieV4.Add(ipAddress.ToIPv4())
-		} else if ipAddress.IsIPv6() {
-			ipBlocklist.TrieV6.Add(ipAddress.ToIPv6())
+		parsedIP, err := netip.ParseAddr(ip)
+		if err == nil {
+			builder.Add(parsedIP)
+			count++
+			continue
 		}
-		count++
+
+		log.Info("Invalid address", slog.String("name", name), slog.String("ip", ip))
 	}
 
-	ipBlocklist.Count = count
+	ipSet, err := builder.IPSet()
+	if err != nil {
+		log.Warn("Failed to build IP set", slog.String("name", name), slog.Any("error", err))
+		return MatchList{
+			Description: description,
+			ipSet:       nil,
+			Count:       0,
+		}
+	}
 
-	return ipBlocklist
+	return MatchList{
+		Description: description,
+		ipSet:       ipSet,
+		Count:       count,
+	}
 }
 
-func Parse(ip string) (*ipaddr.IPAddress, error) {
-	return ipaddr.NewIPAddressString(ip).ToAddress()
+func Parse(ip string) (netip.Addr, error) {
+	result, err := netip.ParseAddr(ip)
+	if err != nil {
+		return netip.Addr{}, err
+	}
+
+	if result.Is4In6() {
+		return result.Unmap(), nil
+	}
+
+	return result, nil
 }

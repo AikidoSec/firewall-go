@@ -9,9 +9,9 @@ require (
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/jtolds/gls v4.20.0+incompatible
 	github.com/labstack/echo/v4 v4.13.4
-	github.com/seancfoley/ipaddress-go v1.7.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tetratelabs/wazero v1.9.0
+	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 )
 
 require (
@@ -108,7 +108,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/seancfoley/bintree v1.3.1 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.1 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.10 // indirect
 	github.com/theckman/httpforwarded v0.4.0 // indirect
