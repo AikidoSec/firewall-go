@@ -54,17 +54,18 @@ func (c *CloudConfigData) UpdatedAt() time.Time {
 	return time.UnixMilli(c.ConfigUpdatedAt)
 }
 
-type BlockedIPsData struct {
+type IPList struct {
 	Source      string   `json:"source"`
 	Description string   `json:"description"`
 	IPs         []string `json:"ips"`
 }
 
 type ListsConfigData struct {
-	Success            bool             `json:"success"`
-	ServiceID          int              `json:"serviceId"`
-	BlockedIPAddresses []BlockedIPsData `json:"blockedIPAddresses"`
-	BlockedUserAgents  string           `json:"blockedUserAgents"`
+	Success            bool     `json:"success"`
+	ServiceID          int      `json:"serviceId"`
+	BlockedIPAddresses []IPList `json:"blockedIPAddresses"`
+	BlockedUserAgents  string   `json:"blockedUserAgents"`
+	AllowedIPAddresses []IPList `json:"allowedIPAddresses"`
 }
 
 type CloudConfigUpdatedAt struct {

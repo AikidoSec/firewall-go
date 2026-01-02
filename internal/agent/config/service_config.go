@@ -42,12 +42,13 @@ type ServiceConfigData struct {
 	Endpoints         []Endpoint
 	BlockedUserIDs    map[string]bool
 	BypassedIPs       ipaddr.MatchList
+	AllowedIPs        map[string]ipaddr.MatchList
 	BlockedIPs        map[string]ipaddr.MatchList
 	BlockedUserAgents *regexp.Regexp
 	Block             bool
 }
 
-func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockListConfig *aikido_types.ListsConfigData) {
+func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsConfig *aikido_types.ListsConfigData) {
 	if cloudConfigFromAgent == nil {
 		return
 	}
@@ -86,14 +87,31 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockL
 		serviceConfig.Block = *cloudConfigFromAgent.Block
 	}
 
-	if blockListConfig != nil {
-		serviceConfig.BlockedIPs = map[string]ipaddr.MatchList{}
-		for _, ipBlocklist := range blockListConfig.BlockedIPAddresses {
-			serviceConfig.BlockedIPs[ipBlocklist.Source] = ipaddr.BuildMatchList(ipBlocklist.Source, ipBlocklist.Description, ipBlocklist.IPs)
+	if listsConfig != nil {
+		serviceConfig.AllowedIPs = map[string]ipaddr.MatchList{}
+		for _, ipAllowlist := range listsConfig.AllowedIPAddresses {
+			if len(ipAllowlist.IPs) == 0 {
+				continue
+			}
+
+			serviceConfig.AllowedIPs[ipAllowlist.Source] = ipaddr.BuildMatchList(
+				ipAllowlist.Source,
+				ipAllowlist.Description,
+				ipAllowlist.IPs,
+			)
 		}
 
-		if blockListConfig.BlockedUserAgents != "" {
-			serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + blockListConfig.BlockedUserAgents)
+		serviceConfig.BlockedIPs = map[string]ipaddr.MatchList{}
+		for _, ipBlocklist := range listsConfig.BlockedIPAddresses {
+			serviceConfig.BlockedIPs[ipBlocklist.Source] = ipaddr.BuildMatchList(
+				ipBlocklist.Source,
+				ipBlocklist.Description,
+				ipBlocklist.IPs,
+			)
+		}
+
+		if listsConfig.BlockedUserAgents != "" {
+			serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + listsConfig.BlockedUserAgents)
 		} else {
 			serviceConfig.BlockedUserAgents = nil
 		}
@@ -132,6 +150,36 @@ func IsIPBlocked(ip string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+// IsIPAllowed checks that the IP is allowed if the global allowed IP list is set.
+// Private/local IP addresses are always allowed, even when an allow list is configured.
+func IsIPAllowed(ip string) bool {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	if len(serviceConfig.AllowedIPs) == 0 {
+		return true
+	}
+
+	// Always allow private/local IP addresses (matches Node.js behavior)
+	if ipaddr.IsPrivateIP(ip) {
+		return true
+	}
+
+	ipAddress, err := ipaddr.Parse(ip)
+	if err != nil {
+		log.Info("Invalid ip address", slog.String("ip", ip))
+		return false
+	}
+
+	for _, ipAllowlist := range serviceConfig.AllowedIPs {
+		if ipAllowlist.Matches(ipAddress) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // IsUserAgentBlocked returns true if we block (e.g. bot blocking), and a string with the reason why.
