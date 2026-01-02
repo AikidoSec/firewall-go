@@ -6,9 +6,14 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/shellinjection"
+	"github.com/AikidoSec/firewall-go/zen"
 )
 
 func Examine(cmdCtx context.Context, args []string, op string) error {
+	if zen.IsDisabled() {
+		return nil
+	}
+
 	ctx := context.Background()
 	if cmdCtx != nil {
 		ctx = cmdCtx

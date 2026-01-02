@@ -40,6 +40,10 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		return err
 	}
 
+	if environmentConfig.ZenDisabled {
+		return nil
+	}
+
 	Stats().SetStartedAt(utils.GetTime())
 
 	client := cloud.NewClient(&cloud.ClientConfig{

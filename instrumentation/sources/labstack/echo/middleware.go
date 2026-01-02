@@ -5,6 +5,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/labstack/echo/v4"
 )
 
@@ -13,9 +14,13 @@ import (
 func GetMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			if zen.IsDisabled() {
+				return next(c)
+			}
+
 			httpRequest := c.Request()
 			if httpRequest == nil {
-				return next(c) // Do not continue.
+				return next(c)
 			}
 
 			ip := c.RealIP()

@@ -1,6 +1,8 @@
 package zen
 
 import (
+	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -119,4 +121,84 @@ func TestGetEnvBool(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsDisabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		want     bool
+	}{
+		{
+			name:     "returns false when env var not set",
+			envValue: "",
+			want:     false,
+		},
+		{
+			name:     "returns true for 'true'",
+			envValue: "true",
+			want:     true,
+		},
+		{
+			name:     "returns true for '1'",
+			envValue: "1",
+			want:     true,
+		},
+		{
+			name:     "returns false for 'false'",
+			envValue: "false",
+			want:     false,
+		},
+		{
+			name:     "returns false for '0'",
+			envValue: "0",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalDisabled := isZenDisabled.Load()
+			defer isZenDisabled.Store(originalDisabled)
+
+			if tt.envValue == "" {
+				originalValue := os.Getenv("AIKIDO_DISABLE")
+				defer func() {
+					if originalValue != "" {
+						os.Setenv("AIKIDO_DISABLE", originalValue)
+					} else {
+						os.Unsetenv("AIKIDO_DISABLE")
+					}
+				}()
+				os.Unsetenv("AIKIDO_DISABLE")
+			} else {
+				t.Setenv("AIKIDO_DISABLE", tt.envValue)
+			}
+
+			isZenDisabled.Store(getEnvBool("AIKIDO_DISABLE"))
+
+			got := IsDisabled()
+			if got != tt.want {
+				t.Errorf("IsDisabled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProtectWithConfig_AikidoDisabled(t *testing.T) {
+	originalDisabled := isZenDisabled.Load()
+	defer isZenDisabled.Store(originalDisabled)
+
+	t.Setenv("AIKIDO_DISABLE", "true")
+
+	protectOnce = sync.Once{}
+	protectErr = nil
+	isZenDisabled.Store(getEnvBool("AIKIDO_DISABLE"))
+
+	err := ProtectWithConfig(nil)
+
+	require.NoError(t, err)
+
+	// Verify that doProtect was never called
+	require.Nil(t, protectErr)
 }
