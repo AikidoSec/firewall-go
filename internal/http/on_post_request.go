@@ -32,6 +32,10 @@ func OnPostRequest(ctx context.Context, statusCode int) {
 		return
 	}
 
+	if agent.CheckAttackWave(reqCtx) {
+		go agent.OnAttackWaveDetected(reqCtx)
+	}
+
 	apiSpec := apidiscovery.GetAPIInfo(reqCtx)
 
 	go OnRequestShutdownReporting(

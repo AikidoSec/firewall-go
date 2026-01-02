@@ -634,3 +634,7 @@ func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 
 	m.attackDetectedEventSent <- struct{}{}
 }
+
+func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+	panic("not implemented")
+}
