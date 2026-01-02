@@ -56,4 +56,16 @@ func TestIsPrivateIP(t *testing.T) {
 		assert.False(t, IsPrivateIP("not-an-ip"))
 		assert.False(t, IsPrivateIP("256.256.256.256"))
 	})
+
+	t.Run("identifies IPv6-mapped IPv4 addresses", func(t *testing.T) {
+		// Private IPv4 mapped to IPv6
+		assert.True(t, IsPrivateIP("::ffff:10.0.0.1"))
+		assert.True(t, IsPrivateIP("::ffff:192.168.1.1"))
+		assert.True(t, IsPrivateIP("::ffff:172.16.0.1"))
+		assert.True(t, IsPrivateIP("::ffff:127.0.0.1"))
+
+		// Public IPv4 mapped to IPv6
+		assert.False(t, IsPrivateIP("::ffff:8.8.8.8"))
+		assert.False(t, IsPrivateIP("::ffff:1.1.1.1"))
+	})
 }
