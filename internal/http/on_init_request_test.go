@@ -143,7 +143,7 @@ func TestOnInitRequest(t *testing.T) {
 
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
-		assert.Contains(t, resp.Message, "Your IP address is not allowed to access this resource")
+		assert.Contains(t, resp.Message, "Your IP address is not allowed")
 		assert.Contains(t, resp.Message, "203.0.114.1")
 	})
 
@@ -201,7 +201,7 @@ func TestOnInitRequest(t *testing.T) {
 		// Should be blocked by allow list first (before block list check)
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
-		assert.Contains(t, resp.Message, "Your IP address is not allowed to access this resource")
+		assert.Contains(t, resp.Message, "Your IP address is not allowed")
 	})
 
 	t.Run("public IPv6 address in global allow list", func(t *testing.T) {
@@ -253,6 +253,6 @@ func TestOnInitRequest(t *testing.T) {
 		// Should be blocked by allow list
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
-		assert.Contains(t, resp.Message, "Your IP address is not allowed to access this resource")
+		assert.Contains(t, resp.Message, "Your IP address is not allowed")
 	})
 }

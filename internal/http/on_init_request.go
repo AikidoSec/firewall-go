@@ -28,7 +28,7 @@ func OnInitRequest(ctx context.Context) *Response {
 
 	// Allowed IP list, global list for allowing traffic by country
 	if ipAllowed := config.IsIPAllowed(ip); !ipAllowed {
-		msg := fmt.Sprintf("Your IP address is not allowed to access this resource. (Your IP: %s)", ip)
+		msg := fmt.Sprintf("Your IP address is not allowed. (Your IP: %s)", ip)
 
 		return &Response{403, msg}
 	}
