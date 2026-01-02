@@ -51,6 +51,8 @@ func newCommand() *cli.Command {
 					switch toolName {
 					case "compile":
 						return toolexecCompileCommand(os.Stdout, os.Stderr, tool, toolArgs)
+					case "link":
+						return toolexecLinkCommand(os.Stdout, os.Stderr, tool, toolArgs)
 					default:
 						return passthrough(tool, toolArgs)
 					}

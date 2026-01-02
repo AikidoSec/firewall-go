@@ -11,7 +11,7 @@ import (
 )
 
 // transformDeclsPrepend finds function declarations matching the prepend rule
-// and prepends statements to the function body
+// and prepends statements to the function body.
 // Supports both methods (with receiver) and standalone functions (without receiver).
 func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRule, modified *bool, importsToAdd map[string]string) error {
 	for _, decl := range decls {
@@ -20,7 +20,7 @@ func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule PrependRu
 			continue
 		}
 
-		// Check if function name matches any in the list
+		// Check if function name matches any of the rule's function names
 		if !matchesFuncName(fn.Name.Name, rule.FuncNames) {
 			continue
 		}
