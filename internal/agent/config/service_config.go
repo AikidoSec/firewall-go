@@ -38,13 +38,15 @@ type Endpoint struct {
 }
 
 type ServiceConfigData struct {
-	ConfigUpdatedAt   time.Time
-	Endpoints         []Endpoint
-	BlockedUserIDs    map[string]bool
-	BypassedIPs       ipaddr.MatchList
-	BlockedIPs        map[string]ipaddr.MatchList
-	BlockedUserAgents *regexp.Regexp
-	Block             bool
+	ConfigUpdatedAt          time.Time
+	Endpoints                []Endpoint
+	BlockedUserIDs           map[string]bool
+	BypassedIPs              ipaddr.MatchList
+	BlockedIPs               map[string]ipaddr.MatchList
+	BlockedUserAgents        *regexp.Regexp
+	Block                    bool
+	BlockNewOutgoingRequests bool
+	Domains                  []aikido_types.OutboundDomains
 }
 
 func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockListConfig *aikido_types.ListsConfigData) {
@@ -70,6 +72,11 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, blockL
 		})
 	}
 	serviceConfig.Endpoints = endpoints
+
+	serviceConfig.BlockNewOutgoingRequests = cloudConfigFromAgent.BlockNewOutgoingRequests
+	domains := make([]aikido_types.OutboundDomains, len(cloudConfigFromAgent.Domains))
+	copy(domains, cloudConfigFromAgent.Domains)
+	serviceConfig.Domains = domains
 
 	serviceConfig.BlockedUserIDs = map[string]bool{}
 	for _, userID := range cloudConfigFromAgent.BlockedUserIds {
@@ -179,6 +186,22 @@ func IsIPBypassed(ip string) bool {
 	}
 
 	return serviceConfig.BypassedIPs.Matches(ipAddress)
+}
+
+func ShouldBlockHostname(hostname string) bool {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	// Check if it's in the known list
+	for _, domain := range serviceConfig.Domains {
+		if domain.Hostname != hostname {
+			continue
+		}
+
+		return domain.Mode == "block"
+	}
+
+	return serviceConfig.BlockNewOutgoingRequests
 }
 
 func GetEndpoints() []Endpoint {
