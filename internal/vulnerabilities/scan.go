@@ -34,6 +34,10 @@ func Scan[T any](ctx context.Context, operation string, vulnerability Vulnerabil
 }
 
 func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability Vulnerability[T], args T, opts ScanOptions) error {
+	if config.IsZenDisabled() {
+		return nil
+	}
+
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
