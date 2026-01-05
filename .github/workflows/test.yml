@@ -149,18 +149,9 @@ jobs:
       - name: Install tools
         run: make install-tools
 
-      - name: Start ${{ matrix.app }} app
+      - name: Run all test suites
         working-directory: ./end2end
-        run: make start-app APP=${{ matrix.app }}
-
-      - name: Run E2E tests
-        working-directory: ./end2end
-        run: make run-tests APP=${{ matrix.app }}
-
-      - name: Stop app
-        if: always()
-        working-directory: ./end2end
-        run: make stop-app APP=${{ matrix.app }}
+        run: make test-all-suites APP=${{ matrix.app }}
 
       - name: Show app logs on failure
         if: failure()
