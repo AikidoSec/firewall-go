@@ -55,7 +55,12 @@ var (
 )
 
 func init() {
-	// Initialize the disabled flag based on environment variable at package load time
+	// Initialize the disabled flag at package load time, before Protect is called.
+	// This early initialization is critical because:
+	// 1. Instrumentation packages (sources/sinks) call IsDisabled() on every middleware/examine call
+	// 	  to short-circuit when disabled
+	// 2. When disabled, ProtectWithConfig returns early before initializing the cloud client,
+	//    agent infrastructure, and logging
 	config.SetZenDisabled(getEnvBool("AIKIDO_DISABLE"))
 }
 
