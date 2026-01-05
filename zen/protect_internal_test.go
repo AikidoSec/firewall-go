@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -115,10 +116,7 @@ func TestGetEnvBool(t *testing.T) {
 			envVar := "TEST_ENV_BOOL"
 			t.Setenv(envVar, tt.envValue)
 
-			got := getEnvBool(envVar)
-			if got != tt.want {
-				t.Errorf("getEnvBool() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, getEnvBool(envVar))
 		})
 	}
 }
@@ -158,8 +156,8 @@ func TestIsDisabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalDisabled := isZenDisabled.Load()
-			defer isZenDisabled.Store(originalDisabled)
+			originalDisabled := IsDisabled()
+			t.Cleanup(func() { SetDisabled(originalDisabled) })
 
 			if tt.envValue == "" {
 				originalValue := os.Getenv("AIKIDO_DISABLE")
@@ -175,25 +173,22 @@ func TestIsDisabled(t *testing.T) {
 				t.Setenv("AIKIDO_DISABLE", tt.envValue)
 			}
 
-			isZenDisabled.Store(getEnvBool("AIKIDO_DISABLE"))
+			SetDisabled(getEnvBool("AIKIDO_DISABLE"))
 
-			got := IsDisabled()
-			if got != tt.want {
-				t.Errorf("IsDisabled() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, IsDisabled())
 		})
 	}
 }
 
 func TestProtectWithConfig_AikidoDisabled(t *testing.T) {
-	originalDisabled := isZenDisabled.Load()
-	defer isZenDisabled.Store(originalDisabled)
+	originalDisabled := IsDisabled()
+	t.Cleanup(func() { SetDisabled(originalDisabled) })
 
 	t.Setenv("AIKIDO_DISABLE", "true")
 
 	protectOnce = sync.Once{}
 	protectErr = nil
-	isZenDisabled.Store(getEnvBool("AIKIDO_DISABLE"))
+	SetDisabled(getEnvBool("AIKIDO_DISABLE"))
 
 	err := ProtectWithConfig(nil)
 

@@ -11,7 +11,7 @@ import (
 )
 
 func ShouldBlockRequest(ctx context.Context) *BlockResponse {
-	if IsDisabled() {
+	if config.IsZenDisabled() {
 		return nil
 	}
 

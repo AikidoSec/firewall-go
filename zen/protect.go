@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 
 	"github.com/AikidoSec/firewall-go/internal"
 	"github.com/AikidoSec/firewall-go/internal/agent"
@@ -51,14 +50,13 @@ func ErrAttackBlocked(kind vulnerabilities.AttackKind) error {
 }
 
 var (
-	protectOnce   sync.Once
-	protectErr    error
-	isZenDisabled atomic.Bool
+	protectOnce sync.Once
+	protectErr  error
 )
 
 func init() {
 	// Initialize the disabled flag based on environment variable at package load time
-	isZenDisabled.Store(getEnvBool("AIKIDO_DISABLE"))
+	config.SetZenDisabled(getEnvBool("AIKIDO_DISABLE"))
 }
 
 // SetDisabled controls whether Zen firewall processing is enabled or disabled.
@@ -67,7 +65,7 @@ func init() {
 //
 // This is commonly used in testing to verify application behavior with the firewall disabled.
 func SetDisabled(disabled bool) {
-	isZenDisabled.Store(disabled)
+	config.SetZenDisabled(disabled)
 }
 
 // Config holds configuration options for the Zen firewall
@@ -102,7 +100,7 @@ func Protect() error {
 // Empty config fields fall back to environment variables.
 func ProtectWithConfig(cfg *Config) error {
 	protectOnce.Do(func() {
-		if IsDisabled() {
+		if config.IsZenDisabled() {
 			// Do not run any Zen features when the disabled flag is on
 			return
 		}
@@ -228,5 +226,5 @@ func getEnvBool(name string) bool {
 // IsDisabled returns true if Zen firewall processing is currently disabled.
 // The disabled state is determined by the AIKIDO_DISABLE environment variable at startup.
 func IsDisabled() bool {
-	return isZenDisabled.Load()
+	return config.IsZenDisabled()
 }

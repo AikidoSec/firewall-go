@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -13,7 +14,7 @@ var ErrRateLimitGroupIDEmpty = errors.New("group id cannot be empty")
 // SetRateLimitGroup associates a group with the current request context which is used for rate limiting.
 // This function must be called before the Zen middleware is executed.
 func SetRateLimitGroup(ctx context.Context, id string) (context.Context, error) {
-	if IsDisabled() {
+	if config.IsZenDisabled() {
 		return ctx, nil
 	}
 
