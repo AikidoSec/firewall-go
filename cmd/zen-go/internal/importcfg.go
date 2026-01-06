@@ -98,6 +98,8 @@ func createTempFile(objdir string) (*os.File, error) {
 	return os.CreateTemp("", "importcfg_*.txt")
 }
 
+// GetPackageExport returns the file path to the compiled export data for the given import path.
+// It runs 'go list -export' from the module root.
 func GetPackageExport(importPath string) (string, error) {
 	dir := findModuleRoot()
 
