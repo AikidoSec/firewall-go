@@ -17,7 +17,10 @@ func transformDeclsInjectDecl(f *ast.File, fset *token.FileSet, rule InjectDeclR
 
 	// Parse the declaration template with comments
 	// We need to add "unsafe" import for go:linkname to work
-	declCode := "package p\nimport _ \"unsafe\"\n" + rule.DeclTemplate
+	declCode := `package p
+		import _ "unsafe"
+	` + rule.DeclTemplate
+
 	declFile, err := parser.ParseFile(fset, "", declCode, parser.ParseComments)
 	if err != nil {
 		return fmt.Errorf("failed to parse inject decl template for %s: %w", rule.ID, err)
