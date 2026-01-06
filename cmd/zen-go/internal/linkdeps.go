@@ -7,11 +7,13 @@ import (
 	"strings"
 )
 
+const linkdepsExtension = ".zenlinkdeps"
+
 // WriteLinkDeps writes link-time dependencies to a sidecar file next to the archive.
 // These dependencies are packages that need to be linked into the final binary
 // but are not direct imports of the package being compiled.
 func WriteLinkDeps(archivePath string, deps []string, stderr io.Writer, debug bool) error {
-	depsFile := archivePath + ".linkdeps"
+	depsFile := archivePath + linkdepsExtension
 	content := strings.Join(deps, "\n")
 	// #nosec G306 -- link deps file needs to be readable by the linker
 	if err := os.WriteFile(depsFile, []byte(content), 0o644); err != nil {
@@ -28,7 +30,7 @@ func WriteLinkDeps(archivePath string, deps []string, stderr io.Writer, debug bo
 // ReadLinkDeps reads link-time dependencies from a sidecar file next to the archive.
 // Returns nil if the file doesn't exist (which is not an error - it means no link deps).
 func ReadLinkDeps(archivePath string) ([]string, error) {
-	depsFile := archivePath + ".linkdeps"
+	depsFile := archivePath + linkdepsExtension
 	content, err := os.ReadFile(depsFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -46,4 +48,3 @@ func ReadLinkDeps(archivePath string) ([]string, error) {
 	}
 	return deps, nil
 }
-

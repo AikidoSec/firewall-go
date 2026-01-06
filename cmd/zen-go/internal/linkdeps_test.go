@@ -23,7 +23,7 @@ func TestWriteLinkDeps_Success(t *testing.T) {
 	err := WriteLinkDeps(archivePath, deps, &stderr, false)
 	require.NoError(t, err)
 
-	depsFile := archivePath + ".linkdeps"
+	depsFile := archivePath + ".zenlinkdeps"
 	content, err := os.ReadFile(depsFile)
 	require.NoError(t, err)
 
@@ -47,7 +47,7 @@ func TestWriteLinkDeps_DebugOutput(t *testing.T) {
 func TestReadLinkDeps_Success(t *testing.T) {
 	tmpDir := t.TempDir()
 	archivePath := filepath.Join(tmpDir, "test.a")
-	depsFile := archivePath + ".linkdeps"
+	depsFile := archivePath + ".zenlinkdeps"
 
 	content := "github.com/example/pkg1\ngithub.com/example/pkg2\n"
 	// #nosec G306 -- test file
@@ -71,7 +71,7 @@ func TestReadLinkDeps_NoFile(t *testing.T) {
 func TestReadLinkDeps_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	archivePath := filepath.Join(tmpDir, "test.a")
-	depsFile := archivePath + ".linkdeps"
+	depsFile := archivePath + ".zenlinkdeps"
 
 	// #nosec G306 -- test file
 	require.NoError(t, os.WriteFile(depsFile, []byte(""), 0o644))
@@ -84,7 +84,7 @@ func TestReadLinkDeps_EmptyFile(t *testing.T) {
 func TestReadLinkDeps_SkipsEmptyLines(t *testing.T) {
 	tmpDir := t.TempDir()
 	archivePath := filepath.Join(tmpDir, "test.a")
-	depsFile := archivePath + ".linkdeps"
+	depsFile := archivePath + ".zenlinkdeps"
 
 	content := "github.com/example/pkg1\n\n  \ngithub.com/example/pkg2\n"
 	// #nosec G306 -- test file
@@ -114,4 +114,3 @@ func TestWriteAndReadLinkDeps_Roundtrip(t *testing.T) {
 
 	assert.Equal(t, original, read)
 }
-

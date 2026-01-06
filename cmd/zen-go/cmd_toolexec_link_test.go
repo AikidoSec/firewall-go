@@ -53,13 +53,13 @@ func TestCollectLinkDeps(t *testing.T) {
 	// #nosec G306 -- test file
 	require.NoError(t, os.WriteFile(archive1, []byte{}, 0o644))
 	// #nosec G306 -- test file
-	require.NoError(t, os.WriteFile(archive1+".linkdeps", []byte("github.com/example/dep1\ngithub.com/example/dep2"), 0o644))
+	require.NoError(t, os.WriteFile(archive1+".zenlinkdeps", []byte("github.com/example/dep1\ngithub.com/example/dep2"), 0o644))
 
 	archive2 := filepath.Join(tmpDir, "pkg2.a")
 	// #nosec G306 -- test file
 	require.NoError(t, os.WriteFile(archive2, []byte{}, 0o644))
 	// #nosec G306 -- test file
-	require.NoError(t, os.WriteFile(archive2+".linkdeps", []byte("github.com/example/dep2\ngithub.com/example/dep3"), 0o644))
+	require.NoError(t, os.WriteFile(archive2+".zenlinkdeps", []byte("github.com/example/dep2\ngithub.com/example/dep3"), 0o644))
 
 	// Archive without link deps
 	archive3 := filepath.Join(tmpDir, "pkg3.a")
@@ -176,7 +176,7 @@ func TestWriteLinkDepsForArchive_NoLinkDeps(t *testing.T) {
 	// Should not create a linkdeps file
 	writeLinkDepsForArchive(os.Stderr, outputPath, linkDeps)
 
-	_, err := os.Stat(outputPath + ".linkdeps")
+	_, err := os.Stat(outputPath + ".zenlinkdeps")
 	assert.True(t, os.IsNotExist(err))
 }
 
@@ -196,7 +196,7 @@ func TestWriteLinkDepsForArchive_NonExistentOutput(t *testing.T) {
 	// Should not create linkdeps file if output doesn't exist
 	writeLinkDepsForArchive(os.Stderr, outputPath, linkDeps)
 
-	_, err := os.Stat(outputPath + ".linkdeps")
+	_, err := os.Stat(outputPath + ".zenlinkdeps")
 	assert.True(t, os.IsNotExist(err))
 }
 
@@ -213,7 +213,7 @@ func TestWriteLinkDepsForArchive_Success(t *testing.T) {
 
 	writeLinkDepsForArchive(os.Stderr, outputPath, linkDeps)
 
-	content, err := os.ReadFile(outputPath + ".linkdeps")
+	content, err := os.ReadFile(outputPath + ".zenlinkdeps")
 	require.NoError(t, err)
 
 	assert.Contains(t, string(content), "github.com/example/pkg1")
