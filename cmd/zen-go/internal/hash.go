@@ -27,6 +27,28 @@ func ComputeInstrumentationHash(inst *Instrumentor) string {
 		fmt.Fprintf(h, "%s\n", rule.WrapTmpl)
 	}
 
+	// Hash prepend rules
+	for _, rule := range inst.PrependRules {
+		fmt.Fprintf(h, "prepend:%s:%s:%s:", rule.ID, rule.ReceiverType, rule.Package)
+		// Sort function names for consistent hashing
+		funcNames := make([]string, len(rule.FuncNames))
+		copy(funcNames, rule.FuncNames)
+		sort.Strings(funcNames)
+		for _, fn := range funcNames {
+			fmt.Fprintf(h, "%s:", fn)
+		}
+		// Sort imports for consistent hashing
+		importKeys := make([]string, 0, len(rule.Imports))
+		for k := range rule.Imports {
+			importKeys = append(importKeys, k)
+		}
+		sort.Strings(importKeys)
+		for _, k := range importKeys {
+			fmt.Fprintf(h, "%s=%s:", k, rule.Imports[k])
+		}
+		fmt.Fprintf(h, "%s\n", rule.PrependTmpl)
+	}
+
 	// Return base64-encoded hash (first 16 chars for brevity)
 	hash := h.Sum(nil)
 	return base64.URLEncoding.EncodeToString(hash)[:16]

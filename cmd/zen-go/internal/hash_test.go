@@ -48,3 +48,28 @@ func TestComputeInstrumentationHash_EmptyRules(t *testing.T) {
 	hash := ComputeInstrumentationHash(inst)
 	assert.Len(t, hash, 16)
 }
+
+func TestComputeInstrumentationHash_AllRuleTypes(t *testing.T) {
+	inst1 := &Instrumentor{
+		WrapRules: []WrapRule{
+			{ID: "wrap1", MatchCall: "pkg.Func"},
+		},
+		PrependRules: []PrependRule{
+			{ID: "prepend1", Package: "os", FuncNames: []string{"Open"}},
+		},
+	}
+
+	inst2 := &Instrumentor{
+		WrapRules: []WrapRule{
+			{ID: "wrap1", MatchCall: "pkg.Func"},
+		},
+		PrependRules: []PrependRule{
+			{ID: "prepend2", Package: "os", FuncNames: []string{"Open"}},
+		},
+	}
+
+	hash1 := ComputeInstrumentationHash(inst1)
+	hash2 := ComputeInstrumentationHash(inst2)
+
+	assert.NotEqual(t, hash1, hash2, "hash should change when prepend rule changes")
+}
