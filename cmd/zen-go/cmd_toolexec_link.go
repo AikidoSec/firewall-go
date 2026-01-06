@@ -9,6 +9,11 @@ import (
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal"
 )
 
+// toolexecLinkCommand is invoked by Go's -toolexec flag when linking.
+// Example args:
+//
+//	tool: "/usr/local/go/pkg/tool/darwin_arm64/link"
+//	toolArgs: ["-o", "/path/to/output", "-importcfg", "/tmp/importcfg", "-buildmode=exe", "main.a"]
 func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
 	importcfgPath := extractLinkerImportcfg(toolArgs)
 	if importcfgPath == "" {
