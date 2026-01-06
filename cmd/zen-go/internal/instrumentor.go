@@ -24,11 +24,7 @@ func NewInstrumentor() (*Instrumentor, error) {
 			return nil, err
 		}
 
-		return &Instrumentor{
-			WrapRules:       rules.WrapRules,
-			PrependRules:    rules.PrependRules,
-			InjectDeclRules: rules.InjectDeclRules,
-		}, nil
+		return NewInstrumentorWithRules(rules), nil
 	}
 
 	// No rules found
