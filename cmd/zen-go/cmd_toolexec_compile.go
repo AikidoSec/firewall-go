@@ -114,7 +114,7 @@ func getObjDir(outputPath string) string {
 func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string) ([]string, map[string]string, []string, error) {
 	newArgs := make([]string, 0, len(toolArgs))
 	allAddedImports := make(map[string]string) // alias -> import path
-	var allLinkDeps []string
+	var allAddedLinkDeps []string
 	instrumentor, err := internal.NewInstrumentor()
 	if err != nil {
 		return nil, nil, nil, err
@@ -144,8 +144,8 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 		// zengin -> github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
 		maps.Copy(allAddedImports, result.Imports)
 
-		// Collect link dependencies
-		allLinkDeps = append(allLinkDeps, result.LinkDeps...)
+		// Collect link dependencies from each file to pass to the linker later
+		allAddedLinkDeps = append(allAddedLinkDeps, result.LinkDeps...)
 
 		tempFile, err := writeTempFile(arg, result.Code, objdir)
 		if err != nil {
@@ -166,7 +166,7 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 		}
 	}
 
-	return newArgs, allAddedImports, allLinkDeps, nil
+	return newArgs, allAddedImports, allAddedLinkDeps, nil
 }
 
 func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string, addedImports map[string]string, objdir string) ([]string, error) {
