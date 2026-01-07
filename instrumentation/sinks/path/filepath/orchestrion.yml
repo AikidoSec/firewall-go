@@ -12,13 +12,10 @@ aspects:
             function:
               - name: Join
     advice:
-      - inject-declarations:
-          # We're using go:linkname to avoid circular depdendencies.
-          links:
-            - github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath
-          template: |-
-            //go:linkname __aikido_path_filepath_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath.Examine
-            func __aikido_path_filepath_Examine ([]string) error
       - prepend-statements:
+          imports:
+            zentransits: github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits
           template: |-
-            __aikido_path_filepath_Examine({{ .Function.Argument 0 }})
+            if examinePath := zentransits.ExaminePath(); examinePath != nil {
+              examinePath("filepath.Join", {{ .Function.Argument 0 }}, true)
+            }

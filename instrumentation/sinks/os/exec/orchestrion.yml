@@ -5,23 +5,6 @@ meta:
     Protection from shell injection.
 
 aspects:
-  - id: ExecExamine-Declaration
-    join-point:
-      all-of:
-        - import-path: os/exec
-        - function-body:
-            function:
-              - receiver: "*os/exec.Cmd"
-              - name: Run
-    advice:
-      - inject-declarations:
-          # We're using go:linkname to avoid circular dependencies.
-          # Added in separate aspect to ensure declared only once.
-          links:
-            - github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec
-          template: |-
-            //go:linkname __aikido_os_exec_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec.Examine
-            func __aikido_os_exec_Examine (context.Context, []string, string) error
   - id: Run-Start
     join-point:
       one-of:
@@ -35,8 +18,12 @@ aspects:
               - name: Start
     advice:
       - prepend-statements:
+          imports:
+            zentransits: github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits
           template: |-
-            _aikido_err := __aikido_os_exec_Examine({{ .Function.Receiver }}.ctx, {{ .Function.Receiver }}.Args, "exec.Cmd.{{ .Function.Name }}")
-            if _aikido_err != nil {
-              return _aikido_err
+            if examineCommand := zentransits.ExamineCommand(); examineCommand != nil {
+              _aikido_err := examineCommand({{ .Function.Receiver}}.ctx, "exec.Cmd.{{ .Function.Name }}", {{ .Function.Receiver }}.Args)
+              if _aikido_err != nil {
+                return _aikido_err
+              }
             }

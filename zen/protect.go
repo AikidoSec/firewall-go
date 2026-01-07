@@ -97,6 +97,8 @@ func ProtectWithConfig(cfg *Config) error {
 // the agent. This is separated from Protect to maintain thread-safety
 // with sync.Once while preserving readability.
 func doProtect(cfg *Config) {
+	internal.SetupTransits()
+
 	// Fallback to environment variables for empty config fields
 	mergedCfg := populateConfigFromEnv(cfg)
 
