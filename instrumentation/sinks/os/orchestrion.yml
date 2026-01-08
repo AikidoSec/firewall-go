@@ -25,7 +25,8 @@ aspects:
             zentransits: github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits
           template: |-
             if examinePath := zentransits.ExaminePath(); examinePath != nil {
-              _aikido_block := examinePath("os.OpenFile", []string{{`{`}}{{ .Function.Argument 0 }}{{`}`}}, false)
+              const _aikido_deferReporting = false
+              _aikido_block := examinePath("os.OpenFile", []string{{`{`}}{{ .Function.Argument 0 }}{{`}`}}, _aikido_deferReporting)
               if _aikido_block != nil {
                 return nil, _aikido_block
               }

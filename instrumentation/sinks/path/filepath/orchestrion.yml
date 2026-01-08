@@ -17,5 +17,6 @@ aspects:
             zentransits: github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits
           template: |-
             if examinePath := zentransits.ExaminePath(); examinePath != nil {
-              examinePath("filepath.Join", {{ .Function.Argument 0 }}, true)
+              const _aikido_deferReporting = true
+              examinePath("filepath.Join", {{ .Function.Argument 0 }}, _aikido_deferReporting)
             }
