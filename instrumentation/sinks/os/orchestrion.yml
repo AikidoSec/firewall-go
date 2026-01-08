@@ -26,7 +26,7 @@ aspects:
           template: |-
             if examinePath := zentransits.ExaminePath(); examinePath != nil {
               const _aikido_deferReporting = false
-              _aikido_block := examinePath("os.OpenFile", []string{{`{`}}{{ .Function.Argument 0 }}{{`}`}}, _aikido_deferReporting)
+              _aikido_block := examinePath("os.OpenFile", []string{ {{ .Function.Argument 0 }} }, _aikido_deferReporting)
               if _aikido_block != nil {
                 return nil, _aikido_block
               }
