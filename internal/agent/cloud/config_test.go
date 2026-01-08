@@ -128,7 +128,7 @@ func TestFetchConfig(t *testing.T) {
 			ReceivedAnyStats:         true,
 			Block:                    &blockTrue,
 			BlockNewOutgoingRequests: true,
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: "malicious.com", Mode: "block"},
 				{Hostname: "allowed.com", Mode: "allow"},
 			},

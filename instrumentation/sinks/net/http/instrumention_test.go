@@ -57,7 +57,7 @@ func TestHTTPClientInstrumentation(t *testing.T) {
 	t.Run("blocks request when domain is in block list", func(t *testing.T) {
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt: time.Now().UnixMilli(),
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: serverHostname, Mode: "block"},
 			},
 			BlockNewOutgoingRequests: false,
@@ -80,7 +80,7 @@ func TestHTTPClientInstrumentation(t *testing.T) {
 	t.Run("allows request when domain is in allow list", func(t *testing.T) {
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt: time.Now().UnixMilli(),
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: serverHostname, Mode: "allow"},
 			},
 			BlockNewOutgoingRequests: true,

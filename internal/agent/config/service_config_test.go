@@ -870,7 +870,7 @@ func TestShouldBlockHostname(t *testing.T) {
 
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt: time.Now().UnixMilli(),
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: "malicious.com", Mode: "block"},
 				{Hostname: "allowed.com", Mode: "allow"},
 			},
@@ -888,7 +888,7 @@ func TestShouldBlockHostname(t *testing.T) {
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt:          time.Now().UnixMilli(),
 			BlockNewOutgoingRequests: true,
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: "known.com", Mode: "allow"},
 			},
 		}
@@ -905,7 +905,7 @@ func TestShouldBlockHostname(t *testing.T) {
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt:          time.Now().UnixMilli(),
 			BlockNewOutgoingRequests: false,
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: "known.com", Mode: "allow"},
 			},
 		}
@@ -922,7 +922,7 @@ func TestShouldBlockHostname(t *testing.T) {
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt:          time.Now().UnixMilli(),
 			BlockNewOutgoingRequests: false,
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: "blocked.com", Mode: "block"},
 			},
 		}
@@ -941,7 +941,7 @@ func TestShouldBlockHostname(t *testing.T) {
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt:          time.Now().UnixMilli(),
 			BlockNewOutgoingRequests: true,
-			Domains:                  []aikido_types.OutboundDomains{},
+			Domains:                  []aikido_types.OutboundDomain{},
 		}
 
 		UpdateServiceConfig(cloudConfig, nil)
@@ -954,7 +954,7 @@ func TestShouldBlockHostname(t *testing.T) {
 
 		cloudConfig := &aikido_types.CloudConfigData{
 			ConfigUpdatedAt: time.Now().UnixMilli(),
-			Domains: []aikido_types.OutboundDomains{
+			Domains: []aikido_types.OutboundDomain{
 				{Hostname: "blocked1.com", Mode: "block"},
 				{Hostname: "allowed1.com", Mode: "allow"},
 				{Hostname: "blocked2.com", Mode: "block"},

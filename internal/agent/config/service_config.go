@@ -47,7 +47,7 @@ type ServiceConfigData struct {
 	BlockedUserAgents        *regexp.Regexp
 	Block                    bool
 	BlockNewOutgoingRequests bool
-	Domains                  []aikido_types.OutboundDomains
+	Domains                  []aikido_types.OutboundDomain
 }
 
 func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsConfig *aikido_types.ListsConfigData) {
@@ -75,7 +75,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsC
 	serviceConfig.Endpoints = endpoints
 
 	serviceConfig.BlockNewOutgoingRequests = cloudConfigFromAgent.BlockNewOutgoingRequests
-	domains := make([]aikido_types.OutboundDomains, len(cloudConfigFromAgent.Domains))
+	domains := make([]aikido_types.OutboundDomain, len(cloudConfigFromAgent.Domains))
 	copy(domains, cloudConfigFromAgent.Domains)
 	serviceConfig.Domains = domains
 
