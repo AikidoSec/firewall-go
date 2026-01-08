@@ -175,7 +175,7 @@ func promptForSelection() ([]string, []string, error) {
 		groups = append(groups, huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Select sinks to instrument").
-				Description("Sinks are operations that need protection (database, file system, etc.)").
+				Description("Sinks are operations that need protection & monitoring (database, file system, etc.)").
 				Options(sinkOptions...).
 				Value(&selectedSinks),
 		))
