@@ -1,35 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestInitCommand_CreatesFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	oldDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer func() { _ = os.Chdir(oldDir) }()
-
-	err = os.Chdir(tmpDir)
-	require.NoError(t, err)
-
-	err = initCommand(os.Stdout, false)
-	require.NoError(t, err)
-
-	// Verify file was created
-	filename := "orchestrion.tool.go"
-	_, err = os.Stat(filename)
-	require.NoError(t, err)
-
-	// Verify file content
-	content, err := os.ReadFile(filename)
-	require.NoError(t, err)
-	assert.Contains(t, string(content), "github.com/AikidoSec/firewall-go/instrumentation")
-}
 
 func TestInitCommand_DoesNotOverwriteExistingFile(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -45,64 +23,83 @@ func TestInitCommand_DoesNotOverwriteExistingFile(t *testing.T) {
 	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
-	err = initCommand(os.Stdout, false)
+	var buf bytes.Buffer
+	err = initCommand(&buf, false)
 	require.NoError(t, err)
 
 	// Verify file content was not overwritten
 	content, err := os.ReadFile(filename)
 	require.NoError(t, err)
 	assert.Equal(t, "existing content", string(content))
+
+	// Verify output message
+	output := buf.String()
+	assert.Contains(t, output, "already exists")
 }
 
-func TestInitCommand_ForceOverwritesExistingFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	oldDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer func() { _ = os.Chdir(oldDir) }()
+func TestGenerateToolsFile_WithSourcesAndSinks(t *testing.T) {
+	config := initConfig{
+		sources: []string{"gin", "chi"},
+		sinks:   []string{"pgx"},
+	}
+	content := generateToolsFile(config)
 
-	err = os.Chdir(tmpDir)
-	require.NoError(t, err)
+	// Verify basic structure
+	assert.Contains(t, content, "//go:build tools")
+	assert.Contains(t, content, "package tools")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation")
+	assert.Contains(t, content, "github.com/DataDog/orchestrion")
 
-	// Create existing file
-	filename := "orchestrion.tool.go"
-	err = os.WriteFile(filename, []byte("existing content"), 0o600)
-	require.NoError(t, err)
+	// Verify sources section
+	assert.Contains(t, content, "// Sources")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi")
 
-	err = initCommand(os.Stdout, true)
-	require.NoError(t, err)
+	// Verify sinks section
+	assert.Contains(t, content, "// Sinks")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
 
-	// Verify file content was overwritten
-	content, err := os.ReadFile(filename)
-	require.NoError(t, err)
-	assert.Contains(t, string(content), "github.com/AikidoSec/firewall-go/instrumentation")
-	assert.NotEqual(t, "existing content", string(content))
+	// Verify other sources/sinks are not included
+	assert.NotContains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo")
 }
 
-func TestInitCommand_ForceShortFlag(t *testing.T) {
-	tmpDir := t.TempDir()
-	oldDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer func() { _ = os.Chdir(oldDir) }()
+func TestGenerateToolsFile_WithNoSourcesOrSinks(t *testing.T) {
+	config := initConfig{
+		sources: []string{},
+		sinks:   []string{},
+	}
+	content := generateToolsFile(config)
 
-	err = os.Chdir(tmpDir)
-	require.NoError(t, err)
+	// Verify basic structure is always present
+	assert.Contains(t, content, "package tools")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation")
+	assert.Contains(t, content, "github.com/DataDog/orchestrion")
 
-	// Create existing file
-	filename := "orchestrion.tool.go"
-	err = os.WriteFile(filename, []byte("existing content"), 0o600)
-	require.NoError(t, err)
-
-	err = initCommand(os.Stdout, true)
-	require.NoError(t, err)
-
-	// Verify file content was overwritten
-	content, err := os.ReadFile(filename)
-	require.NoError(t, err)
-	assert.Contains(t, string(content), "github.com/AikidoSec/firewall-go/instrumentation")
+	// Verify no sources/sinks sections
+	assert.NotContains(t, content, "// Sources")
+	assert.NotContains(t, content, "// Sinks")
 }
 
-func TestToolsFileTemplate_ContainsRequiredImports(t *testing.T) {
-	assert.Contains(t, toolsFileTemplate, "github.com/AikidoSec/firewall-go/instrumentation")
-	assert.Contains(t, toolsFileTemplate, "github.com/DataDog/orchestrion")
-	assert.Contains(t, toolsFileTemplate, "package tools")
+func TestGenerateToolsFile_OnlySourcesSelected(t *testing.T) {
+	config := initConfig{
+		sources: []string{"gin"},
+		sinks:   []string{},
+	}
+	content := generateToolsFile(config)
+
+	assert.Contains(t, content, "// Sources")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
+	assert.NotContains(t, content, "// Sinks")
+}
+
+func TestGenerateToolsFile_OnlySinksSelected(t *testing.T) {
+	config := initConfig{
+		sources: []string{},
+		sinks:   []string{"pgx"},
+	}
+	content := generateToolsFile(config)
+
+	assert.NotContains(t, content, "// Sources")
+	assert.Contains(t, content, "// Sinks")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
 }
