@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/pathtraversal"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/shellinjection"
@@ -18,6 +19,10 @@ func SetupTransits() {
 }
 
 func examinePath(operation string, args []string, deferReporting bool) error {
+	if config.IsZenDisabled() {
+		return nil
+	}
+
 	path := strings.Join(args, "")
 
 	// The error that the vulnerability scan returns is deferred with path.Join
@@ -33,6 +38,10 @@ func examinePath(operation string, args []string, deferReporting bool) error {
 }
 
 func examineCommand(cmdCtx context.Context, op string, args []string) error {
+	if config.IsZenDisabled() {
+		return nil
+	}
+
 	ctx := context.Background()
 	if cmdCtx != nil {
 		ctx = cmdCtx

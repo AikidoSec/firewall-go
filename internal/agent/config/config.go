@@ -80,6 +80,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		defer serviceConfigMutex.Unlock()
 		serviceConfig.Block = true
 	}
+
 	return nil
 }
 

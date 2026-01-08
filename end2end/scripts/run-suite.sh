@@ -59,7 +59,7 @@ echo ""
 echo "Running tests..."
 cd "$END2END_DIR"
 PORT_VALUE=$(cat "/tmp/$APP.port")
-APP_NAME=$APP APP_URL="http://localhost:$PORT_VALUE" go test -v "./tests/$SUITE_NAME/..."
+APP_NAME=$APP APP_URL="http://localhost:$PORT_VALUE" go test -count=1 -v "./tests/$SUITE_NAME/..."
 TEST_EXIT_CODE=$?
 
 # Stop the app

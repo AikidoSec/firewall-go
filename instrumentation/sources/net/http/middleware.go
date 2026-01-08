@@ -9,12 +9,18 @@ import (
 	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/zen"
 )
 
 // Middleware sets the request contexts of incoming requests.
 // It is part of the automatic instrumentation and will be run before any other middleware.
 func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if zen.IsDisabled() {
+			orig(w, r)
+			return
+		}
+
 		ip := r.RemoteAddr
 
 		pattern := r.Pattern

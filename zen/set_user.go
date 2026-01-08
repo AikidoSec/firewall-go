@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -15,6 +16,10 @@ var ErrUserIDOrNameEmpty = errors.New("user id or name cannot be empty")
 // blocking and rate limiting. This function must be called before the Zen
 // middleware is executed.
 func SetUser(ctx context.Context, id string, name string) (context.Context, error) {
+	if config.IsZenDisabled() {
+		return ctx, nil
+	}
+
 	if id == "" || name == "" {
 		return ctx, ErrUserIDOrNameEmpty
 	}

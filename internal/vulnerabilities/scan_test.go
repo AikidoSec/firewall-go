@@ -325,3 +325,55 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 		})
 	}
 }
+
+func TestScan_ZenDisabled(t *testing.T) {
+	ip := "127.0.0.1"
+	args := mockScanArgs{Value: "test"}
+
+	// Enable blocking for tests that expect errors
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer config.SetBlocking(original)
+
+	tests := []struct {
+		name        string
+		zenDisabled bool
+		expectError bool
+		description string
+	}{
+		{
+			name:        "zen is disabled",
+			zenDisabled: true,
+			expectError: false,
+		},
+		{
+			name:        "zen is enabled",
+			zenDisabled: false,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalDisabled := config.IsZenDisabled()
+			t.Cleanup(func() { config.SetZenDisabled(originalDisabled) })
+
+			config.SetZenDisabled(tt.zenDisabled)
+
+			req := httptest.NewRequest("GET", "/test?param1=attack&param2=safe", http.NoBody)
+			ctx := request.SetContext(context.Background(), req, request.ContextData{
+				Source:        "test",
+				Route:         "/test",
+				RemoteAddress: &ip,
+			})
+
+			err := ScanWithOptions(ctx, "testOperation", mockVulnerability, args, ScanOptions{})
+			if tt.expectError {
+				require.Error(t, err, tt.description)
+				assert.Contains(t, err.Error(), "SQL injection")
+			} else {
+				assert.NoError(t, err, tt.description)
+			}
+		})
+	}
+}

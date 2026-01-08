@@ -54,6 +54,25 @@ var (
 	protectErr  error
 )
 
+func init() {
+	// Initialize the disabled flag at package load time, before Protect is called.
+	// This early initialization is critical because:
+	// 1. Instrumentation packages (sources/sinks) call IsDisabled() on every middleware/examine call
+	// 	  to short-circuit when disabled
+	// 2. When disabled, ProtectWithConfig returns early before initializing the cloud client,
+	//    agent infrastructure, and logging
+	config.SetZenDisabled(getEnvBool("AIKIDO_DISABLE"))
+}
+
+// SetDisabled controls whether Zen firewall processing is enabled or disabled.
+// When disabled is true, all Zen security checks are bypassed, including instrumentation
+// and middleware processing. This overrides the AIKIDO_DISABLE environment variable.
+//
+// This is commonly used in testing to verify application behavior with the firewall disabled.
+func SetDisabled(disabled bool) {
+	config.SetZenDisabled(disabled)
+}
+
 // Config holds configuration options for the Zen firewall
 type Config struct {
 	// LogLevel sets the logging level (DEBUG, INFO, WARN, ERROR)
@@ -86,6 +105,10 @@ func Protect() error {
 // Empty config fields fall back to environment variables.
 func ProtectWithConfig(cfg *Config) error {
 	protectOnce.Do(func() {
+		if config.IsZenDisabled() {
+			// Do not run any Zen features when the disabled flag is on
+			return
+		}
 		doProtect(cfg)
 	})
 
@@ -203,4 +226,10 @@ func populateConfigFromEnv(cfg *Config) *Config {
 func getEnvBool(name string) bool {
 	v := strings.ToLower(os.Getenv(name))
 	return v == "true" || v == "1"
+}
+
+// IsDisabled returns true if Zen firewall processing is currently disabled.
+// The disabled state is determined by the AIKIDO_DISABLE environment variable at startup.
+func IsDisabled() bool {
+	return config.IsZenDisabled()
 }
