@@ -3,10 +3,6 @@ package state
 import "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 
 func (c *Collector) StoreHostname(domain string, port uint32) {
-	if port == 0 {
-		return
-	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

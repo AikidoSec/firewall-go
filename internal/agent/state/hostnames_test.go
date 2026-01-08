@@ -48,11 +48,11 @@ func TestStoreDomain(t *testing.T) {
 			calls: 2,
 		},
 		{
-			name:          "skips storage when port is 0",
+			name:          "stores when port is 0",
 			domain:        "example.com",
 			port:          0,
-			expectedCount: 0,
-			shouldStore:   false,
+			expectedCount: 1,
+			shouldStore:   true,
 			calls:         1,
 		},
 		{
