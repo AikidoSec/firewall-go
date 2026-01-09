@@ -250,6 +250,8 @@ func TestExtractRouteParams(t *testing.T) {
 }
 
 func TestMiddlewareCallsOnPostRequest(t *testing.T) {
+	agent.Stats().GetAndClear()
+
 	handler := Middleware(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

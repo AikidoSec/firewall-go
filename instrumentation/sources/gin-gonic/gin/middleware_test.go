@@ -322,6 +322,8 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 }
 
 func TestMiddlewareCallsOnPostRequestOnPanic(t *testing.T) {
+	agent.Stats().GetAndClear()
+
 	router := gin.Default()
 	router.ContextWithFallback = true
 	router.Use(zengin.GetMiddleware())

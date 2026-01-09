@@ -301,6 +301,8 @@ func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
 }
 
 func TestMiddlewareCallsOnPostRequest(t *testing.T) {
+	agent.Stats().GetAndClear()
+
 	router := echo.New()
 	router.Use(zenecho.GetMiddleware())
 
