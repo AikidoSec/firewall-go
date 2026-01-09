@@ -6,20 +6,20 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/polling"
 )
 
 var (
-	heartbeatRoutine     *utils.PollingRoutine
-	configPollingRoutine *utils.PollingRoutine
+	heartbeatRoutine     *polling.Routine
+	configPollingRoutine *polling.Routine
 
 	minHeartbeatIntervalInMS = 120000
 )
 
 func startPolling() {
-	heartbeatRoutine = utils.StartPollingRoutine(10*time.Minute, sendHeartbeatEvent)
-	configPollingRoutine = utils.StartPollingRoutine(1*time.Minute, refreshCloudConfig)
+	heartbeatRoutine = polling.Start(10*time.Minute, sendHeartbeatEvent)
+	configPollingRoutine = polling.Start(1*time.Minute, refreshCloudConfig)
 }
 
 func stopPolling() {

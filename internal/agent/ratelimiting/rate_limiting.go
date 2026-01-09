@@ -7,8 +7,8 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/polling"
 	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 )
 
@@ -74,7 +74,7 @@ type RateLimiter struct {
 	mu sync.RWMutex
 
 	// Polling routine for periodic cleanup
-	cleanupRoutine *utils.PollingRoutine
+	cleanupRoutine *polling.Routine
 }
 
 func New() *RateLimiter {
@@ -85,7 +85,7 @@ func New() *RateLimiter {
 
 // Init initializes the rate limiting subsystem with periodic cleanup
 func (rl *RateLimiter) Init() {
-	rl.cleanupRoutine = utils.StartPollingRoutine(inactiveCleanupInterval, rl.cleanupInactive)
+	rl.cleanupRoutine = polling.Start(inactiveCleanupInterval, rl.cleanupInactive)
 }
 
 // Uninit shuts down the rate limiting subsystem
