@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -37,7 +38,7 @@ func transformDeclsInjectDecl(f *ast.File, fset *token.FileSet, rule InjectDeclR
 	}
 
 	if len(declsToInject) == 0 {
-		return nil
+		return errors.New("no declarations found in template")
 	}
 
 	// Find and associate comments with declarations
