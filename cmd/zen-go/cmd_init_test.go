@@ -51,12 +51,12 @@ func TestGenerateToolsFile_WithSourcesAndSinks(t *testing.T) {
 	assert.Contains(t, content, "github.com/DataDog/orchestrion")
 
 	// Verify sources section
-	assert.Contains(t, content, "// Sources")
+	assert.Contains(t, content, "// Aikido Zen: Sources")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi")
 
 	// Verify sinks section
-	assert.Contains(t, content, "// Sinks")
+	assert.Contains(t, content, "// Aikido Zen: Sinks")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
 
 	// Verify other sources/sinks are not included
@@ -76,8 +76,8 @@ func TestGenerateToolsFile_WithNoSourcesOrSinks(t *testing.T) {
 	assert.Contains(t, content, "github.com/DataDog/orchestrion")
 
 	// Verify no sources/sinks sections
-	assert.NotContains(t, content, "// Sources")
-	assert.NotContains(t, content, "// Sinks")
+	assert.NotContains(t, content, "// Aikido Zen: Sources")
+	assert.NotContains(t, content, "// Aikido Zen: Sinks")
 }
 
 func TestGenerateToolsFile_OnlySourcesSelected(t *testing.T) {
@@ -87,9 +87,9 @@ func TestGenerateToolsFile_OnlySourcesSelected(t *testing.T) {
 	}
 	content := generateToolsFile(config)
 
-	assert.Contains(t, content, "// Sources")
+	assert.Contains(t, content, "// Aikido Zen: Sources")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
-	assert.NotContains(t, content, "// Sinks")
+	assert.NotContains(t, content, "// Aikido Zen: Sinks")
 }
 
 func TestGenerateToolsFile_OnlySinksSelected(t *testing.T) {
@@ -99,7 +99,7 @@ func TestGenerateToolsFile_OnlySinksSelected(t *testing.T) {
 	}
 	content := generateToolsFile(config)
 
-	assert.NotContains(t, content, "// Sources")
-	assert.Contains(t, content, "// Sinks")
+	assert.NotContains(t, content, "// Aikido Zen: Sources")
+	assert.Contains(t, content, "// Aikido Zen: Sinks")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
 }
