@@ -49,6 +49,20 @@ func ErrAttackBlocked(kind vulnerabilities.AttackKind) error {
 	return &AttackBlockedError{Kind: AttackKind(kind)}
 }
 
+// OutboundConnectionBlocked represents an error when an outbound connection is blocked by Zen.
+type OutboundConnectionBlocked struct {
+	Hostname string
+}
+
+func (e *OutboundConnectionBlocked) Error() string {
+	return fmt.Sprintf("zen has blocked an outbound connection to %s", e.Hostname)
+}
+
+// ErrOutboundBlocked returns an error indicating that an outbound connection was blocked.
+func ErrOutboundBlocked(hostname string) error {
+	return &OutboundConnectionBlocked{Hostname: hostname}
+}
+
 var (
 	protectOnce sync.Once
 	protectErr  error

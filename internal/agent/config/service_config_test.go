@@ -861,6 +861,116 @@ func TestGetCloudConfigUpdatedAt(t *testing.T) {
 	})
 }
 
+func TestShouldBlockHostname(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+
+	t.Run("blocks hostname in domains list with mode block", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+			Domains: []aikido_types.OutboundDomain{
+				{Hostname: "malicious.com", Mode: "block"},
+				{Hostname: "allowed.com", Mode: "allow"},
+			},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		assert.True(t, ShouldBlockHostname("malicious.com"))
+		assert.False(t, ShouldBlockHostname("allowed.com"))
+	})
+
+	t.Run("blocks hostname when BlockNewOutgoingRequests is true and hostname not in domains", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt:          time.Now().UnixMilli(),
+			BlockNewOutgoingRequests: true,
+			Domains: []aikido_types.OutboundDomain{
+				{Hostname: "known.com", Mode: "allow"},
+			},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		assert.True(t, ShouldBlockHostname("unknown.com"))
+		assert.False(t, ShouldBlockHostname("known.com"))
+	})
+
+	t.Run("does not block hostname when BlockNewOutgoingRequests is false and hostname not in domains", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt:          time.Now().UnixMilli(),
+			BlockNewOutgoingRequests: false,
+			Domains: []aikido_types.OutboundDomain{
+				{Hostname: "known.com", Mode: "allow"},
+			},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		assert.False(t, ShouldBlockHostname("unknown.com"))
+		assert.False(t, ShouldBlockHostname("known.com"))
+	})
+
+	t.Run("prioritizes domain list over BlockNewOutgoingRequests", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt:          time.Now().UnixMilli(),
+			BlockNewOutgoingRequests: false,
+			Domains: []aikido_types.OutboundDomain{
+				{Hostname: "blocked.com", Mode: "block"},
+			},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		// Even though BlockNewOutgoingRequests is false, blocked.com should be blocked
+		assert.True(t, ShouldBlockHostname("blocked.com"))
+		// Unknown hostname should not be blocked when BlockNewOutgoingRequests is false
+		assert.False(t, ShouldBlockHostname("unknown.com"))
+	})
+
+	t.Run("handles empty domains list", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt:          time.Now().UnixMilli(),
+			BlockNewOutgoingRequests: true,
+			Domains:                  []aikido_types.OutboundDomain{},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		assert.True(t, ShouldBlockHostname("anyhostname.com"))
+	})
+
+	t.Run("handles multiple domains with different modes", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+			Domains: []aikido_types.OutboundDomain{
+				{Hostname: "blocked1.com", Mode: "block"},
+				{Hostname: "allowed1.com", Mode: "allow"},
+				{Hostname: "blocked2.com", Mode: "block"},
+				{Hostname: "allowed2.com", Mode: "allow"},
+			},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		assert.True(t, ShouldBlockHostname("blocked1.com"))
+		assert.True(t, ShouldBlockHostname("blocked2.com"))
+		assert.False(t, ShouldBlockHostname("allowed1.com"))
+		assert.False(t, ShouldBlockHostname("allowed2.com"))
+	})
+}
+
 func TestConcurrency(t *testing.T) {
 	setupTestGlobals()
 	defer resetServiceConfig()

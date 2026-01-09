@@ -123,10 +123,15 @@ func TestFetchConfig(t *testing.T) {
 					},
 				},
 			},
-			BlockedUserIds:   []string{"user1", "user2"},
-			BypassedIPs:      []string{"192.168.1.1"},
-			ReceivedAnyStats: true,
-			Block:            &blockTrue,
+			BlockedUserIds:           []string{"user1", "user2"},
+			BypassedIPs:              []string{"192.168.1.1"},
+			ReceivedAnyStats:         true,
+			Block:                    &blockTrue,
+			BlockNewOutgoingRequests: true,
+			Domains: []aikido_types.OutboundDomain{
+				{Hostname: "malicious.com", Mode: "block"},
+				{Hostname: "allowed.com", Mode: "allow"},
+			},
 		}
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +158,12 @@ func TestFetchConfig(t *testing.T) {
 		assert.Len(t, result.Endpoints, 1)
 		assert.Equal(t, "POST", result.Endpoints[0].Method)
 		assert.Equal(t, "/api/users", result.Endpoints[0].Route)
+		assert.True(t, result.BlockNewOutgoingRequests)
+		assert.Len(t, result.Domains, 2)
+		assert.Equal(t, "malicious.com", result.Domains[0].Hostname)
+		assert.Equal(t, "block", result.Domains[0].Mode)
+		assert.Equal(t, "allowed.com", result.Domains[1].Hostname)
+		assert.Equal(t, "allow", result.Domains[1].Mode)
 	})
 
 	t.Run("network error", func(t *testing.T) {
@@ -295,6 +306,36 @@ func TestParseCloudConfigResponse(t *testing.T) {
 		assert.Equal(t, 100, result.ServiceID)
 		assert.Equal(t, int64(1234567890), result.ConfigUpdatedAt)
 		assert.Len(t, result.Endpoints, 0)
+	})
+
+	t.Run("parse config with domains and BlockNewOutgoingRequests", func(t *testing.T) {
+		configJSON := []byte(`{
+			"success": true,
+			"serviceId": 200,
+			"configUpdatedAt": 1234567890,
+			"heartbeatIntervalInMS": 60000,
+			"endpoints": [],
+			"blockedUserIds": [],
+			"allowedIPAddresses": [],
+			"receivedAnyStats": false,
+			"blockNewOutgoingRequests": true,
+			"domains": [
+				{"hostname": "blocked.example.com", "mode": "block"},
+				{"hostname": "allowed.example.com", "mode": "allow"}
+			]
+		}`)
+
+		result, err := parseCloudConfigResponse(configJSON)
+
+		require.NoError(t, err)
+		assert.True(t, result.Success)
+		assert.Equal(t, 200, result.ServiceID)
+		assert.True(t, result.BlockNewOutgoingRequests)
+		assert.Len(t, result.Domains, 2)
+		assert.Equal(t, "blocked.example.com", result.Domains[0].Hostname)
+		assert.Equal(t, "block", result.Domains[0].Mode)
+		assert.Equal(t, "allowed.example.com", result.Domains[1].Hostname)
+		assert.Equal(t, "allow", result.Domains[1].Mode)
 	})
 }
 
