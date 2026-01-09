@@ -54,9 +54,7 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 
 	// After successful compile, if we have link-time dependencies, record them
 	// in a sidecar file next to the archive. The linker will read these later.
-	if len(allLinkDeps) > 0 {
-		writeLinkDepsForArchive(stderr, outputPath, allLinkDeps)
-	}
+	writeLinkDepsForArchive(stderr, outputPath, allLinkDeps)
 
 	return nil
 }
