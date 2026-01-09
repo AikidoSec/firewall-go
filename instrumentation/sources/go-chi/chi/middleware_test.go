@@ -12,8 +12,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	zenchi "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi"
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -299,4 +301,25 @@ func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
 
 	assert.Equal(t, originalBody, bodyReadInHandler)
 	assert.Equal(t, 200, w.Code)
+}
+
+func TestMiddlewareCallsOnPostRequest(t *testing.T) {
+	agent.Stats().GetAndClear()
+
+	router := chi.NewRouter()
+	router.Use(zenchi.GetMiddleware())
+
+	router.Get("/route", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		stats := agent.Stats().GetAndClear()
+		require.Equal(c, 1, stats.Requests.Total)
+	}, 100*time.Millisecond, 10*time.Millisecond)
 }

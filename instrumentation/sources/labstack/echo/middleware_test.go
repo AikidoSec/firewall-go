@@ -301,6 +301,8 @@ func TestMiddlewarePreservesBodyForRawReadAfterFormParsing(t *testing.T) {
 }
 
 func TestMiddlewareCallsOnPostRequest(t *testing.T) {
+	agent.Stats().GetAndClear()
+
 	router := echo.New()
 	router.Use(zenecho.GetMiddleware())
 
@@ -315,8 +317,8 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		stats := agent.Stats().GetAndClear()
-		return stats.Requests.Total == 1
+		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
