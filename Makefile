@@ -77,7 +77,7 @@ test-instrumentation-unit:
 	@rm -f coverage-*.out coverage.out
 	@# Test subdirectories with go.mod
 	@i=0; \
-	for dir in instrumentation/sources instrumentation/sinks; do \
+	for dir in instrumentation/; do \
 		find $$dir -name go.mod -exec dirname {} \; | while read moddir; do \
 			i=$$((i+1)); \
 			echo "Testing module in $$moddir (unit tests)"; \
