@@ -73,27 +73,26 @@ type RateLimiter struct {
 
 	mu sync.RWMutex
 
-	// Channel and Ticker for the rate limiting background routine
-	channel chan struct{}
-	ticker  *time.Ticker
+	// Polling routine for periodic cleanup
+	cleanupRoutine *utils.PollingRoutine
 }
 
 func New() *RateLimiter {
 	return &RateLimiter{
 		rateLimitingMap: make(map[endpointKey]*endpointData),
-		channel:         make(chan struct{}),
-		ticker:          time.NewTicker(inactiveCleanupInterval),
 	}
 }
 
 // Init initializes the rate limiting subsystem with periodic cleanup
 func (rl *RateLimiter) Init() {
-	utils.StartPollingRoutine(rl.channel, rl.ticker, rl.cleanupInactive)
+	rl.cleanupRoutine = utils.StartPollingRoutine(inactiveCleanupInterval, rl.cleanupInactive)
 }
 
 // Uninit shuts down the rate limiting subsystem
 func (rl *RateLimiter) Uninit() {
-	utils.StopPollingRoutine(rl.channel)
+	if rl.cleanupRoutine != nil {
+		rl.cleanupRoutine.Stop()
+	}
 }
 
 func getOrCreateCounts(m map[entityKey]*slidingwindow.Window, key entityKey, windowSizeSeconds int64, maxRequests int) *slidingwindow.Window {
