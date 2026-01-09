@@ -35,11 +35,13 @@ func Start(interval time.Duration, fn func()) *Routine {
 	return r
 }
 
+// Stop stops the polling routine and waits for the goroutine to complete
 func (r *Routine) Stop() {
 	close(r.stopChan)
 	r.wg.Wait()
 }
 
+// Reset resets the interval of the polling routine
 func (r *Routine) Reset(interval time.Duration) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
