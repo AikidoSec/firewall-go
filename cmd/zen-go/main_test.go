@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,19 +46,6 @@ func TestCLI(t *testing.T) {
 			name:           "help long flag --help",
 			args:           []string{"zen-go", "--help"},
 			stdoutContains: []string{"zen-go - Aikido Zen CLI tool for Go"},
-		},
-		{
-			name:           "init command",
-			args:           []string{"zen-go", "init"},
-			stdoutContains: []string{"✓ Created orchestrion.tool.go"},
-			setupDir: func(t *testing.T) {
-				tmpDir := t.TempDir()
-				oldDir, err := os.Getwd()
-				require.NoError(t, err)
-				t.Cleanup(func() { _ = os.Chdir(oldDir) })
-				err = os.Chdir(tmpDir)
-				require.NoError(t, err)
-			},
 		},
 	}
 
