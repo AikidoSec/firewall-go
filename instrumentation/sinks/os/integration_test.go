@@ -179,3 +179,7 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 		t.Fatal("timeout waiting for attack event")
 	}
 }
+
+func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+	panic("not implemented")
+}

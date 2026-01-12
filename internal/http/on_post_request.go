@@ -17,6 +17,11 @@ func OnPostRequest(ctx context.Context, statusCode int) {
 		return
 	}
 
+	// Check wave is run during post request so that we have the user in the context
+	if agent.CheckAttackWave(reqCtx) {
+		go agent.OnAttackWaveDetected(reqCtx)
+	}
+
 	apiSpec := apidiscovery.GetAPIInfo(reqCtx)
 
 	method := reqCtx.Method

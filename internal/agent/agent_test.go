@@ -33,6 +33,9 @@ func (m *mockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, err
 func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 }
 
+func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+
 func TestCloudClient(t *testing.T) {
 	original := agent.GetCloudClient()
 	t.Cleanup(func() {

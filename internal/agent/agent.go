@@ -15,13 +15,16 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/attackwave"
 )
 
 var (
 	cloudClient      CloudClient
 	cloudClientMutex sync.RWMutex
 
-	stateCollector = state.NewCollector()
+	stateCollector     = state.NewCollector()
+	attackWaveDetector = attackwave.NewDetector(nil)
 )
 
 type CloudClient interface {
@@ -31,6 +34,7 @@ type CloudClient interface {
 	FetchConfig() (*aikido_types.CloudConfigData, error)
 	FetchListsConfig() (*aikido_types.ListsConfigData, error)
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
+	SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails)
 }
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
@@ -136,6 +140,37 @@ func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings)
 func OnMiddlewareInstalled() {
 	log.Debug("Received MiddlewareInstalled")
 	stateCollector.SetMiddlewareInstalled(true)
+}
+
+func CheckAttackWave(ctx *request.Context) bool {
+	return attackWaveDetector.CheckRequest(ctx)
+}
+
+type DetectedAttackWave struct {
+	IPAddress string
+	UserAgent string
+	Source    string
+}
+
+func OnAttackWaveDetected(ctx *request.Context) {
+	if ctx == nil {
+		return
+	}
+
+	log.Debug("Reporting attack wave")
+
+	requestInfo := cloud.AttackWaveRequestInfo{
+		IPAddress: ctx.GetIP(),
+		UserAgent: ctx.GetUserAgent(),
+		Source:    ctx.Source,
+	}
+
+	if client := GetCloudClient(); client != nil {
+		client.SendAttackWaveDetectedEvent(getAgentInfo(), requestInfo, cloud.AttackWaveDetails{
+			Metadata: map[string]string{},
+			User:     ctx.GetUser(),
+		})
+	}
 }
 
 // GetCloudClient returns the current cloud client.
