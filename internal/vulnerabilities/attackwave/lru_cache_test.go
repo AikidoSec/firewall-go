@@ -9,7 +9,7 @@ import (
 
 func TestLRUCache(t *testing.T) {
 	t.Run("stores and retrieves values", func(t *testing.T) {
-		cache := newLRUCache(10, 0)
+		cache := newLRUCache(10, 50*time.Millisecond)
 
 		cache.Set("ip1", 1)
 
@@ -19,7 +19,7 @@ func TestLRUCache(t *testing.T) {
 	})
 
 	t.Run("evicts oldest entry when capacity reached", func(t *testing.T) {
-		cache := newLRUCache(3, 0)
+		cache := newLRUCache(3, 50*time.Millisecond)
 
 		cache.Set("ip1", 1)
 		cache.Set("ip2", 1)
@@ -35,7 +35,7 @@ func TestLRUCache(t *testing.T) {
 	})
 
 	t.Run("get bumps entry to most recent", func(t *testing.T) {
-		cache := newLRUCache(3, 0)
+		cache := newLRUCache(3, 50*time.Millisecond)
 
 		cache.Set("ip1", 1)
 		cache.Set("ip2", 1)
