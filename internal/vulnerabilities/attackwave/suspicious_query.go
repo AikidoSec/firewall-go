@@ -43,6 +43,9 @@ func queryContainsDangerousPayload(ctx *request.Context) bool {
 
 func containsDangerousPattern(str string) bool {
 	// Performance optimization: skip very short or very long strings
+	// Some keywords like ../ are shorter than this min length check
+	// However, they are part of a larger string in the most cases
+	// e.g. ../etc/passwd or MD5(something)
 	if len(str) < 5 || len(str) > 1000 {
 		return false
 	}
