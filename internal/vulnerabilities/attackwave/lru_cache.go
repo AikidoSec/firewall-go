@@ -56,10 +56,7 @@ func (c *lruCache) Set(key string, value int) {
 	defer c.mu.Unlock()
 
 	now := time.Now()
-	expiry := time.Time{}
-	if c.ttl > 0 {
-		expiry = now.Add(c.ttl)
-	}
+	expiry := now.Add(c.ttl)
 
 	// Update existing entry
 	if elem, exists := c.items[key]; exists {
