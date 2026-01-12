@@ -53,3 +53,6 @@ func (m *MockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 
 	m.AttackDetectedEventSent <- struct{}{}
 }
+
+func (m *MockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}

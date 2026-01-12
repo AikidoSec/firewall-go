@@ -79,6 +79,3 @@ func TestCloudClient(t *testing.T) {
 		wg.Wait()
 	})
 }
-
-func TestOnAttackWaveDetected(t *testing.T) {
-}
