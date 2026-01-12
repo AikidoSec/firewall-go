@@ -41,7 +41,7 @@ func (c *lruCache) Get(key string) (int, bool) {
 	ent := elem.Value.(*entry)
 
 	// Check if expired
-	if c.ttl > 0 && time.Now().After(ent.expiry) {
+	if time.Now().After(ent.expiry) {
 		c.removeElement(elem)
 		return 0, false
 	}
