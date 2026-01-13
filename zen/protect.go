@@ -15,6 +15,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
+	"github.com/AikidoSec/firewall-go/internal/examine"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 )
@@ -134,7 +135,7 @@ func ProtectWithConfig(cfg *Config) error {
 // the agent. This is separated from Protect to maintain thread-safety
 // with sync.Once while preserving readability.
 func doProtect(cfg *Config) {
-	internal.SetupTransits()
+	examine.SetupTransits()
 
 	// Fallback to environment variables for empty config fields
 	mergedCfg := populateConfigFromEnv(cfg)

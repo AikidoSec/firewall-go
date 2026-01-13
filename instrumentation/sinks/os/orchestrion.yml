@@ -22,7 +22,7 @@ aspects:
     advice:
       - prepend-statements:
           imports:
-            zentransits: github.com/AikidoSec/firewall-go/internal/vulnerabilities/transits
+            zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
           template: |-
             if examinePath := zentransits.ExaminePath(); examinePath != nil {
               const _aikido_deferReporting = false
