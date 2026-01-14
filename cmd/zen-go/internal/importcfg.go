@@ -93,10 +93,7 @@ func createTempFile(objdir string) (*os.File, error) {
 }
 
 func getPackageExport(importPath string) (string, error) {
-	dir := ""
-	if modDir := findModuleRoot(); modDir != "" {
-		dir = modDir
-	}
+	dir := findModuleRoot()
 
 	pkgs, err := packages.Load(&packages.Config{
 		Mode:
