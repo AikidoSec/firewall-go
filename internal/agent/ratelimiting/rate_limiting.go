@@ -7,8 +7,8 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/polling"
 	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 )
 
@@ -73,27 +73,26 @@ type RateLimiter struct {
 
 	mu sync.RWMutex
 
-	// Channel and Ticker for the rate limiting background routine
-	channel chan struct{}
-	ticker  *time.Ticker
+	// Polling routine for periodic cleanup
+	cleanupRoutine *polling.Routine
 }
 
 func New() *RateLimiter {
 	return &RateLimiter{
 		rateLimitingMap: make(map[endpointKey]*endpointData),
-		channel:         make(chan struct{}),
-		ticker:          time.NewTicker(inactiveCleanupInterval),
 	}
 }
 
 // Init initializes the rate limiting subsystem with periodic cleanup
 func (rl *RateLimiter) Init() {
-	utils.StartPollingRoutine(rl.channel, rl.ticker, rl.cleanupInactive)
+	rl.cleanupRoutine = polling.Start(inactiveCleanupInterval, rl.cleanupInactive)
 }
 
 // Uninit shuts down the rate limiting subsystem
 func (rl *RateLimiter) Uninit() {
-	utils.StopPollingRoutine(rl.channel)
+	if rl.cleanupRoutine != nil {
+		rl.cleanupRoutine.Stop()
+	}
 }
 
 func getOrCreateCounts(m map[entityKey]*slidingwindow.Window, key entityKey, windowSizeSeconds int64, maxRequests int) *slidingwindow.Window {

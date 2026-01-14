@@ -6,36 +6,28 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/polling"
 )
 
 var (
-	heartbeatRoutineChannel     = make(chan struct{})
-	heartbeatTicker             *time.Ticker
-	configPollingRoutineChannel = make(chan struct{})
-	configPollingTicker         *time.Ticker
+	heartbeatRoutine     *polling.Routine
+	configPollingRoutine *polling.Routine
 
 	minHeartbeatIntervalInMS = 120000
 )
 
 func startPolling() {
-	heartbeatTicker = time.NewTicker(10 * time.Minute)
-	configPollingTicker = time.NewTicker(1 * time.Minute)
-
-	utils.StartPollingRoutine(heartbeatRoutineChannel, heartbeatTicker, sendHeartbeatEvent)
-	utils.StartPollingRoutine(configPollingRoutineChannel, configPollingTicker, refreshCloudConfig)
+	heartbeatRoutine = polling.Start(10*time.Minute, sendHeartbeatEvent)
+	configPollingRoutine = polling.Start(1*time.Minute, refreshCloudConfig)
 }
 
 func stopPolling() {
-	utils.StopPollingRoutine(heartbeatRoutineChannel)
-	utils.StopPollingRoutine(configPollingRoutineChannel)
-
-	if heartbeatTicker != nil {
-		heartbeatTicker.Stop()
+	if heartbeatRoutine != nil {
+		heartbeatRoutine.Stop()
 	}
-	if configPollingTicker != nil {
-		configPollingTicker.Stop()
+	if configPollingRoutine != nil {
+		configPollingRoutine.Stop()
 	}
 }
 
@@ -99,8 +91,8 @@ func calculateHeartbeatInterval(heartbeatIntervalInMS int, receivedAnyStats bool
 }
 
 func resetHeartbeatTicker(newInterval time.Duration) {
-	if heartbeatTicker != nil && newInterval > 0 {
+	if heartbeatRoutine != nil && newInterval > 0 {
 		log.Debug("Resetting HeartbeatTicker", slog.String("interval", newInterval.String()))
-		heartbeatTicker.Reset(newInterval)
+		heartbeatRoutine.Reset(newInterval)
 	}
 }
