@@ -95,6 +95,11 @@ func createTempFile(objdir string) (*os.File, error) {
 func getPackageExport(importPath string) (string, error) {
 	dir := findModuleRoot()
 
+	buildFlags, err := parentBuildFlags()
+	if err != nil {
+		return "", err
+	}
+
 	pkgs, err := packages.Load(&packages.Config{
 		Mode:
 		// Provides the export file which we will add to importcfg
@@ -103,7 +108,9 @@ func getPackageExport(importPath string) (string, error) {
 			packages.NeedDeps | packages.NeedImports | packages.NeedCompiledGoFiles |
 			// Forces final package identity which stabilises the ExportFile
 			packages.NeedName,
-		Dir: dir,
+		Dir:        dir,
+		BuildFlags: buildFlags,
+		Env:        os.Environ(),
 	}, importPath)
 	if err != nil {
 		return "", err
