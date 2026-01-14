@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"errors"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,7 +55,12 @@ func locateGoBinary() (string, error) {
 }
 
 func findParentGoProcess(goBinary string) ([]string, error) {
-	proc, err := process.NewProcess(int32(os.Getpid()))
+	pid := os.Getpid()
+	if pid < 0 || pid > math.MaxInt32 {
+		return nil, errors.New("PID out of int32 range")
+	}
+	pid32 := int32(pid)
+	proc, err := process.NewProcess(pid32)
 	if err != nil {
 		return nil, err
 	}
