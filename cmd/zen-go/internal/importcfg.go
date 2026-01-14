@@ -1,12 +1,14 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/tools/go/packages"
 )
 
 func ExtendImportcfg(origPath string, addedImports map[string]string, objdir string, stderr io.Writer, debug bool) (string, error) {
@@ -91,16 +93,30 @@ func createTempFile(objdir string) (*os.File, error) {
 }
 
 func getPackageExport(importPath string) (string, error) {
-	cmd := exec.Command("go", "list", "-export", "-f", "{{.Export}}", importPath)
+	dir := ""
 	if modDir := findModuleRoot(); modDir != "" {
-		cmd.Dir = modDir
+		dir = modDir
 	}
 
-	output, err := cmd.Output()
+	pkgs, err := packages.Load(&packages.Config{
+		Mode:
+		// Provides the export file which we will add to importcfg
+		packages.NeedExportFile |
+			// Ensure go walks the full dependency graph
+			packages.NeedDeps | packages.NeedImports | packages.NeedCompiledGoFiles |
+			// Forces final package identity which stabilises the ExportFile
+			packages.NeedName,
+		Dir: dir,
+	}, importPath)
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(output)), nil
+
+	if len(pkgs) == 0 {
+		return "", errors.New("package was not resolved")
+	}
+
+	return pkgs[0].ExportFile, err
 }
 
 func findModuleRoot() string {
