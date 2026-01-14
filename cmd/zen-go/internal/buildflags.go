@@ -133,51 +133,32 @@ func extractBuildFlags(args []string) []string {
 
 	for ; i < len(args); i++ {
 		arg := args[i]
-		if arg == "--" || !strings.HasPrefix(arg, "-") {
+
+		if arg == "--" {
 			break
 		}
 
-		if strings.Contains(arg, "=") {
-			if extracted := extractFlag(arg, "", standalone, withValue); extracted != "" {
-				result = append(result, extracted)
-			}
+		if !strings.HasPrefix(arg, "-") {
 			continue
 		}
 
-		nextVal := ""
-		if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
-			nextVal = args[i+1]
+		// Normalize --flag to -flag
+		normalized := arg
+		if strings.HasPrefix(arg, "--") {
+			normalized = arg[1:]
 		}
-		if extracted := extractFlag(arg, nextVal, standalone, withValue); extracted != "" {
-			result = append(result, extracted)
-			if nextVal != "" && withValue[strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")] {
-				i++
+
+		if key, val, ok := strings.Cut(normalized, "="); ok {
+			if withValue[key] {
+				result = append(result, key+"="+val)
 			}
+		} else if withValue[normalized] {
+			result = append(result, normalized+"="+args[i+1])
+			i++
+		} else if standalone[normalized] {
+			result = append(result, normalized)
 		}
 	}
 
 	return result
-}
-
-func extractFlag(flag, nextArg string, standalone, withValue map[string]bool) string {
-	// Normalize -- to -
-	normalized := strings.TrimPrefix(flag, "-")
-	normalized = "-" + normalized
-
-	if key, val, ok := strings.Cut(normalized, "="); ok {
-		name := strings.TrimPrefix(key, "-")
-		if withValue[name] {
-			return key + "=" + val
-		}
-		return ""
-	}
-
-	name := strings.TrimPrefix(normalized, "-")
-	if standalone[name] {
-		return normalized
-	}
-	if withValue[name] && nextArg != "" {
-		return normalized + "=" + nextArg
-	}
-	return ""
 }
