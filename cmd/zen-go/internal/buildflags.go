@@ -99,37 +99,8 @@ func matchesGoBinary(candidate, goBinary string) bool {
 }
 
 // extractBuildFlags parses the parent go command's arguments and returns
-// the build flags. Skips -a (would force unnecessary rebuilds) and
-// -toolexec (we add our own).
+// the build flags. Skips -a (would force unnecessary rebuilds).
 func extractBuildFlags(args []string) []string {
-	standalone := map[string]bool{
-		"-asan":       true,
-		"-cover":      true,
-		"-linkshared": true,
-		"-modcacherw": true,
-		"-msan":       true,
-		"-race":       true,
-		"-trimpath":   true,
-		"-work":       true,
-	}
-	withValue := map[string]bool{
-		"-asmflags":   true,
-		"-buildmode":  true,
-		"-buildvcs":   true,
-		"-compiler":   true,
-		"-covermode":  true,
-		"-coverpkg":   true,
-		"-gccgoflags": true,
-		"-gcflags":    true,
-		"-ldflags":    true,
-		"-mod":        true,
-		"-modfile":    true,
-		"-overlay":    true,
-		"-pgo":        true,
-		"-pkgdir":     true,
-		"-tags":       true,
-	}
-
 	var result []string
 
 	// Skip go binary and subcommand
@@ -145,26 +116,12 @@ func extractBuildFlags(args []string) []string {
 			break
 		}
 
-		if !strings.HasPrefix(arg, "-") {
+		// Skip -a
+		if arg == "-a" || arg == "--a" {
 			continue
 		}
 
-		// Normalize --flag to -flag
-		normalized := arg
-		if strings.HasPrefix(arg, "--") {
-			normalized = arg[1:]
-		}
-
-		if key, val, ok := strings.Cut(normalized, "="); ok {
-			if withValue[key] {
-				result = append(result, key+"="+val)
-			}
-		} else if withValue[normalized] {
-			result = append(result, normalized+"="+args[i+1])
-			i++
-		} else if standalone[normalized] {
-			result = append(result, normalized)
-		}
+		result = append(result, arg)
 	}
 
 	return result

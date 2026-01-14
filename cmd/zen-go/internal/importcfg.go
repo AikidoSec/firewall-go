@@ -100,13 +100,6 @@ func getPackageExport(importPath string) (string, error) {
 		return "", err
 	}
 
-	// Add our toolexec so packages.Load uses the same instrumented cache
-	exe, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
-	buildFlags = append(buildFlags, fmt.Sprintf("-toolexec=%s toolexec", exe))
-
 	pkgs, err := packages.Load(&packages.Config{
 		Mode:
 		// Provides the export file which we will add to importcfg
