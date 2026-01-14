@@ -91,7 +91,15 @@ func createTempFile(objdir string) (*os.File, error) {
 }
 
 func getPackageExport(importPath string) (string, error) {
-	cmd := exec.Command("go", "list", "-export", "-f", "{{.Export}}", importPath)
+	// Get the path to ourselves so we can use -toolexec
+	// This ensures we get the export path from the same cache as the current build
+	selfPath, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("failed to get executable path: %w", err)
+	}
+
+	toolexecArg := selfPath + " toolexec"
+	cmd := exec.Command("go", "list", "-toolexec", toolexecArg, "-export", "-f", "{{.Export}}", importPath)
 	if modDir := findModuleRoot(); modDir != "" {
 		cmd.Dir = modDir
 	}
