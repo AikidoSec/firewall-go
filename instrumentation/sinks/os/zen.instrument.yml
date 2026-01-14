@@ -1,0 +1,20 @@
+meta:
+  name: os
+  description: Protection from Local File Inclusion (LFI) Attacks.
+
+rules:
+  # Prepend security check to os.OpenFile
+  - id: os.OpenFile
+    type: prepend
+    package: os
+    imports:
+      zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
+    function: OpenFile
+    template: |
+      if examinePath := zentransits.ExaminePath(); examinePath != nil {
+        const _aikido_deferReporting = false
+        _aikido_block := examinePath("os.OpenFile", []string{ {{ .Function.Argument 0 }} }, _aikido_deferReporting)
+        if _aikido_block != nil {
+          return nil, _aikido_block
+        }
+      }
