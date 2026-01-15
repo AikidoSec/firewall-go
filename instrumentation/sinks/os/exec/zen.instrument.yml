@@ -1,0 +1,32 @@
+meta:
+  name: os/exec
+  description: Protection from shell injection.
+
+rules:
+  - id: exec.Cmd.Run
+    type: prepend
+    receiver: "*os/exec.Cmd"
+    function: Run
+    imports:
+      zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
+    template: |
+      if examineCommand := zentransits.ExamineCommand(); examineCommand != nil {
+        _aikido_err := examineCommand({{ .Function.Receiver }}.ctx, "exec.Cmd.Run", {{ .Function.Receiver }}.Args)
+        if _aikido_err != nil {
+          return _aikido_err
+        }
+      }
+
+  - id: exec.Cmd.Start
+    type: prepend
+    receiver: "*os/exec.Cmd"
+    function: Start
+    imports:
+      zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
+    template: |
+      if examineCommand := zentransits.ExamineCommand(); examineCommand != nil {
+        _aikido_err := examineCommand({{ .Function.Receiver }}.ctx, "exec.Cmd.Start", {{ .Function.Receiver }}.Args)
+        if _aikido_err != nil {
+          return _aikido_err
+        }
+      }
