@@ -34,7 +34,7 @@ func captureParentFlags() ([]string, error) {
 		return nil, err
 	}
 
-	args, err := findParentGoProcess(goBinary)
+	args, err := findParentGoProcessArgs(goBinary)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func locateGoBinary() (string, error) {
 	return filepath.EvalSymlinks(path)
 }
 
-func findParentGoProcess(goBinary string) ([]string, error) {
+func findParentGoProcessArgs(goBinary string) ([]string, error) {
 	pid := os.Getpid()
 	if pid < 0 || pid > math.MaxInt32 {
 		return nil, errors.New("PID out of int32 range")
@@ -66,6 +66,7 @@ func findParentGoProcess(goBinary string) ([]string, error) {
 	}
 
 	for {
+		// Keep running through the process stack until we find the parent go binary
 		proc, err = proc.Parent()
 		if err != nil {
 			return nil, err
@@ -116,7 +117,6 @@ func extractBuildFlags(args []string) []string {
 			break
 		}
 
-		// Skip -a
 		if arg == "-a" || arg == "--a" {
 			continue
 		}
