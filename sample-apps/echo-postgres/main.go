@@ -26,7 +26,7 @@ func main() {
 			userHeader := c.Request().Header.Get("user")
 			fmt.Println("userHeader:", userHeader)
 			if userHeader != "" {
-				_, err := zen.SetUser(c.Request().Context(), userHeader, "Bob example")
+				_, err = zen.SetUser(c.Request().Context(), userHeader, "Bob example")
 				if err != nil {
 					log.Println(err)
 					return err
@@ -52,13 +52,14 @@ func AikidoMiddleware() echo.MiddlewareFunc {
 			blockResult := zen.ShouldBlockRequest(c.Request().Context())
 
 			if blockResult != nil {
-				if blockResult.Type == "rate-limited" {
+				switch blockResult.Type {
+				case "rate-limited":
 					message := "You are rate limited by Zen."
 					if blockResult.Trigger == "ip" {
 						message += " (Your IP: " + *blockResult.IP + ")"
 					}
 					return c.String(http.StatusTooManyRequests, message)
-				} else if blockResult.Type == "blocked" {
+				case "blocked":
 					return c.String(http.StatusForbidden, "You are blocked by Zen.")
 				}
 			}
