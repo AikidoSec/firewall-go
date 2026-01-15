@@ -167,7 +167,7 @@ func tryTransformCall(expr ast.Expr, fset *token.FileSet, pkgName, funcName stri
 	// Step 4: Serialize the original call expression back to source code
 	// e.g., AST for "http.Get(url)" becomes the string "http.Get(url)"
 	var origBuf bytes.Buffer
-	printer.Fprint(&origBuf, fset, call)
+	_ = printer.Fprint(&origBuf, fset, call)
 	origCode := origBuf.String()
 
 	// Step 5: Apply the wrapping template

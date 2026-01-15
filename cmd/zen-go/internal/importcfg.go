@@ -70,11 +70,13 @@ func ExtendImportcfg(origPath string, addedImports map[string]string, objdir str
 	}
 
 	if _, err := tmpFile.WriteString(newContent); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
 		return "", err
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return "", err
+	}
 
 	if debug {
 		fmt.Fprintf(stderr, "zen-go: wrote extended importcfg to %s\n", tmpFile.Name())
