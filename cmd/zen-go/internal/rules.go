@@ -85,6 +85,7 @@ func loadRulesFromDir(dir string) (*InstrumentationRules, error) {
 
 // loadRulesFromFile loads rules from a single zen.instrument.yml file
 func loadRulesFromFile(path string) (*InstrumentationRules, error) {
+	// #nosec G304 - path is from project's instrumentation directory
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

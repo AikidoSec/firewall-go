@@ -12,6 +12,7 @@ import (
 )
 
 func ExtendImportcfg(origPath string, addedImports map[string]string, objdir string, stderr io.Writer, debug bool) (string, error) {
+	// #nosec G304 - path is provided by the Go toolchain
 	content, err := os.ReadFile(origPath)
 	if err != nil {
 		return "", err
@@ -88,7 +89,9 @@ func ExtendImportcfg(origPath string, addedImports map[string]string, objdir str
 func createTempFile(objdir string) (*os.File, error) {
 	if objdir != "" {
 		dir := filepath.Join(objdir, "zen-go")
+		// #nosec G301 - build artifacts need to be readable by the compiler
 		if err := os.MkdirAll(dir, 0o755); err == nil {
+			// #nosec G304 - path is constructed from objdir provided by Go toolchain
 			return os.Create(filepath.Join(dir, "importcfg.txt"))
 		}
 	}
