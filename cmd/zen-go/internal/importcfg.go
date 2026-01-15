@@ -39,7 +39,8 @@ func ExtendImportcfg(origPath string, addedImports map[string]string, objdir str
 			continue
 		}
 
-		exportPath, err := getPackageExport(importPath)
+		var exportPath string
+		exportPath, err = getPackageExport(importPath)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: could not find export for %s: %v\n", importPath, err)
 			continue
