@@ -95,6 +95,7 @@ func createTempFile(objdir string) (*os.File, error) {
 func getPackageExport(importPath string) (string, error) {
 	dir := findModuleRoot()
 
+	// Pass original build flags to packages.Load to prevent cache misses and fingerprint errors.
 	buildFlags, err := parentBuildFlags()
 	if err != nil {
 		return "", err
