@@ -172,7 +172,9 @@ func OnAttackWaveDetected(ctx *request.Context) {
 	samples := attackWaveDetector.GetSamplesForIP(ctx.GetIP())
 	if len(samples) > 0 {
 		samplesJSON, err := json.Marshal(samples)
-		if err == nil {
+		if err != nil {
+			log.Debug("Error marshaling attack wave samples", slog.Any("error", err))
+		} else {
 			metadata["samples"] = string(samplesJSON)
 		}
 	}
