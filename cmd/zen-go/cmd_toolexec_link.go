@@ -1,0 +1,205 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal"
+)
+
+// toolexecLinkCommand is invoked by Go's -toolexec flag when linking.
+// Example args:
+//
+//	tool: "/usr/local/go/pkg/tool/darwin_arm64/link"
+//	toolArgs: ["-o", "/path/to/output", "-importcfg", "/tmp/importcfg", "-buildmode=exe", "main.a"]
+func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
+	importcfgPath := extractLinkerImportcfg(toolArgs)
+	if importcfgPath == "" {
+		return passthrough(tool, toolArgs)
+	}
+
+	if isDebug() {
+		fmt.Fprintf(stderr, "zen-go: intercepting linker\n")
+	}
+
+	// Read the importcfg to find all archives
+	// #nosec G304 - importcfgPath comes from Go toolchain args, not user input
+	content, err := os.ReadFile(importcfgPath)
+	if err != nil {
+		return passthrough(tool, toolArgs)
+	}
+
+	// Collect all link deps from all archives
+	allLinkDeps := collectLinkDeps(content, stderr)
+	if len(allLinkDeps) == 0 {
+		return passthrough(tool, toolArgs)
+	}
+
+	// Find deps we introduced that aren't in the original importcfg.
+	// Example: if we injected a go:linkname pointing to
+	// github.com/AikidoSec/firewall-go/instrumentation/sinks/os,
+	// that package won't be in the importcfg unless the app already used it.
+	newLines := resolveMissingDeps(content, allLinkDeps, stderr)
+	if len(newLines) == 0 {
+		return passthrough(tool, toolArgs)
+	}
+
+	// Write new importcfg with additional dependencies
+	newImportcfgPath, err := writeExtendedLinkerImportcfg(content, newLines)
+	if err != nil {
+		fmt.Fprintf(stderr, "zen-go: warning: failed to write extended importcfg: %v\n", err)
+		return passthrough(tool, toolArgs)
+	}
+	defer func() { _ = os.Remove(newImportcfgPath) }()
+
+	// Update args with new importcfg
+	newArgs := replaceLinkerImportcfgArg(toolArgs, newImportcfgPath)
+
+	return passthrough(tool, newArgs)
+}
+
+func extractLinkerImportcfg(args []string) string {
+	for i := range len(args) {
+		if val, ok := extractFlag(args, i, "-importcfg"); ok {
+			return val
+		}
+	}
+	return ""
+}
+
+func collectLinkDeps(importcfgContent []byte, stderr io.Writer) map[string]bool {
+	allLinkDeps := make(map[string]bool)
+	lines := strings.Split(string(importcfgContent), "\n")
+
+	for _, line := range lines {
+		if !strings.HasPrefix(line, "packagefile ") {
+			continue
+		}
+
+		parts := strings.SplitN(strings.TrimPrefix(line, "packagefile "), "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		archivePath := parts[1]
+		deps, err := internal.ReadLinkDeps(archivePath)
+		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: warning: could not read linkdeps: %v\n", err)
+			continue
+		}
+
+		if len(deps) > 0 {
+			for _, dep := range deps {
+				allLinkDeps[dep] = true
+			}
+			if isDebug() {
+				fmt.Fprintf(stderr, "zen-go: found link deps in %s: %v\n", parts[0], deps)
+			}
+		}
+	}
+
+	return allLinkDeps
+}
+
+func resolveMissingDeps(importcfgContent []byte, allLinkDeps map[string]bool, stderr io.Writer) []string {
+	// Parse existing packages in importcfg
+	existing := make(map[string]bool)
+	lines := strings.Split(string(importcfgContent), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "packagefile ") {
+			parts := strings.SplitN(strings.TrimPrefix(line, "packagefile "), "=", 2)
+			if len(parts) == 2 {
+				existing[parts[0]] = true
+			}
+		}
+	}
+
+	// Find missing deps and resolve their export paths
+	var newLines []string
+	for dep := range allLinkDeps {
+		if existing[dep] {
+			if isDebug() {
+				fmt.Fprintf(stderr, "zen-go: link dep %s already in importcfg\n", dep)
+			}
+			continue
+		}
+
+		exportPath, err := internal.GetPackageExport(dep)
+		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: warning: could not find export for link dep %s: %v\n", dep, err)
+			continue
+		}
+
+		newLines = append(newLines, fmt.Sprintf("packagefile %s=%s", dep, exportPath))
+		if isDebug() {
+			fmt.Fprintf(stderr, "zen-go: adding link dep to importcfg: %s=%s\n", dep, exportPath)
+		}
+	}
+
+	return newLines
+}
+
+func writeExtendedLinkerImportcfg(originalContent []byte, newLines []string) (string, error) {
+	newContent := string(originalContent)
+	if !strings.HasSuffix(newContent, "\n") {
+		newContent += "\n"
+	}
+	newContent += strings.Join(newLines, "\n") + "\n"
+
+	tmpFile, err := os.CreateTemp("", "importcfg_link_*.txt")
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := tmpFile.WriteString(newContent); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
+		return "", err
+	}
+	_ = tmpFile.Close()
+
+	if isDebug() {
+		fmt.Fprintf(os.Stderr, "zen-go: wrote extended linker importcfg to %s\n", tmpFile.Name())
+	}
+
+	return tmpFile.Name(), nil
+}
+
+func replaceLinkerImportcfgArg(args []string, newPath string) []string {
+	result := make([]string, len(args))
+	copy(result, args)
+
+	for i := range len(result) {
+		if result[i] == "-importcfg" && i+1 < len(result) {
+			result[i+1] = newPath
+			return result
+		}
+		if strings.HasPrefix(result[i], "-importcfg=") {
+			result[i] = "-importcfg=" + newPath
+			return result
+		}
+	}
+	return result
+}
+
+// writeLinkDepsForArchive writes link dependencies for the compiled archive if any exist.
+func writeLinkDepsForArchive(stderr io.Writer, outputPath string, linkDeps []string) {
+	if len(linkDeps) == 0 {
+		return
+	}
+
+	if outputPath == "" {
+		return
+	}
+
+	// Only write if the output file exists (it should after successful compilation)
+	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
+		return
+	}
+
+	if err := internal.WriteLinkDeps(outputPath, linkDeps, stderr, isDebug()); err != nil {
+		fmt.Fprintf(stderr, "zen-go: warning: failed to write link deps: %v\n", err)
+	}
+}

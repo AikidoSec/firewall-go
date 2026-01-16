@@ -29,17 +29,28 @@ type Rule struct {
 	Type      string            `yaml:"type"`
 	Match     string            `yaml:"match"`     // For wrap rules: "pkg.Func"
 	Receiver  string            `yaml:"receiver"`  // For prepend rules with receiver: "*pkg.Type"
-	Package   string            `yaml:"package"`   // For prepend rules without receiver: target package (e.g., "os")
+	Package   string            `yaml:"package"`   // For prepend/inject-decl rules: target package (e.g., "os")
 	Function  string            `yaml:"function"`  // For prepend rules: single "MethodName"
 	Functions []string          `yaml:"functions"` // For prepend rules: multiple method names (one-of)
+	Anchor    string            `yaml:"anchor"`    // For inject-decl rules: anchor function name
+	Links     []string          `yaml:"links"`     // For inject-decl rules: packages to link
 	Imports   map[string]string `yaml:"imports"`
 	Template  string            `yaml:"template"`
 }
 
 // InstrumentationRules holds all loaded rules
 type InstrumentationRules struct {
-	WrapRules    []WrapRule
-	PrependRules []PrependRule
+	WrapRules       []WrapRule
+	PrependRules    []PrependRule
+	InjectDeclRules []InjectDeclRule
+}
+
+// WrapRule wraps a function call expression
+type WrapRule struct {
+	ID        string
+	MatchCall string
+	Imports   map[string]string
+	WrapTmpl  string
 }
 
 // PrependRule prepends statements to a function body.
@@ -47,11 +58,20 @@ type InstrumentationRules struct {
 // For standalone functions: set Package (e.g., "os") and leave ReceiverType empty
 type PrependRule struct {
 	ID           string
-	ReceiverType string            // e.g., "*database/sql.DB"
+	ReceiverType string            // e.g., "*database/sql.DB" (for methods)
 	Package      string            // e.g., "os" (for standalone functions without receiver)
 	FuncNames    []string          // e.g., ["Run", "Start"] - matches any of these
 	Imports      map[string]string // alias -> import path
 	PrependTmpl  string            // template with {{ .Function.Argument N }}
+}
+
+// InjectDeclRule injects declarations into a package (e.g., go:linkname)
+type InjectDeclRule struct {
+	ID           string
+	Package      string   // Package being compiled, e.g., "os"
+	AnchorFunc   string   // Function to attach declaration to (e.g., "Getpid")
+	Links        []string // Packages needed for linking
+	DeclTemplate string   // The declaration to inject
 }
 
 // loadRulesFromDir loads all zen.instrument.yml files from a directory tree
@@ -74,6 +94,7 @@ func loadRulesFromDir(dir string) (*InstrumentationRules, error) {
 
 		result.WrapRules = append(result.WrapRules, rules.WrapRules...)
 		result.PrependRules = append(result.PrependRules, rules.PrependRules...)
+		result.InjectDeclRules = append(result.InjectDeclRules, rules.InjectDeclRules...)
 		return nil
 	})
 	if err != nil {
@@ -120,6 +141,14 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 				FuncNames:    funcNames,
 				Imports:      rule.Imports,
 				PrependTmpl:  strings.TrimSpace(rule.Template),
+			})
+		case "inject-decl":
+			result.InjectDeclRules = append(result.InjectDeclRules, InjectDeclRule{
+				ID:           rule.ID,
+				Package:      rule.Package,
+				AnchorFunc:   rule.Anchor,
+				Links:        rule.Links,
+				DeclTemplate: strings.TrimSpace(rule.Template),
 			})
 		}
 	}

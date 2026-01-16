@@ -1,0 +1,42 @@
+meta:
+  name: net/http
+  description: net/http.ServeMux is the stdlib request multiplexer
+
+rules:
+  # Inject go:linkname declaration for WrapHandler
+  - id: net/http.ServeMux.linkname.WrapHandler
+    type: inject-decl
+    package: net/http
+    anchor: Handle
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sources/net/http
+    template: |
+      //go:linkname __aikido_http_wrapHandler github.com/AikidoSec/firewall-go/instrumentation/sources/net/http.WrapHandler
+      func __aikido_http_wrapHandler(Handler) Handler
+
+  # Inject go:linkname declaration for Middleware
+  - id: net/http.ServeMux.linkname.Middleware
+    type: inject-decl
+    package: net/http
+    anchor: HandleFunc
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sources/net/http
+    template: |
+      //go:linkname __aikido_http_middleware github.com/AikidoSec/firewall-go/instrumentation/sources/net/http.Middleware
+      func __aikido_http_middleware(func(ResponseWriter, *Request)) func(ResponseWriter, *Request)
+
+  # Prepend to ServeMux.Handle
+  - id: net/http.ServeMux.Handle
+    type: prepend
+    receiver: "*net/http.ServeMux"
+    function: Handle
+    template: |
+      {{ .Function.Argument 1 }} = __aikido_http_wrapHandler({{ .Function.Argument 1 }})
+
+  # Prepend to ServeMux.HandleFunc
+  - id: net/http.ServeMux.HandleFunc
+    type: prepend
+    receiver: "*net/http.ServeMux"
+    function: HandleFunc
+    template: |
+      {{ .Function.Argument 1 }} = __aikido_http_middleware({{ .Function.Argument 1 }})
