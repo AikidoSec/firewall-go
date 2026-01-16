@@ -168,7 +168,6 @@ func OnAttackWaveDetected(ctx *request.Context) {
 
 	metadata := map[string]string{}
 
-	// Get samples for this IP and serialize to JSON
 	samples := attackWaveDetector.GetSamplesForIP(ctx.GetIP())
 	if len(samples) > 0 {
 		samplesJSON, err := json.Marshal(samples)
