@@ -25,6 +25,7 @@ func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []
 	}
 
 	// Read the importcfg to find all archives
+	// #nosec G304 - importcfgPath comes from Go toolchain args, not user input
 	content, err := os.ReadFile(importcfgPath)
 	if err != nil {
 		return passthrough(tool, toolArgs)
@@ -51,7 +52,7 @@ func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []
 		fmt.Fprintf(stderr, "zen-go: warning: failed to write extended importcfg: %v\n", err)
 		return passthrough(tool, toolArgs)
 	}
-	defer os.Remove(newImportcfgPath)
+	defer func() { _ = os.Remove(newImportcfgPath) }()
 
 	// Update args with new importcfg
 	newArgs := replaceLinkerImportcfgArg(toolArgs, newImportcfgPath)
@@ -153,11 +154,11 @@ func writeExtendedLinkerImportcfg(originalContent []byte, newLines []string) (st
 	}
 
 	if _, err := tmpFile.WriteString(newContent); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
 		return "", err
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	if isDebug() {
 		fmt.Fprintf(os.Stderr, "zen-go: wrote extended linker importcfg to %s\n", tmpFile.Name())

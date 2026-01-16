@@ -119,7 +119,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 			continue
 		}
 
-		err := transformDeclsInjectDecl(file, fset, rule, &modified, &linksToAdd)
+		err = transformDeclsInjectDecl(file, fset, rule, &modified, &linksToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}

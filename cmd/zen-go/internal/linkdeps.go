@@ -31,6 +31,7 @@ func WriteLinkDeps(archivePath string, deps []string, stderr io.Writer, debug bo
 // Returns nil if the file doesn't exist (which is not an error - it means no link deps).
 func ReadLinkDeps(archivePath string) ([]string, error) {
 	depsFile := archivePath + linkdepsExtension
+	// #nosec G304 - depsFile is derived from archivePath which comes from Go toolchain
 	content, err := os.ReadFile(depsFile)
 	if err != nil {
 		if os.IsNotExist(err) {
