@@ -36,7 +36,10 @@ func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []
 		return passthrough(tool, toolArgs)
 	}
 
-	// Check which deps are missing from importcfg and get their export paths
+	// Find deps we introduced that aren't in the original importcfg.
+	// Example: if we injected a go:linkname pointing to
+	// github.com/AikidoSec/firewall-go/instrumentation/sinks/os,
+	// that package won't be in the importcfg unless the app already used it.
 	newLines := resolveMissingDeps(content, allLinkDeps, stderr)
 	if len(newLines) == 0 {
 		return passthrough(tool, toolArgs)

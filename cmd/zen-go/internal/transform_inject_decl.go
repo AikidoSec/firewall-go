@@ -41,8 +41,9 @@ func transformDeclsInjectDecl(f *ast.File, fset *token.FileSet, rule InjectDeclR
 		return errors.New("no declarations found in template")
 	}
 
-	// Find and associate comments with declarations
-	// Comments that appear immediately before a declaration should be preserved
+	// Copy go:linkname directive comments to the target file.
+	// Go's AST stores comments separately from declarations, so we must
+	// explicitly add them to f.Comments or they'll be lost in the output.
 	for _, decl := range declsToInject {
 		for _, cg := range declFile.Comments {
 			// Check if comment is immediately before this declaration
