@@ -140,4 +140,83 @@ func TestDetectorCheck(t *testing.T) {
 		result = detector.CheckRequest(ctx)
 		assert.True(t, result, "Should trigger again after waiting")
 	})
+
+	t.Run("collects samples for suspicious requests", func(t *testing.T) {
+		detector := attackwave.NewDetector(&attackwave.Options{
+			AttackWaveThreshold: 3,
+			AttackWaveTimeFrame: 60 * time.Second,
+		})
+
+		ip := "192.168.1.1"
+		ctx := &request.Context{
+			RemoteAddress: &ip,
+			Method:        "GET",
+			Path:          "/.env",
+			URL:           "http://example.com/.env",
+		}
+
+		detector.CheckRequest(ctx)
+		detector.CheckRequest(ctx)
+		detector.CheckRequest(ctx)
+
+		samples := detector.GetSamplesForIP(ip)
+		assert.Len(t, samples, 1, "Should have 1 unique sample")
+		assert.Equal(t, "GET", samples[0].Method)
+		assert.Equal(t, "http://example.com/.env", samples[0].URL)
+	})
+
+	t.Run("stores only unique samples", func(t *testing.T) {
+		detector := attackwave.NewDetector(&attackwave.Options{
+			AttackWaveThreshold: 5,
+			AttackWaveTimeFrame: 60 * time.Second,
+		})
+
+		ip := "192.168.1.1"
+
+		// Same request multiple times
+		ctx1 := &request.Context{
+			RemoteAddress: &ip,
+			Method:        "GET",
+			Path:          "/.env",
+			URL:           "http://example.com/.env",
+		}
+		detector.CheckRequest(ctx1)
+		detector.CheckRequest(ctx1)
+
+		// Different request
+		ctx2 := &request.Context{
+			RemoteAddress: &ip,
+			Method:        "POST",
+			Path:          "/.git/config",
+			URL:           "http://example.com/.git/config",
+		}
+		detector.CheckRequest(ctx2)
+
+		samples := detector.GetSamplesForIP(ip)
+		assert.Len(t, samples, 2, "Should have 2 unique samples")
+	})
+
+	t.Run("respects maxSamplesPerIP", func(t *testing.T) {
+		detector := attackwave.NewDetector(&attackwave.Options{
+			AttackWaveThreshold: 10,
+			AttackWaveTimeFrame: 60 * time.Second,
+			MaxSamplesPerIP:     2,
+		})
+
+		ip := "192.168.1.1"
+
+		paths := []string{"/.env", "/.git/config", "/.aws/credentials"}
+		for _, path := range paths {
+			ctx := &request.Context{
+				RemoteAddress: &ip,
+				Method:        "GET",
+				Path:          path,
+				URL:           "http://example.com" + path,
+			}
+			detector.CheckRequest(ctx)
+		}
+
+		samples := detector.GetSamplesForIP(ip)
+		assert.Len(t, samples, 2, "Should be limited to maxSamplesPerIP")
+	})
 }

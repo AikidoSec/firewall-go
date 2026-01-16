@@ -56,6 +56,11 @@ func TestOnPostRequest_AttackWave(t *testing.T) {
 		assert.Equal(t, "10.0.0.1", result.ip)
 		assert.Equal(t, "user-agent", result.userAgent)
 		assert.Equal(t, "test", result.source)
+
+		// Verify samples are included in metadata
+		assert.Contains(t, result.metadata, "samples", "metadata should contain samples")
+		assert.Contains(t, result.metadata["samples"], "BADMETHOD", "samples should contain the method")
+		assert.Contains(t, result.metadata["samples"], "/route", "samples should contain the URL")
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("attack wave was never reported")
 	}
@@ -69,6 +74,7 @@ type attackWaveDetails struct {
 	ip        string
 	userAgent string
 	source    string
+	metadata  map[string]string
 }
 
 func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
@@ -97,5 +103,6 @@ func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo,
 		ip:        request.IPAddress,
 		userAgent: request.UserAgent,
 		source:    request.Source,
+		metadata:  attack.Metadata,
 	}
 }
