@@ -1,0 +1,16 @@
+meta:
+  name: path/filepath
+  description: Protection from Local File Inclusion (LFI) Attacks.
+
+rules:
+  - id: filepath.Join
+    type: prepend
+    package: path/filepath
+    function: Join
+    imports:
+      zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
+    template: |
+      if examinePath := zentransits.ExaminePath(); examinePath != nil {
+        const _aikido_deferReporting = true
+        examinePath("filepath.Join", {{ .Function.Argument 0 }}, _aikido_deferReporting)
+      }

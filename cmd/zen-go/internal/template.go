@@ -47,3 +47,23 @@ func (f *function) Argument(idx int) string {
 
 	return ""
 }
+
+// Receiver returns the name of the receiver variable
+func (f *function) Receiver() string {
+	if f.fn.Recv == nil || len(f.fn.Recv.List) == 0 {
+		return ""
+	}
+	field := f.fn.Recv.List[0]
+	if len(field.Names) == 0 {
+		return ""
+	}
+	return field.Names[0].Name
+}
+
+// Name returns the name of the function
+func (f *function) Name() string {
+	if f.fn.Name == nil {
+		return ""
+	}
+	return f.fn.Name.Name
+}
