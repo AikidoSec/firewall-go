@@ -34,7 +34,7 @@ func (dh *DatabaseHelper) GetAllPets(ctx context.Context) ([]Pet, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var pet Pet
@@ -93,4 +93,3 @@ func connectToDb() *sql.DB {
 
 	return db
 }
-

@@ -14,15 +14,26 @@ linters:
     - unused
     - bodyclose
     - gocritic
-    - gosimple
     - gosec
   settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
     govet:
       enable-all: true
       disable:
         - fieldalignment
-    gocritic:
-      enable-all: true
+
+  exclusions:
+    warn-unused: true
+    rules:
+      - path: '_test\.go'
+        linters:
+          - bodyclose
+          - errcheck
+          - gosec
 
 formatters:
   enable:

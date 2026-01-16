@@ -77,4 +77,3 @@ func defineAPIRoutes(r *gin.Engine, db *DatabaseHelper) {
 		c.String(http.StatusOK, content)
 	})
 }
-

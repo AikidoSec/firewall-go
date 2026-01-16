@@ -26,7 +26,7 @@ func main() {
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("user") != "" {
-				_, err := zen.SetUser(r.Context(), r.Header.Get("user"), "John Doe")
+				_, err = zen.SetUser(r.Context(), r.Header.Get("user"), "John Doe")
 				if err != nil {
 					log.Println(err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -63,14 +63,15 @@ func RateLimitMiddleware() func(next http.Handler) http.Handler {
 			blockResult := zen.ShouldBlockRequest(r.Context())
 
 			if blockResult != nil {
-				if blockResult.Type == "rate-limited" {
+				switch blockResult.Type {
+				case "rate-limited":
 					message := "You are rate limited by Zen."
 					if blockResult.Trigger == "ip" {
 						message += " (Your IP: " + *blockResult.IP + ")"
 					}
 					http.Error(w, message, http.StatusTooManyRequests)
 					return
-				} else if blockResult.Type == "blocked" {
+				case "blocked":
 					http.Error(w, "You are blocked by Zen.", http.StatusForbidden)
 					return
 				}

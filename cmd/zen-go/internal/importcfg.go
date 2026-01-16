@@ -12,6 +12,7 @@ import (
 )
 
 func ExtendImportcfg(origPath string, addedImports map[string]string, objdir string, stderr io.Writer, debug bool) (string, error) {
+	// #nosec G304 - path is provided by the Go toolchain
 	content, err := os.ReadFile(origPath)
 	if err != nil {
 		return "", err
@@ -39,7 +40,8 @@ func ExtendImportcfg(origPath string, addedImports map[string]string, objdir str
 			continue
 		}
 
-		exportPath, err := getPackageExport(importPath)
+		var exportPath string
+		exportPath, err = getPackageExport(importPath)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: could not find export for %s: %v\n", importPath, err)
 			continue
@@ -69,11 +71,13 @@ func ExtendImportcfg(origPath string, addedImports map[string]string, objdir str
 	}
 
 	if _, err := tmpFile.WriteString(newContent); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
 		return "", err
 	}
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return "", err
+	}
 
 	if debug {
 		fmt.Fprintf(stderr, "zen-go: wrote extended importcfg to %s\n", tmpFile.Name())
@@ -85,7 +89,9 @@ func ExtendImportcfg(origPath string, addedImports map[string]string, objdir str
 func createTempFile(objdir string) (*os.File, error) {
 	if objdir != "" {
 		dir := filepath.Join(objdir, "zen-go")
+		// #nosec G301 - build artifacts need to be readable by the compiler
 		if err := os.MkdirAll(dir, 0o755); err == nil {
+			// #nosec G304 - path is constructed from objdir provided by Go toolchain
 			return os.Create(filepath.Join(dir, "importcfg.txt"))
 		}
 	}

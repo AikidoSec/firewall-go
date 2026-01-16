@@ -97,7 +97,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 			continue
 		}
 
-		err := transformDeclsWrap(file.Decls, fset, localPkgName, funcName, rule, &modified, importsToAdd)
+		err = transformDeclsWrap(file.Decls, fset, localPkgName, funcName, rule, &modified, importsToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}
@@ -105,7 +105,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 
 	// Apply prepend rules
 	for _, rule := range i.PrependRules {
-		err := transformDeclsPrepend(file.Decls, compilingPkg, rule, &modified, importsToAdd)
+		err = transformDeclsPrepend(file.Decls, compilingPkg, rule, &modified, importsToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}

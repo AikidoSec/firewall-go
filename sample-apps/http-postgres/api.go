@@ -38,7 +38,7 @@ func createPetHandler(w http.ResponseWriter, r *http.Request, db *DatabaseHelper
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if _, err := w.Write([]byte(fmt.Sprintf("%d", rowsCreated))); err != nil {
+	if _, err := fmt.Fprintf(w, "%d", rowsCreated); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

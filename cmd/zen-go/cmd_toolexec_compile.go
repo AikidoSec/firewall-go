@@ -194,6 +194,7 @@ func replaceImportcfgArg(args []string, newPath string) []string {
 func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
 	// Write to objdir/zen-go/src/
 	dir := filepath.Join(objdir, "zen-go", "src")
+	// #nosec G301 - build artifacts need to be readable by the compiler
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		// Fall back to source directory
 		dir = filepath.Dir(origPath)

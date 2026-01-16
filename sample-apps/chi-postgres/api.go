@@ -44,7 +44,7 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(fmt.Sprintf("%d", rowsCreated)))
+		_, _ = fmt.Fprintf(w, "%d", rowsCreated)
 	})
 
 	r.Post("/api/execute", func(w http.ResponseWriter, r *http.Request) {

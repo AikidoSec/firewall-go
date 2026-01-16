@@ -29,7 +29,7 @@ func makeHTTPRequest(url string) string {
 	if err != nil {
 		return fmt.Sprintf("Error: %s", err.Error())
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -40,10 +40,10 @@ func makeHTTPRequest(url string) string {
 
 // readFile reads the content of a file and returns it as a string.
 func readFile(filePath string) string {
+	// #nosec G304 - intentional path traversal vulnerability
 	content, err := os.ReadFile("content/blogs/" + filePath)
 	if err != nil {
 		return fmt.Sprintf("Error: %s", err.Error())
 	}
 	return string(content)
 }
-
