@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"log/slog"
 	"sync"
 	"time"
@@ -165,9 +166,20 @@ func OnAttackWaveDetected(ctx *request.Context) {
 		Source:    ctx.Source,
 	}
 
+	metadata := map[string]string{}
+
+	// Get samples for this IP and serialize to JSON
+	samples := attackWaveDetector.GetSamplesForIP(ctx.GetIP())
+	if len(samples) > 0 {
+		samplesJSON, err := json.Marshal(samples)
+		if err == nil {
+			metadata["samples"] = string(samplesJSON)
+		}
+	}
+
 	if client := GetCloudClient(); client != nil {
 		client.SendAttackWaveDetectedEvent(getAgentInfo(), requestInfo, cloud.AttackWaveDetails{
-			Metadata: map[string]string{},
+			Metadata: metadata,
 			User:     ctx.GetUser(),
 		})
 	}
