@@ -28,6 +28,7 @@ type Rule struct {
 	ID        string            `yaml:"id"`
 	Type      string            `yaml:"type"`
 	Match     string            `yaml:"match"`     // For wrap rules: "pkg.Func"
+	Exclude   []string          `yaml:"exclude"`   // For wrap rules: packages to exclude from instrumentation
 	Receiver  string            `yaml:"receiver"`  // For prepend rules with receiver: "*pkg.Type"
 	Package   string            `yaml:"package"`   // For prepend/inject-decl rules: target package (e.g., "os")
 	Function  string            `yaml:"function"`  // For prepend rules: single "MethodName"
@@ -47,10 +48,11 @@ type InstrumentationRules struct {
 
 // WrapRule wraps a function call expression
 type WrapRule struct {
-	ID        string
-	MatchCall string
-	Imports   map[string]string
-	WrapTmpl  string
+	ID          string
+	MatchCall   string
+	ExcludePkgs []string // Packages to exclude from this rule
+	Imports     map[string]string
+	WrapTmpl    string
 }
 
 // PrependRule prepends statements to a function body.
@@ -123,10 +125,11 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 		switch rule.Type {
 		case "wrap":
 			result.WrapRules = append(result.WrapRules, WrapRule{
-				ID:        rule.ID,
-				MatchCall: rule.Match,
-				Imports:   rule.Imports,
-				WrapTmpl:  strings.TrimSpace(rule.Template),
+				ID:          rule.ID,
+				MatchCall:   rule.Match,
+				ExcludePkgs: rule.Exclude,
+				Imports:     rule.Imports,
+				WrapTmpl:    strings.TrimSpace(rule.Template),
 			})
 		case "prepend":
 			// Support both "function" (single) and "functions" (multiple)

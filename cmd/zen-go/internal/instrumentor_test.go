@@ -106,6 +106,35 @@ func main() {
 	assert.Contains(t, resultStr, "GetMiddleware()")
 }
 
+func TestInstrumentFile_ChiExcludedPackage(t *testing.T) {
+	src := `package middleware
+
+import "github.com/go-chi/chi/v5"
+
+func WithRouter() *chi.Mux {
+	return chi.NewRouter()
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "middleware.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	rules := []WrapRule{
+		{
+			ID:          "chi.NewRouter",
+			MatchCall:   "github.com/go-chi/chi/v5.NewRouter",
+			ExcludePkgs: []string{"github.com/go-chi/chi/v5/middleware"},
+			Imports:     map[string]string{"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi"},
+			WrapTmpl:    `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
+		},
+	}
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: rules})
+	result, err := inst.InstrumentFile(tmpFile, "github.com/go-chi/chi/v5/middleware")
+
+	require.NoError(t, err)
+	assert.False(t, result.Modified, "should not modify excluded package")
+}
+
 func TestInstrumentFile_GinDefault(t *testing.T) {
 	src := `package main
 

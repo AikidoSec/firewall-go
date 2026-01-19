@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -96,6 +97,11 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 
 		localPkgName, ok := imports[pkg]
 		if !ok {
+			continue
+		}
+
+		// Skip if the package being compiled is in the exclude list
+		if slices.Contains(rule.ExcludePkgs, compilingPkg) {
 			continue
 		}
 

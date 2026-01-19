@@ -6,6 +6,9 @@ rules:
   - id: chi.NewMux
     type: wrap
     match: github.com/go-chi/chi/v5.NewMux
+    exclude:
+      - github.com/go-chi/chi/v5
+      - github.com/go-chi/chi/v5/middleware
     imports:
       zenchi: github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi
     template: |
@@ -14,6 +17,9 @@ rules:
   - id: chi.NewRouter
     type: wrap
     match: github.com/go-chi/chi/v5.NewRouter
+    exclude:
+      - github.com/go-chi/chi/v5
+      - github.com/go-chi/chi/v5/middleware
     imports:
       zenchi: github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi
     template: |
