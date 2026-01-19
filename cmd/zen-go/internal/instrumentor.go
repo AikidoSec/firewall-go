@@ -68,6 +68,10 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 		} else {
 			parts := strings.Split(path, "/")
 			name = parts[len(parts)-1]
+			// Handle major version suffixes (e.g., /v5 in github.com/go-chi/chi/v5)
+			if len(parts) >= 2 && len(name) >= 2 && name[0] == 'v' && name[1] >= '0' && name[1] <= '9' {
+				name = parts[len(parts)-2]
+			}
 		}
 		imports[path] = name
 	}
