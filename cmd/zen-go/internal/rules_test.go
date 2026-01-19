@@ -258,3 +258,75 @@ rules:
 	assert.Empty(t, rules.PrependRules[0].ReceiverType)
 	assert.Equal(t, map[string]string{"sink": "github.com/example/sink"}, rules.PrependRules[0].Imports)
 }
+
+func TestLoadRulesFromFile_InjectDeclRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: os
+  description: OS instrumentation
+
+rules:
+  - id: os.linkname
+    type: inject-decl
+    package: os
+    anchor: Getpid
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sinks/os
+    template: |
+      //go:linkname __aikido_os_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/os.Examine
+      func __aikido_os_Examine(string) error
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	rules, err := loadRulesFromFile(yamlPath)
+	require.NoError(t, err)
+	require.Len(t, rules.InjectDeclRules, 1)
+	require.Empty(t, rules.WrapRules)
+	require.Empty(t, rules.PrependRules)
+
+	assert.Equal(t, "os.linkname", rules.InjectDeclRules[0].ID)
+	assert.Equal(t, "os", rules.InjectDeclRules[0].Package)
+	assert.Equal(t, "Getpid", rules.InjectDeclRules[0].AnchorFunc)
+	assert.Equal(t, []string{"github.com/AikidoSec/firewall-go/instrumentation/sinks/os"}, rules.InjectDeclRules[0].Links)
+	assert.Contains(t, rules.InjectDeclRules[0].DeclTemplate, "go:linkname")
+}
+
+func TestLoadRulesFromFile_AllRuleTypes(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: mixed-all
+rules:
+  - id: wrap-rule
+    type: wrap
+    match: pkg.Func
+    imports: {}
+    template: wrap({{.}})
+  - id: prepend-rule
+    type: prepend
+    receiver: "*pkg.Type"
+    function: Method
+    imports: {}
+    template: before()
+  - id: inject-decl-rule
+    type: inject-decl
+    package: os
+    anchor: Getpid
+    links: []
+    template: func __test() {}
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	rules, err := loadRulesFromFile(yamlPath)
+	require.NoError(t, err)
+	assert.Len(t, rules.WrapRules, 1)
+	assert.Len(t, rules.PrependRules, 1)
+	assert.Len(t, rules.InjectDeclRules, 1)
+}

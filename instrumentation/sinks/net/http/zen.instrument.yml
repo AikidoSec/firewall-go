@@ -1,0 +1,26 @@
+meta:
+  name: net/http
+  description: net/http.Client is the stdlib http client
+
+rules:
+  # Inject go:linkname declaration for Examine
+  - id: net/http.Client.linkname.Examine
+    type: inject-decl
+    package: net/http
+    anchor: Do
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http
+    template: |
+      //go:linkname __aikido_http_do github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http.Examine
+      func __aikido_http_do(*Request) error
+
+  # Prepend to Client.Do
+  - id: net/http.Client.Do
+    type: prepend
+    receiver: "*net/http.Client"
+    function: Do
+    template: |
+      _aikido_err := __aikido_http_do({{ .Function.Argument 0 }})
+      if _aikido_err != nil {
+        return nil, _aikido_err
+      }
