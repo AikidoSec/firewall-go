@@ -6,6 +6,18 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
+// Sample represents a suspicious request sample with method and URL
+type Sample struct {
+	Method string `json:"method"`
+	URL    string `json:"url"`
+}
+
+// suspiciousRequestData holds the count and samples for an IP
+type suspiciousRequestData struct {
+	count   int
+	samples []Sample
+}
+
 // Detector tracks suspicious requests per IP and reports attack waves
 type Detector struct {
 	// attackWaveThreshold is the number of suspicious requests needed within the time frame to trigger an alert
@@ -14,17 +26,20 @@ type Detector struct {
 	attackWaveTimeFrame time.Duration
 	// minTimeBetweenReports gives a minimum time period between reporting a new attack wave for an IP
 	minTimeBetweenReports time.Duration
+	// maxSamplesPerIP is the maximum number of samples to keep per IP
+	maxSamplesPerIP int
 
-	suspiciousRequests *lruCache
+	suspiciousRequests *lruCache[*suspiciousRequestData]
 
 	// recentReports tracks IPs we've recently reported (value is unused, only presence matters)
-	recentReports *lruCache
+	recentReports *lruCache[struct{}]
 }
 
 type Options struct {
 	AttackWaveThreshold   int
 	AttackWaveTimeFrame   time.Duration
 	MinTimeBetweenReports time.Duration
+	MaxSamplesPerIP       int
 }
 
 func NewDetector(opts *Options) *Detector {
@@ -33,6 +48,7 @@ func NewDetector(opts *Options) *Detector {
 		options.AttackWaveThreshold = opts.AttackWaveThreshold
 		options.AttackWaveTimeFrame = opts.AttackWaveTimeFrame
 		options.MinTimeBetweenReports = opts.MinTimeBetweenReports
+		options.MaxSamplesPerIP = opts.MaxSamplesPerIP
 	}
 
 	// Set defaults
@@ -45,14 +61,18 @@ func NewDetector(opts *Options) *Detector {
 	if options.MinTimeBetweenReports == 0 {
 		options.MinTimeBetweenReports = 20 * time.Minute
 	}
+	if options.MaxSamplesPerIP == 0 {
+		options.MaxSamplesPerIP = 15
+	}
 
 	return &Detector{
 		attackWaveThreshold:   options.AttackWaveThreshold,
 		attackWaveTimeFrame:   options.AttackWaveTimeFrame,
 		minTimeBetweenReports: options.MinTimeBetweenReports,
+		maxSamplesPerIP:       options.MaxSamplesPerIP,
 
-		suspiciousRequests: newLRUCache(10_000, options.AttackWaveTimeFrame),
-		recentReports:      newLRUCache(10_000, options.MinTimeBetweenReports),
+		suspiciousRequests: newLRUCache[*suspiciousRequestData](10_000, options.AttackWaveTimeFrame),
+		recentReports:      newLRUCache[struct{}](10_000, options.MinTimeBetweenReports),
 	}
 }
 
@@ -74,21 +94,61 @@ func (d *Detector) CheckRequest(ctx *request.Context) bool {
 		return false
 	}
 
-	overLimit := d.addSuspiciousRequest(ip)
+	sample := Sample{
+		Method: ctx.Method,
+		URL:    ctx.URL,
+	}
+
+	overLimit := d.addSuspiciousRequest(ip, sample)
 	if !overLimit {
 		return false
 	}
 
-	d.recentReports.Set(ip, 1)
+	d.recentReports.Set(ip, struct{}{})
 
 	return true
 }
 
-// addSuspiciousRequest adds a new request timestamp to the sliding window for that IP
-// Returns true if request should be reported
-func (d *Detector) addSuspiciousRequest(ip string) bool {
-	timestamps, _ := d.suspiciousRequests.Get(ip)
-	d.suspiciousRequests.Set(ip, timestamps+1)
+// addSuspiciousRequest increments the count and tracks sample for the given IP
+// Returns true if the threshold has been reached and should be reported
+func (d *Detector) addSuspiciousRequest(ip string, sample Sample) bool {
+	data, exists := d.suspiciousRequests.Get(ip)
+	if !exists || data == nil {
+		data = &suspiciousRequestData{
+			count:   0,
+			samples: []Sample{},
+		}
+	}
 
-	return timestamps+1 >= d.attackWaveThreshold
+	data.count++
+	data.samples = d.trackSample(sample, data.samples)
+
+	d.suspiciousRequests.Set(ip, data)
+
+	return data.count >= d.attackWaveThreshold
+}
+
+// trackSample adds a sample if it's unique and we haven't reached the max
+func (d *Detector) trackSample(sample Sample, samples []Sample) []Sample {
+	if len(samples) >= d.maxSamplesPerIP {
+		return samples
+	}
+
+	// Only store unique samples
+	for _, s := range samples {
+		if s.Method == sample.Method && s.URL == sample.URL {
+			return samples
+		}
+	}
+
+	return append(samples, sample)
+}
+
+// GetSamplesForIP returns the samples collected for the given IP
+func (d *Detector) GetSamplesForIP(ip string) []Sample {
+	data, exists := d.suspiciousRequests.Get(ip)
+	if !exists || data == nil {
+		return []Sample{}
+	}
+	return data.samples
 }

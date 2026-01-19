@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-type entry struct {
+type entry[T any] struct {
 	key    string
-	value  int
+	value  T
 	expiry time.Time
 }
 
-type lruCache struct {
+type lruCache[T any] struct {
 	mu       sync.Mutex
 	capacity int
 	ttl      time.Duration
@@ -20,8 +20,8 @@ type lruCache struct {
 	list     *list.List // Front = most recent, Back = least recent
 }
 
-func newLRUCache(capacity int, ttl time.Duration) *lruCache {
-	return &lruCache{
+func newLRUCache[T any](capacity int, ttl time.Duration) *lruCache[T] {
+	return &lruCache[T]{
 		capacity: capacity,
 		ttl:      ttl,
 		items:    make(map[string]*list.Element),
@@ -29,21 +29,22 @@ func newLRUCache(capacity int, ttl time.Duration) *lruCache {
 	}
 }
 
-func (c *lruCache) Get(key string) (int, bool) {
+func (c *lruCache[T]) Get(key string) (T, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	var zero T
 	elem, exists := c.items[key]
 	if !exists {
-		return 0, false
+		return zero, false
 	}
 
-	ent := elem.Value.(*entry)
+	ent := elem.Value.(*entry[T])
 
 	// Check if expired
 	if time.Now().After(ent.expiry) {
 		c.removeElement(elem)
-		return 0, false
+		return zero, false
 	}
 
 	// Move to front (most recently used)
@@ -51,7 +52,7 @@ func (c *lruCache) Get(key string) (int, bool) {
 	return ent.value, true
 }
 
-func (c *lruCache) Set(key string, value int) {
+func (c *lruCache[T]) Set(key string, value T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -60,7 +61,7 @@ func (c *lruCache) Set(key string, value int) {
 
 	// Update existing entry
 	if elem, exists := c.items[key]; exists {
-		ent := elem.Value.(*entry)
+		ent := elem.Value.(*entry[T])
 		ent.value = value
 		ent.expiry = expiry
 		c.list.MoveToFront(elem)
@@ -73,7 +74,7 @@ func (c *lruCache) Set(key string, value int) {
 	}
 
 	// Add new entry
-	ent := &entry{
+	ent := &entry[T]{
 		key:    key,
 		value:  value,
 		expiry: expiry,
@@ -82,7 +83,7 @@ func (c *lruCache) Set(key string, value int) {
 	c.items[key] = elem
 }
 
-func (c *lruCache) Delete(key string) {
+func (c *lruCache[T]) Delete(key string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -91,26 +92,26 @@ func (c *lruCache) Delete(key string) {
 	}
 }
 
-func (c *lruCache) evictOldest() {
+func (c *lruCache[T]) evictOldest() {
 	elem := c.list.Back()
 	if elem != nil {
 		c.removeElement(elem)
 	}
 }
 
-func (c *lruCache) removeElement(elem *list.Element) {
+func (c *lruCache[T]) removeElement(elem *list.Element) {
 	c.list.Remove(elem)
-	ent := elem.Value.(*entry)
+	ent := elem.Value.(*entry[T])
 	delete(c.items, ent.key)
 }
 
-func (c *lruCache) Size() int {
+func (c *lruCache[T]) Size() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.list.Len()
 }
 
-func (c *lruCache) Clear() {
+func (c *lruCache[T]) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.items = make(map[string]*list.Element)
