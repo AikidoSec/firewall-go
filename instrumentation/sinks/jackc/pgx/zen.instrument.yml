@@ -1,0 +1,46 @@
+meta:
+  name: jackc/pgx
+  description: Protection from SQL Injection for pgx v5.
+
+rules:
+  # Conn.Query returns (pgx.Rows, error) - return rows carrying the error
+  - id: github.com/jackc/pgx/v5.Conn.Query
+    type: prepend
+    receiver: "*github.com/jackc/pgx/v5.Conn"
+    function: Query
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "pgx.Conn.Query")
+      if _aikido_block != nil {
+        return &baseRows{err: _aikido_block}, _aikido_block
+      }
+
+  # Conn.Exec returns (pgconn.CommandTag, error) - should return error
+  - id: github.com/jackc/pgx/v5.Conn.Exec
+    type: prepend
+    receiver: "*github.com/jackc/pgx/v5.Conn"
+    function: Exec
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx
+    template: |
+      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "pgx.Conn.Exec")
+      if _aikido_block != nil {
+        var _zeroTag pgconn.CommandTag
+        return _zeroTag, _aikido_block
+      }
+
+  # Conn.SendBatch returns *BatchResults
+  - id: github.com/jackc/pgx/v5.Conn.SendBatch
+    type: prepend
+    receiver: "*github.com/jackc/pgx/v5.Conn"
+    function: SendBatch
+    imports:
+      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx
+    template: |
+      for _, query := range {{ .Function.Argument 1 }}.QueuedQueries {
+        _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, query.SQL, "pgx.Conn.SendBatch")
+        if _aikido_block != nil {
+          return &batchResults{ctx: {{ .Function.Argument 0 }}, conn: {{ .Function.Receiver }}, err: _aikido_block}
+        }
+      }
