@@ -70,7 +70,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 			parts := strings.Split(path, "/")
 			name = parts[len(parts)-1]
 			// Handle major version suffixes (e.g., /v5 in github.com/go-chi/chi/v5)
-			if len(parts) >= 2 && len(name) >= 2 && name[0] == 'v' && name[1] >= '0' && name[1] <= '9' {
+			if len(parts) >= 2 && isMajorVersion(name) {
 				name = parts[len(parts)-2]
 			}
 		}
@@ -156,4 +156,17 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 		Imports:  importsToAdd,
 		LinkDeps: linksToAdd,
 	}, nil
+}
+
+// isMajorVersion checks if s is a Go module major version suffix (e.g., "v2", "v5", "v10")
+func isMajorVersion(s string) bool {
+	if len(s) < 2 || s[0] != 'v' {
+		return false
+	}
+	for i := 1; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
 }

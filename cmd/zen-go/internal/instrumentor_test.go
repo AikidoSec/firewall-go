@@ -659,3 +659,14 @@ func SomeOtherFunc() {
 	require.NoError(t, err)
 	assert.False(t, result.Modified)
 }
+
+func TestIsMajorVersion(t *testing.T) {
+	assert.True(t, isMajorVersion("v2"))
+	assert.True(t, isMajorVersion("v5"))
+	assert.True(t, isMajorVersion("v10"))
+
+	assert.False(t, isMajorVersion("v"))
+	assert.False(t, isMajorVersion("v1-extras"))
+	assert.False(t, isMajorVersion("middleware"))
+	assert.False(t, isMajorVersion(""))
+}
