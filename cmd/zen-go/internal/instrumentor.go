@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -68,6 +69,10 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 		} else {
 			parts := strings.Split(path, "/")
 			name = parts[len(parts)-1]
+			// Handle major version suffixes (e.g., /v5 in github.com/go-chi/chi/v5)
+			if len(parts) >= 2 && isMajorVersion(name) {
+				name = parts[len(parts)-2]
+			}
 		}
 		imports[path] = name
 	}
@@ -92,6 +97,11 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 
 		localPkgName, ok := imports[pkg]
 		if !ok {
+			continue
+		}
+
+		// Skip if the package being compiled is in the exclude list
+		if slices.Contains(rule.ExcludePkgs, compilingPkg) {
 			continue
 		}
 
@@ -146,4 +156,17 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 		Imports:  importsToAdd,
 		LinkDeps: linksToAdd,
 	}, nil
+}
+
+// isMajorVersion checks if s is a Go module major version suffix (e.g., "v2", "v5", "v10")
+func isMajorVersion(s string) bool {
+	if len(s) < 2 || s[0] != 'v' {
+		return false
+	}
+	for i := 1; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
 }

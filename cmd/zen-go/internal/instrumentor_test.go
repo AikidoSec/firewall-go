@@ -10,6 +10,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testChiRules returns rules for testing chi instrumentation (with /v5 version in path)
+func testChiRules() []WrapRule {
+	return []WrapRule{
+		{
+			ID:        "chi.NewMux",
+			MatchCall: "github.com/go-chi/chi/v5.NewMux",
+			Imports: map[string]string{
+				"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi",
+			},
+			WrapTmpl: `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
+		},
+		{
+			ID:        "chi.NewRouter",
+			MatchCall: "github.com/go-chi/chi/v5.NewRouter",
+			Imports: map[string]string{
+				"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi",
+			},
+			WrapTmpl: `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
+		},
+	}
+}
+
 // testGinRules returns rules for testing gin instrumentation
 func testGinRules() []WrapRule {
 	return []WrapRule{
@@ -30,6 +52,87 @@ func testGinRules() []WrapRule {
 			WrapTmpl: `func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()`,
 		},
 	}
+}
+
+func TestInstrumentFile_ChiNewRouter(t *testing.T) {
+	src := `package main
+
+import "github.com/go-chi/chi/v5"
+
+func main() {
+	r := chi.NewRouter()
+	r.Get("/", nil)
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testChiRules()})
+	result, err := inst.InstrumentFile(tmpFile, "main")
+
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+	assert.Contains(t, result.Imports, "zenchi")
+	assert.Equal(t, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi", result.Imports["zenchi"])
+
+	resultStr := string(result.Code)
+	assert.Contains(t, resultStr, "GetMiddleware()")
+	assert.Contains(t, resultStr, "r.Use(zenchi.")
+}
+
+func TestInstrumentFile_ChiNewMux(t *testing.T) {
+	src := `package main
+
+import "github.com/go-chi/chi/v5"
+
+func main() {
+	r := chi.NewMux()
+	r.Get("/", nil)
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testChiRules()})
+	result, err := inst.InstrumentFile(tmpFile, "main")
+
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+	assert.Contains(t, result.Imports, "zenchi")
+
+	resultStr := string(result.Code)
+	assert.Contains(t, resultStr, "GetMiddleware()")
+}
+
+func TestInstrumentFile_ChiExcludedPackage(t *testing.T) {
+	src := `package middleware
+
+import "github.com/go-chi/chi/v5"
+
+func WithRouter() *chi.Mux {
+	return chi.NewRouter()
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "middleware.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	rules := []WrapRule{
+		{
+			ID:          "chi.NewRouter",
+			MatchCall:   "github.com/go-chi/chi/v5.NewRouter",
+			ExcludePkgs: []string{"github.com/go-chi/chi/v5/middleware"},
+			Imports:     map[string]string{"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi"},
+			WrapTmpl:    `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
+		},
+	}
+	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: rules})
+	result, err := inst.InstrumentFile(tmpFile, "github.com/go-chi/chi/v5/middleware")
+
+	require.NoError(t, err)
+	assert.False(t, result.Modified, "should not modify excluded package")
 }
 
 func TestInstrumentFile_GinDefault(t *testing.T) {
@@ -555,4 +658,15 @@ func SomeOtherFunc() {
 
 	require.NoError(t, err)
 	assert.False(t, result.Modified)
+}
+
+func TestIsMajorVersion(t *testing.T) {
+	assert.True(t, isMajorVersion("v2"))
+	assert.True(t, isMajorVersion("v5"))
+	assert.True(t, isMajorVersion("v10"))
+
+	assert.False(t, isMajorVersion("v"))
+	assert.False(t, isMajorVersion("v1-extras"))
+	assert.False(t, isMajorVersion("middleware"))
+	assert.False(t, isMajorVersion(""))
 }
