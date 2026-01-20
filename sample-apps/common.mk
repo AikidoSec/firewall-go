@@ -1,22 +1,22 @@
 PORT ?= 8080
 BINARY := bin/app
 ROOT_DIR := $(shell cd ../.. && pwd)
-ORCHESTRION := $(ROOT_DIR)/tools/bin/orchestrion
+ZENGO := $(ROOT_DIR)/tools/bin/zen-go
 
 export AIKIDO_BLOCK ?= true
 export AIKIDO_DEBUG ?= true
 
 .PHONY: build run dev start-database stop-database clean
 
-build: check-orchestrion
+build: check-zen-go
 	@mkdir -p bin
-	@go build -toolexec="$(ORCHESTRION) toolexec" -o $(BINARY) .
+	@go build -toolexec="$(ZENGO) toolexec" -o $(BINARY) .
 
 run: build
 	@PORT=$(PORT) ./$(BINARY)
 
-dev: check-orchestrion
-	@PORT=$(PORT) go run -toolexec="$(ORCHESTRION) toolexec" .
+dev: check-zen-go
+	@PORT=$(PORT) go run -toolexec="$(ZENGO) toolexec" .
 
 start-database:
 	@cd ../databases/ && docker compose up $(DB_SERVICE) -d
@@ -24,8 +24,8 @@ start-database:
 stop-database:
 	@cd ../databases/ && docker compose down
 
-check-orchestrion:
-	@test -f $(ORCHESTRION) || (echo "❌ orchestrion not found at $(ORCHESTRION). Run 'make install-tools' from project root" && exit 1)
+check-zen-go:
+	@test -f $(ZENGO) || (echo "❌ zen-go not found at $(ZENGO). Run 'make build-zen-go' from project root" && exit 1)
 
 clean:
 	@rm -rf bin/

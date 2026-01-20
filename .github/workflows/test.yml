@@ -149,6 +149,9 @@ jobs:
       - name: Install tools
         run: make install-tools
 
+      - name: Build Zen Go
+        run: make build-zen-go
+
       - name: Run all test suites
         working-directory: ./end2end
         run: make test-all-suites APP=${{ matrix.app }}
