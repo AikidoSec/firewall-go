@@ -102,6 +102,8 @@ func matchesGoBinary(candidate, goBinary string) bool {
 // extractBuildFlags parses the parent go command's arguments and returns
 // the build flags. Skips -a (would force unnecessary rebuilds).
 func extractBuildFlags(args []string) []string {
+	// We use an allowlist to ensure only build flags are passed through.
+	// For example, we don't want to pass flags from `go test`.
 	standalone := map[string]bool{
 		"-asan":       true,
 		"-cover":      true,
