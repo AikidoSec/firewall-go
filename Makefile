@@ -16,6 +16,10 @@ install-tools:
 	@GOBIN=$(TOOLS_BIN) go install github.com/DataDog/orchestrion
 	@echo "✅ tools installed successfully"
 
+.PHONY: build-zen-go
+build-zen-go:
+	@cd cmd/zen-go && go build -o $(TOOLS_BIN)/zen-go .
+
 .PHONY: clean-tools
 clean-tools:
 	@rm -rf $(TOOLS_BIN)
