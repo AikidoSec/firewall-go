@@ -47,7 +47,7 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 	}
 
 	// Run the compiler
-	err = passthrough(tool, newArgs)
+	err = passthrough(stdout, stderr, tool, newArgs)
 	if err != nil {
 		return err
 	}
@@ -71,11 +71,11 @@ func extractFlag(args []string, i int, flag string) (string, bool) {
 
 // passthrough runs the given Golang tool
 // For example, it will run the compiler with the arguments originally passed our toolexec command
-func passthrough(tool string, args []string) error {
+func passthrough(stdout io.Writer, stderr io.Writer, tool string, args []string) error {
 	cmd := exec.Command(tool, args...)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	return cmd.Run()
 }

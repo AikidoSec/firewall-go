@@ -74,7 +74,7 @@ func newCommand() *cli.Command {
 					case "link":
 						return toolexecLinkCommand(out, outErr, tool, toolArgs)
 					default:
-						return passthrough(tool, toolArgs)
+						return passthrough(out, outErr, tool, toolArgs)
 					}
 				},
 			},

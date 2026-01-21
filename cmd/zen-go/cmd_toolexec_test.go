@@ -132,7 +132,7 @@ func TestPassthrough(t *testing.T) {
 	os.Stdout = w
 
 	toolArgs := []string{"arg1", "arg2", "arg3"}
-	err = passthrough(mockTool, toolArgs)
+	err = passthrough(os.Stdout, os.Stderr, mockTool, toolArgs)
 
 	w.Close()
 	os.Stdout = oldStdout
@@ -159,7 +159,7 @@ func TestPassthrough_Error(t *testing.T) {
 	os.Stderr = w
 
 	toolArgs := []string{}
-	err = passthrough(mockTool, toolArgs)
+	err = passthrough(os.Stdout, os.Stderr, mockTool, toolArgs)
 
 	w.Close()
 	os.Stderr = oldStderr
@@ -231,7 +231,7 @@ func TestPassthrough_PreservesExitCode(t *testing.T) {
 			os.Stderr = w
 
 			toolArgs := []string{}
-			err = passthrough(mockTool, toolArgs)
+			err = passthrough(os.Stdout, os.Stderr, mockTool, toolArgs)
 
 			w.Close()
 			os.Stderr = oldStderr
@@ -265,7 +265,7 @@ func TestPassthrough_WithComplexArgs(t *testing.T) {
 		"-trimpath", "/tmp",
 		"input.go",
 	}
-	err = passthrough(mockTool, toolArgs)
+	err = passthrough(os.Stdout, os.Stderr, mockTool, toolArgs)
 
 	w.Close()
 	os.Stdout = oldStdout
