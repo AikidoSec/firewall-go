@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -48,11 +49,30 @@ func newCommand() *cli.Command {
 					toolArgs := args[1:]
 					toolName := filepath.Base(tool)
 
+					out := io.Writer(os.Stdout)
+					outErr := io.Writer(os.Stderr)
+
+					if logPath := os.Getenv("ZENGO_LOG"); logPath != "" {
+						// #nosec G304 - logPath is from environment variable set by user
+						logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600)
+						if err != nil {
+							return err
+						}
+						defer func() {
+							if err := logFile.Close(); err != nil {
+								fmt.Fprintf(os.Stderr, "failed to close log file: %v\n", err)
+							}
+						}()
+
+						out = io.MultiWriter(os.Stdout, logFile)
+						outErr = io.MultiWriter(os.Stderr, logFile)
+					}
+
 					switch toolName {
 					case "compile":
-						return toolexecCompileCommand(os.Stdout, os.Stderr, tool, toolArgs)
+						return toolexecCompileCommand(out, outErr, tool, toolArgs)
 					case "link":
-						return toolexecLinkCommand(os.Stdout, os.Stderr, tool, toolArgs)
+						return toolexecLinkCommand(out, outErr, tool, toolArgs)
 					default:
 						return passthrough(tool, toolArgs)
 					}
