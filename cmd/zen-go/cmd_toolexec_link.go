@@ -14,10 +14,10 @@ import (
 //
 //	tool: "/usr/local/go/pkg/tool/darwin_arm64/link"
 //	toolArgs: ["-o", "/path/to/output", "-importcfg", "/tmp/importcfg", "-buildmode=exe", "main.a"]
-func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
+func toolexecLinkCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
 	importcfgPath := extractLinkerImportcfg(toolArgs)
 	if importcfgPath == "" {
-		return passthrough(tool, toolArgs)
+		return passthrough(stdout, stderr, tool, toolArgs)
 	}
 
 	if isDebug() {
@@ -28,13 +28,13 @@ func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []
 	// #nosec G304 - importcfgPath comes from Go toolchain args, not user input
 	content, err := os.ReadFile(importcfgPath)
 	if err != nil {
-		return passthrough(tool, toolArgs)
+		return passthrough(stdout, stderr, tool, toolArgs)
 	}
 
 	// Collect all link deps from all archives
 	allLinkDeps := collectLinkDeps(content, stderr)
 	if len(allLinkDeps) == 0 {
-		return passthrough(tool, toolArgs)
+		return passthrough(stdout, stderr, tool, toolArgs)
 	}
 
 	// Find deps we introduced that aren't in the original importcfg.
@@ -43,21 +43,21 @@ func toolexecLinkCommand(_ io.Writer, stderr io.Writer, tool string, toolArgs []
 	// that package won't be in the importcfg unless the app already used it.
 	newLines := resolveMissingDeps(content, allLinkDeps, stderr)
 	if len(newLines) == 0 {
-		return passthrough(tool, toolArgs)
+		return passthrough(stdout, stderr, tool, toolArgs)
 	}
 
 	// Write new importcfg with additional dependencies
 	newImportcfgPath, err := writeExtendedLinkerImportcfg(content, newLines)
 	if err != nil {
 		fmt.Fprintf(stderr, "zen-go: warning: failed to write extended importcfg: %v\n", err)
-		return passthrough(tool, toolArgs)
+		return passthrough(stdout, stderr, tool, toolArgs)
 	}
 	defer func() { _ = os.Remove(newImportcfgPath) }()
 
 	// Update args with new importcfg
 	newArgs := replaceLinkerImportcfgArg(toolArgs, newImportcfgPath)
 
-	return passthrough(tool, newArgs)
+	return passthrough(stdout, stderr, tool, newArgs)
 }
 
 func extractLinkerImportcfg(args []string) string {
