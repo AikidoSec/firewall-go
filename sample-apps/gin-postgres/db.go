@@ -6,7 +6,7 @@ import (
 	"errors"
 	"log"
 
-	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/lib/pq"
 )
 
 // Pet represents a pet entity
@@ -80,8 +80,8 @@ func connectToDb() *sql.DB {
 	var err error
 	var db *sql.DB
 	// Connect to PostgreSQL
-	connStr := "postgresql://localhost:5432/db?user=user&password=password"
-	db, err = sql.Open("pgx", connStr)
+	connStr := "postgresql://localhost:5432/db?user=user&password=password&sslmode=disable"
+	db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
