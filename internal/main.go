@@ -7,8 +7,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/zeninternals"
 )
 
-// Init initializes the firewall system by loading the zen-internals library
-// and defining transit handlers. Returns an error if zen-internals fails to load.
+// Init initializes the firewall system by loading the zen-internals library.
+// Returns an error if zen-internals fails to load.
 func Init() error {
 	err := zeninternals.Init()
 	if err != nil {

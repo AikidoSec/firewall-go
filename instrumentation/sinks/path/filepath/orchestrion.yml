@@ -4,6 +4,22 @@ meta:
   description: |-
     Protection from Local File Inclusion (LFI) Attacks
 aspects:
+  - id: FilepathExamine-Declaration
+    join-point:
+      all-of:
+        - import-path: path/filepath
+        - function-body:
+            function:
+              - name: Join
+    advice:
+      - inject-declarations:
+          # We're using go:linkname to avoid circular dependencies with `path/filepath`.
+          # We attach the declaration to Join to ensure it's included.
+          links:
+            - github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath
+          template: |-
+            //go:linkname __aikido_filepath_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath.Examine
+            func __aikido_filepath_Examine([]string) error
   - id: JoinPath
     join-point:
       all-of:
@@ -13,10 +29,5 @@ aspects:
               - name: Join
     advice:
       - prepend-statements:
-          imports:
-            zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
           template: |-
-            if examinePath := zentransits.ExaminePath(); examinePath != nil {
-              const _aikido_deferReporting = true
-              examinePath("filepath.Join", {{ .Function.Argument 0 }}, _aikido_deferReporting)
-            }
+            __aikido_filepath_Examine({{ .Function.Argument 0 }})

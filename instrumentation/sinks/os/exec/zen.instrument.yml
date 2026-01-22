@@ -3,30 +3,34 @@ meta:
   description: Protection from shell injection.
 
 rules:
+  # Inject go:linkname declaration for Examine
+  - id: exec.Examine.linkname
+    type: inject-decl
+    package: os/exec
+    receiver: "*os/exec.Cmd"
+    anchor: Run
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec
+    template: |
+      //go:linkname __aikido_exec_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec.Examine
+      func __aikido_exec_Examine(context.Context, string, []string) error
+
   - id: exec.Cmd.Run
     type: prepend
     receiver: "*os/exec.Cmd"
     function: Run
-    imports:
-      zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
     template: |
-      if examineCommand := zentransits.ExamineCommand(); examineCommand != nil {
-        _aikido_err := examineCommand({{ .Function.Receiver }}.ctx, "exec.Cmd.Run", {{ .Function.Receiver }}.Args)
-        if _aikido_err != nil {
-          return _aikido_err
-        }
+      _aikido_err := __aikido_exec_Examine({{ .Function.Receiver }}.ctx, "exec.Cmd.Run", {{ .Function.Receiver }}.Args)
+      if _aikido_err != nil {
+        return _aikido_err
       }
 
   - id: exec.Cmd.Start
     type: prepend
     receiver: "*os/exec.Cmd"
     function: Start
-    imports:
-      zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
     template: |
-      if examineCommand := zentransits.ExamineCommand(); examineCommand != nil {
-        _aikido_err := examineCommand({{ .Function.Receiver }}.ctx, "exec.Cmd.Start", {{ .Function.Receiver }}.Args)
-        if _aikido_err != nil {
-          return _aikido_err
-        }
+      _aikido_err := __aikido_exec_Examine({{ .Function.Receiver }}.ctx, "exec.Cmd.Start", {{ .Function.Receiver }}.Args)
+      if _aikido_err != nil {
+        return _aikido_err
       }
