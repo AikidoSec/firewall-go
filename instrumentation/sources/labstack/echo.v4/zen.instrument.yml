@@ -7,6 +7,6 @@ rules:
     type: wrap
     match: github.com/labstack/echo/v4.New
     imports:
-      zenecho: github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo
+      zenecho: github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4
     template: |
       func() *echo.Echo { e := {{.}}; e.Use(zenecho.GetMiddleware()); return e }()

@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	zenecho "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo"
+	zenecho "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"

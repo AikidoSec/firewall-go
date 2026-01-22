@@ -9,7 +9,7 @@ import (
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
 
 	// Aikido Zen: Sources
-	_ "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo"
+	_ "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4"
 
 	// Aikido Zen: Sinks
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx"
