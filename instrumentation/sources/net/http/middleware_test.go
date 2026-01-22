@@ -10,15 +10,28 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	// Set zen as loaded for all tests in this package
+	original := config.IsZenLoaded()
+	config.SetZenLoaded(true)
+
+	code := m.Run()
+
+	config.SetZenLoaded(original)
+	os.Exit(code)
+}
 
 func TestStatusRecorder(t *testing.T) {
 	t.Run("captures status code", func(t *testing.T) {

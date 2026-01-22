@@ -15,7 +15,7 @@ func GetMiddleware() gin.HandlerFunc {
 			return // Don't investigate empty requests.
 		}
 
-		if zen.IsDisabled() {
+		if !zen.ShouldProtect() {
 			c.Next()
 			return
 		}

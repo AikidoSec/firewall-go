@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -12,6 +13,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	// Set zen as loaded for all tests in this package
+	original := config.IsZenLoaded()
+	config.SetZenLoaded(true)
+
+	code := m.Run()
+
+	config.SetZenLoaded(original)
+	os.Exit(code)
+}
 
 // mockScanArgs is a simple type for testing
 type mockScanArgs struct {
@@ -326,7 +338,7 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 	}
 }
 
-func TestScan_ZenDisabled(t *testing.T) {
+func TestScan_ShouldProtect(t *testing.T) {
 	ip := "127.0.0.1"
 	args := mockScanArgs{Value: "test"}
 
@@ -338,27 +350,51 @@ func TestScan_ZenDisabled(t *testing.T) {
 	tests := []struct {
 		name        string
 		zenDisabled bool
+		zenLoaded   bool
 		expectError bool
 		description string
 	}{
 		{
 			name:        "zen is disabled",
 			zenDisabled: true,
+			zenLoaded:   true,
 			expectError: false,
+			description: "scanning should be skipped when zen is disabled",
 		},
 		{
-			name:        "zen is enabled",
+			name:        "zen is not loaded",
 			zenDisabled: false,
+			zenLoaded:   false,
+			expectError: false,
+			description: "scanning should be skipped when zen is not loaded",
+		},
+		{
+			name:        "zen is enabled and loaded",
+			zenDisabled: false,
+			zenLoaded:   true,
 			expectError: true,
+			description: "scanning should run when zen is enabled and loaded",
+		},
+		{
+			name:        "zen is disabled and not loaded",
+			zenDisabled: true,
+			zenLoaded:   false,
+			expectError: false,
+			description: "scanning should be skipped when zen is disabled and not loaded",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			originalDisabled := config.IsZenDisabled()
-			t.Cleanup(func() { config.SetZenDisabled(originalDisabled) })
+			originalLoaded := config.IsZenLoaded()
+			t.Cleanup(func() {
+				config.SetZenDisabled(originalDisabled)
+				config.SetZenLoaded(originalLoaded)
+			})
 
 			config.SetZenDisabled(tt.zenDisabled)
+			config.SetZenLoaded(tt.zenLoaded)
 
 			req := httptest.NewRequest("GET", "/test?param1=attack&param2=safe", http.NoBody)
 			ctx := request.SetContext(context.Background(), req, request.ContextData{

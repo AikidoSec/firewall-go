@@ -181,6 +181,8 @@ func doProtect(cfg *Config) {
 		return
 	}
 
+	config.SetZenLoaded(true)
+
 	log.Info("Aikido Zen loaded!",
 		slog.String("version", globals.EnvironmentConfig.Version))
 }
@@ -247,4 +249,10 @@ func getEnvBool(name string) bool {
 // The disabled state is determined by the AIKIDO_DISABLE environment variable at startup.
 func IsDisabled() bool {
 	return config.IsZenDisabled()
+}
+
+// ShouldProtect returns true if protection should run.
+// Protection runs when zen is not disabled AND has been loaded successfully via Protect().
+func ShouldProtect() bool {
+	return config.ShouldProtect()
 }

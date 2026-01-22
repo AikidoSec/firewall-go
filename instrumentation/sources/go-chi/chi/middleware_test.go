@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	original := config.IsZenLoaded()
+	config.SetZenLoaded(true)
+
+	code := m.Run()
+
+	config.SetZenLoaded(original)
+	os.Exit(code)
+}
 
 func TestMiddlewareAddsContext(t *testing.T) {
 	router := chi.NewRouter()
