@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	zenecho "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo"
+	zenecho "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"

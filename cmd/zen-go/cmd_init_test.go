@@ -60,7 +60,7 @@ func TestGenerateToolsFile_WithSourcesAndSinks(t *testing.T) {
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
 
 	// Verify other sources/sinks are not included
-	assert.NotContains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo")
+	assert.NotContains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4")
 }
 
 func TestGenerateToolsFile_WithNoSourcesOrSinks(t *testing.T) {

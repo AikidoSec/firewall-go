@@ -14,9 +14,9 @@ import (
 // Available sources and sinks
 var (
 	availableSources = map[string]string{
-		"gin":  "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
-		"chi":  "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi",
-		"echo": "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo",
+		"gin":     "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
+		"chi":     "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi",
+		"echo/v4": "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4",
 	}
 
 	availableSinks = map[string]string{
