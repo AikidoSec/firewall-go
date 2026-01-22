@@ -1,0 +1,12 @@
+meta:
+  name: labstack/echo
+  description: High performance, extensible, minimalist Go web framework.
+
+rules:
+  - id: echo.New
+    type: wrap
+    match: github.com/labstack/echo/v5.New
+    imports:
+      zenecho: github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v5
+    template: |
+      func() *echo.Echo { e := {{.}}; e.Use(zenecho.GetMiddleware()); return e }()
