@@ -10,6 +10,10 @@ import (
 )
 
 func Examine(r *http.Request) error {
+	if !zen.ShouldProtect() {
+		return nil
+	}
+
 	if r.URL == nil {
 		return nil
 	}

@@ -16,7 +16,7 @@ import (
 // It is part of the automatic instrumentation and will be run before any other middleware.
 func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if zen.IsDisabled() {
+		if !zen.ShouldProtect() {
 			orig(w, r)
 			return
 		}

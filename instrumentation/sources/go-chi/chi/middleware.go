@@ -9,6 +9,7 @@ import (
 	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -17,6 +18,11 @@ import (
 func GetMiddleware() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !zen.ShouldProtect() {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			if r == nil {
 				next.ServeHTTP(w, r)
 				return

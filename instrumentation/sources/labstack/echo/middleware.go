@@ -14,7 +14,7 @@ import (
 func GetMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			if zen.IsDisabled() {
+			if !zen.ShouldProtect() {
 				return next(c)
 			}
 
