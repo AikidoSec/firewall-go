@@ -12,6 +12,24 @@ meta:
     the `os` package that open files ultimately call `os.OpenFile` (as of Go 1.23).
 
 aspects:
+  - id: OSExamine-Declaration
+    join-point:
+      all-of:
+        - import-path: os
+        - function-body:
+            function:
+              - name: Getpid
+    advice:
+      - inject-declarations:
+          # We're using go:linkname to avoid circular dependencies with `os`.
+          # Separate aspect to handle both OpenFile methods (standalone and Root.OpenFile).
+          # We attach the declaration to a function that only exists in the main os package
+          # to ensure it's included exactly once.
+          links:
+            - github.com/AikidoSec/firewall-go/instrumentation/sinks/os
+          template: |-
+            //go:linkname __aikido_os_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/os.Examine
+            func __aikido_os_Examine (string) error
   - id: OpenFile
     join-point:
       all-of:
@@ -21,13 +39,8 @@ aspects:
               - name: OpenFile
     advice:
       - prepend-statements:
-          imports:
-            zentransits: github.com/AikidoSec/firewall-go/instrumentation/transits
           template: |-
-            if examinePath := zentransits.ExaminePath(); examinePath != nil {
-              const _aikido_deferReporting = false
-              _aikido_block := examinePath("os.OpenFile", []string{ {{ .Function.Argument 0 }} }, _aikido_deferReporting)
-              if _aikido_block != nil {
-                return nil, _aikido_block
-              }
+            _aikido_block := __aikido_os_Examine({{ .Function.Argument 0 }})
+            if _aikido_block != nil {
+              return nil, _aikido_block
             }

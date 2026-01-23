@@ -1,16 +1,22 @@
-package examine
+//go:build !integration
+
+package exec_test
 
 import (
+	"context"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-func TestExaminePath_Disabled(t *testing.T) {
+func TestExamine_Disabled(t *testing.T) {
 	originalDisabled := config.IsZenDisabled()
 	defer config.SetZenDisabled(originalDisabled)
 
@@ -25,13 +31,21 @@ func TestExaminePath_Disabled(t *testing.T) {
 	mockClient := testutil.NewMockCloudClient()
 	agent.SetCloudClient(mockClient)
 
+	req := httptest.NewRequest("GET", "/test?cmd=rm%20-rf%20%2F", nil)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
 	config.SetZenDisabled(true)
 
-	maliciousPath := "../../etc/passwd"
+	maliciousArgs := []string{"sh", "-c", "echo hello; rm -rf /"}
 
-	err := examinePath("os.OpenFeil", []string{maliciousPath}, false)
+	err := exec.Examine(ctx, "os/exec.Command", maliciousArgs)
 
-	require.NoError(t, err, "Examine should return early with no error when zen is disabled")
+	require.NoError(t, err, "Should not detect shell injection when zen is disabled")
 
 	select {
 	case <-mockClient.AttackDetectedEventSent:
