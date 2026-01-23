@@ -11,13 +11,13 @@ func TestComputeInstrumentationHash(t *testing.T) {
 	inst, err := NewInstrumentor()
 	require.NoError(t, err)
 
-	hash := ComputeInstrumentationHash(inst)
+	hash := ComputeInstrumentationHash(inst, "test-version")
 
 	// Hash should be 16 characters (base64 encoded, truncated)
 	assert.Len(t, hash, 16)
 
 	// Hash should be consistent
-	hash2 := ComputeInstrumentationHash(inst)
+	hash2 := ComputeInstrumentationHash(inst, "test-version")
 	assert.Equal(t, hash, hash2)
 }
 
@@ -34,8 +34,8 @@ func TestComputeInstrumentationHash_DifferentRules(t *testing.T) {
 		},
 	}
 
-	hash1 := ComputeInstrumentationHash(inst1)
-	hash2 := ComputeInstrumentationHash(inst2)
+	hash1 := ComputeInstrumentationHash(inst1, "test-version")
+	hash2 := ComputeInstrumentationHash(inst2, "test-version")
 
 	assert.NotEqual(t, hash1, hash2)
 }
@@ -45,7 +45,7 @@ func TestComputeInstrumentationHash_EmptyRules(t *testing.T) {
 		WrapRules: []WrapRule{},
 	}
 
-	hash := ComputeInstrumentationHash(inst)
+	hash := ComputeInstrumentationHash(inst, "test-version")
 	assert.Len(t, hash, 16)
 }
 
@@ -62,8 +62,8 @@ func TestComputeInstrumentationHash_DifferentPrependRules(t *testing.T) {
 		},
 	}
 
-	hash1 := ComputeInstrumentationHash(inst1)
-	hash2 := ComputeInstrumentationHash(inst2)
+	hash1 := ComputeInstrumentationHash(inst1, "test-version")
+	hash2 := ComputeInstrumentationHash(inst2, "test-version")
 
 	assert.NotEqual(t, hash1, hash2)
 }
@@ -81,8 +81,8 @@ func TestComputeInstrumentationHash_DifferentInjectDeclRules(t *testing.T) {
 		},
 	}
 
-	hash1 := ComputeInstrumentationHash(inst1)
-	hash2 := ComputeInstrumentationHash(inst2)
+	hash1 := ComputeInstrumentationHash(inst1, "test-version")
+	hash2 := ComputeInstrumentationHash(inst2, "test-version")
 
 	assert.NotEqual(t, hash1, hash2)
 }
@@ -124,10 +124,23 @@ func TestComputeInstrumentationHash_AllRuleTypes(t *testing.T) {
 		},
 	}
 
-	hash1 := ComputeInstrumentationHash(inst1)
-	hash2 := ComputeInstrumentationHash(inst2)
-	hash3 := ComputeInstrumentationHash(inst3)
+	hash1 := ComputeInstrumentationHash(inst1, "test-version")
+	hash2 := ComputeInstrumentationHash(inst2, "test-version")
+	hash3 := ComputeInstrumentationHash(inst3, "test-version")
 
 	assert.NotEqual(t, hash1, hash2, "hash should change when prepend rule changes")
 	assert.NotEqual(t, hash2, hash3, "hash should change when inject-decl rule changes")
+}
+
+func TestComputeInstrumentationHash_DifferentVersions(t *testing.T) {
+	inst := &Instrumentor{
+		WrapRules: []WrapRule{
+			{ID: "test1", MatchCall: "pkg.Func"},
+		},
+	}
+
+	hash1 := ComputeInstrumentationHash(inst, "1.0.0")
+	hash2 := ComputeInstrumentationHash(inst, "1.0.1")
+
+	assert.NotEqual(t, hash1, hash2, "hash should change when version changes")
 }

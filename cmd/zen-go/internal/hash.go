@@ -7,10 +7,13 @@ import (
 	"sort"
 )
 
-// ComputeInstrumentationHash computes a hash of all instrumentation rules.
-// This hash is used to modify the build ID so that when rules change, Go will rebuild packages.
-func ComputeInstrumentationHash(inst *Instrumentor) string {
+// ComputeInstrumentationHash computes a hash of all instrumentation rules and the zen-go version.
+// This hash is used to modify the build ID so that when rules or the version change, Go will rebuild packages.
+func ComputeInstrumentationHash(inst *Instrumentor, version string) string {
 	h := sha256.New()
+
+	// Hash the zen-go version
+	fmt.Fprintf(h, "version:%s\n", version)
 
 	// Hash wrap rules
 	for _, rule := range inst.WrapRules {
