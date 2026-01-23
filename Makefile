@@ -68,13 +68,13 @@ test-db-stop:
 
 .PHONY: test-instrumentation-integration
 test-instrumentation-integration: test-db-start
-	@echo "Running instrumentation tests with orchestrion"
-	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="$(TOOLS_BIN)/orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/... || \
+	@echo "Running instrumentation tests with zen-go"
+	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -toolexec="$(TOOLS_BIN)/zen-go toolexec" -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/... || \
 		($(MAKE) test-db-stop && exit 1)
 	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
-	@echo "Coverage report saved to coverage.out"
-	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
+	# @echo "Coverage report saved to coverage.out"
+	# @go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
 
 .PHONY: test-instrumentation-unit
 test-instrumentation-unit:

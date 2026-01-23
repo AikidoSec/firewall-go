@@ -1,6 +1,6 @@
 //go:build integration
 
-package http
+package http_test
 
 import (
 	"io"
@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/AikidoSec/firewall-go/instrumentation"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"

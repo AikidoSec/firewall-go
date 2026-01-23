@@ -110,17 +110,20 @@ jobs:
       - name: Install tools
         run: make install-tools
 
+      - name: Build Zen Go
+        run: make build-zen-go
+
       - name: Run tests
         run: make test-instrumentation-integration
 
-      - name: Upload instrumentation coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
-        with:
-          fail_ci_if_error: true
-          files: ./coverage.out
-          flags: instrumentation-integration
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
+      # - name: Upload instrumentation coverage to Codecov
+      #   uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+      #   with:
+      #     fail_ci_if_error: true
+      #     files: ./coverage.out
+      #     flags: instrumentation-integration
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     verbose: true
 
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
