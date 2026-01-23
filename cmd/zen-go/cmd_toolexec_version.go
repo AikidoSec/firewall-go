@@ -31,7 +31,7 @@ func toolexecVersionQueryCommand(stdout io.Writer, stderr io.Writer, tool string
 		return err
 	}
 
-	rulesHash := internal.ComputeInstrumentationHash(inst)
+	rulesHash := internal.ComputeInstrumentationHash(inst, version)
 
 	// Append our hash to the version string
 	versionStr := strings.TrimSpace(versionOutput.String())
