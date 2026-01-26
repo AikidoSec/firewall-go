@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:14-alpine
@@ -9,12 +7,12 @@ services:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpass
     ports:
-      - "5433:5432"  # Use different port to avoid conflicts with sample-apps
+      - "5433:5432" # Use different port to avoid conflicts with sample-apps
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
       interval: 1s
       timeout: 5s
       retries: 10
     tmpfs:
-      - /var/lib/postgresql/data  # Use tmpfs for faster tests, no persistence needed
+      - /var/lib/postgresql/data # Use tmpfs for faster tests, no persistence needed
 
