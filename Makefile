@@ -1,5 +1,4 @@
 ZEN_INTERNALS_VERSION=v0.1.55
-ORCHESTRION_VERSION=v1.6.1
 GOLANGCI_LINT_VERSION=v2.8.0
 
 TOOLS_BIN := $(shell pwd)/tools/bin
@@ -12,9 +11,6 @@ install-tools:
 	@echo "Installing golangci-lint"
 	@GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	@echo "✅ golangci-lint installed successfully"
-	@echo "Installing orchestrion"
-	@GOBIN=$(TOOLS_BIN) go install github.com/DataDog/orchestrion
-	@echo "✅ tools installed successfully"
 
 .PHONY: build-zen-go
 build-zen-go:
@@ -183,55 +179,3 @@ internal/vulnerabilities/zeninternals/%:
 	@echo "Downloading $*..."
 	curl -L -o $@ $(BASE_URL)/$*
 
-.PHONY: check-orchestrion
-check-orchestrion:
-	@echo "Checking orchestrion versions across all modules..."
-	@EXPECTED="$(ORCHESTRION_VERSION)"; \
-	echo "Expected version: $$EXPECTED"; \
-	echo ""; \
-	FAILED=0; \
-	check_module() { \
-		local dir=$$1; \
-		local label=$$2; \
-		echo "$$label:"; \
-		MOD_VERSION=$$(cd "$$dir" && go list -m -f '{{.Version}}' github.com/DataDog/orchestrion 2>/dev/null || echo "not found"); \
-		if [ "$$MOD_VERSION" != "$$EXPECTED" ]; then \
-			echo "  ❌ $$MOD_VERSION (expected $$EXPECTED)"; \
-			return 1; \
-		else \
-			echo "  ✅ $$MOD_VERSION"; \
-			return 0; \
-		fi; \
-	}; \
-	check_module "." "Root module" || FAILED=1; \
-	echo ""; \
-	echo "Sample apps:"; \
-	for dir in sample-apps/*/; do \
-		if [ -f "$$dir/go.mod" ]; then \
-			check_module "$$dir" "  $$dir" || FAILED=1; \
-		fi \
-	done; \
-	if [ $$FAILED -eq 1 ]; then \
-		echo ""; \
-		echo "❌ Version mismatch detected. Run 'make sync-orchestrion' to fix."; \
-		exit 1; \
-	else \
-		echo ""; \
-		echo "✅ All modules use orchestrion $(ORCHESTRION_VERSION)"; \
-	fi
-
-.PHONY: sync-orchestrion
-sync-orchestrion:
-	@echo "Syncing orchestrion $(ORCHESTRION_VERSION) to all modules..."
-	@go mod edit -require=github.com/DataDog/orchestrion@$(ORCHESTRION_VERSION)
-	@go mod tidy
-	@for dir in sample-apps/*/; do \
-		if [ -f "$$dir/go.mod" ]; then \
-			echo "  Updating $$dir"; \
-			cd "$$dir" && \
-				go mod edit -require=github.com/DataDog/orchestrion@$(ORCHESTRION_VERSION) && \
-				go mod tidy && \
-				cd ../..; \
-		fi \
-	done
-	@echo "✅ All modules synced to orchestrion $(ORCHESTRION_VERSION)"
