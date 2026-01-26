@@ -24,12 +24,12 @@ func newCommand() *cli.Command {
 		Commands: []*cli.Command{
 			{
 				Name:  "init",
-				Usage: "Initialize Aikido Firewall (creates orchestrion.tool.go)",
+				Usage: "Initialize Aikido Firewall (creates zen.tool.go)",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:    "force",
 						Aliases: []string{"f"},
-						Usage:   "Force overwrite existing orchestrion.tool.go file",
+						Usage:   "Force overwrite existing zen.tool.go file",
 					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {

@@ -19,7 +19,7 @@ func TestInitCommand_DoesNotOverwriteExistingFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create existing file
-	filename := "orchestrion.tool.go"
+	filename := "zen.tool.go"
 	err = os.WriteFile(filename, []byte("existing content"), 0o600)
 	require.NoError(t, err)
 
@@ -45,10 +45,8 @@ func TestGenerateToolsFile_WithSourcesAndSinks(t *testing.T) {
 	content := generateToolsFile(config)
 
 	// Verify basic structure
-	assert.Contains(t, content, "//go:build tools")
-	assert.Contains(t, content, "package tools")
+	assert.Contains(t, content, "package main")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation")
-	assert.Contains(t, content, "github.com/DataDog/orchestrion")
 
 	// Verify sources section
 	assert.Contains(t, content, "// Aikido Zen: Sources")
@@ -71,9 +69,8 @@ func TestGenerateToolsFile_WithNoSourcesOrSinks(t *testing.T) {
 	content := generateToolsFile(config)
 
 	// Verify basic structure is always present
-	assert.Contains(t, content, "package tools")
+	assert.Contains(t, content, "package main")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation")
-	assert.Contains(t, content, "github.com/DataDog/orchestrion")
 
 	// Verify no sources/sinks sections
 	assert.NotContains(t, content, "// Aikido Zen: Sources")

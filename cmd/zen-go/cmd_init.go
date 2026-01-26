@@ -34,15 +34,13 @@ func generateToolsFile(config initConfig) string {
 
 	sb.WriteString(`// This file was created by 'zen-go init', and is used to ensure the
 // go.mod file contains the necessary entries for repeatable builds.
-//go:build tools
 
-package tools
+package main
 
 import (
 	// Ensures Aikido Zen instrumentation is present in go.mod
 	// Do not remove this unless you want to stop using Aikido.
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
-	_ "github.com/DataDog/orchestrion" // integration
 `)
 
 	// Add sources
@@ -71,7 +69,7 @@ import (
 }
 
 func initCommand(stdout io.Writer, force bool) error {
-	filename := "orchestrion.tool.go"
+	filename := "zen.tool.go"
 
 	// Check if file already exists
 	if !force {
@@ -123,7 +121,7 @@ func initCommand(stdout io.Writer, force bool) error {
 	fmt.Fprintln(stdout)
 	fmt.Fprintln(stdout, "Next steps:")
 	fmt.Fprintln(stdout, "  1. Run 'go mod tidy' to update your dependencies")
-	fmt.Fprintln(stdout, "  2. Build with 'orchestrion go build' to enable instrumentation")
+	fmt.Fprintln(stdout, "  2. Build with 'go build -toolexec=\"zen-go toolexec\"' to enable instrumentation")
 
 	return nil
 }
