@@ -80,8 +80,7 @@ test-instrumentation-integration: test-db-start
 		./instrumentation/sinks/os \
 		./instrumentation/sinks/os/exec \
 		./instrumentation/sinks/path \
-		./instrumentation/sinks/path/filepath || \
-		($(MAKE) test-db-stop && exit 1)
+		./instrumentation/sinks/path/filepath
 
 	@echo "Running instrumentation tests without coverage (problematic packages)"
 	@$(TOOLS_BIN)/gotestsum --format pkgname -- \
@@ -92,8 +91,7 @@ test-instrumentation-integration: test-db-start
 		./instrumentation/sources/go-chi/chi \
 		./instrumentation/sources/labstack/echo.v4 \
 		./instrumentation/sinks/database/sql \
-		./instrumentation/sinks/jackc/pgx || \
-		($(MAKE) test-db-stop && exit 1)
+		./instrumentation/sinks/jackc/pgx
 
 	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
