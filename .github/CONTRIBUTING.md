@@ -97,7 +97,8 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/Aikido
 ### Your First Code Contribution
 
 - clone the repository to your local machine
-- run `$ make install-tools` to install required development tools (gotestsum, golangci-lint, orchestrion)
+- run `$ make install-tools` to install required development tools (gotestsum, golangci-lint)
+- run `$ make build-zen-go` to build our compile time instrumentor
 - run `$ make test` to run tests with race detection and coverage
 - run `$ make test-instrumentation` to run instrumentation tests
 - run `$ make lint` to run golangci-lint
@@ -106,16 +107,17 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/Aikido
 
 #### Working with Instrumentation
 
-This project uses [Orchestrion](https://github.com/DataDog/orchestrion) for compile-time instrumentation. If you're working on code in `./instrumentation/sources/` or `./instrumentation/sinks/`, you should:
+This project uses compile-time instrumentation to automatically instrument services. If you're working on code in `./instrumentation/sources/` or `./instrumentation/sinks/`, you should:
 
 - Run `$ make test-instrumentation` to test your instrumentation changes.
-- This runs tests with the `-toolexec="orchestrion toolexec"` flag to enable compile-time instrumentation.
+- This runs tests with the `-toolexec="zen-go toolexec"` flag to enable compile-time instrumentation.
 
 ## Styleguides
 
 ### Code format
 
 Code is formatted using Go's standard formatting tools:
+
 - Use `gofmt` for consistent formatting
 - Use `goimports` for managing imports
 - Follow the [Effective Go](https://go.dev/doc/effective_go) guidelines
