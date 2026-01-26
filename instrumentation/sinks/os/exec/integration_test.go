@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"testing"
 
+	_ "github.com/AikidoSec/firewall-go/instrumentation"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/AikidoSec/firewall-go/instrumentation"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"

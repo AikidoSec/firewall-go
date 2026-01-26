@@ -68,9 +68,31 @@ test-db-stop:
 
 .PHONY: test-instrumentation-integration
 test-instrumentation-integration: test-db-start
-	@echo "Running instrumentation tests with orchestrion"
-	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic -toolexec="$(TOOLS_BIN)/orchestrion toolexec" -a -tags=integration ./instrumentation/sources/... ./instrumentation/sinks/... || \
-		($(MAKE) test-db-stop && exit 1)
+	@echo "Running instrumentation tests with zen-go (coverage-enabled packages)"
+	@$(TOOLS_BIN)/gotestsum --format pkgname -- \
+		-race \
+		-coverprofile=coverage.out \
+		-covermode=atomic \
+		-toolexec="$(TOOLS_BIN)/zen-go toolexec" \
+		-tags=integration \
+		./instrumentation/sources/net/http \
+		./instrumentation/sinks/net/http \
+		./instrumentation/sinks/os \
+		./instrumentation/sinks/os/exec \
+		./instrumentation/sinks/path \
+		./instrumentation/sinks/path/filepath
+
+	@echo "Running instrumentation tests without coverage (problematic packages)"
+	@$(TOOLS_BIN)/gotestsum --format pkgname -- \
+		-race \
+		-toolexec="$(TOOLS_BIN)/zen-go toolexec" \
+		-tags=integration \
+		./instrumentation/sources/gin-gonic/gin \
+		./instrumentation/sources/go-chi/chi \
+		./instrumentation/sources/labstack/echo.v4 \
+		./instrumentation/sinks/database/sql \
+		./instrumentation/sinks/jackc/pgx
+
 	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"

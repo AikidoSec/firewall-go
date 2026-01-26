@@ -110,6 +110,9 @@ jobs:
       - name: Install tools
         run: make install-tools
 
+      - name: Build Zen Go
+        run: make build-zen-go
+
       - name: Run tests
         run: make test-instrumentation-integration
 
