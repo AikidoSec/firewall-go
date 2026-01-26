@@ -1,10 +1,11 @@
-module http-postgres
+module echo-postgres
 
 go 1.25.0
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
 	github.com/DataDog/orchestrion v1.6.1
+	github.com/labstack/echo/v4 v4.15.0
 	github.com/lib/pq v1.10.2
 )
 
@@ -50,7 +51,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/gin-gonic/gin v1.11.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.3 // indirect
@@ -70,7 +71,6 @@ require (
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
-	github.com/labstack/echo/v4 v4.15.0 // indirect
 	github.com/labstack/echo/v5 v5.0.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -150,5 +150,3 @@ require (
 )
 
 replace github.com/AikidoSec/firewall-go => ../../
-
-replace github.com/AikidoSec/firewall-go/instrumentation => ../../instrumentation

@@ -1,6 +1,6 @@
 module gin-postgres
 
-go 1.24.2
+go 1.25.0
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
@@ -71,6 +71,7 @@ require (
 	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/labstack/echo/v4 v4.15.0 // indirect
+	github.com/labstack/echo/v5 v5.0.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
