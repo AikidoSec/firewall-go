@@ -134,8 +134,12 @@ func OnAttackDetected(attack *DetectedAttack) {
 	Stats().OnAttackDetected(attack.Attack.Blocked)
 }
 
-func OnMonitoredSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings) {
-	Stats().OnSinkStats(sink, stats)
+func OnOperationCall(operation string, kind aikido_types.OperationKind) {
+	Stats().OnOperationCall(operation, kind)
+}
+
+func OnOperationAttack(operation string, blocked bool) {
+	Stats().OnOperationAttack(operation, blocked)
 }
 
 func OnMiddlewareInstalled() {

@@ -114,6 +114,9 @@ func onInterceptorResult(ctx context.Context, res *InterceptorResult) error {
 	}
 
 	attack := getAttackDetected(ctx, *res)
+	if attack != nil {
+		go agent.OnOperationAttack(res.Operation, attack.Attack.Blocked)
+	}
 	go agent.OnAttackDetected(attack)
 
 	// If blocking is disabled, continue as normal after reporting the attack.
@@ -181,5 +184,8 @@ func reportDeferredAttack(ctx context.Context) {
 	}
 
 	attack := getAttackDetected(ctx, *res)
+	if attack != nil {
+		go agent.OnOperationAttack(res.Operation, attack.Attack.Blocked)
+	}
 	go agent.OnAttackDetected(attack)
 }
