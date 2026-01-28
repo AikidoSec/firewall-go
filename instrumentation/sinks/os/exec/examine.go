@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/shellinjection"
 )
@@ -16,7 +16,7 @@ func Examine(cmdCtx context.Context, op string, args []string) error {
 		return nil
 	}
 
-	agent.OnOperationCall(op, aikido_types.OperationKindExec)
+	agent.OnOperationCall(op, stats.OperationKindExec)
 
 	ctx := context.Background()
 	if cmdCtx != nil {

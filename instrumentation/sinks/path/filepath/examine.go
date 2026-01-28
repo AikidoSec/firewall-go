@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/pathtraversal"
 )
@@ -16,7 +16,7 @@ func Examine(args []string) error {
 		return nil
 	}
 
-	agent.OnOperationCall("path/filepath.Join", aikido_types.OperationKindFileSystem)
+	agent.OnOperationCall("path/filepath.Join", stats.OperationKindFileSystem)
 
 	path := strings.Join(args, "")
 

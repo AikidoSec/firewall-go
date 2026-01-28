@@ -2,12 +2,13 @@ package cloud
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
 type HeartbeatEvent struct {
 	Type                string                  `json:"type"`
-	Stats               aikido_types.Stats      `json:"stats"`
+	Stats               stats.Data              `json:"stats"`
 	Hostnames           []aikido_types.Hostname `json:"hostnames"`
 	Routes              []aikido_types.Route    `json:"routes"`
 	Users               []aikido_types.User     `json:"users"`
@@ -20,7 +21,7 @@ type HeartbeatData struct {
 	Hostnames           []aikido_types.Hostname
 	Routes              []aikido_types.Route
 	Users               []aikido_types.User
-	Stats               aikido_types.Stats
+	Stats               stats.Data
 	MiddlewareInstalled bool
 }
 

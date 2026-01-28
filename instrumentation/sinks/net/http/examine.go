@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
@@ -15,7 +15,7 @@ func Examine(r *http.Request) error {
 		return nil
 	}
 
-	agent.OnOperationCall("net/http.Client.Do", aikido_types.OperationKindOutgoingHTTP)
+	agent.OnOperationCall("net/http.Client.Do", stats.OperationKindOutgoingHTTP)
 
 	if r.URL == nil {
 		return nil

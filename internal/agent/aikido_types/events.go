@@ -39,13 +39,6 @@ type Requests struct {
 	RateLimited     int             `json:"rateLimited"`
 }
 
-type Stats struct {
-	Operations map[string]OperationStats `json:"operations"`
-	StartedAt  int64                     `json:"startedAt"`
-	EndedAt    int64                     `json:"endedAt"`
-	Requests   Requests                  `json:"requests"`
-}
-
 type RequestInfo struct {
 	Method    string `json:"method"`
 	IPAddress string `json:"ipAddress"`

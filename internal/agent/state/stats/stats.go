@@ -8,7 +8,7 @@ import (
 )
 
 type operationData struct {
-	kind            aikido_types.OperationKind
+	kind            OperationKind
 	total           int
 	attacksDetected int
 	attacksBlocked  int
@@ -32,11 +32,11 @@ func New() *Stats {
 	}
 }
 
-func (s *Stats) GetAndClear() aikido_types.Stats {
+func (s *Stats) GetAndClear() Data {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	result := aikido_types.Stats{
+	result := Data{
 		StartedAt: s.startedAt,
 		EndedAt:   utils.GetTime(),
 		Requests: aikido_types.Requests{
@@ -92,7 +92,7 @@ func (s *Stats) OnRateLimit() {
 	s.requestsRateLimited++
 }
 
-func (s *Stats) OnOperationCall(operation string, kind aikido_types.OperationKind) {
+func (s *Stats) OnOperationCall(operation string, kind OperationKind) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -130,15 +130,15 @@ func (s *Stats) OnOperationAttack(operation string, blocked bool) {
 	s.operations[operation] = data
 }
 
-func (s *Stats) getAndClearOperations() map[string]aikido_types.OperationStats {
-	operations := make(map[string]aikido_types.OperationStats)
+func (s *Stats) getAndClearOperations() map[string]OperationStats {
+	operations := make(map[string]OperationStats)
 
 	if s.operations == nil {
 		return operations
 	}
 
 	for operation, data := range s.operations {
-		operations[operation] = aikido_types.OperationStats{
+		operations[operation] = OperationStats{
 			Kind:  data.kind,
 			Total: data.total,
 			AttacksDetected: aikido_types.AttacksDetected{
