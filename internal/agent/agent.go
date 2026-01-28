@@ -134,7 +134,7 @@ func OnAttackDetected(attack *DetectedAttack) {
 	Stats().OnAttackDetected(attack.Attack.Blocked)
 }
 
-func OnOperationCall(operation string, kind aikido_types.OperationKind) {
+func OnOperationCall(operation string, kind stats.OperationKind) {
 	Stats().OnOperationCall(operation, kind)
 }
 

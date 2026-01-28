@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/sqlinjection"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -25,7 +25,7 @@ func ExamineContext(ctx context.Context, query string, op string) error {
 		return nil
 	}
 
-	agent.OnOperationCall(op, aikido_types.OperationKindSQL)
+	agent.OnOperationCall(op, stats.OperationKindSQL)
 
 	err := vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
 		Statement: query,
