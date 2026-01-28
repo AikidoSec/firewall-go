@@ -1,9 +1,5 @@
 package stats
 
-import (
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
-)
-
 type OperationKind string
 
 const (
@@ -17,14 +13,26 @@ const (
 )
 
 type OperationStats struct {
-	Kind            OperationKind                `json:"kind"`
-	Total           int                          `json:"total"`
-	AttacksDetected aikido_types.AttacksDetected `json:"attacksDetected"`
+	Kind            OperationKind   `json:"kind"`
+	Total           int             `json:"total"`
+	AttacksDetected AttacksDetected `json:"attacksDetected"`
 }
 
 type Snapshot struct {
 	Operations map[string]OperationStats `json:"operations"`
 	StartedAt  int64                     `json:"startedAt"`
 	EndedAt    int64                     `json:"endedAt"`
-	Requests   aikido_types.Requests     `json:"requests"`
+	Requests   Requests                  `json:"requests"`
+}
+
+type AttacksDetected struct {
+	Total   int `json:"total"`
+	Blocked int `json:"blocked"`
+}
+
+type Requests struct {
+	Total           int             `json:"total"`
+	Aborted         int             `json:"aborted"`
+	AttacksDetected AttacksDetected `json:"attacksDetected"`
+	RateLimited     int             `json:"rateLimited"`
 }

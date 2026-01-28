@@ -21,24 +21,6 @@ type User struct {
 	LastSeenAt    int64  `json:"lastSeenAt"`
 }
 
-type AttacksDetected struct {
-	Total   int `json:"total"`
-	Blocked int `json:"blocked"`
-}
-
-type CompressedTiming struct {
-	AverageInMS  float64            `json:"averageInMS"`
-	Percentiles  map[string]float64 `json:"percentiles"`
-	CompressedAt int64              `json:"compressedAt"`
-}
-
-type Requests struct {
-	Total           int             `json:"total"`
-	Aborted         int             `json:"aborted"`
-	AttacksDetected AttacksDetected `json:"attacksDetected"`
-	RateLimited     int             `json:"rateLimited"`
-}
-
 type RequestInfo struct {
 	Method    string `json:"method"`
 	IPAddress string `json:"ipAddress"`

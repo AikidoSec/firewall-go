@@ -3,7 +3,6 @@ package stats
 import (
 	"sync"
 
-	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
@@ -39,10 +38,10 @@ func (s *Stats) GetAndClear() Snapshot {
 	result := Snapshot{
 		StartedAt: s.startedAt,
 		EndedAt:   utils.GetTime(),
-		Requests: aikido_types.Requests{
+		Requests: Requests{
 			Total:   s.requests,
 			Aborted: s.requestsAborted,
-			AttacksDetected: aikido_types.AttacksDetected{
+			AttacksDetected: AttacksDetected{
 				Total:   s.attacks,
 				Blocked: s.attacksBlocked,
 			},
@@ -141,7 +140,7 @@ func (s *Stats) getAndClearOperations() map[string]OperationStats {
 		operations[operation] = OperationStats{
 			Kind:  data.kind,
 			Total: data.total,
-			AttacksDetected: aikido_types.AttacksDetected{
+			AttacksDetected: AttacksDetected{
 				Total:   data.attacksDetected,
 				Blocked: data.attacksBlocked,
 			},
