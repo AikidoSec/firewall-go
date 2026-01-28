@@ -22,7 +22,7 @@ type OperationStats struct {
 	AttacksDetected aikido_types.AttacksDetected `json:"attacksDetected"`
 }
 
-type Data struct {
+type Snapshot struct {
 	Operations map[string]OperationStats `json:"operations"`
 	StartedAt  int64                     `json:"startedAt"`
 	EndedAt    int64                     `json:"endedAt"`

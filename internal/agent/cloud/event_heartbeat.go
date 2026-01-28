@@ -8,7 +8,7 @@ import (
 
 type HeartbeatEvent struct {
 	Type                string                  `json:"type"`
-	Stats               stats.Data              `json:"stats"`
+	Stats               stats.Snapshot          `json:"stats"`
 	Hostnames           []aikido_types.Hostname `json:"hostnames"`
 	Routes              []aikido_types.Route    `json:"routes"`
 	Users               []aikido_types.User     `json:"users"`
@@ -21,7 +21,7 @@ type HeartbeatData struct {
 	Hostnames           []aikido_types.Hostname
 	Routes              []aikido_types.Route
 	Users               []aikido_types.User
-	Stats               stats.Data
+	Stats               stats.Snapshot
 	MiddlewareInstalled bool
 }
 

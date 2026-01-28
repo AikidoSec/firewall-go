@@ -32,11 +32,11 @@ func New() *Stats {
 	}
 }
 
-func (s *Stats) GetAndClear() Data {
+func (s *Stats) GetAndClear() Snapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	result := Data{
+	result := Snapshot{
 		StartedAt: s.startedAt,
 		EndedAt:   utils.GetTime(),
 		Requests: aikido_types.Requests{
