@@ -7,25 +7,28 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
-const (
-	minStatsCollectedForRelevantMetrics = 10000
-)
+type operationData struct {
+	kind            aikido_types.OperationKind
+	total           int
+	attacksDetected int
+	attacksBlocked  int
+}
 
 type Stats struct {
-	startedAt            int64
-	requests             int
-	requestsAborted      int
-	requestsRateLimited  int
-	attacks              int
-	attacksBlocked       int
-	monitoredSinkTimings map[string]aikido_types.MonitoredSinkTimings
+	startedAt           int64
+	requests            int
+	requestsAborted     int
+	requestsRateLimited int
+	attacks             int
+	attacksBlocked      int
+	operations          map[string]operationData
 
 	mu sync.Mutex
 }
 
 func New() *Stats {
 	return &Stats{
-		monitoredSinkTimings: make(map[string]aikido_types.MonitoredSinkTimings),
+		operations: make(map[string]operationData),
 	}
 }
 
@@ -45,7 +48,7 @@ func (s *Stats) GetAndClear() aikido_types.Stats {
 			},
 			RateLimited: s.requestsRateLimited,
 		},
-		Sinks: s.getAndClearSinks(),
+		Operations: s.getAndClearOperations(),
 	}
 
 	s.startedAt = utils.GetTime()
@@ -56,32 +59,6 @@ func (s *Stats) GetAndClear() aikido_types.Stats {
 	s.attacksBlocked = 0
 
 	return result
-}
-
-func (s *Stats) getAndClearSinks() map[string]aikido_types.MonitoredSinkStats {
-	monitoredSinkStats := make(map[string]aikido_types.MonitoredSinkStats)
-	for sink, stats := range s.monitoredSinkTimings {
-		if stats.Total <= minStatsCollectedForRelevantMetrics {
-			continue
-		}
-
-		monitoredSinkStats[sink] = aikido_types.MonitoredSinkStats{
-			AttacksDetected:       stats.AttacksDetected,
-			InterceptorThrewError: stats.InterceptorThrewError,
-			WithoutContext:        stats.WithoutContext,
-			Total:                 stats.Total,
-			CompressedTimings: []aikido_types.CompressedTiming{
-				{
-					AverageInMS:  computeAverage(stats.Timings),
-					Percentiles:  computePercentiles(stats.Timings),
-					CompressedAt: utils.GetTime(),
-				},
-			},
-		}
-
-		delete(s.monitoredSinkTimings, sink)
-	}
-	return monitoredSinkStats
 }
 
 func (s *Stats) SetStartedAt(startedAt int64) {
@@ -108,28 +85,68 @@ func (s *Stats) OnAttackDetected(blocked bool) {
 	}
 }
 
-func (s *Stats) OnSinkStats(sink string, stats *aikido_types.MonitoredSinkTimings) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	monitoredSinkTimings, found := s.monitoredSinkTimings[sink]
-	if !found {
-		monitoredSinkTimings = aikido_types.MonitoredSinkTimings{}
-	}
-
-	monitoredSinkTimings.AttacksDetected.Total += int(stats.AttacksDetected.Total)
-	monitoredSinkTimings.AttacksDetected.Blocked += int(stats.AttacksDetected.Blocked)
-	monitoredSinkTimings.InterceptorThrewError += int(stats.InterceptorThrewError)
-	monitoredSinkTimings.WithoutContext += int(stats.WithoutContext)
-	monitoredSinkTimings.Total += int(stats.Total)
-	monitoredSinkTimings.Timings = append(monitoredSinkTimings.Timings, stats.Timings...)
-
-	s.monitoredSinkTimings[sink] = monitoredSinkTimings
-}
-
 func (s *Stats) OnRateLimit() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.requestsRateLimited++
+}
+
+func (s *Stats) OnOperationCall(operation string, kind aikido_types.OperationKind) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.operations == nil {
+		s.operations = make(map[string]operationData)
+	}
+
+	data, found := s.operations[operation]
+	if !found {
+		data = operationData{
+			kind: kind,
+		}
+	}
+	data.total++
+	s.operations[operation] = data
+}
+
+func (s *Stats) OnOperationAttack(operation string, blocked bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.operations == nil {
+		return
+	}
+
+	data, found := s.operations[operation]
+	if !found {
+		// If operation wasn't registered, we can't track the attack
+		return
+	}
+	data.attacksDetected++
+	if blocked {
+		data.attacksBlocked++
+	}
+	s.operations[operation] = data
+}
+
+func (s *Stats) getAndClearOperations() map[string]aikido_types.OperationStats {
+	operations := make(map[string]aikido_types.OperationStats)
+
+	if s.operations == nil {
+		return operations
+	}
+
+	for operation, data := range s.operations {
+		operations[operation] = aikido_types.OperationStats{
+			Kind:  data.kind,
+			Total: data.total,
+			AttacksDetected: aikido_types.AttacksDetected{
+				Total:   data.attacksDetected,
+				Blocked: data.attacksBlocked,
+			},
+		}
+		delete(s.operations, operation)
+	}
+	return operations
 }

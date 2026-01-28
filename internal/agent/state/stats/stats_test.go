@@ -96,177 +96,6 @@ func TestOnAttackDetected(t *testing.T) {
 	}
 }
 
-func TestOnSinkStats(t *testing.T) {
-	t.Run("stores stats for new sink", func(t *testing.T) {
-		stats := New()
-
-		sink := &aikido_types.MonitoredSinkTimings{
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   5,
-				Blocked: 2,
-			},
-			InterceptorThrewError: 1,
-			WithoutContext:        3,
-			Total:                 10001, // Above minimum threshold
-			Timings:               []int64{1000000, 2000000},
-		}
-
-		stats.OnSinkStats("database", sink)
-		data := stats.GetAndClear()
-
-		require.Contains(t, data.Sinks, "database", "sink should be stored")
-		sinkStats := data.Sinks["database"]
-		assert.Equal(t, 5, sinkStats.AttacksDetected.Total)
-		assert.Equal(t, 2, sinkStats.AttacksDetected.Blocked)
-		assert.Equal(t, 1, sinkStats.InterceptorThrewError)
-		assert.Equal(t, 3, sinkStats.WithoutContext)
-		assert.Equal(t, 10001, sinkStats.Total)
-		assert.Len(t, sinkStats.CompressedTimings, 1)
-		assert.Equal(t, 1.5, sinkStats.CompressedTimings[0].AverageInMS)
-	})
-
-	t.Run("accumulates stats for existing sink", func(t *testing.T) {
-		stats := New()
-
-		// Add initial stats
-		initialSink := &aikido_types.MonitoredSinkTimings{
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   3,
-				Blocked: 1,
-			},
-			InterceptorThrewError: 2,
-			WithoutContext:        1,
-			Total:                 6000,
-			Timings:               []int64{500000},
-		}
-		stats.OnSinkStats("database", initialSink)
-
-		// Add additional stats
-		additionalSink := &aikido_types.MonitoredSinkTimings{
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   4,
-				Blocked: 2,
-			},
-			InterceptorThrewError: 1,
-			WithoutContext:        2,
-			Total:                 4001,
-			Timings:               []int64{1000000, 2000000},
-		}
-		stats.OnSinkStats("database", additionalSink)
-
-		data := stats.GetAndClear()
-
-		require.Contains(t, data.Sinks, "database", "sink should be stored")
-		sinkStats := data.Sinks["database"]
-		assert.Equal(t, 7, sinkStats.AttacksDetected.Total, "AttacksDetected.Total should be accumulated (3+4)")
-		assert.Equal(t, 3, sinkStats.AttacksDetected.Blocked, "AttacksDetected.Blocked should be accumulated (1+2)")
-		assert.Equal(t, 3, sinkStats.InterceptorThrewError, "InterceptorThrewError should be accumulated (2+1)")
-		assert.Equal(t, 3, sinkStats.WithoutContext, "WithoutContext should be accumulated (1+2)")
-		assert.Equal(t, 10001, sinkStats.Total, "Total should be accumulated (6000+4001)")
-		assert.Len(t, sinkStats.CompressedTimings, 1)
-	})
-
-	t.Run("handles multiple sinks", func(t *testing.T) {
-		stats := New()
-
-		stats1 := &aikido_types.MonitoredSinkTimings{
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   2,
-				Blocked: 1,
-			},
-			Total: 10001, // Above minimum threshold
-		}
-
-		stats2 := &aikido_types.MonitoredSinkTimings{
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   3,
-				Blocked: 2,
-			},
-			Total: 10002, // Above minimum threshold
-		}
-
-		stats.OnSinkStats("database", stats1)
-		stats.OnSinkStats("http", stats2)
-
-		data := stats.GetAndClear()
-
-		require.Contains(t, data.Sinks, "database", "database sink should be stored")
-		require.Contains(t, data.Sinks, "http", "http sink should be stored")
-
-		dbStats := data.Sinks["database"]
-		assert.Equal(t, 2, dbStats.AttacksDetected.Total)
-		assert.Equal(t, 1, dbStats.AttacksDetected.Blocked)
-		assert.Equal(t, 10001, dbStats.Total)
-
-		httpStats := data.Sinks["http"]
-		assert.Equal(t, 3, httpStats.AttacksDetected.Total)
-		assert.Equal(t, 2, httpStats.AttacksDetected.Blocked)
-		assert.Equal(t, 10002, httpStats.Total)
-	})
-
-	t.Run("filters sinks below minimum threshold", func(t *testing.T) {
-		stats := New()
-
-		// Sink with total below minimum threshold should not appear in results
-		lowStats := &aikido_types.MonitoredSinkTimings{
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   5,
-				Blocked: 2,
-			},
-			Total: 5000, // Below minimum threshold of 10000
-		}
-
-		// Sink with total above minimum threshold should appear
-		highStats := &aikido_types.MonitoredSinkTimings{
-			AttacksDetected: aikido_types.AttacksDetected{
-				Total:   3,
-				Blocked: 1,
-			},
-			Total: 15000, // Above minimum threshold
-		}
-
-		stats.OnSinkStats("low", lowStats)
-		stats.OnSinkStats("high", highStats)
-
-		data := stats.GetAndClear()
-
-		assert.NotContains(t, data.Sinks, "low", "sink below threshold should not be stored")
-		require.Contains(t, data.Sinks, "high", "sink above threshold should be stored")
-
-		highSinkStats := data.Sinks["high"]
-		assert.Equal(t, 3, highSinkStats.AttacksDetected.Total)
-		assert.Equal(t, 1, highSinkStats.AttacksDetected.Blocked)
-		assert.Equal(t, 15000, highSinkStats.Total)
-	})
-
-	t.Run("appends timings correctly", func(t *testing.T) {
-		stats := New()
-
-		// Add initial timings
-		initialSink := &aikido_types.MonitoredSinkTimings{
-			Timings: []int64{1000000, 2000000},
-			Total:   10001, // Above minimum threshold
-		}
-		stats.OnSinkStats("sink", initialSink)
-
-		// Add more timings
-		additionalSink := &aikido_types.MonitoredSinkTimings{
-			Timings: []int64{3000000, 4000000, 5000000},
-			Total:   10002, // Above minimum threshold
-		}
-		stats.OnSinkStats("sink", additionalSink)
-
-		data := stats.GetAndClear()
-
-		require.Contains(t, data.Sinks, "sink", "sink should be stored")
-		sinkStats := data.Sinks["sink"]
-		assert.Equal(t, 20003, sinkStats.Total, "Total should be accumulated")
-		assert.Len(t, sinkStats.CompressedTimings, 1)
-		// Average of [1000000, 2000000, 3000000, 4000000, 5000000] = 3.0
-		assert.Equal(t, 3.0, sinkStats.CompressedTimings[0].AverageInMS, "Average should be calculated from all timings")
-	})
-}
-
 func TestOnRateLimited(t *testing.T) {
 	t.Run("increments rate limited count", func(t *testing.T) {
 		stats := New()
@@ -288,5 +117,153 @@ func TestOnRateLimited(t *testing.T) {
 		data := stats.GetAndClear()
 
 		assert.Equal(t, 3, data.Requests.RateLimited, "rate limited should be incremented to 3")
+	})
+}
+
+func TestOnOperationCall(t *testing.T) {
+	t.Run("registers new operation", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+
+		data := stats.GetAndClear()
+
+		require.Contains(t, data.Operations, "database/sql.DB.Query", "operation should be registered")
+		opStats := data.Operations["database/sql.DB.Query"]
+		assert.Equal(t, aikido_types.OperationKindSQL, opStats.Kind)
+		assert.Equal(t, 1, opStats.Total)
+		assert.Equal(t, 0, opStats.AttacksDetected.Total)
+		assert.Equal(t, 0, opStats.AttacksDetected.Blocked)
+	})
+
+	t.Run("increments operation counter", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+
+		data := stats.GetAndClear()
+
+		require.Contains(t, data.Operations, "database/sql.DB.Query", "operation should be registered")
+		opStats := data.Operations["database/sql.DB.Query"]
+		assert.Equal(t, 3, opStats.Total, "operation counter should be incremented to 3")
+	})
+
+	t.Run("tracks multiple operations separately", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Exec", aikido_types.OperationKindSQL)
+		stats.OnOperationCall("os/exec.Cmd.Run", aikido_types.OperationKindExec)
+
+		data := stats.GetAndClear()
+
+		assert.Len(t, data.Operations, 3, "should track 3 different operations")
+		assert.Equal(t, 1, data.Operations["database/sql.DB.Query"].Total)
+		assert.Equal(t, 1, data.Operations["database/sql.DB.Exec"].Total)
+		assert.Equal(t, 1, data.Operations["os/exec.Cmd.Run"].Total)
+	})
+}
+
+func TestOnOperationAttack(t *testing.T) {
+	t.Run("tracks attack for registered operation", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationAttack("database/sql.DB.Query", false)
+
+		data := stats.GetAndClear()
+
+		require.Contains(t, data.Operations, "database/sql.DB.Query")
+		opStats := data.Operations["database/sql.DB.Query"]
+		assert.Equal(t, 1, opStats.AttacksDetected.Total)
+		assert.Equal(t, 0, opStats.AttacksDetected.Blocked)
+	})
+
+	t.Run("tracks blocked attack for registered operation", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationAttack("database/sql.DB.Query", true)
+
+		data := stats.GetAndClear()
+
+		require.Contains(t, data.Operations, "database/sql.DB.Query")
+		opStats := data.Operations["database/sql.DB.Query"]
+		assert.Equal(t, 1, opStats.AttacksDetected.Total)
+		assert.Equal(t, 1, opStats.AttacksDetected.Blocked)
+	})
+
+	t.Run("accumulates multiple attacks", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationAttack("database/sql.DB.Query", false)
+		stats.OnOperationAttack("database/sql.DB.Query", true)
+		stats.OnOperationAttack("database/sql.DB.Query", true)
+
+		data := stats.GetAndClear()
+
+		require.Contains(t, data.Operations, "database/sql.DB.Query")
+		opStats := data.Operations["database/sql.DB.Query"]
+		assert.Equal(t, 3, opStats.AttacksDetected.Total, "should track 3 total attacks")
+		assert.Equal(t, 2, opStats.AttacksDetected.Blocked, "should track 2 blocked attacks")
+	})
+
+	t.Run("does not track attack for unregistered operation", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationAttack("unregistered.Operation", true)
+
+		data := stats.GetAndClear()
+
+		assert.NotContains(t, data.Operations, "unregistered.Operation", "unregistered operation should not be tracked")
+	})
+}
+
+func TestGetAndClearOperations(t *testing.T) {
+	t.Run("clears operations after retrieval", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationAttack("database/sql.DB.Query", false)
+
+		data1 := stats.GetAndClear()
+		require.Contains(t, data1.Operations, "database/sql.DB.Query")
+
+		data2 := stats.GetAndClear()
+		assert.Empty(t, data2.Operations, "operations should be cleared after first GetAndClear")
+	})
+
+	t.Run("includes operations in result", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationCall("os/exec.Cmd.Run", aikido_types.OperationKindExec)
+
+		data := stats.GetAndClear()
+
+		assert.NotNil(t, data.Operations)
+		assert.Len(t, data.Operations, 2, "should include both operations")
+	})
+}
+
+func TestMultipleOperationKinds(t *testing.T) {
+	t.Run("tracks different operation kinds separately", func(t *testing.T) {
+		stats := New()
+
+		stats.OnOperationCall("database/sql.DB.Query", aikido_types.OperationKindSQL)
+		stats.OnOperationCall("net/http.Client.Do", aikido_types.OperationKindOutgoingHTTP)
+		stats.OnOperationCall("os.OpenFile", aikido_types.OperationKindFileSystem)
+		stats.OnOperationCall("os/exec.Cmd.Run", aikido_types.OperationKindExec)
+
+		data := stats.GetAndClear()
+
+		assert.Len(t, data.Operations, 4)
+		assert.Equal(t, aikido_types.OperationKindSQL, data.Operations["database/sql.DB.Query"].Kind)
+		assert.Equal(t, aikido_types.OperationKindOutgoingHTTP, data.Operations["net/http.Client.Do"].Kind)
+		assert.Equal(t, aikido_types.OperationKindFileSystem, data.Operations["os.OpenFile"].Kind)
+		assert.Equal(t, aikido_types.OperationKindExec, data.Operations["os/exec.Cmd.Run"].Kind)
 	})
 }

@@ -32,14 +32,6 @@ type CompressedTiming struct {
 	CompressedAt int64              `json:"compressedAt"`
 }
 
-type MonitoredSinkStats struct {
-	AttacksDetected       AttacksDetected    `json:"attacksDetected"`
-	InterceptorThrewError int                `json:"interceptorThrewError"`
-	WithoutContext        int                `json:"withoutContext"`
-	Total                 int                `json:"total"`
-	CompressedTimings     []CompressedTiming `json:"compressedTimings"`
-}
-
 type Requests struct {
 	Total           int             `json:"total"`
 	Aborted         int             `json:"aborted"`
@@ -48,10 +40,10 @@ type Requests struct {
 }
 
 type Stats struct {
-	Sinks     map[string]MonitoredSinkStats `json:"sinks"`
-	StartedAt int64                         `json:"startedAt"`
-	EndedAt   int64                         `json:"endedAt"`
-	Requests  Requests                      `json:"requests"`
+	Operations map[string]OperationStats `json:"operations"`
+	StartedAt  int64                     `json:"startedAt"`
+	EndedAt    int64                     `json:"endedAt"`
+	Requests   Requests                  `json:"requests"`
 }
 
 type RequestInfo struct {
