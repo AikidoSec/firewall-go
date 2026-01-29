@@ -244,6 +244,18 @@ func TestExtractRouteParams(t *testing.T) {
 			path:     "/api/v1/users",
 			expected: map[string]string{"version": "v1"},
 		},
+		{
+			name:     "multi segment wildcard",
+			pattern:  "/files/{path...}",
+			path:     "/files/a/b/c",
+			expected: map[string]string{"path": "a/b/c"},
+		},
+		{
+			name:     "empty multi segment wildcard",
+			pattern:  "/files/{path...}",
+			path:     "/files/",
+			expected: map[string]string{"path": ""},
+		},
 	}
 
 	for _, tt := range tests {
@@ -251,7 +263,7 @@ func TestExtractRouteParams(t *testing.T) {
 			mux := http.NewServeMux()
 			mux.HandleFunc(tt.pattern, func(w http.ResponseWriter, r *http.Request) {})
 
-			req := httptest.NewRequest("GET", tt.path, http.NoBody)
+			req := httptest.NewRequest(http.MethodGet, tt.path, http.NoBody)
 			w := httptest.NewRecorder()
 
 			mux.ServeHTTP(w, req)
