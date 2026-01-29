@@ -28,6 +28,12 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 				return
 			}
 
+			// If a context is already set, then middleware has already run
+			if request.GetContext(r.Context()) != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			var ip string
 			addrPort, err := netip.ParseAddrPort(r.RemoteAddr)
 			if err != nil {

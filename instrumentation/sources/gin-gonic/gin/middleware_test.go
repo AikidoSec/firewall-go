@@ -355,3 +355,63 @@ func TestMiddlewareCallsOnPostRequestOnPanic(t *testing.T) {
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
+
+func TestMiddlewareNestedRouters(t *testing.T) {
+	t.Run("nested groups with multiple params", func(t *testing.T) {
+		router := gin.New()
+		router.ContextWithFallback = true
+		router.Use(zengin.GetMiddleware())
+
+		// Create nested groups with pattern like /route/:id/subrouter/:anotherid
+		routeGroup := router.Group("/route/:id")
+		{
+			routeGroup.GET("/subrouter/:anotherid", func(c *gin.Context) {
+				ctx := request.GetContext(c)
+				require.NotNil(t, ctx, "request context should be set")
+
+				assert.Equal(t, "gin", ctx.Source)
+				assert.Equal(t, "/route/:id/subrouter/:anotherid", ctx.Route)
+				assert.Equal(t, "123", ctx.RouteParams["id"])
+				assert.Equal(t, "456", ctx.RouteParams["anotherid"])
+			})
+		}
+
+		r := httptest.NewRequest("GET", "/route/123/subrouter/456", http.NoBody)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("deeply nested groups", func(t *testing.T) {
+		router := gin.New()
+		router.ContextWithFallback = true
+		router.Use(zengin.GetMiddleware())
+
+		// Three levels of nesting
+		apiGroup := router.Group("/api/:version")
+		{
+			usersGroup := apiGroup.Group("/users/:userid")
+			{
+				usersGroup.GET("/posts/:postid", func(c *gin.Context) {
+					ctx := request.GetContext(c)
+					require.NotNil(t, ctx, "request context should be set")
+
+					assert.Equal(t, "gin", ctx.Source)
+					assert.Equal(t, "/api/:version/users/:userid/posts/:postid", ctx.Route)
+					assert.Equal(t, "v1", ctx.RouteParams["version"])
+					assert.Equal(t, "user123", ctx.RouteParams["userid"])
+					assert.Equal(t, "post456", ctx.RouteParams["postid"])
+				})
+			}
+		}
+
+		r := httptest.NewRequest("GET", "/api/v1/users/user123/posts/post456", http.NoBody)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+}
