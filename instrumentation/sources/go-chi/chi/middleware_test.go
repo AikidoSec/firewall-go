@@ -213,7 +213,7 @@ func TestMiddlewarePreservesBodyForJSON(t *testing.T) {
 
 	var bodyReadInHandler string
 	router.Post("/route", func(w http.ResponseWriter, r *http.Request) {
-		var data map[string]interface{}
+		var data map[string]any
 		err := json.NewDecoder(r.Body).Decode(&data)
 		require.NoError(t, err, "Should be able to decode JSON after middleware")
 
@@ -333,4 +333,86 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		stats := agent.Stats().GetAndClear()
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestMiddlewareNestedRouters(t *testing.T) {
+	t.Run("mounted sub-router", func(t *testing.T) {
+		router := chi.NewRouter()
+		router.Use(zenchi.GetMiddleware())
+
+		// Create a sub-router with NewRouter
+		apiRouter := chi.NewRouter()
+
+		// Instrumentation would automatically add middleware again
+		apiRouter.Use(zenchi.GetMiddleware())
+
+		apiRouter.Get("/articles/{date}-{slug}", func(w http.ResponseWriter, r *http.Request) {
+			ctx := request.GetContext(r.Context())
+			require.NotNil(t, ctx, "request context should be set")
+
+			assert.Equal(t, "chi", ctx.Source)
+			assert.Equal(t, "/api/{version}/articles/{date}-{slug}", ctx.Route)
+			assert.Equal(t, "20170116", ctx.RouteParams["date"])
+			assert.Equal(t, "hello-world", ctx.RouteParams["slug"])
+			assert.Equal(t, "v1", ctx.RouteParams["version"])
+		})
+
+		router.Mount("/api/{version}", apiRouter)
+
+		r := httptest.NewRequest("GET", "/api/v1/articles/20170116-hello-world", http.NoBody)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("route sub-router", func(t *testing.T) {
+		router := chi.NewRouter()
+		router.Use(zenchi.GetMiddleware())
+
+		// Use Route method to create nested routers with pattern like /route/{id}/subrouter/{anotherid}
+		router.Route("/route/{id}", func(r chi.Router) {
+			r.Get("/subrouter/{anotherid}", func(w http.ResponseWriter, r *http.Request) {
+				ctx := request.GetContext(r.Context())
+				require.NotNil(t, ctx, "request context should be set")
+
+				assert.Equal(t, "chi", ctx.Source)
+				assert.Equal(t, "/route/{id}/subrouter/{anotherid}", ctx.Route)
+				assert.Equal(t, "123", ctx.RouteParams["id"])
+				assert.Equal(t, "456", ctx.RouteParams["anotherid"])
+			})
+		})
+
+		r := httptest.NewRequest("GET", "/route/123/subrouter/456", http.NoBody)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("group", func(t *testing.T) {
+		router := chi.NewRouter()
+		router.Use(zenchi.GetMiddleware())
+
+		// Test Group - middleware should be applied within the group
+		router.Group(func(r chi.Router) {
+			r.Get("/manage/url/{path}", func(w http.ResponseWriter, r *http.Request) {
+				ctx := request.GetContext(r.Context())
+				require.NotNil(t, ctx, "request context should be set")
+
+				assert.Equal(t, "chi", ctx.Source)
+				assert.Equal(t, "/manage/url/{path}", ctx.Route)
+				assert.Equal(t, "asset123", ctx.RouteParams["path"])
+			})
+		})
+
+		r := httptest.NewRequest("GET", "/manage/url/asset123", http.NoBody)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
 }
