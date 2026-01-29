@@ -122,7 +122,7 @@ func extractRouteParams(r *http.Request, pattern string) map[string]string {
 	remaining := pattern
 
 	// Find all wildcard parameters in the pattern
-	// Pattern examples: "/users/{id}", "/posts/{id}/comments/{commentId}"
+	// Pattern examples: "/users/{id}", "/posts/{id}/comments/{commentId}", "/files/{path...}"
 	for {
 		start := strings.Index(remaining, "{")
 		if start == -1 {
@@ -134,6 +134,8 @@ func extractRouteParams(r *http.Request, pattern string) map[string]string {
 		}
 
 		paramName := remaining[start+1 : start+end]
+		// Strip "..." suffix for multi-segment wildcards
+		paramName = strings.TrimSuffix(paramName, "...")
 		// Use PathValue to get the actual value from the request
 		params[paramName] = r.PathValue(paramName)
 
