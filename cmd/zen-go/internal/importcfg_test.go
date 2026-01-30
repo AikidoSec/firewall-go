@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/paths"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -88,7 +89,7 @@ func TestFindModuleRoot(t *testing.T) {
 	require.NoError(t, os.MkdirAll(subDir, 0755))
 	require.NoError(t, os.Chdir(subDir))
 
-	root := findModuleRoot()
+	root := paths.FindModuleRoot()
 
 	expectedRoot, _ := filepath.EvalSymlinks(tmpDir)
 	actualRoot, _ := filepath.EvalSymlinks(root)
@@ -103,7 +104,7 @@ func TestFindModuleRoot_NoGoMod(t *testing.T) {
 	tmpDir := t.TempDir()
 	require.NoError(t, os.Chdir(tmpDir))
 
-	root := findModuleRoot()
+	root := paths.FindModuleRoot()
 	assert.Empty(t, root)
 }
 

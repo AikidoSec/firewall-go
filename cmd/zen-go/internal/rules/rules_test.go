@@ -1,4 +1,4 @@
-package internal
+package rules
 
 import (
 	"os"
@@ -137,7 +137,7 @@ rules:
 	err = os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
 	require.NoError(t, err)
 
-	rules, err := loadRulesFromDir(tmpDir)
+	rules, err := LoadRulesFromDir(tmpDir)
 	require.NoError(t, err)
 	require.Len(t, rules.WrapRules, 1)
 
@@ -170,7 +170,7 @@ rules:
 		require.NoError(t, err)
 	}
 
-	rules, err := loadRulesFromDir(tmpDir)
+	rules, err := LoadRulesFromDir(tmpDir)
 	require.NoError(t, err)
 	require.Len(t, rules.WrapRules, 2)
 }
@@ -220,7 +220,7 @@ func TestLoadRulesFromFile_InvalidYAML(t *testing.T) {
 func TestLoadRulesFromDir_EmptyDir(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	rules, err := loadRulesFromDir(tmpDir)
+	rules, err := LoadRulesFromDir(tmpDir)
 	require.NoError(t, err)
 	assert.Empty(t, rules.WrapRules)
 	assert.Empty(t, rules.PrependRules)

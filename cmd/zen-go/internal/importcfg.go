@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/paths"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -101,7 +102,7 @@ func createTempFile(objdir string) (*os.File, error) {
 // GetPackageExport returns the file path to the compiled export data for the given import path.
 // It runs 'go list -export' from the module root.
 func GetPackageExport(importPath string) (string, error) {
-	dir := findModuleRoot()
+	dir := paths.FindModuleRoot()
 
 	// Pass original build flags to packages.Load to prevent cache misses and fingerprint errors.
 	buildFlags, err := parentBuildFlags()
@@ -130,22 +131,4 @@ func GetPackageExport(importPath string) (string, error) {
 	}
 
 	return pkgs[0].ExportFile, err
-}
-
-func findModuleRoot() string {
-	dir, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return ""
-		}
-		dir = parent
-	}
 }
