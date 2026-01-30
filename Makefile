@@ -25,6 +25,11 @@ clean-tools:
 test: test-main test-zen-go
 	@echo "✅ All tests completed successfully"
 
+.PHONY: benchmark
+benchmark:
+	@echo "Running benchmarks..."
+	@GIN_MODE=release go test -bench=. -benchmem -run=^$$ $$(grep -r "func Benchmark" --include="*_test.go" -l . | xargs -n1 dirname | sort -u)
+
 .PHONY: test-main
 test-main:
 	@echo "Running main module tests with gotestsum"
