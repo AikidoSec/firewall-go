@@ -68,7 +68,48 @@ import (
 	return sb.String()
 }
 
-func initCommand(stdout io.Writer, force bool) error {
+func parseAndValidateList(flagValue string, available map[string]string, itemType string) ([]string, error) {
+	if flagValue == "" {
+		return []string{}, nil
+	}
+
+	// Split by comma and trim whitespace
+	items := strings.Split(flagValue, ",")
+	result := make([]string, 0, len(items))
+	invalid := []string{}
+
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+
+		if _, ok := available[item]; !ok {
+			invalid = append(invalid, item)
+		} else {
+			result = append(result, item)
+		}
+	}
+
+	if len(invalid) > 0 {
+		availableList := make([]string, 0, len(available))
+		for key := range available {
+			availableList = append(availableList, key)
+		}
+		sort.Strings(availableList)
+
+		return nil, fmt.Errorf("invalid %s(s): %s\nAvailable %ss: %s",
+			itemType,
+			strings.Join(invalid, ", "),
+			itemType,
+			strings.Join(availableList, ", "),
+		)
+	}
+
+	return result, nil
+}
+
+func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bool, sinksFlag string, sinksSet bool) error {
 	filename := "zen.tool.go"
 
 	// Check if file already exists
@@ -80,10 +121,33 @@ func initCommand(stdout io.Writer, force bool) error {
 		}
 	}
 
-	// Show interactive TUI for selection
-	selectedSources, selectedSinks, err := promptForSelection()
-	if err != nil {
-		return fmt.Errorf("selection cancelled or failed: %w", err)
+	var selectedSources, selectedSinks []string
+	var err error
+
+	// Handle sources: use flag if explicitly set, otherwise prompt
+	if sourcesSet {
+		selectedSources, err = parseAndValidateList(sourcesFlag, availableSources, "source")
+		if err != nil {
+			return err
+		}
+	} else {
+		selectedSources, err = promptForSources()
+		if err != nil {
+			return fmt.Errorf("source selection cancelled or failed: %w", err)
+		}
+	}
+
+	// Handle sinks: use flag if explicitly set, otherwise prompt
+	if sinksSet {
+		selectedSinks, err = parseAndValidateList(sinksFlag, availableSinks, "sink")
+		if err != nil {
+			return err
+		}
+	} else {
+		selectedSinks, err = promptForSinks()
+		if err != nil {
+			return fmt.Errorf("sink selection cancelled or failed: %w", err)
+		}
 	}
 
 	// Sort for consistent output
@@ -144,47 +208,60 @@ func getAvailableSinks() []string {
 	return sinks
 }
 
-func promptForSelection() ([]string, []string, error) {
-	var selectedSources, selectedSinks []string
+func promptForSources() ([]string, error) {
+	var selectedSources []string
 
 	sourceOptions := make([]huh.Option[string], 0, len(availableSources))
 	for _, source := range getAvailableSources() {
 		sourceOptions = append(sourceOptions, huh.NewOption(source, source))
 	}
 
-	sinkOptions := make([]huh.Option[string], 0, len(availableSinks))
-	for _, sink := range getAvailableSinks() {
-		sinkOptions = append(sinkOptions, huh.NewOption(sink, sink))
+	if len(sourceOptions) == 0 {
+		return []string{}, nil
 	}
 
-	groups := []*huh.Group{}
-
-	if len(sourceOptions) > 0 {
-		groups = append(groups, huh.NewGroup(
+	form := huh.NewForm(
+		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Select sources to instrument").
 				Description("Sources are entry points for requests (web frameworks)").
 				Options(sourceOptions...).
 				Value(&selectedSources),
-		))
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		return nil, err
 	}
 
-	if len(sinkOptions) > 0 {
-		groups = append(groups, huh.NewGroup(
+	return selectedSources, nil
+}
+
+func promptForSinks() ([]string, error) {
+	var selectedSinks []string
+
+	sinkOptions := make([]huh.Option[string], 0, len(availableSinks))
+	for _, sink := range getAvailableSinks() {
+		sinkOptions = append(sinkOptions, huh.NewOption(sink, sink))
+	}
+
+	if len(sinkOptions) == 0 {
+		return []string{}, nil
+	}
+
+	form := huh.NewForm(
+		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Select sinks to instrument").
 				Description("Sinks are operations that need protection & monitoring (database, file system, etc.)").
 				Options(sinkOptions...).
 				Value(&selectedSinks),
-		))
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		return nil, err
 	}
 
-	if len(groups) > 0 {
-		form := huh.NewForm(groups...)
-		if err := form.Run(); err != nil {
-			return nil, nil, err
-		}
-	}
-
-	return selectedSources, selectedSinks, nil
+	return selectedSinks, nil
 }
