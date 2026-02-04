@@ -31,9 +31,24 @@ func newCommand() *cli.Command {
 						Aliases: []string{"f"},
 						Usage:   "Force overwrite existing zen.tool.go file",
 					},
+					&cli.StringFlag{
+						Name:  "sources",
+						Usage: "Comma-separated list of sources to instrument (e.g., 'gin,chi,echo/v4'). Skips interactive prompt.",
+					},
+					&cli.StringFlag{
+						Name:  "sinks",
+						Usage: "Comma-separated list of sinks to instrument (e.g., 'pgx'). Skips interactive prompt.",
+					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return initCommand(cmd.Root().Writer, cmd.Bool("force"))
+					return initCommand(
+						cmd.Root().Writer,
+						cmd.Bool("force"),
+						cmd.String("sources"),
+						cmd.IsSet("sources"),
+						cmd.String("sinks"),
+						cmd.IsSet("sinks"),
+					)
 				},
 			},
 			{
