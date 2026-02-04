@@ -205,6 +205,7 @@ func TestInitCommand_WithEmptySourcesFlag(t *testing.T) {
 
 	// Verify output message
 	output := buf.String()
+	assert.Contains(t, output, "No sources selected (empty argument provided)")
 	assert.Contains(t, output, "Created zen.tool.go")
 	assert.NotContains(t, output, "Sources:")
 	assert.Contains(t, output, "Sinks: pgx")
@@ -237,6 +238,7 @@ func TestInitCommand_WithEmptySinksFlag(t *testing.T) {
 
 	// Verify output message
 	output := buf.String()
+	assert.Contains(t, output, "No sinks selected (empty argument provided)")
 	assert.Contains(t, output, "Created zen.tool.go")
 	assert.Contains(t, output, "Sources: gin")
 	assert.NotContains(t, output, "Sinks:")

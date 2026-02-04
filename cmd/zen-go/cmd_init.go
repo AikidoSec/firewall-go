@@ -130,6 +130,9 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 		if err != nil {
 			return err
 		}
+		if len(selectedSources) == 0 && sourcesFlag == "" {
+			fmt.Fprintln(stdout, "No sources selected (empty argument provided)")
+		}
 	} else {
 		selectedSources, err = promptForSources()
 		if err != nil {
@@ -142,6 +145,9 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 		selectedSinks, err = parseAndValidateList(sinksFlag, availableSinks, "sink")
 		if err != nil {
 			return err
+		}
+		if len(selectedSinks) == 0 && sinksFlag == "" {
+			fmt.Fprintln(stdout, "No sinks selected (empty argument provided)")
 		}
 	} else {
 		selectedSinks, err = promptForSinks()
