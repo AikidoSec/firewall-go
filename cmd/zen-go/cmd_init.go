@@ -15,7 +15,7 @@ import (
 var (
 	availableSources = map[string]string{
 		"gin":     "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
-		"chi":     "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi",
+		"chi":     "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5",
 		"echo/v4": "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4",
 	}
 
