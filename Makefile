@@ -89,7 +89,7 @@ test-instrumentation-integration: test-db-start
 		-toolexec="$(TOOLS_BIN)/zen-go toolexec" \
 		-tags=integration \
 		./instrumentation/sources/gin-gonic/gin \
-		./instrumentation/sources/go-chi/chi \
+		./instrumentation/sources/go-chi/chi.v5 \
 		./instrumentation/sources/labstack/echo.v4 \
 		./instrumentation/sinks/database/sql \
 		./instrumentation/sinks/jackc/pgx
