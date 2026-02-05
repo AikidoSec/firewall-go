@@ -8,24 +8,27 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/paths"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 )
 
 type Instrumentor struct {
-	WrapRules       []WrapRule
-	PrependRules    []PrependRule
-	InjectDeclRules []InjectDeclRule
+	WrapRules       []rules.WrapRule
+	PrependRules    []rules.PrependRule
+	InjectDeclRules []rules.InjectDeclRule
 }
 
 // NewInstrumentor creates a new Instrumentor, loading rules from YAML files
 func NewInstrumentor() (*Instrumentor, error) {
 	// Try to load rules from the instrumentation directory
-	if instDir := findInstrumentationDir(); instDir != "" {
-		rules, err := loadRulesFromDir(instDir)
+	if instDir := paths.FindInstrumentationDir(); instDir != "" {
+		rulesData, err := rules.LoadRulesFromDir(instDir)
 		if err != nil {
 			return nil, err
 		}
 
-		return NewInstrumentorWithRules(rules), nil
+		return NewInstrumentorWithRules(rulesData), nil
 	}
 
 	// No rules found
@@ -33,7 +36,7 @@ func NewInstrumentor() (*Instrumentor, error) {
 }
 
 // NewInstrumentorWithRules creates an Instrumentor with the given rules
-func NewInstrumentorWithRules(rules *InstrumentationRules) *Instrumentor {
+func NewInstrumentorWithRules(rules *rules.InstrumentationRules) *Instrumentor {
 	return &Instrumentor{
 		WrapRules:       rules.WrapRules,
 		PrependRules:    rules.PrependRules,

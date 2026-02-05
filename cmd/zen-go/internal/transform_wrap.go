@@ -7,11 +7,13 @@ import (
 	"go/printer"
 	"go/token"
 	"strings"
+
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 )
 
 // transformDeclsWrap walks through all declarations in a file looking for function
 // declarations, then recursively transforms any matching function calls within them.
-func transformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) error {
+func transformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName string, rule rules.WrapRule, modified *bool, importsToAdd map[string]string) error {
 	for _, decl := range decls {
 		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
 			err := transformStmtsWrap(fn.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
@@ -32,7 +34,7 @@ func transformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName
 // - Expression statements (pkg.Func())
 // - Return statements (return pkg.Func())
 // - Control flow blocks (if/for/switch/select bodies)
-func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) error {
+func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName string, rule rules.WrapRule, modified *bool, importsToAdd map[string]string) error {
 	for _, stmt := range stmts {
 		switch s := stmt.(type) {
 		case *ast.AssignStmt:
@@ -144,7 +146,7 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 // 5. If all match, wrap the call using the rule's template
 //
 // Returns the wrapped expression if transformation occurred, nil otherwise.
-func tryTransformCall(expr ast.Expr, fset *token.FileSet, pkgName, funcName string, rule WrapRule, modified *bool, importsToAdd map[string]string) (ast.Expr, error) {
+func tryTransformCall(expr ast.Expr, fset *token.FileSet, pkgName, funcName string, rule rules.WrapRule, modified *bool, importsToAdd map[string]string) (ast.Expr, error) {
 	// Step 1: Check if this is a function call at all
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {

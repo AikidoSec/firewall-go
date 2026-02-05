@@ -6,13 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // testChiRules returns rules for testing chi instrumentation (with /v5 version in path)
-func testChiRules() []WrapRule {
-	return []WrapRule{
+func testChiRules() []rules.WrapRule {
+	return []rules.WrapRule{
 		{
 			ID:        "chi.NewMux",
 			MatchCall: "github.com/go-chi/chi/v5.NewMux",
@@ -33,8 +34,8 @@ func testChiRules() []WrapRule {
 }
 
 // testGinRules returns rules for testing gin instrumentation
-func testGinRules() []WrapRule {
-	return []WrapRule{
+func testGinRules() []rules.WrapRule {
+	return []rules.WrapRule{
 		{
 			ID:        "gin.Default",
 			MatchCall: "github.com/gin-gonic/gin.Default",
@@ -68,7 +69,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testChiRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testChiRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -95,7 +96,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testChiRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testChiRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -119,7 +120,7 @@ func WithRouter() *chi.Mux {
 	tmpFile := filepath.Join(tmpDir, "middleware.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	rules := []WrapRule{
+	wrapRules := []rules.WrapRule{
 		{
 			ID:          "chi.NewRouter",
 			MatchCall:   "github.com/go-chi/chi/v5.NewRouter",
@@ -128,7 +129,7 @@ func WithRouter() *chi.Mux {
 			WrapTmpl:    `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
 		},
 	}
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: rules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: wrapRules})
 	result, err := inst.InstrumentFile(tmpFile, "github.com/go-chi/chi/v5/middleware")
 
 	require.NoError(t, err)
@@ -149,7 +150,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -176,7 +177,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -200,7 +201,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -222,7 +223,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -249,7 +250,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -276,7 +277,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -302,7 +303,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -314,7 +315,7 @@ func TestInstrumentFile_InvalidFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "nonexistent.go")
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
@@ -333,7 +334,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{WrapRules: testGinRules()})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{WrapRules: testGinRules()})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	assert.Error(t, err)
@@ -358,7 +359,7 @@ func main() {
 	inst, err := NewInstrumentor()
 	require.NoError(t, err)
 
-	inst.WrapRules = []WrapRule{
+	inst.WrapRules = []rules.WrapRule{
 		{
 			ID:        "gin.Default",
 			MatchCall: "github.com/gin-gonic/gin.Default",
@@ -392,7 +393,7 @@ type Rows struct{}
 	tmpFile := filepath.Join(tmpDir, "db.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	prependRules := []PrependRule{
+	prependRules := []rules.PrependRule{
 		{
 			ID:           "sql.DB.QueryContext",
 			ReceiverType: "*database/sql.DB",
@@ -406,7 +407,7 @@ type Rows struct{}
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "database/sql")
 
 	require.NoError(t, err)
@@ -431,7 +432,7 @@ func DoSomething() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	prependRules := []PrependRule{
+	prependRules := []rules.PrependRule{
 		{
 			ID:           "sql.DB.QueryContext",
 			ReceiverType: "*database/sql.DB",
@@ -441,7 +442,7 @@ func DoSomething() {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "main")
 
 	require.NoError(t, err)
@@ -475,7 +476,7 @@ func (c *Cmd) Wait() error {
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
 	// Single rule that matches both Run and Start, but not Wait
-	prependRules := []PrependRule{
+	prependRules := []rules.PrependRule{
 		{
 			ID:           "exec.Cmd.RunOrStart",
 			ReceiverType: "*os/exec.Cmd",
@@ -485,7 +486,7 @@ func (c *Cmd) Wait() error {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "os/exec")
 
 	require.NoError(t, err)
@@ -509,7 +510,7 @@ type File struct{}
 	tmpFile := filepath.Join(tmpDir, "file.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	prependRules := []PrependRule{
+	prependRules := []rules.PrependRule{
 		{
 			ID:        "os.OpenFile",
 			Package:   "os",
@@ -521,7 +522,7 @@ type File struct{}
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "os")
 
 	require.NoError(t, err)
@@ -544,7 +545,7 @@ func OpenFile(name string) error {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	prependRules := []PrependRule{
+	prependRules := []rules.PrependRule{
 		{
 			ID:          "os.OpenFile",
 			Package:     "os", // Rule targets "os" package
@@ -554,7 +555,7 @@ func OpenFile(name string) error {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "main") // Compiling "main" package
 
 	require.NoError(t, err)
@@ -574,7 +575,7 @@ func (f *File) OpenFile(name string) error {
 	tmpFile := filepath.Join(tmpDir, "file.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	prependRules := []PrependRule{
+	prependRules := []rules.PrependRule{
 		{
 			ID:          "os.OpenFile",
 			Package:     "os", // Standalone function rule
@@ -584,7 +585,7 @@ func (f *File) OpenFile(name string) error {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{PrependRules: prependRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{PrependRules: prependRules})
 	result, err := inst.InstrumentFile(tmpFile, "os")
 
 	require.NoError(t, err)
@@ -607,7 +608,7 @@ func OpenFile(name string) error {
 	tmpFile := filepath.Join(tmpDir, "proc.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	injectDeclRules := []InjectDeclRule{
+	injectDeclRules := []rules.InjectDeclRule{
 		{
 			ID:         "os.linkname",
 			Package:    "os",
@@ -618,7 +619,7 @@ func __example_check(string) error`,
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{InjectDeclRules: injectDeclRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{InjectDeclRules: injectDeclRules})
 	result, err := inst.InstrumentFile(tmpFile, "os")
 
 	require.NoError(t, err)
@@ -643,7 +644,7 @@ func SomeOtherFunc() {
 	tmpFile := filepath.Join(tmpDir, "other.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	injectDeclRules := []InjectDeclRule{
+	injectDeclRules := []rules.InjectDeclRule{
 		{
 			ID:           "os.linkname",
 			Package:      "os",
@@ -653,7 +654,7 @@ func SomeOtherFunc() {
 		},
 	}
 
-	inst := NewInstrumentorWithRules(&InstrumentationRules{InjectDeclRules: injectDeclRules})
+	inst := NewInstrumentorWithRules(&rules.InstrumentationRules{InjectDeclRules: injectDeclRules})
 	result, err := inst.InstrumentFile(tmpFile, "os")
 
 	require.NoError(t, err)

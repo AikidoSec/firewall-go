@@ -1,10 +1,9 @@
-package internal
+package rules
 
 import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -76,8 +75,8 @@ type InjectDeclRule struct {
 	DeclTemplate string   // The declaration to inject
 }
 
-// loadRulesFromDir loads all zen.instrument.yml files from a directory tree
-func loadRulesFromDir(dir string) (*InstrumentationRules, error) {
+// LoadRulesFromDir loads all zen.instrument.yml files from a directory tree
+func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
 	result := &InstrumentationRules{}
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -157,32 +156,4 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 	}
 
 	return result, nil
-}
-
-// findInstrumentationDir finds the instrumentation directory from the firewall-go module
-func findInstrumentationDir() string {
-	// Use go list to find where the firewall-go module is located
-	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/AikidoSec/firewall-go")
-
-	// Run from the module root if we can find it
-	if modRoot := findModuleRoot(); modRoot != "" {
-		cmd.Dir = modRoot
-	}
-
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-
-	modDir := strings.TrimSpace(string(output))
-	if modDir == "" {
-		return ""
-	}
-
-	instDir := filepath.Join(modDir, "instrumentation")
-	if info, err := os.Stat(instDir); err == nil && info.IsDir() {
-		return instDir
-	}
-
-	return ""
 }
