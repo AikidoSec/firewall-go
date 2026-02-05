@@ -8,6 +8,5 @@ import (
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec"
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/path"
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath"
-	_ "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4"
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sources/net/http"
 )

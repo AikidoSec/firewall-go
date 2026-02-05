@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
+	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4 v0.0.0-00010101000000-000000000000
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/lib/pq v1.10.2
 )
@@ -25,3 +26,5 @@ require (
 )
 
 replace github.com/AikidoSec/firewall-go => ../../
+
+replace github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4 => ../../instrumentation/sources/labstack/echo.v4/
