@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
+	github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5 v0.0.0-00010101000000-000000000000
 	github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.11.0
 	github.com/jackc/pgx/v5 v5.8.0
@@ -51,3 +52,5 @@ require (
 replace github.com/AikidoSec/firewall-go => ../../
 
 replace github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin => ../../instrumentation/sources/gin-gonic/gin
+
+replace github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5 => ../../instrumentation/sinks/jackc/pgx.v5

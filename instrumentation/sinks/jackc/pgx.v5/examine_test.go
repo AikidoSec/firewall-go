@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx"
+	"github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx"
+	"github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
