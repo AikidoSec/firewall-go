@@ -32,6 +32,7 @@ jobs:
           cp -r firewall-go zen-demo-go/firewall-go-local
           cd zen-demo-go
           go mod edit -replace github.com/AikidoSec/firewall-go=./firewall-go-local
+          go mod edit -replace github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin=./firewall-go-local/instrumentation/sources/gin-gonic/gin
           go mod tidy
 
       - name: Patch Dockerfile for local build
