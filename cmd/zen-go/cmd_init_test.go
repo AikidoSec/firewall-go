@@ -55,7 +55,7 @@ func TestGenerateToolsFile_WithSourcesAndSinks(t *testing.T) {
 
 	// Verify sinks section
 	assert.Contains(t, content, "// Aikido Zen: Sinks")
-	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5")
 
 	// Verify other sources/sinks are not included
 	assert.NotContains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4")
@@ -98,7 +98,7 @@ func TestGenerateToolsFile_OnlySinksSelected(t *testing.T) {
 
 	assert.NotContains(t, content, "// Aikido Zen: Sources")
 	assert.Contains(t, content, "// Aikido Zen: Sinks")
-	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5")
 }
 
 func TestParseAndValidateList_ValidSources(t *testing.T) {
@@ -154,7 +154,7 @@ func TestInitCommand_WithSourcesAndSinksFlags(t *testing.T) {
 	// Verify both sources and sinks are included
 	contentStr := string(content)
 	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
-	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
+	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5")
 
 	// Verify output message
 	output := buf.String()
@@ -201,7 +201,7 @@ func TestInitCommand_WithEmptySourcesFlag(t *testing.T) {
 	assert.NotContains(t, contentStr, "// Aikido Zen: Sources")
 
 	// Verify sinks are included
-	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx")
+	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5")
 
 	// Verify output message
 	output := buf.String()

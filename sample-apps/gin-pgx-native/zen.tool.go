@@ -12,5 +12,5 @@ import (
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
 
 	// Aikido Zen: Sinks
-	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx"
+	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5"
 )

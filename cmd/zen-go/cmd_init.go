@@ -20,7 +20,7 @@ var (
 	}
 
 	availableSinks = map[string]string{
-		"pgx": "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx",
+		"pgx": "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5",
 	}
 )
 
