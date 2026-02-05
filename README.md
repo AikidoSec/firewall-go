@@ -1,6 +1,7 @@
 ![Zen by Aikido for Go](./docs/banner.svg)
 
 # Zen, in-app firewall for Go | by Aikido
+
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 [![Unit tests](https://github.com/AikidoSec/firewall-go/actions/workflows/test.yml/badge.svg)](https://github.com/AikidoSec/firewall-go/actions/workflows/unit-test.yml)
 
@@ -8,38 +9,97 @@ Zen, your in-app firewall for peace of mind– at runtime.
 
 Zen is an embedded Web Application Firewall that autonomously protects your Go apps against common and critical attacks.
 
-Zen does this by scanning user input and matching it with actions made in you web app like executing a SQL query. 
+Zen does this by scanning user input and matching it with actions made in you web app like executing a SQL query.
 It runs on the same server as your Go app for easy installation and zero maintenance.
 
 ## Features
 
 Zen will autonomously protect your Go applications from the inside against:
 
-* 🛡️ [SQL injection attacks](https://www.aikido.dev/blog/the-state-of-sql-injections)
-* 🛡️ [Command injection attacks](https://www.aikido.dev/blog/command-injection-in-2024-unpacked)
-* 🛡️ [Path traversal attacks](https://owasp.org/www-community/attacks/Path_Traversal)
-*  🚧 Server-side request forgery (SSRF)
+- 🛡️ [SQL injection attacks](https://www.aikido.dev/blog/the-state-of-sql-injections)
+- 🛡️ [Command injection attacks](https://www.aikido.dev/blog/command-injection-in-2024-unpacked)
+- 🛡️ [Path traversal attacks](https://owasp.org/www-community/attacks/Path_Traversal)
+- 🚧 Server-side request forgery (SSRF)
 
 Zen operates autonomously on the same server as your Go app to:
 
-* ✅ Secure your app like a classic web application firewall (WAF), but with none of the infrastructure or cost.
-* ✅ Auto-generate API specifications
-* ✅ Block known threat actors and bots.
-* ✅ Geo-fencing to block or allow a selection of countries
-* ✅ Rate limit specific API endpoints by IP or by user
-* ✅ Allow you to block specific users manually
+- ✅ Secure your app like a classic web application firewall (WAF), but with none of the infrastructure or cost.
+- ✅ Auto-generate API specifications
+- ✅ Block known threat actors and bots.
+- ✅ Geo-fencing to block or allow a selection of countries
+- ✅ Rate limit specific API endpoints by IP or by user
+- ✅ Allow you to block specific users manually
 
 ## Supported libraries and frameworks
+
 ### Web frameworks
-* ✅ [`Gin`](docs/gin.md)
-* ✅ [`Echo`](docs/echo.md) v4
+
+- ✅ [`Gin`](docs/gin.md)
+- ✅ [`Echo`](docs/echo.md) v4
 
 ### Database drivers
-* ✅ [`database/sql`](https://pkg.go.dev/database/sql) - we support all drivers that are made using the built-in interface
-* ✅ [`jackc/pgx`](https://github.com/jackc/pgx) v5
+
+- ✅ [`database/sql`](https://pkg.go.dev/database/sql) - we support all drivers that are made using the built-in interface
+- ✅ [`jackc/pgx`](https://github.com/jackc/pgx) v5
 
 ## Installation
-> 🚧 This area is currently under construction
+
+Initialize Zen in your **application module** (the module that contains `main`):
+
+```bash
+go run github.com/AikidoSec/firewall-go/cmd/zen-go@latest init
+
+# Then:
+go mod tidy
+```
+
+This will prompt you to select the frameworks and libraries your service uses.
+
+### Enable the firewall
+
+In your `main` package, import Zen and enable protection as early as possible:
+
+```go
+import "github.com/AikidoSec/firewall-go/zen"
+
+func main() {
+	zen.Protect()
+
+	// your existing setup
+}
+```
+
+### Build your application with `zen-go`
+
+Install the Zen build tool:
+
+```bash
+go install github.com/AikidoSec/firewall-go/cmd/zen-go@latest
+```
+
+Then update your build process to use `zen-go` via `toolexec`:
+
+```bash
+go build -toolexec="zen-go" -o bin/app
+```
+
+> `zen-go` instruments your application at build time.
+> You only need this for building (and testing) your binary — not at runtime.
+
+### Configure your token
+
+Set your token as an environment variable when running your application:
+
+```bash
+export AIKIDO_TOKEN=<YOUR-TOKEN-HERE>
+```
+
+### Framework-specific setup
+
+Add middleware to enable user tracking and rate limiting for your framework:
+
+* [Gin](./docs/gin.md)
+* [Echo](./docs/echo.md)
 
 ## Reporting to your Aikido Security dashboard
 
@@ -54,15 +114,14 @@ But you will get the most value by reporting your data to Aikido.
 You will need an Aikido account and a token to report events to Aikido. If you don't have an account, you can [sign up for free](https://app.aikido.dev/login).
 
 Here's how:
-* [Log in to your Aikido account](https://app.aikido.dev/login).
-* Go to [Zen](https://app.aikido.dev/runtime/services).
-* Go to apps.
-* Click on **Add app**.
-* Choose a name for your app.
-* Click **Generate token**.
-* Copy the token.
-* Set the token as an environment variable, `AIKIDO_TOKEN`, using [dotenv](https://github.com/motdotla/dotenv) or another method of your choosing.
-
+- [Log in to your Aikido account](https://app.aikido.dev/login).
+- Go to [Zen](https://app.aikido.dev/runtime/services).
+- Go to apps.
+- Click on **Add app**.
+- Choose a name for your app.
+- Click **Generate token**.
+- Copy the token.
+- Set the token as an environment variable, `AIKIDO_TOKEN`, using [dotenv](https://github.com/motdotla/dotenv) or another method of your choosing.
 
 ## Running in production (blocking) mode
 
