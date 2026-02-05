@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	zenchi "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi"
+	zenchi "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"

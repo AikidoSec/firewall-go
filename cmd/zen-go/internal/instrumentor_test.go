@@ -17,7 +17,7 @@ func testChiRules() []WrapRule {
 			ID:        "chi.NewMux",
 			MatchCall: "github.com/go-chi/chi/v5.NewMux",
 			Imports: map[string]string{
-				"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi",
+				"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5",
 			},
 			WrapTmpl: `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
 		},
@@ -25,7 +25,7 @@ func testChiRules() []WrapRule {
 			ID:        "chi.NewRouter",
 			MatchCall: "github.com/go-chi/chi/v5.NewRouter",
 			Imports: map[string]string{
-				"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi",
+				"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5",
 			},
 			WrapTmpl: `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
 		},
@@ -74,7 +74,7 @@ func main() {
 	require.NoError(t, err)
 	assert.True(t, result.Modified)
 	assert.Contains(t, result.Imports, "zenchi")
-	assert.Equal(t, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi", result.Imports["zenchi"])
+	assert.Equal(t, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5", result.Imports["zenchi"])
 
 	resultStr := string(result.Code)
 	assert.Contains(t, resultStr, "GetMiddleware()")
@@ -124,7 +124,7 @@ func WithRouter() *chi.Mux {
 			ID:          "chi.NewRouter",
 			MatchCall:   "github.com/go-chi/chi/v5.NewRouter",
 			ExcludePkgs: []string{"github.com/go-chi/chi/v5/middleware"},
-			Imports:     map[string]string{"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi"},
+			Imports:     map[string]string{"zenchi": "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5"},
 			WrapTmpl:    `func() *chi.Mux { r := {{.}}; r.Use(zenchi.GetMiddleware()); return r }()`,
 		},
 	}

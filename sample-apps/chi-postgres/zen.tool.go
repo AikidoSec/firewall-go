@@ -9,5 +9,5 @@ import (
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
 
 	// Aikido Zen: Sources
-	_ "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi"
+	_ "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5"
 )

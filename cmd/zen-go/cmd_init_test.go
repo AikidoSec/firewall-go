@@ -51,7 +51,7 @@ func TestGenerateToolsFile_WithSourcesAndSinks(t *testing.T) {
 	// Verify sources section
 	assert.Contains(t, content, "// Aikido Zen: Sources")
 	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
-	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi")
+	assert.Contains(t, content, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5")
 
 	// Verify sinks section
 	assert.Contains(t, content, "// Aikido Zen: Sinks")

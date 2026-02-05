@@ -83,21 +83,32 @@ test-instrumentation-integration: test-db-start
 		./instrumentation/sinks/path \
 		./instrumentation/sinks/path/filepath
 
-	@echo "Running instrumentation tests without coverage (problematic packages)"
+	@echo "Running instrumentation tests without coverage (root module)"
 	@$(TOOLS_BIN)/gotestsum --format pkgname -- \
 		-race \
 		-toolexec="$(TOOLS_BIN)/zen-go toolexec" \
 		-tags=integration \
 		./instrumentation/sources/gin-gonic/gin \
-		./instrumentation/sources/go-chi/chi \
 		./instrumentation/sources/labstack/echo.v4 \
 		./instrumentation/sinks/database/sql \
 		./instrumentation/sinks/jackc/pgx
+
+	@echo "Running instrumentation tests without coverage (separate modules)"
+	$(call run_module_tests,instrumentation/sources/go-chi/chi.v5)
 
 	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
+
+define run_module_tests
+	@echo "Running tests for $(1)"
+	@cd $(1) && $(TOOLS_BIN)/gotestsum --format pkgname -- \
+		-race \
+		-toolexec="$(TOOLS_BIN)/zen-go toolexec" \
+		-tags=integration \
+		./...
+endef
 
 .PHONY: test-instrumentation-unit
 test-instrumentation-unit:
