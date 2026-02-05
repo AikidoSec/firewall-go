@@ -94,7 +94,7 @@ test-instrumentation-integration: test-db-start
 	$(call run_module_tests,instrumentation/sources/gin-gonic/gin)
 	$(call run_module_tests,instrumentation/sources/go-chi/chi.v5)
 	$(call run_module_tests,instrumentation/sources/labstack/echo.v4)
-	$(call run_module_tests,instrumentation/sinks/jackc/pgx)
+	$(call run_module_tests,instrumentation/sinks/jackc/pgx.v5)
 
 	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
