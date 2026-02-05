@@ -88,13 +88,13 @@ test-instrumentation-integration: test-db-start
 		-race \
 		-toolexec="$(TOOLS_BIN)/zen-go toolexec" \
 		-tags=integration \
-		./instrumentation/sources/labstack/echo.v4 \
 		./instrumentation/sinks/database/sql \
 		./instrumentation/sinks/jackc/pgx
 
 	@echo "Running instrumentation tests without coverage (separate modules)"
 	$(call run_module_tests,instrumentation/sources/gin-gonic/gin)
 	$(call run_module_tests,instrumentation/sources/go-chi/chi.v5)
+	$(call run_module_tests,instrumentation/sources/labstack/echo.v4)
 
 	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
