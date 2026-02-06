@@ -661,6 +661,99 @@ func SomeOtherFunc() {
 	assert.False(t, result.Modified)
 }
 
+func TestNewInstrumentorWithRules_MultipleDirectories(t *testing.T) {
+	// Simulate the module cache layout: rules from root module's instrumentation/
+	// and rules from a separately-versioned submodule are loaded and merged.
+
+	// Dir 1: root module's instrumentation/ (e.g., stdlib sinks)
+	rootInstDir := t.TempDir()
+	sinkDir := filepath.Join(rootInstDir, "sinks", "os")
+	require.NoError(t, os.MkdirAll(sinkDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(sinkDir, "zen.instrument.yml"), []byte(`
+meta:
+  name: os
+  description: OS sink
+rules:
+  - id: os.OpenFile
+    type: prepend
+    package: os
+    function: OpenFile
+    imports:
+      sink: "github.com/example/sink"
+    template: |
+      if err := sink.Check({{ .Function.Argument 0 }}); err != nil { return nil, err }
+`), 0o600))
+
+	// Dir 2: separately-versioned submodule (e.g., gin in module cache)
+	ginDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(ginDir, "zen.instrument.yml"), []byte(`
+meta:
+  name: gin
+  description: Gin source
+rules:
+  - id: gin.Default
+    type: wrap
+    match: "github.com/gin-gonic/gin.Default"
+    imports:
+      zengin: "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"
+    template: |
+      func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()
+`), 0o600))
+
+	// Load rules from both directories and merge (simulating what NewInstrumentor does)
+	allRules := &rules.InstrumentationRules{}
+	for _, dir := range []string{rootInstDir, ginDir} {
+		rulesData, err := rules.LoadRulesFromDir(dir)
+		require.NoError(t, err)
+		allRules.WrapRules = append(allRules.WrapRules, rulesData.WrapRules...)
+		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
+		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
+	}
+
+	inst := NewInstrumentorWithRules(allRules)
+
+	// Verify rules from both directories are present
+	assert.Len(t, inst.WrapRules, 1)
+	assert.Len(t, inst.PrependRules, 1)
+	assert.Equal(t, "gin.Default", inst.WrapRules[0].ID)
+	assert.Equal(t, "os.OpenFile", inst.PrependRules[0].ID)
+
+	// Verify the gin wrap rule works on source code
+	src := `package main
+
+import "github.com/gin-gonic/gin"
+
+func main() {
+	r := gin.Default()
+	r.Run()
+}
+`
+	tmpFile := filepath.Join(t.TempDir(), "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	result, err := inst.InstrumentFile(tmpFile, "main")
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+	assert.Contains(t, string(result.Code), "GetMiddleware()")
+
+	// Verify the os prepend rule works on source code
+	osSrc := `package os
+
+func OpenFile(name string, flag int, perm uint32) (*File, error) {
+	return nil, nil
+}
+
+type File struct{}
+`
+	osFile := filepath.Join(t.TempDir(), "file.go")
+	require.NoError(t, os.WriteFile(osFile, []byte(osSrc), 0o600))
+
+	osResult, err := inst.InstrumentFile(osFile, "os")
+	require.NoError(t, err)
+	assert.True(t, osResult.Modified)
+	assert.Contains(t, string(osResult.Code), "sink.Check(name)")
+}
+
 func TestIsMajorVersion(t *testing.T) {
 	assert.True(t, isMajorVersion("v2"))
 	assert.True(t, isMajorVersion("v5"))
