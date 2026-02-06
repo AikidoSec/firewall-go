@@ -1,5 +1,9 @@
 # Gin Web Framework
 
+## Installation
+
+If you haven't already, follow the [installation instructions](../README.md#installation) in the main README.
+
 ## Setting a user
 If you want to use user-blocking, know which user performed an attack and rate-limit on a user basis, you have to set  a user using the following function : 
 ```go

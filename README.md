@@ -44,6 +44,8 @@ Zen operates autonomously on the same server as your Go app to:
 
 ## Installation
 
+To install Zen: add the library to your project, then integrate the build tool.
+
 Initialize Zen in your **application module** (the module that contains `main`):
 
 ```bash
@@ -70,6 +72,8 @@ func main() {
 ```
 
 ### Build your application with `zen-go`
+
+Zen needs to instrument your code at build time to intercept and monitor operations like database queries and system calls.
 
 Install the Zen build tool:
 
@@ -98,8 +102,8 @@ export AIKIDO_TOKEN=<YOUR-TOKEN-HERE>
 
 Add middleware to enable user tracking and rate limiting for your framework:
 
-* [Gin](./docs/gin.md)
-* [Echo](./docs/echo.md)
+- [Gin](./docs/gin.md)
+- [Echo](./docs/echo.md)
 
 ## Reporting to your Aikido Security dashboard
 
@@ -114,6 +118,7 @@ But you will get the most value by reporting your data to Aikido.
 You will need an Aikido account and a token to report events to Aikido. If you don't have an account, you can [sign up for free](https://app.aikido.dev/login).
 
 Here's how:
+
 - [Log in to your Aikido account](https://app.aikido.dev/login).
 - Go to [Zen](https://app.aikido.dev/runtime/services).
 - Go to apps.
