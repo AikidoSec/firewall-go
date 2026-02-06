@@ -26,13 +26,39 @@ func FindModuleRoot() string {
 	}
 }
 
-// FindInstrumentationDir finds the instrumentation directory from the firewall-go module
-func FindInstrumentationDir() string {
-	// Use go list to find where the firewall-go module is located
-	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/AikidoSec/firewall-go")
+// FindInstrumentationDirs finds all directories containing instrumentation rules.
+// This includes the root module's instrumentation/ directory as well as any
+// separately-versioned instrumentation submodules (e.g., gin, echo, pgx).
+func FindInstrumentationDirs() []string {
+	modRoot := FindModuleRoot()
+	rootModuleDir := findModuleDir(modRoot, "github.com/AikidoSec/firewall-go")
+	submoduleDirs := findSubmoduleDirs(modRoot)
+	return collectInstrumentationDirs(rootModuleDir, submoduleDirs)
+}
 
-	// Run from the module root if we can find it
-	if modRoot := FindModuleRoot(); modRoot != "" {
+// collectInstrumentationDirs builds the list of directories to scan for rules.
+// It appends /instrumentation to the root module dir, then adds any submodule dirs.
+// Duplicates are avoided at the loading level: LoadRulesFromDir skips subdirectories
+// that contain their own go.mod (i.e., separate modules discovered via submoduleDirs).
+func collectInstrumentationDirs(rootModuleDir string, submoduleDirs []string) []string {
+	var dirs []string
+
+	if rootModuleDir != "" {
+		instDir := filepath.Join(rootModuleDir, "instrumentation")
+		if info, err := os.Stat(instDir); err == nil && info.IsDir() {
+			dirs = append(dirs, instDir)
+		}
+	}
+
+	dirs = append(dirs, submoduleDirs...)
+
+	return dirs
+}
+
+// findModuleDir returns the directory for a specific Go module.
+func findModuleDir(modRoot string, modulePath string) string {
+	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", modulePath)
+	if modRoot != "" {
 		cmd.Dir = modRoot
 	}
 
@@ -41,15 +67,32 @@ func FindInstrumentationDir() string {
 		return ""
 	}
 
-	modDir := strings.TrimSpace(string(output))
-	if modDir == "" {
+	dir := strings.TrimSpace(string(output))
+	if dir == "" {
 		return ""
 	}
+	return dir
+}
 
-	instDir := filepath.Join(modDir, "instrumentation")
-	if info, err := os.Stat(instDir); err == nil && info.IsDir() {
-		return instDir
+// findSubmoduleDirs returns directories for all firewall-go instrumentation submodules
+// that the current project depends on.
+func findSubmoduleDirs(modRoot string) []string {
+	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/AikidoSec/firewall-go/instrumentation/...")
+	if modRoot != "" {
+		cmd.Dir = modRoot
 	}
 
-	return ""
+	output, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+
+	var dirs []string
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			dirs = append(dirs, line)
+		}
+	}
+	return dirs
 }
