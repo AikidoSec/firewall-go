@@ -295,6 +295,80 @@ rules:
 	assert.Contains(t, rules.InjectDeclRules[0].DeclTemplate, "go:linkname")
 }
 
+func TestLoadRulesFromDir_SkipsSubmodulesWithGoMod(t *testing.T) {
+	// Simulate the root module's instrumentation/ dir where some subdirectories
+	// are separate Go modules (have their own go.mod). These should be skipped
+	// to avoid loading their rules twice (they're discovered independently).
+	tmpDir := t.TempDir()
+
+	// Create a stdlib sink (part of root module, no go.mod)
+	stdlibDir := filepath.Join(tmpDir, "sinks", "os")
+	require.NoError(t, os.MkdirAll(stdlibDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(stdlibDir, "zen.instrument.yml"), []byte(`
+meta:
+  name: os
+rules:
+  - id: os.rule
+    type: prepend
+    package: os
+    function: OpenFile
+    imports: {}
+    template: "// instrumented"
+`), 0o600))
+
+	// Create a submodule sink (has its own go.mod, should be skipped)
+	submoduleDir := filepath.Join(tmpDir, "sinks", "jackc", "pgx.v5")
+	require.NoError(t, os.MkdirAll(submoduleDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(submoduleDir, "go.mod"), []byte(`
+module github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(submoduleDir, "zen.instrument.yml"), []byte(`
+meta:
+  name: pgx
+rules:
+  - id: pgx.rule
+    type: prepend
+    package: pgx
+    function: Connect
+    imports: {}
+    template: "// instrumented"
+`), 0o600))
+
+	rules, err := LoadRulesFromDir(tmpDir)
+	require.NoError(t, err)
+
+	// Only the stdlib rule should be loaded; pgx should be skipped
+	require.Len(t, rules.PrependRules, 1)
+	assert.Equal(t, "os.rule", rules.PrependRules[0].ID)
+}
+
+func TestLoadRulesFromDir_RootGoModNotSkipped(t *testing.T) {
+	// When walking a submodule dir directly (e.g., pgx.v5/), its own go.mod
+	// should NOT cause it to be skipped — only subdirectory go.mods are skipped.
+	tmpDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(`
+module github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5
+`), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "zen.instrument.yml"), []byte(`
+meta:
+  name: pgx
+rules:
+  - id: pgx.rule
+    type: prepend
+    package: pgx
+    function: Connect
+    imports: {}
+    template: "// instrumented"
+`), 0o600))
+
+	rules, err := LoadRulesFromDir(tmpDir)
+	require.NoError(t, err)
+
+	require.Len(t, rules.PrependRules, 1)
+	assert.Equal(t, "pgx.rule", rules.PrependRules[0].ID)
+}
+
 func TestLoadRulesFromFile_AllRuleTypes(t *testing.T) {
 	tmpDir := t.TempDir()
 	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")

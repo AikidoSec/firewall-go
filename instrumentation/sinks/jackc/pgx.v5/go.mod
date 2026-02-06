@@ -2,7 +2,7 @@ module github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5
 
 go 1.24.2
 
-replace github.com/aikidoSec/firewall-go => ../../../../
+replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (
 	github.com/AikidoSec/firewall-go v0.0.0-20260205155144-7e398694c761
