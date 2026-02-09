@@ -21,18 +21,23 @@ type Instrumentor struct {
 
 // NewInstrumentor creates a new Instrumentor, loading rules from YAML files
 func NewInstrumentor() (*Instrumentor, error) {
-	// Try to load rules from the instrumentation directory
-	if instDir := paths.FindInstrumentationDir(); instDir != "" {
-		rulesData, err := rules.LoadRulesFromDir(instDir)
+	dirs := paths.FindInstrumentationDirs()
+	if len(dirs) == 0 {
+		return &Instrumentor{}, nil
+	}
+
+	allRules := &rules.InstrumentationRules{}
+	for _, dir := range dirs {
+		rulesData, err := rules.LoadRulesFromDir(dir)
 		if err != nil {
 			return nil, err
 		}
-
-		return NewInstrumentorWithRules(rulesData), nil
+		allRules.WrapRules = append(allRules.WrapRules, rulesData.WrapRules...)
+		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
+		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
 	}
 
-	// No rules found
-	return &Instrumentor{}, nil
+	return NewInstrumentorWithRules(allRules), nil
 }
 
 // NewInstrumentorWithRules creates an Instrumentor with the given rules

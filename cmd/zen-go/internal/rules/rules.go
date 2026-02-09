@@ -75,7 +75,9 @@ type InjectDeclRule struct {
 	DeclTemplate string   // The declaration to inject
 }
 
-// LoadRulesFromDir loads all zen.instrument.yml files from a directory tree
+// LoadRulesFromDir loads all zen.instrument.yml files from a directory tree.
+// Subdirectories that contain their own go.mod are skipped, since those are
+// separate Go modules whose rules will be discovered independently.
 func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
 	result := &InstrumentationRules{}
 
@@ -84,7 +86,18 @@ func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
 			return err
 		}
 
-		if d.IsDir() || !strings.HasSuffix(d.Name(), "zen.instrument.yml") {
+		if d.IsDir() {
+			// Skip subdirectories that are separate Go modules (have their own go.mod).
+			// Their rules are discovered independently via findSubmoduleDirs.
+			if path != dir {
+				if _, statErr := os.Stat(filepath.Join(path, "go.mod")); statErr == nil {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+
+		if !strings.HasSuffix(d.Name(), "zen.instrument.yml") {
 			return nil
 		}
 
