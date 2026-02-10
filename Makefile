@@ -178,6 +178,19 @@ tidy:
 	done
 	@echo "✅ All modules tidied successfully"
 
+INSTRUMENTATION_MODULES := $(shell find instrumentation -name go.mod -exec dirname {} \;)
+
+.PHONY: update-instrumentation
+update-instrumentation:
+	@for dir in $(INSTRUMENTATION_MODULES); do \
+		echo "📦 Updating $$dir"; \
+		cd $$dir && \
+		go get github.com/AikidoSec/firewall-go@latest && \
+		go mod tidy && \
+		cd $(CURDIR); \
+	done
+	@echo "✅ All instrumentation modules updated"
+
 BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/$(ZEN_INTERNALS_VERSION)
 FILES = \
 		libzen_internals.wasm \
