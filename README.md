@@ -67,9 +67,12 @@ In your `main` package, import Zen and enable protection as early as possible:
 import "github.com/AikidoSec/firewall-go/zen"
 
 func main() {
-	zen.Protect()
+  err := zen.Protect()
+  if err != nil {
+    panic(err)
+  }
 
-	// your existing setup
+  // your existing setup
 }
 ```
 
