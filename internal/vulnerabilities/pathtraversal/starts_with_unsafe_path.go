@@ -25,6 +25,9 @@ var linuxRootFolders = []string{
 	"/tmp/",
 	"/usr/",
 	"/var/",
+	// Common container/cloud directories
+	"/app/",
+	"/code/",
 	// macOS specific
 	"/applications/",
 	"/cores/",

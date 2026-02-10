@@ -111,6 +111,20 @@ func TestDetectPathTraversal(t *testing.T) {
 		assert.False(t, detectPathTraversal("/etc/app/data/etc/config", "/etc/config", true))
 	})
 
+	t.Run("container /app/ directory", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("/app/config/secret.yml", "/app/config", true))
+		assert.True(t, detectPathTraversal("/app/config/secret.yml", "/app/config/secret.yml", true))
+		assert.False(t, detectPathTraversal("/app/test.txt", "/app/", true))
+		assert.False(t, detectPathTraversal("/app/test.txt", "/app", true))
+	})
+
+	t.Run("container /code/ directory", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("/code/src/index.js", "/code/src", true))
+		assert.True(t, detectPathTraversal("/code/src/index.js", "/code/src/index.js", true))
+		assert.False(t, detectPathTraversal("/code/test.txt", "/code/", true))
+		assert.False(t, detectPathTraversal("/code/test.txt", "/code", true))
+	})
+
 	t.Run("disable checkPathStart", func(t *testing.T) {
 		assert.False(t, detectPathTraversal("/etc/passwd", "/etc/passwd", false))
 	})
