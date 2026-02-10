@@ -67,9 +67,12 @@ In your `main` package, import Zen and enable protection as early as possible:
 import "github.com/AikidoSec/firewall-go/zen"
 
 func main() {
-	zen.Protect()
+  err := zen.Protect()
+  if err != nil {
+    panic(err)
+  }
 
-	// your existing setup
+  // your existing setup
 }
 ```
 
@@ -86,7 +89,7 @@ go install github.com/AikidoSec/firewall-go/cmd/zen-go@latest
 Then update your build process to use `zen-go` via `toolexec`:
 
 ```bash
-go build -toolexec="zen-go" -o bin/app
+go build -toolexec="zen-go toolexec" -o bin/app
 ```
 
 > `zen-go` instruments your application at build time.
