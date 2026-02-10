@@ -1,5 +1,3 @@
-github.com/AikidoSec/firewall-go v0.0.0-20260205155144-7e398694c761 h1:yCA7mOdLJjmbfuR2wiHttKVfTeQyS17dR5Z8TeHWiZw=
-github.com/AikidoSec/firewall-go v0.0.0-20260205155144-7e398694c761/go.mod h1:loXpS7xgalWRHHOQVfW0sWyQWpjIOsqQD6OKrbgp9PM=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=

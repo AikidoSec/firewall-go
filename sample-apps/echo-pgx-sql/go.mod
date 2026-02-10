@@ -3,7 +3,7 @@ module echo-pgx-sql
 go 1.24.2
 
 require (
-	github.com/AikidoSec/firewall-go v0.0.0
+	github.com/AikidoSec/firewall-go v0.1.0
 	github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5 v0.0.0-00010101000000-000000000000
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4 v0.0.0-00010101000000-000000000000
 	github.com/jackc/pgx/v5 v5.8.0
