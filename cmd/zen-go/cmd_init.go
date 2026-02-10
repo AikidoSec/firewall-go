@@ -191,7 +191,8 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 	fmt.Fprintln(stdout)
 	fmt.Fprintln(stdout, "Next steps:")
 	fmt.Fprintln(stdout, "  1. Run 'go mod tidy' to update your dependencies")
-	fmt.Fprintln(stdout, "  2. Build with 'go build -toolexec=\"zen-go toolexec\"' to enable instrumentation")
+	fmt.Fprintln(stdout, "  2. Install `zen-go` CLI with 'go install github.com/AikidoSec/firewall-go/cmd/zen-go@latest'")
+	fmt.Fprintln(stdout, "  3. Build with 'go build -toolexec=\"zen-go toolexec\"' to enable instrumentation")
 
 	return nil
 }
