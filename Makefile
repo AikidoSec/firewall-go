@@ -2,6 +2,10 @@ ZEN_INTERNALS_VERSION=v0.1.58
 GOLANGCI_LINT_VERSION=v2.8.0
 
 TOOLS_BIN := $(shell pwd)/tools/bin
+CURRENT_GO_MINOR := $(shell go env GOVERSION | sed 's/^go1\.//' | cut -d. -f1)
+
+# Returns the go minor version required by the module at path $(1)
+go_mod_minor = $(shell sed -n 's/^go 1\.//p' $(1)/go.mod | cut -d. -f1)
 
 .PHONY: install-tools
 install-tools:
@@ -95,6 +99,7 @@ test-instrumentation-integration: test-db-start
 		instrumentation/sources/gin-gonic/gin \
 		instrumentation/sources/go-chi/chi.v5 \
 		instrumentation/sources/labstack/echo.v4 \
+		instrumentation/sources/labstack/echo.v5 \
 		instrumentation/sinks/jackc/pgx.v5 \
 		-- -race -toolexec="$(TOOLS_BIN)/zen-go toolexec" -tags=integration
 
