@@ -28,7 +28,7 @@ jobs:
           go get github.com/AikidoSec/firewall-go@$GITHUB_SHA
           go get github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin@$GITHUB_SHA
           go mod tidy
-          sed -i "s|github.com/AikidoSec/firewall-go/cmd/zen-go@latest|github.com/AikidoSec/firewall-go/cmd/zen-go@$GITHUB_SHA|" Dockerfile
+          sed -i "s|github.com/AikidoSec/firewall-go/cmd/zen-go@[^ ]*|github.com/AikidoSec/firewall-go/cmd/zen-go@$GITHUB_SHA|" Dockerfile
 
       - name: Run Firewall QA Tests
         uses: AikidoSec/firewall-tester-action@v1.0.7
