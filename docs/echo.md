@@ -7,10 +7,10 @@ If you haven't already, follow the [installation instructions](../README.md#inst
 ## Setting a user
 If you want to use user-blocking, know which user performed an attack and rate-limit on a user basis, you have to set  a user using the following function :
 ```go
-// Setting a user : 
+// Setting a user:
 zen.SetUser(c.Request().Context(), id, name)
 
-// So an example for Bob with id 1 :
+// So an example for Bob with id 1:
 zen.SetUser(c.Request().Context(), "1", "Bob")
 ```
 It's advised to do this in your authentication middleware, and before you add the Aikido Middleware (used for rate-limiting and user blocking, [See here](#middleware))

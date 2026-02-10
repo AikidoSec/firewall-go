@@ -34,6 +34,8 @@ Zen operates autonomously on the same server as your Go app to:
 
 ### Web frameworks
 
+- ✅ [`net/http`](docs/net-http.md) (standard library)
+- ✅ [`Chi`](docs/net-http.md) v5
 - ✅ [`Gin`](docs/gin.md)
 - ✅ [`Echo`](docs/echo.md) v4
 
@@ -102,6 +104,7 @@ export AIKIDO_TOKEN=<YOUR-TOKEN-HERE>
 
 Add middleware to enable user tracking and rate limiting for your framework:
 
+- [net/http / Chi](./docs/net-http.md)
 - [Gin](./docs/gin.md)
 - [Echo](./docs/echo.md)
 
