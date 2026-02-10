@@ -191,6 +191,17 @@ update-instrumentation:
 	done
 	@echo "✅ All instrumentation modules updated"
 
+.PHONY: tag-instrumentation
+tag-instrumentation:
+ifndef VERSION
+	$(error VERSION is required. Usage: make tag-instrumentation VERSION=0.1.0)
+endif
+	@for dir in $(INSTRUMENTATION_MODULES); do \
+		echo "🏷️ Tagging $$dir/v$(VERSION)"; \
+		git tag "$$dir/v$(VERSION)"; \
+	done
+	@echo "✅ All instrumentation modules tagged with v$(VERSION)"
+
 BASE_URL = https://github.com/AikidoSec/zen-internals/releases/download/$(ZEN_INTERNALS_VERSION)
 FILES = \
 		libzen_internals.wasm \
