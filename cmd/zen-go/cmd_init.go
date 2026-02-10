@@ -228,9 +228,12 @@ func promptForSources() ([]string, error) {
 
 	form := huh.NewForm(
 		huh.NewGroup(
+			huh.NewNote().
+				Title("Sources").
+				Description("Sources are entry points for requests (web frameworks)"),
 			huh.NewMultiSelect[string]().
 				Title("Select sources to instrument").
-				Description("Sources are entry points for requests (web frameworks)").
+				Description("Standard library (net/http) is always included.").
 				Options(sourceOptions...).
 				Value(&selectedSources),
 		),
@@ -257,9 +260,13 @@ func promptForSinks() ([]string, error) {
 
 	form := huh.NewForm(
 		huh.NewGroup(
+			huh.NewNote().
+				Title("Sinks").
+				Description("Sinks are operations that need protection & monitoring (database, file system, etc.)"),
+
 			huh.NewMultiSelect[string]().
 				Title("Select sinks to instrument").
-				Description("Sinks are operations that need protection & monitoring (database, file system, etc.)").
+				Description("Standard library sinks (os, os/exec, database/sql, net/http) are always included.").
 				Options(sinkOptions...).
 				Value(&selectedSinks),
 		),
