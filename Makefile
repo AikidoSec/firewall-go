@@ -91,39 +91,27 @@ test-instrumentation-integration: test-db-start
 		./instrumentation/sinks/database/sql
 
 	@echo "Running instrumentation tests without coverage (separate modules)"
-	$(call run_module_tests,instrumentation/sources/gin-gonic/gin)
-	$(call run_module_tests,instrumentation/sources/go-chi/chi.v5)
-	$(call run_module_tests,instrumentation/sources/labstack/echo.v4)
-	$(call run_module_tests,instrumentation/sinks/jackc/pgx.v5)
+	@TOOLS_BIN=$(TOOLS_BIN) ./scripts/test-modules.sh \
+		instrumentation/sources/gin-gonic/gin \
+		instrumentation/sources/go-chi/chi.v5 \
+		instrumentation/sources/labstack/echo.v4 \
+		instrumentation/sinks/jackc/pgx.v5 \
+		-- -race -toolexec="$(TOOLS_BIN)/zen-go toolexec" -tags=integration
 
 	@$(MAKE) test-db-stop
 	@echo "✅ Instrumentation tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
 
-define run_module_tests
-	@echo "Running tests for $(1)"
-	@cd $(1) && $(TOOLS_BIN)/gotestsum --format pkgname -- \
-		-race \
-		-toolexec="$(TOOLS_BIN)/zen-go toolexec" \
-		-tags=integration \
-		./...
-endef
-
 .PHONY: test-instrumentation-unit
 test-instrumentation-unit:
 	@echo "Running instrumentation unit tests"
 	@rm -f coverage-*.out coverage.out
 	@# Test subdirectories with go.mod
-	@i=0; \
-	for dir in instrumentation/; do \
-		find $$dir -name go.mod -exec dirname {} \; | while read moddir; do \
-			i=$$((i+1)); \
-			echo "Testing module in $$moddir (unit tests)"; \
-			cd $$moddir && $(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=$(CURDIR)/coverage-$$i.out -covermode=atomic ./...; \
-			cd $(CURDIR); \
-		done; \
-	done
+	@TOOLS_BIN=$(TOOLS_BIN) ./scripts/test-modules.sh \
+		--find instrumentation/ \
+		--coverage-dir $(CURDIR) \
+		-- -race
 	@# Test root module instrumentation packages (those without go.mod)
 	@if go list ./instrumentation/... 2>/dev/null | grep -q .; then \
 		echo "Testing root module instrumentation packages"; \
