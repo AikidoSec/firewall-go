@@ -55,9 +55,10 @@ func GetMiddleware() echo.MiddlewareFunc {
 			})
 
 			// Report after call with status code :
-			// @todo err
-			response, _ := echo.UnwrapResponse(c.Response())
-			status := response.Status
+			var status int
+			if response, unwrapErr := echo.UnwrapResponse(c.Response()); unwrapErr == nil {
+				status = response.Status
+			}
 
 			httpErr := new(echo.HTTPError)
 			if errors.As(err, &httpErr) {
