@@ -13,8 +13,8 @@ import (
 var ErrUserIDOrNameEmpty = errors.New("user id or name cannot be empty")
 
 // SetUser associates a user with the current request context for user-based
-// blocking and rate limiting. This function must be called before the Zen
-// middleware is executed.
+// blocking and rate limiting. This function must be called before
+// zen.ShouldBlockRequest() is called.
 func SetUser(ctx context.Context, id string, name string) (context.Context, error) {
 	if config.IsZenDisabled() {
 		return ctx, nil
@@ -26,7 +26,7 @@ func SetUser(ctx context.Context, id string, name string) (context.Context, erro
 
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil || reqCtx.HasMiddlewareExecuted() {
-		log.Info("zen.SetUser(...) must be called before the Zen middleware is executed.")
+		log.Info("zen.SetUser(...) must be called before zen.ShouldBlockRequest().")
 		return ctx, nil
 	}
 

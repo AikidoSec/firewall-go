@@ -12,7 +12,7 @@ import (
 var ErrRateLimitGroupIDEmpty = errors.New("group id cannot be empty")
 
 // SetRateLimitGroup associates a group with the current request context which is used for rate limiting.
-// This function must be called before the Zen middleware is executed.
+// This function must be called before zen.ShouldBlockRequest() is called.
 func SetRateLimitGroup(ctx context.Context, id string) (context.Context, error) {
 	if config.IsZenDisabled() {
 		return ctx, nil
@@ -24,7 +24,7 @@ func SetRateLimitGroup(ctx context.Context, id string) (context.Context, error) 
 
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil || reqCtx.HasMiddlewareExecuted() {
-		log.Info("zen.SetRateLimitGroup(...) must be called before the Zen middleware is executed.")
+		log.Info("zen.SetRateLimitGroup(...) must be called before zen.ShouldBlockRequest().")
 		return ctx, nil
 	}
 
