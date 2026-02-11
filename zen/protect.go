@@ -253,3 +253,10 @@ func IsDisabled() bool {
 func ShouldProtect() bool {
 	return config.ShouldProtect()
 }
+
+// WarnIfNotProtected logs a warning once if zen.Protect() has not been called
+// and zen is not explicitly disabled. Call this when ShouldProtect() returns false
+// to help customers notice they forgot to call zen.Protect().
+func WarnIfNotProtected() {
+	config.WarnIfNotProtected()
+}

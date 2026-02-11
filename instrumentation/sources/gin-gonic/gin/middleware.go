@@ -16,6 +16,7 @@ func GetMiddleware() gin.HandlerFunc {
 		}
 
 		if !zen.ShouldProtect() {
+			zen.WarnIfNotProtected()
 			c.Next()
 			return
 		}
