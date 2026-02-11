@@ -38,12 +38,17 @@ func TestMultiSelect_ToggleOptionalItem(t *testing.T) {
 	assert.False(t, m.items[0].selected)
 }
 
-func TestMultiSelect_CannotToggleLockedItem(t *testing.T) {
+func TestMultiSelect_CursorSkipsLockedItems(t *testing.T) {
 	m := newTestModel()
-	m.cursor = 2 // locked item
 
-	m.Update(key(" "))
-	assert.False(t, m.items[2].selected, "locked item should not be toggled")
+	// Cursor starts at 0 (first optional item "a")
+	assert.Equal(t, 0, m.cursor)
+
+	// Move down past last optional item - should not reach locked item at index 2
+	m.Update(key("j"))
+	assert.Equal(t, 1, m.cursor)
+	m.Update(key("j"))
+	assert.Equal(t, 1, m.cursor, "cursor should not move to locked item")
 }
 
 func TestMultiSelect_EnterSetsDone(t *testing.T) {
@@ -76,18 +81,17 @@ func TestMultiSelect_NavigationBounds(t *testing.T) {
 	m := newTestModel()
 	assert.Equal(t, 0, m.cursor)
 
-	// Can't go above 0
+	// Can't go above first optional item
 	m.Update(key("k"))
 	assert.Equal(t, 0, m.cursor)
 
-	// Move to last item
+	// Move to last optional item (index 1)
 	m.Update(key("j"))
-	m.Update(key("j"))
-	assert.Equal(t, 2, m.cursor)
+	assert.Equal(t, 1, m.cursor)
 
-	// Can't go below last item
+	// Can't go past last optional item
 	m.Update(key("j"))
-	assert.Equal(t, 2, m.cursor)
+	assert.Equal(t, 1, m.cursor)
 }
 
 func TestMultiSelect_ArrowKeys(t *testing.T) {

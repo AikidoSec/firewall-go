@@ -28,21 +28,40 @@ func (m *multiSelectModel) Init() tea.Cmd {
 	return nil
 }
 
+// optionalIndices returns the indices of non-locked items.
+func (m *multiSelectModel) optionalIndices() []int {
+	var indices []int
+	for i, item := range m.items {
+		if !item.Locked {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
 func (m *multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		optional := m.optionalIndices()
+		// Find current position within optional items
+		pos := 0
+		for i, idx := range optional {
+			if idx == m.cursor {
+				pos = i
+				break
+			}
+		}
+
 		switch keyMsg.String() {
 		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
+			if pos > 0 {
+				m.cursor = optional[pos-1]
 			}
 		case "down", "j":
-			if m.cursor < len(m.items)-1 {
-				m.cursor++
+			if pos < len(optional)-1 {
+				m.cursor = optional[pos+1]
 			}
 		case " ":
-			if !m.items[m.cursor].Locked {
-				m.items[m.cursor].selected = !m.items[m.cursor].selected
-			}
+			m.items[m.cursor].selected = !m.items[m.cursor].selected
 		case "enter":
 			m.done = true
 			return m, tea.Quit
@@ -60,7 +79,6 @@ var (
 	titleStyle    = lipgloss.NewStyle().Bold(true).Foreground(accentColor)
 	subtitleStyle = lipgloss.NewStyle()
 	descStyle     = lipgloss.NewStyle().Faint(true)
-	lockedStyle   = lipgloss.NewStyle().Faint(true)
 	helpStyle     = lipgloss.NewStyle().Faint(true)
 )
 
@@ -89,7 +107,7 @@ func (m *multiSelectModel) View() string {
 		}
 	}
 
-	for _, i := range optional {
+	for _, i := range locked {
 		sb.WriteString(m.renderItem(i))
 		sb.WriteString("\n")
 	}
@@ -98,7 +116,7 @@ func (m *multiSelectModel) View() string {
 		sb.WriteString("  ---\n")
 	}
 
-	for _, i := range locked {
+	for _, i := range optional {
 		sb.WriteString(m.renderItem(i))
 		sb.WriteString("\n")
 	}
@@ -135,7 +153,7 @@ func (m *multiSelectModel) renderItem(index int) string {
 	}
 
 	if item.Locked {
-		return cursor + lockedStyle.Render("[x] "+item.Name) + desc
+		return "  [x] " + item.Name + desc
 	}
 	if index == m.cursor {
 		return cursor + checkbox + " " + lipgloss.NewStyle().Bold(true).Render(name) + desc
@@ -144,10 +162,20 @@ func (m *multiSelectModel) renderItem(index int) string {
 }
 
 func RunMultiSelect(title, subtitle string, items []SelectItem) ([]string, error) {
+	// Start cursor on first optional item
+	cursor := 0
+	for i, item := range items {
+		if !item.Locked {
+			cursor = i
+			break
+		}
+	}
+
 	m := multiSelectModel{
 		title:    title,
 		subtitle: subtitle,
 		items:    items,
+		cursor:   cursor,
 	}
 
 	p := tea.NewProgram(&m)
