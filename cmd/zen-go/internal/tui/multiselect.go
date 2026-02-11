@@ -61,7 +61,9 @@ func (m *multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = optional[pos+1]
 			}
 		case " ":
-			m.items[m.cursor].selected = !m.items[m.cursor].selected
+			if m.cursor < len(m.items) {
+				m.items[m.cursor].selected = !m.items[m.cursor].selected
+			}
 		case "enter":
 			m.done = true
 			return m, tea.Quit
