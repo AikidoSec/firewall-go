@@ -17,6 +17,7 @@ import (
 func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !zen.ShouldProtect() {
+			zen.WarnIfNotProtected()
 			orig(w, r)
 			return
 		}
