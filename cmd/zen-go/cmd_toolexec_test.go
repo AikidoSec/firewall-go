@@ -287,3 +287,71 @@ func TestPassthrough_WithComplexArgs(t *testing.T) {
 	assert.Contains(t, output, "-trimpath")
 	assert.Contains(t, output, "input.go")
 }
+
+func TestCheckZenToolFileIncluded(t *testing.T) {
+	t.Run("errors when zen.tool.go exists but is not in args", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create zen.tool.go in the source directory
+		zenToolPath := filepath.Join(tmpDir, "zen.tool.go")
+		err := os.WriteFile(zenToolPath, []byte("package main\n"), 0o644)
+		require.NoError(t, err)
+
+		mainGoPath := filepath.Join(tmpDir, "main.go")
+		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a", mainGoPath}
+
+		err = checkZenToolFileIncluded("main", toolArgs)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "zen.tool.go exists but was not included in the build")
+		assert.Contains(t, err.Error(), "instead of specifying individual files")
+	})
+
+	t.Run("no error when zen.tool.go is in args", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		mainGoPath := filepath.Join(tmpDir, "main.go")
+		zenToolPath := filepath.Join(tmpDir, "zen.tool.go")
+
+		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a", mainGoPath, zenToolPath}
+
+		err := checkZenToolFileIncluded("main", toolArgs)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("no error when zen.tool.go does not exist", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		mainGoPath := filepath.Join(tmpDir, "main.go")
+
+		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a", mainGoPath}
+
+		err := checkZenToolFileIncluded("main", toolArgs)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("no error for non-main packages", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create zen.tool.go - but since it's not the main package, no error
+		zenToolPath := filepath.Join(tmpDir, "zen.tool.go")
+		err := os.WriteFile(zenToolPath, []byte("package main\n"), 0o644)
+		require.NoError(t, err)
+
+		goFilePath := filepath.Join(tmpDir, "handler.go")
+
+		toolArgs := []string{"-p", "github.com/example/pkg", "-o", "/tmp/out.a", goFilePath}
+
+		err = checkZenToolFileIncluded("github.com/example/pkg", toolArgs)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("no error when no go files in args", func(t *testing.T) {
+		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a"}
+
+		err := checkZenToolFileIncluded("main", toolArgs)
+
+		assert.NoError(t, err)
+	})
+}
