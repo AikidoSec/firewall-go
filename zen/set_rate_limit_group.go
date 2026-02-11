@@ -23,7 +23,10 @@ func SetRateLimitGroup(ctx context.Context, id string) (context.Context, error) 
 	}
 
 	reqCtx := request.GetContext(ctx)
-	if reqCtx == nil || reqCtx.HasMiddlewareExecuted() {
+	if reqCtx == nil {
+		return ctx, nil
+	}
+	if reqCtx.HasMiddlewareExecuted() {
 		log.Info("zen.SetRateLimitGroup(...) must be called before zen.ShouldBlockRequest().")
 		return ctx, nil
 	}

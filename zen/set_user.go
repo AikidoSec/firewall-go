@@ -25,7 +25,10 @@ func SetUser(ctx context.Context, id string, name string) (context.Context, erro
 	}
 
 	reqCtx := request.GetContext(ctx)
-	if reqCtx == nil || reqCtx.HasMiddlewareExecuted() {
+	if reqCtx == nil {
+		return ctx, nil
+	}
+	if reqCtx.HasMiddlewareExecuted() {
 		log.Info("zen.SetUser(...) must be called before zen.ShouldBlockRequest().")
 		return ctx, nil
 	}
