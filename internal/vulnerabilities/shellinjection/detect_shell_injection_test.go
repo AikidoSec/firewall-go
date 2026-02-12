@@ -129,4 +129,24 @@ func TestDetectShellInjection(t *testing.T) {
 	t.Run("detects subshell execution within backticks inside double quotes", func(t *testing.T) {
 		isShellInjection(t, "ls \"$(echo `whoami`)\"", "`whoami`")
 	})
+
+	t.Run("detects carriage return in user input", func(t *testing.T) {
+		isShellInjection(t, "ls \rrm", "\rrm")
+		isShellInjection(t, "ls \rrm -rf", "\rrm -rf")
+	})
+
+	t.Run("detects form feed in user input", func(t *testing.T) {
+		isShellInjection(t, "ls \frm", "\frm")
+		isShellInjection(t, "ls \frm -rf", "\frm -rf")
+	})
+
+	t.Run("detects carriage return in user input when user input is command", func(t *testing.T) {
+		isShellInjection(t, "sleep\r10", "sleep\r10")
+		isShellInjection(t, "shutdown\r-h\rnow", "shutdown\r-h\rnow")
+	})
+
+	t.Run("detects form feed in user input when user input is command", func(t *testing.T) {
+		isShellInjection(t, "sleep\f10", "sleep\f10")
+		isShellInjection(t, "shutdown\f-h\fnow", "shutdown\f-h\fnow")
+	})
 }
