@@ -90,4 +90,26 @@ func TestContainsShellSyntax(t *testing.T) {
 			t.Errorf("Expected %v for shell injection detection, but got %v", expected, result)
 		}
 	})
+
+	t.Run("it detects carriage return as separator", func(t *testing.T) {
+		checkSep := func(str, cmd string) {
+			if !containsShellSyntax(str, cmd) {
+				t.Errorf("Expected shell syntax detected in %q for command %q", str, cmd)
+			}
+		}
+		checkSep("ls\rrm", "rm")
+		checkSep("echo test\rrm -rf /", "rm")
+		checkSep("rm\rls", "rm")
+	})
+
+	t.Run("it detects form feed as separator", func(t *testing.T) {
+		checkSep := func(str, cmd string) {
+			if !containsShellSyntax(str, cmd) {
+				t.Errorf("Expected shell syntax detected in %q for command %q", str, cmd)
+			}
+		}
+		checkSep("ls\frm", "rm")
+		checkSep("echo test\frm -rf /", "rm")
+		checkSep("rm\fls", "rm")
+	})
 }
