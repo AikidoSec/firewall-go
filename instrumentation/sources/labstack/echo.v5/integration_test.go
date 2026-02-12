@@ -19,7 +19,7 @@ func TestEchoIsAutomaticallyInstrumented(t *testing.T) {
 
 	router := echo.New()
 
-	router.GET("/route", func(e echo.Context) error {
+	router.GET("/route", func(e *echo.Context) error {
 		ctx := request.GetContext(e.Request().Context())
 		require.NotNil(t, ctx, "request context should be set")
 
