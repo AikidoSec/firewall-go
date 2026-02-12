@@ -9,6 +9,101 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFindModuleRoot_InModuleRoot(t *testing.T) {
+	dir := t.TempDir()
+	dir, err := filepath.EvalSymlinks(dir)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644))
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	require.NoError(t, os.Chdir(dir))
+
+	assert.Equal(t, dir, FindModuleRoot())
+}
+
+func TestFindModuleRoot_InSubdirectory(t *testing.T) {
+	dir := t.TempDir()
+	dir, err := filepath.EvalSymlinks(dir)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644))
+	subDir := filepath.Join(dir, "pkg", "internal")
+	require.NoError(t, os.MkdirAll(subDir, 0o755))
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	require.NoError(t, os.Chdir(subDir))
+
+	assert.Equal(t, dir, FindModuleRoot())
+}
+
+func TestFindModuleRoot_NoGoMod(t *testing.T) {
+	dir := t.TempDir()
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	require.NoError(t, os.Chdir(dir))
+
+	assert.Equal(t, "", FindModuleRoot())
+}
+
+func TestFindModuleRoot_NestedGoMod(t *testing.T) {
+	// When go.mod exists in both current dir and parent, the current dir wins
+	parentDir := t.TempDir()
+	parentDir, err := filepath.EvalSymlinks(parentDir)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(parentDir, "go.mod"), []byte("module parent\n"), 0o644))
+
+	childDir := filepath.Join(parentDir, "child")
+	require.NoError(t, os.MkdirAll(childDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(childDir, "go.mod"), []byte("module child\n"), 0o644))
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	require.NoError(t, os.Chdir(childDir))
+
+	assert.Equal(t, childDir, FindModuleRoot())
+}
+
+func TestFindModuleRoot_DeeplyNestedSubdirectory(t *testing.T) {
+	dir := t.TempDir()
+	dir, err := filepath.EvalSymlinks(dir)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\n"), 0o644))
+	deepDir := filepath.Join(dir, "a", "b", "c", "d")
+	require.NoError(t, os.MkdirAll(deepDir, 0o755))
+
+	origDir, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Chdir(origDir) })
+
+	require.NoError(t, os.Chdir(deepDir))
+
+	assert.Equal(t, dir, FindModuleRoot())
+}
+
+func TestCollectInstrumentationDirs_InstrumentationIsFile(t *testing.T) {
+	// "instrumentation" exists but is a file, not a directory
+	rootDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(rootDir, "instrumentation"), []byte("not a dir"), 0o644))
+
+	dirs := collectInstrumentationDirs(rootDir, nil)
+
+	assert.Empty(t, dirs)
+}
+
 func TestCollectInstrumentationDirs_RootAndSeparateSubmodules(t *testing.T) {
 	// Simulate module cache layout where submodules are in separate directories
 	// (this is the case when packages are installed via go get)
