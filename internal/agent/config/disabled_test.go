@@ -72,6 +72,12 @@ func TestShouldProtect(t *testing.T) {
 	}
 }
 
+func TestIsCompiledWithZenGo(t *testing.T) {
+	// The variable is not set during normal test execution (no -ldflags -X),
+	// so it should return false by default.
+	assert.False(t, config.IsCompiledWithZenGo())
+}
+
 func TestWarnIfNotProtected(t *testing.T) {
 	saveAndRestore := func(t *testing.T) {
 		origDisabled := config.IsZenDisabled()

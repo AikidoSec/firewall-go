@@ -180,6 +180,10 @@ func doProtect(cfg *Config) {
 
 	config.SetZenLoaded(true)
 
+	if !config.IsCompiledWithZenGo() {
+		log.Warn("This application is not compiled with zen-go. Instrumentation is not active and requests will not be protected.")
+	}
+
 	log.Info("Aikido Zen loaded!",
 		slog.String("version", globals.EnvironmentConfig.Version))
 }
