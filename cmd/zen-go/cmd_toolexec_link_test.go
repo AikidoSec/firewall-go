@@ -165,6 +165,47 @@ func TestWriteExtendedLinkerImportcfg(t *testing.T) {
 	assert.Contains(t, string(content), "packagefile io=/path/to/io.a")
 }
 
+func TestInsertLinkerFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		flags    []string
+		expected []string
+	}{
+		{
+			name:     "inserts before archive file",
+			args:     []string{"-o", "output", "-importcfg", "/tmp/cfg", "main.a"},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-o", "output", "-importcfg", "/tmp/cfg", "-X", "pkg.Var=value", "main.a"},
+		},
+		{
+			name:     "works with existing -X flags",
+			args:     []string{"-X", "main.version=1.0", "main.a"},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-X", "main.version=1.0", "-X", "pkg.Var=value", "main.a"},
+		},
+		{
+			name:     "empty args",
+			args:     []string{},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-X", "pkg.Var=value"},
+		},
+		{
+			name:     "single arg",
+			args:     []string{"main.a"},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-X", "pkg.Var=value", "main.a"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := insertLinkerFlags(tt.args, tt.flags...)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestWriteLinkDepsForArchive_NoLinkDeps(t *testing.T) {
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "test.a")
