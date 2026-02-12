@@ -223,6 +223,8 @@ func checkZenToolFileIncluded(pkgPath string, toolArgs []string) error {
 			continue
 		}
 		if sourceDir == "" {
+			// The Go compiler processes one package at a time, so all
+			// .go files in toolArgs share the same directory.
 			sourceDir = filepath.Dir(arg)
 		}
 		if filepath.Base(arg) == "zen.tool.go" {
