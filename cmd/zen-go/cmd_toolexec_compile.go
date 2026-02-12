@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -29,6 +30,10 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 
 	if isDebug() {
 		fmt.Fprintf(stderr, "zen-go: compiling package %s\n", pkgPath)
+	}
+
+	if err := checkZenToolFileIncluded(pkgPath, toolArgs); err != nil {
+		return err
 	}
 
 	// These are the arguments that we want to pass through to the compiler
@@ -200,6 +205,44 @@ func replaceImportcfgArg(args []string, newPath string) []string {
 		}
 	}
 	return result
+}
+
+// checkZenToolFileIncluded checks if the main package is being compiled
+// without zen.tool.go. This happens when users run e.g. `go build main.go`
+// instead of `go build .`, which causes zen.tool.go to be excluded from the
+// build and results in cryptic compiler errors.
+func checkZenToolFileIncluded(pkgPath string, toolArgs []string) error {
+	if pkgPath != "main" {
+		return nil
+	}
+
+	var sourceDir string
+	hasZenToolFile := false
+	for _, arg := range toolArgs {
+		if !strings.HasSuffix(arg, ".go") {
+			continue
+		}
+		if sourceDir == "" {
+			// The Go compiler processes one package at a time, so all
+			// .go files in toolArgs share the same directory.
+			sourceDir = filepath.Dir(arg)
+		}
+		if filepath.Base(arg) == "zen.tool.go" {
+			hasZenToolFile = true
+			break
+		}
+	}
+
+	if hasZenToolFile || sourceDir == "" {
+		return nil
+	}
+
+	zenToolPath := filepath.Join(sourceDir, "zen.tool.go")
+	if _, err := os.Stat(zenToolPath); err == nil {
+		return errors.New("zen-go: zen.tool.go exists but was not included in the build, use 'go build -toolexec=\"zen-go toolexec\" .' instead of specifying individual files")
+	}
+
+	return nil
 }
 
 func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
