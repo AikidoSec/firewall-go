@@ -1,4 +1,4 @@
-# zen-go
+# zen-go CLI
 
 CLI build tool for [Aikido Zen for Go](../../README.md). It instruments your Go application at compile time using Go's `-toolexec` flag to intercept and monitor operations like database queries and system calls.
 
@@ -10,7 +10,7 @@ Install:
 go install github.com/AikidoSec/firewall-go/cmd/zen-go@latest
 ```
 
-Initialize your project (creates `zen.tool.go`):
+Create initial zen-go configuration for your project (creates `zen.tool.go`):
 
 ```bash
 zen-go init
