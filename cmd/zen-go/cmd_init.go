@@ -8,20 +8,49 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/charmbracelet/huh"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/tui"
 )
 
-// Available sources and sinks
+type instrumentOption struct {
+	name        string
+	description string
+	importPath  string // empty for locked/stdlib items
+	locked      bool
+}
+
 var (
-	availableSources = map[string]string{
-		"gin":     "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
-		"chi":     "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5",
-		"echo/v4": "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4",
+	sourceOptions = []instrumentOption{
+		{name: "gin", description: "Gin web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"},
+		{name: "chi", description: "Chi router", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5"},
+		{name: "echo/v4", description: "Echo v4 web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4"},
+		{name: "net/http", description: "Standard library (always included)", locked: true},
 	}
 
-	availableSinks = map[string]string{
-		"pgx": "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5",
+	sinkOptions = []instrumentOption{
+		{name: "pgx", description: "PostgreSQL via pgx/v5", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5"},
+		{name: "os", description: "File system operations (always included)", locked: true},
+		{name: "os/exec", description: "Command execution (always included)", locked: true},
+		{name: "path", description: "Path traversal protection (always included)", locked: true},
+		{name: "path/filepath", description: "Filepath traversal protection (always included)", locked: true},
+		{name: "database/sql", description: "SQL databases (always included)", locked: true},
+		{name: "net/http", description: "Outbound HTTP (always included)", locked: true},
 	}
+)
+
+// availableMap returns a name->importPath map for non-locked options
+func availableMap(options []instrumentOption) map[string]string {
+	m := make(map[string]string)
+	for _, opt := range options {
+		if !opt.locked {
+			m[opt.name] = opt.importPath
+		}
+	}
+	return m
+}
+
+var (
+	availableSources = availableMap(sourceOptions)
+	availableSinks   = availableMap(sinkOptions)
 )
 
 type initConfig struct {
@@ -197,85 +226,30 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 	return nil
 }
 
-func getAvailableSources() []string {
-	sources := make([]string, 0, len(availableSources))
-	for source := range availableSources {
-		sources = append(sources, source)
+func toSelectItems(options []instrumentOption) []tui.SelectItem {
+	items := make([]tui.SelectItem, len(options))
+	for i, opt := range options {
+		items[i] = tui.SelectItem{
+			Name:        opt.name,
+			Description: opt.description,
+			Locked:      opt.locked,
+		}
 	}
-	sort.Strings(sources)
-	return sources
-}
-
-func getAvailableSinks() []string {
-	sinks := make([]string, 0, len(availableSinks))
-	for sink := range availableSinks {
-		sinks = append(sinks, sink)
-	}
-	sort.Strings(sinks)
-	return sinks
+	return items
 }
 
 func promptForSources() ([]string, error) {
-	var selectedSources []string
-
-	sourceOptions := make([]huh.Option[string], 0, len(availableSources))
-	for _, source := range getAvailableSources() {
-		sourceOptions = append(sourceOptions, huh.NewOption(source, source))
-	}
-
-	if len(sourceOptions) == 0 {
-		return []string{}, nil
-	}
-
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewNote().
-				Title("Sources").
-				Description("Sources are entry points for requests (web frameworks)"),
-			huh.NewMultiSelect[string]().
-				Title("Select sources to instrument").
-				Description("Standard library (net/http) is always included.").
-				Options(sourceOptions...).
-				Value(&selectedSources),
-		),
+	return tui.RunMultiSelect(
+		"Sources",
+		"Entry points for incoming requests (web frameworks)",
+		toSelectItems(sourceOptions),
 	)
-
-	if err := form.Run(); err != nil {
-		return nil, err
-	}
-
-	return selectedSources, nil
 }
 
 func promptForSinks() ([]string, error) {
-	var selectedSinks []string
-
-	sinkOptions := make([]huh.Option[string], 0, len(availableSinks))
-	for _, sink := range getAvailableSinks() {
-		sinkOptions = append(sinkOptions, huh.NewOption(sink, sink))
-	}
-
-	if len(sinkOptions) == 0 {
-		return []string{}, nil
-	}
-
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewNote().
-				Title("Sinks").
-				Description("Sinks are operations that need protection & monitoring (database, file system, etc.)"),
-
-			huh.NewMultiSelect[string]().
-				Title("Select sinks to instrument").
-				Description("Standard library sinks (os, os/exec, database/sql, net/http) are always included.").
-				Options(sinkOptions...).
-				Value(&selectedSinks),
-		),
+	return tui.RunMultiSelect(
+		"Sinks",
+		"Operations that need protection & monitoring (database, file system, etc.)",
+		toSelectItems(sinkOptions),
 	)
-
-	if err := form.Run(); err != nil {
-		return nil, err
-	}
-
-	return selectedSinks, nil
 }
