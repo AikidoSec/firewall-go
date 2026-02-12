@@ -1,5 +1,7 @@
 # Echo Web Framework
 
+Zen supports both Echo v4 and v5. The middleware API is nearly identical — the key difference is that in v5, `echo.Context` is a concrete `*echo.Context` pointer rather than an interface.
+
 ## Installation
 
 If you haven't already, follow the [installation instructions](../README.md#installation) in the main README.
@@ -16,8 +18,12 @@ zen.SetUser(c.Request().Context(), "1", "Bob")
 It's advised to do this in your authentication middleware, and before you add the Aikido Middleware (used for rate-limiting and user blocking, [See here](#middleware))
 
 ## Middleware
+
 To use rate-limiting or user-blocking we require you to add some middleware yourself.
 Here is an example of how to do that, you can tailor the responses to something that is more appropriate for your app.
+
+### Echo v4
+
 ```go
 // ...
 e.Use(AikidoMiddleware())
@@ -25,6 +31,37 @@ e.Use(AikidoMiddleware())
 func AikidoMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			blockResult := zen.ShouldBlockRequest(c.Request().Context())
+
+			if blockResult != nil {
+				if blockResult.Type == "rate-limited" {
+					message := "You are rate limited by Zen."
+					if blockResult.Trigger == "ip" {
+						message += " (Your IP: " + *blockResult.IP + ")"
+					}
+					return c.String(http.StatusTooManyRequests, message)
+				} else if blockResult.Type == "blocked" {
+					return c.String(http.StatusForbidden, "You are blocked by Zen.")
+				}
+			}
+
+			return next(c)
+		}
+	}
+}
+```
+
+### Echo v5
+
+In Echo v5, `echo.Context` changed from an interface to a concrete `*echo.Context` pointer. The middleware is otherwise identical:
+
+```go
+// ...
+e.Use(AikidoMiddleware())
+// ...
+func AikidoMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
 			blockResult := zen.ShouldBlockRequest(c.Request().Context())
 
 			if blockResult != nil {

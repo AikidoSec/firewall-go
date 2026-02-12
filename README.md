@@ -37,7 +37,7 @@ Zen operates autonomously on the same server as your Go app to:
 - ✅ [`net/http`](docs/net-http.md) (standard library)
 - ✅ [`Chi`](docs/net-http.md) v5
 - ✅ [`Gin`](docs/gin.md)
-- ✅ [`Echo`](docs/echo.md) v4
+- ✅ [`Echo`](docs/echo.md) v4 and v5
 
 ### Database drivers
 
