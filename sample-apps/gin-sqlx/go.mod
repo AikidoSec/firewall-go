@@ -3,7 +3,7 @@ module gin-sqlx
 go 1.24.2
 
 require (
-	github.com/AikidoSec/firewall-go v0.1.0
+	github.com/AikidoSec/firewall-go v0.2.0
 	github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.11.0
 	github.com/jmoiron/sqlx v1.4.0
