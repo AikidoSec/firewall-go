@@ -108,6 +108,21 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	handler(w, r)
 }
 
+func TestMiddlewareSetsIPInContext(t *testing.T) {
+	handler := Middleware(func(w http.ResponseWriter, r *http.Request) {
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "192.168.1.1", ctx.GetIP())
+	})
+
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
+	r.RemoteAddr = "192.168.1.1:1234"
+	w := httptest.NewRecorder()
+
+	handler(w, r)
+}
+
 func TestMiddlewareGLSFallback(t *testing.T) {
 	handler := Middleware(func(w http.ResponseWriter, r *http.Request) {
 		// Test that we can get context using context.Background() (should fallback to GLS)

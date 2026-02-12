@@ -59,6 +59,25 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	router.ServeHTTP(w, r)
 }
 
+func TestMiddlewareSetsIPInContext(t *testing.T) {
+	router := gin.New()
+	router.ContextWithFallback = true
+	router.Use(zengin.GetMiddleware())
+
+	router.GET("/route", func(c *gin.Context) {
+		ctx := request.GetContext(c)
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "192.168.1.1", ctx.GetIP())
+	})
+
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
+	r.RemoteAddr = "192.168.1.1:1234"
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+}
+
 func TestMiddlewareGLSFallback(t *testing.T) {
 	router := gin.New()
 	router.ContextWithFallback = true
