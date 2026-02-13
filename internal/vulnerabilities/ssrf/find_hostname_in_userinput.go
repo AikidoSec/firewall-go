@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
@@ -31,6 +33,11 @@ func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 		}
 
 		parsedHostname := strings.ToLower(parsed.Hostname())
+		// NFKC-normalize to handle Unicode confusables (e.g. ⓛ → l).
+		// Go's HTTP transport applies IDNA processing (which includes NFKC)
+		// before dialing, so the hostname we receive at DialContext level is
+		// already normalized. We must normalize the user input side to match.
+		parsedHostname = norm.NFKC.String(parsedHostname)
 		for _, option := range hostnameOptions {
 			if parsedHostname == option {
 				parsedPort := getPortFromURL(parsed)
