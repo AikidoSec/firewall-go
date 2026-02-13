@@ -1,4 +1,4 @@
-package internal
+package transform
 
 import (
 	"errors"
@@ -10,9 +10,9 @@ import (
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 )
 
-// transformDeclsInjectDecl injects declarations (like go:linkname) into a file.
+// TransformDeclsInjectDecl injects declarations (like go:linkname) into a file.
 // The declaration is inserted immediately before the anchor function.
-func transformDeclsInjectDecl(f *ast.File, fset *token.FileSet, rule rules.InjectDeclRule, modified *bool, linksToAdd *[]string) error {
+func TransformDeclsInjectDecl(f *ast.File, fset *token.FileSet, rule rules.InjectDeclRule, modified *bool, linksToAdd *[]string) error {
 	anchorIndex := findAnchorFunction(f, rule.AnchorFunc)
 	if anchorIndex == -1 {
 		return nil // Anchor function not found, skip

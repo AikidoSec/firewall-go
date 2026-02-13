@@ -1,4 +1,4 @@
-package internal
+package transform
 
 import (
 	"go/ast"

@@ -1,4 +1,4 @@
-package internal
+package transform
 
 import (
 	"bytes"
@@ -11,9 +11,9 @@ import (
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 )
 
-// transformDeclsWrap walks through all declarations in a file looking for function
+// TransformDeclsWrap walks through all declarations in a file looking for function
 // declarations, then recursively transforms any matching function calls within them.
-func transformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName string, rule rules.WrapRule, modified *bool, importsToAdd map[string]string) error {
+func TransformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName string, rule rules.WrapRule, modified *bool, importsToAdd map[string]string) error {
 	for _, decl := range decls {
 		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
 			err := transformStmtsWrap(fn.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
