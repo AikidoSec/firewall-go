@@ -6,6 +6,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/ssrf"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -48,6 +49,8 @@ func ssrfDialContext(original func(ctx context.Context, network, addr string) (n
 // scanSSRF runs the SSRF vulnerability scan with the given hostname and resolved IPs.
 // The hostname is used for user-input matching; the resolved IPs are checked for
 // private addresses inside the scan function.
+// If no direct match is found, it checks redirect origins: if this connection is
+// the result of following a redirect, the original hostname may be in user input.
 func scanSSRF(ctx context.Context, hostname string, port uint32, resolvedIPs []string) error {
 	scanErr := vulnerabilities.Scan(ctx, "net/http.Client.Do",
 		ssrf.SSRFVulnerability, &ssrf.ScanArgs{
@@ -56,12 +59,35 @@ func scanSSRF(ctx context.Context, hostname string, port uint32, resolvedIPs []s
 			ResolvedIPs: resolvedIPs,
 		})
 	if scanErr != nil {
-		attackKind := vulnerabilities.KindSSRF
-		var attackErr *vulnerabilities.AttackDetectedError
-		if errors.As(scanErr, &attackErr) {
-			attackKind = attackErr.Kind
-		}
-		return errors.Join(zen.ErrAttackBlocked(attackKind), scanErr)
+		return wrapSSRFError(scanErr)
 	}
+
+	// Check redirect origins: if this hostname was reached via a redirect,
+	// check whether the original (source) hostname was in user input.
+	if reqCtx := request.GetContext(ctx); reqCtx != nil {
+		for _, redirect := range reqCtx.GetOutgoingRedirects() {
+			if redirect.DestHostname == hostname && (redirect.DestPort == port || redirect.DestPort == 0 || port == 0) {
+				scanErr := vulnerabilities.Scan(ctx, "net/http.Client.Do",
+					ssrf.SSRFVulnerability, &ssrf.ScanArgs{
+						Hostname:    redirect.SourceHostname,
+						Port:        redirect.SourcePort,
+						ResolvedIPs: resolvedIPs,
+					})
+				if scanErr != nil {
+					return wrapSSRFError(scanErr)
+				}
+			}
+		}
+	}
+
 	return nil
+}
+
+func wrapSSRFError(scanErr error) error {
+	attackKind := vulnerabilities.KindSSRF
+	var attackErr *vulnerabilities.AttackDetectedError
+	if errors.As(scanErr, &attackErr) {
+		attackKind = attackErr.Kind
+	}
+	return errors.Join(zen.ErrAttackBlocked(attackKind), scanErr)
 }
