@@ -3,10 +3,14 @@
 package http
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
@@ -59,4 +63,105 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	stats := agent.Stats().GetAndClear()
 	require.Contains(t, stats.Operations, "net/http.Client.Do")
 	require.Equal(t, 3, stats.Operations["net/http.Client.Do"].Total, "should track 3 HTTP calls")
+}
+
+func TestExamine_SSRF_BlocksPrivateIPFromUserInput(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	originalBlocking := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer func() {
+		config.SetBlocking(originalBlocking)
+		agent.SetCloudClient(originalClient)
+	}()
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	// Set up a request context where query contains the private IP
+	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2F10.0.0.1%2Finternal", nil)
+	ip := "1.2.3.4"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
+	// Create outgoing request to private IP with the request context
+	outgoingReq, _ := http.NewRequest("GET", "http://10.0.0.1/internal", http.NoBody)
+	outgoingReq = outgoingReq.WithContext(ctx)
+
+	err := Examine(outgoingReq)
+	require.Error(t, err, "should block request to private IP found in user input")
+}
+
+func TestExamine_SSRF_AllowsPublicIP(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	originalBlocking := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer func() {
+		config.SetBlocking(originalBlocking)
+		agent.SetCloudClient(originalClient)
+	}()
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2F8.8.8.8%2Fdns", nil)
+	ip := "1.2.3.4"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
+	// Outgoing request to public IP should not be blocked
+	outgoingReq, _ := http.NewRequest("GET", "http://8.8.8.8/dns", http.NoBody)
+	outgoingReq = outgoingReq.WithContext(ctx)
+
+	err := Examine(outgoingReq)
+	require.NoError(t, err, "should not block request to public IP")
+}
+
+func TestExamine_SSRF_AllowsPrivateIPNotInUserInput(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	originalBlocking := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer func() {
+		config.SetBlocking(originalBlocking)
+		agent.SetCloudClient(originalClient)
+	}()
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	// User input contains a different hostname, not the private IP
+	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2Fexample.com", nil)
+	ip := "1.2.3.4"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
+	// Outgoing request to private IP that is NOT in user input should pass
+	outgoingReq, _ := http.NewRequest("GET", "http://10.0.0.1/internal", http.NoBody)
+	outgoingReq = outgoingReq.WithContext(ctx)
+
+	err := Examine(outgoingReq)
+	require.NoError(t, err, "should not block private IP not originating from user input")
 }

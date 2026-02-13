@@ -1,12 +1,15 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/ssrf"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
@@ -29,6 +32,17 @@ func Examine(r *http.Request) error {
 
 	if config.ShouldBlockHostname(hostname) {
 		return zen.ErrOutboundBlocked(hostname)
+	}
+
+	err := vulnerabilities.Scan(r.Context(), "net/http.Client.Do",
+		ssrf.SSRFVulnerability, &ssrf.ScanArgs{Hostname: hostname, Port: port})
+	if err != nil {
+		attackKind := vulnerabilities.KindSSRF
+		var attackErr *vulnerabilities.AttackDetectedError
+		if errors.As(err, &attackErr) {
+			attackKind = attackErr.Kind
+		}
+		return errors.Join(zen.ErrAttackBlocked(attackKind), err)
 	}
 
 	return nil
