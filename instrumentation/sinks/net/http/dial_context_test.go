@@ -190,6 +190,41 @@ func TestSsrfDialContext_AllowsDifferentPortThanUserInput(t *testing.T) {
 	assert.NotNil(t, conn, "should return the connection")
 }
 
+// Reproduces QA test_ssrf: http://ssrf-redirects.testssandbox.com/ssrf-test-4
+// redirects to a private IP. The redirect origin hostname IS in user input,
+// so the request to the private IP should be blocked.
+func TestSsrfDialContext_BlocksRedirectToPrivateIP(t *testing.T) {
+	setupProtection(t)
+
+	// User sends the redirect hostname in query params
+	incomingReq := httptest.NewRequest("GET",
+		"/api/request?url=http%3A%2F%2Fssrf-redirects.testssandbox.com%2Fssrf-test-4", nil)
+	ip := "1.2.3.4"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source:        "test",
+		Route:         "/api/request",
+		RemoteAddress: &ip,
+	})
+
+	// Simulate the redirect chain: RoundTrip recorded that
+	// ssrf-redirects.testssandbox.com:80 redirected to 127.0.0.1:4000
+	reqCtx := request.GetContext(ctx)
+	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
+		SourceHostname: "ssrf-redirects.testssandbox.com",
+		SourcePort:     80,
+		DestHostname:   "127.0.0.1",
+		DestPort:       4000,
+	})
+
+	// DialContext is called for the redirect target
+	original := dialerReturning("127.0.0.1:4000")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "127.0.0.1:4000")
+
+	assert.Error(t, err, "should block redirect to private IP when origin hostname is in user input")
+	assert.Nil(t, conn, "should not return a connection when blocked")
+}
+
 func TestSsrfDialContext_AllowsPrivateIPNotInUserInput(t *testing.T) {
 	setupProtection(t)
 
