@@ -1,4 +1,4 @@
-package internal
+package transform
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ func (e *DuplicateImportAliasError) Error() string {
 	return fmt.Sprintf("duplicate import alias: %s", e.alias)
 }
 
-func addImports(f *ast.File, imports map[string]string) error {
+func AddImports(f *ast.File, imports map[string]string) error {
 	if len(imports) == 0 {
 		return nil
 	}

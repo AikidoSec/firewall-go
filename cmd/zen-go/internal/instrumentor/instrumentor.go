@@ -1,4 +1,4 @@
-package internal
+package instrumentor
 
 import (
 	"bytes"
@@ -149,7 +149,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 	}
 
 	// Add new imports
-	err = addImports(file, importsToAdd)
+	err = transform.AddImports(file, importsToAdd)
 	if err != nil {
 		return InstrumentFileResult{}, err
 	}
