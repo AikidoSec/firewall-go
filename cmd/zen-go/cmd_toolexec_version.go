@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/buildid"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
 )
 
@@ -32,7 +32,7 @@ func toolexecVersionQueryCommand(stdout io.Writer, stderr io.Writer, tool string
 		return err
 	}
 
-	rulesHash := internal.ComputeInstrumentationHash(inst, version)
+	rulesHash := buildid.ComputeInstrumentationHash(inst, version)
 
 	// Append our hash to the version string
 	versionStr := strings.TrimSpace(versionOutput.String())

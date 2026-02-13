@@ -1,4 +1,4 @@
-package internal
+package buildid
 
 import (
 	"crypto/sha256"
