@@ -1,4 +1,4 @@
-package internal
+package instrumentor
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/paths"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/transform"
 )
 
 type Instrumentor struct {
@@ -113,7 +114,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 			continue
 		}
 
-		err = transformDeclsWrap(file.Decls, fset, localPkgName, funcName, rule, &modified, importsToAdd)
+		err = transform.TransformDeclsWrap(file.Decls, fset, localPkgName, funcName, rule, &modified, importsToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}
@@ -121,7 +122,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 
 	// Apply prepend rules (for methods and standalone functions)
 	for _, rule := range i.PrependRules {
-		err = transformDeclsPrepend(file.Decls, compilingPkg, rule, &modified, importsToAdd)
+		err = transform.TransformDeclsPrepend(file.Decls, compilingPkg, rule, &modified, importsToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}
@@ -137,7 +138,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 			continue
 		}
 
-		err = transformDeclsInjectDecl(file, fset, rule, &modified, &linksToAdd)
+		err = transform.TransformDeclsInjectDecl(file, fset, rule, &modified, &linksToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}
@@ -148,7 +149,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 	}
 
 	// Add new imports
-	err = addImports(file, importsToAdd)
+	err = transform.AddImports(file, importsToAdd)
 	if err != nil {
 		return InstrumentFileResult{}, err
 	}
