@@ -139,4 +139,10 @@ func TestFindHostnameInUserInput(t *testing.T) {
 	t.Run("::ffff:127.0.0.1 not found for different hostname", func(t *testing.T) {
 		assert.False(t, findHostnameInUserInput("http://[::ffff:127.0.0.1]:8081", "example.com", 0))
 	})
+
+	t.Run("unicode confusable ⓛocalhost matches normalized localhost", func(t *testing.T) {
+		// Go's HTTP transport NFKC-normalizes ⓛocalhost → localhost before dialing,
+		// so the hostname argument here is "localhost" (what DialContext receives).
+		assert.True(t, findHostnameInUserInput("http://ⓛocalhost:4000/", "localhost", 4000))
+	})
 }
