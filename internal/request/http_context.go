@@ -72,6 +72,21 @@ func GetContext(ctx context.Context) *Context {
 	return getLocalContext()
 }
 
+// EnsureContextPropagated ensures the request context is stored in the Go context.
+// If the context already has request data, it returns ctx unchanged.
+// Otherwise it checks the GLS fallback and, if found, stores it in the context.
+// This is needed to pass request data across goroutine boundaries (e.g. from
+// http.RoundTrip to the transport's DialContext which runs in a different goroutine).
+func EnsureContextPropagated(ctx context.Context) context.Context {
+	if ctx.Value(reqCtxKey) != nil {
+		return ctx
+	}
+	if c := getLocalContext(); c != nil {
+		return context.WithValue(ctx, reqCtxKey, c)
+	}
+	return ctx
+}
+
 func headersToMap(headers http.Header) map[string][]string {
 	headerInfo := make(map[string][]string)
 	for key, values := range headers {
