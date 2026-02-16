@@ -10,6 +10,61 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestOutboundConnectionBlocked_Error(t *testing.T) {
+	tests := []struct {
+		name     string
+		hostname string
+		expected string
+	}{
+		{
+			name:     "regular hostname",
+			hostname: "evil.example.com",
+			expected: "zen has blocked an outbound connection to evil.example.com",
+		},
+		{
+			name:     "IP address",
+			hostname: "10.0.0.1",
+			expected: "zen has blocked an outbound connection to 10.0.0.1",
+		},
+		{
+			name:     "empty hostname",
+			hostname: "",
+			expected: "zen has blocked an outbound connection to ",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := &zen.OutboundConnectionBlocked{Hostname: tt.hostname}
+			assert.Equal(t, tt.expected, err.Error())
+		})
+	}
+}
+
+func TestErrOutboundBlocked(t *testing.T) {
+	err := zen.ErrOutboundBlocked("evil.example.com")
+
+	require.Error(t, err)
+	assert.Equal(t, "zen has blocked an outbound connection to evil.example.com", err.Error())
+
+	var outboundErr *zen.OutboundConnectionBlocked
+	require.True(t, errors.As(err, &outboundErr), "errors.As should extract *OutboundConnectionBlocked")
+	assert.Equal(t, "evil.example.com", outboundErr.Hostname)
+}
+
+func TestErrOutboundBlocked_ErrorsAs(t *testing.T) {
+	err := zen.ErrOutboundBlocked("internal-host")
+
+	var outboundErr *zen.OutboundConnectionBlocked
+	require.True(t, errors.As(err, &outboundErr))
+	assert.Equal(t, "internal-host", outboundErr.Hostname)
+}
+
+func TestWarnIfNotProtected(t *testing.T) {
+	// smoke test: must not panic
+	zen.WarnIfNotProtected()
+}
+
 func TestAttackKind_Constants(t *testing.T) {
 	tests := []struct {
 		name     string
