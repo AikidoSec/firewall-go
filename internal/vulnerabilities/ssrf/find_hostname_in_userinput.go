@@ -32,6 +32,10 @@ func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 			continue
 		}
 
+		// Strip trailing colons from the host to handle URLs like
+		// http://127.0.0.1:4000:/ where a trailing colon causes
+		// Hostname() to misparse (it splits on the last colon).
+		parsed.Host = strings.TrimRight(parsed.Host, ":")
 		parsedHostname := strings.ToLower(parsed.Hostname())
 		// NFKC-normalize to handle Unicode confusables (e.g. ⓛ → l).
 		// Go's HTTP transport applies IDNA processing (which includes NFKC)
