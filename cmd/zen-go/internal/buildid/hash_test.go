@@ -134,6 +134,48 @@ func TestComputeInstrumentationHash_AllRuleTypes(t *testing.T) {
 	assert.NotEqual(t, hash2, hash3, "hash should change when inject-decl rule changes")
 }
 
+func TestComputeInstrumentationHash_WrapRuleImports(t *testing.T) {
+	inst1 := &instrumentor.Instrumentor{
+		WrapRules: []rules.WrapRule{
+			{ID: "test1", MatchCall: "pkg.Func", Imports: map[string]string{"a": "1"}},
+		},
+	}
+	inst2 := &instrumentor.Instrumentor{
+		WrapRules: []rules.WrapRule{
+			{ID: "test1", MatchCall: "pkg.Func", Imports: map[string]string{"a": "2"}},
+		},
+	}
+	assert.NotEqual(t, ComputeInstrumentationHash(inst1, "v"), ComputeInstrumentationHash(inst2, "v"))
+}
+
+func TestComputeInstrumentationHash_PrependRuleImports(t *testing.T) {
+	inst1 := &instrumentor.Instrumentor{
+		PrependRules: []rules.PrependRule{
+			{ID: "test1", Package: "os", Imports: map[string]string{"a": "1"}},
+		},
+	}
+	inst2 := &instrumentor.Instrumentor{
+		PrependRules: []rules.PrependRule{
+			{ID: "test1", Package: "os", Imports: map[string]string{"a": "2"}},
+		},
+	}
+	assert.NotEqual(t, ComputeInstrumentationHash(inst1, "v"), ComputeInstrumentationHash(inst2, "v"))
+}
+
+func TestComputeInstrumentationHash_InjectDeclRuleLinks(t *testing.T) {
+	inst1 := &instrumentor.Instrumentor{
+		InjectDeclRules: []rules.InjectDeclRule{
+			{ID: "test1", Package: "os", Links: []string{"linkA"}},
+		},
+	}
+	inst2 := &instrumentor.Instrumentor{
+		InjectDeclRules: []rules.InjectDeclRule{
+			{ID: "test1", Package: "os", Links: []string{"linkB"}},
+		},
+	}
+	assert.NotEqual(t, ComputeInstrumentationHash(inst1, "v"), ComputeInstrumentationHash(inst2, "v"))
+}
+
 func TestComputeInstrumentationHash_DifferentVersions(t *testing.T) {
 	inst := &instrumentor.Instrumentor{
 		WrapRules: []rules.WrapRule{
