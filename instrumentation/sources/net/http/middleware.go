@@ -1,8 +1,10 @@
 package http
 
 import (
+	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync/atomic"
 
@@ -22,7 +24,13 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 			return
 		}
 
-		ip := r.RemoteAddr
+		var ip string
+		addrPort, err := netip.ParseAddrPort(r.RemoteAddr)
+		if err != nil {
+			log.Debug("could not parse ip", slog.Any("error", err))
+		} else {
+			ip = addrPort.Addr().String()
+		}
 
 		pattern := r.Pattern
 		// ServeMux patterns can start with the method and/or host
