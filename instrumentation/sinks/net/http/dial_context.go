@@ -62,20 +62,23 @@ func scanSSRF(ctx context.Context, hostname string, port uint32, resolvedIPs []s
 		return wrapSSRFError(scanErr)
 	}
 
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil {
+		return nil
+	}
+
 	// Check redirect origins: if this hostname was reached via a redirect,
 	// check whether the original (source) hostname was in user input.
-	if reqCtx := request.GetContext(ctx); reqCtx != nil {
-		for _, redirect := range reqCtx.GetOutgoingRedirects() {
-			if redirect.DestHostname == hostname && (redirect.DestPort == port || redirect.DestPort == 0 || port == 0) {
-				scanErr := vulnerabilities.Scan(ctx, "net/http.Client.Do",
-					ssrf.SSRFVulnerability, &ssrf.ScanArgs{
-						Hostname:    redirect.SourceHostname,
-						Port:        redirect.SourcePort,
-						ResolvedIPs: resolvedIPs,
-					})
-				if scanErr != nil {
-					return wrapSSRFError(scanErr)
-				}
+	for _, redirect := range reqCtx.GetOutgoingRedirects() {
+		if redirect.DestHostname == hostname && (redirect.DestPort == port || redirect.DestPort == 0 || port == 0) {
+			scanErr := vulnerabilities.Scan(ctx, "net/http.Client.Do",
+				ssrf.SSRFVulnerability, &ssrf.ScanArgs{
+					Hostname:    redirect.SourceHostname,
+					Port:        redirect.SourcePort,
+					ResolvedIPs: resolvedIPs,
+				})
+			if scanErr != nil {
+				return wrapSSRFError(scanErr)
 			}
 		}
 	}
