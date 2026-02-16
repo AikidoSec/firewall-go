@@ -6,7 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/importcfg"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/linkdeps"
 )
 
 // toolexecLinkCommand is invoked by Go's -toolexec flag when linking.
@@ -88,7 +89,7 @@ func collectLinkDeps(importcfgContent []byte, stderr io.Writer) map[string]bool 
 		}
 
 		archivePath := parts[1]
-		deps, err := internal.ReadLinkDeps(archivePath)
+		deps, err := linkdeps.ReadLinkDeps(archivePath)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: could not read linkdeps: %v\n", err)
 			continue
@@ -130,7 +131,7 @@ func resolveMissingDeps(importcfgContent []byte, allLinkDeps map[string]bool, st
 			continue
 		}
 
-		exportPath, err := internal.GetPackageExport(dep)
+		exportPath, err := importcfg.GetPackageExport(dep)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: could not find export for link dep %s: %v\n", dep, err)
 			continue
@@ -216,7 +217,7 @@ func writeLinkDepsForArchive(stderr io.Writer, outputPath string, linkDeps []str
 		return
 	}
 
-	if err := internal.WriteLinkDeps(outputPath, linkDeps, stderr, isDebug()); err != nil {
+	if err := linkdeps.WriteLinkDeps(outputPath, linkDeps, stderr, isDebug()); err != nil {
 		fmt.Fprintf(stderr, "zen-go: warning: failed to write link deps: %v\n", err)
 	}
 }

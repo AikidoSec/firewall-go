@@ -1,4 +1,4 @@
-package internal
+package transform
 
 import (
 	"bytes"
@@ -12,10 +12,10 @@ import (
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 )
 
-// transformDeclsPrepend finds function declarations matching the prepend rule
+// TransformDeclsPrepend finds function declarations matching the prepend rule
 // and prepends statements to the function body.
 // Supports both methods (with receiver) and standalone functions (without receiver).
-func transformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule rules.PrependRule, modified *bool, importsToAdd map[string]string) error {
+func TransformDeclsPrepend(decls []ast.Decl, compilingPkg string, rule rules.PrependRule, modified *bool, importsToAdd map[string]string) error {
 	for _, decl := range decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {

@@ -1,4 +1,4 @@
-package internal
+package transform
 
 import (
 	"go/ast"
@@ -23,7 +23,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.NoError(t, err)
@@ -50,7 +50,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.NoError(t, err)
@@ -74,7 +74,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.NoError(t, err)
@@ -98,7 +98,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 		"zensql": "github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql",
 	})
@@ -125,7 +125,7 @@ func main() {}
 	require.NoError(t, err)
 
 	originalDecls := len(f.Decls)
-	err = addImports(f, map[string]string{})
+	err = AddImports(f, map[string]string{})
 	require.NoError(t, err)
 
 	// Should not modify the file
@@ -146,7 +146,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.NoError(t, err)
@@ -172,7 +172,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.NoError(t, err)
@@ -204,7 +204,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.NoError(t, err)
@@ -235,7 +235,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.NoError(t, err)
@@ -263,7 +263,7 @@ func main() {}
 	f, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
 	require.NoError(t, err)
 
-	err = addImports(f, map[string]string{
+	err = AddImports(f, map[string]string{
 		"zengin": "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin",
 	})
 	require.Error(t, err)
