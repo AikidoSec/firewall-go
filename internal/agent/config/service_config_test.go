@@ -76,6 +76,7 @@ func TestUpdateServiceConfig(t *testing.T) {
 			ServiceID: 123,
 			BlockedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "threat-intel",
 					Source:      "threat-intel",
 					Description: "Known malicious IPs",
 					IPs:         []string{"203.0.113.0", "203.0.113.1"},
@@ -191,6 +192,7 @@ func TestIsIPBlocked(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			BlockedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "manual",
 					Source:      "manual",
 					Description: "Manually blocked",
 					IPs:         []string{"192.168.1.100", "10.0.0.0/24"},
@@ -218,6 +220,7 @@ func TestIsIPBlocked(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			BlockedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "ipv6-test",
 					Source:      "ipv6-test",
 					Description: "IPv6 blocklist",
 					IPs:         []string{"2001:db8::1", "2001:db8::/32"},
@@ -245,6 +248,7 @@ func TestIsIPBlocked(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			BlockedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "test",
 					Source:      "test",
 					Description: "Test blocklist",
 					IPs:         []string{"192.168.1.100"},
@@ -287,11 +291,13 @@ func TestIsIPBlocked(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			BlockedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "list1",
 					Source:      "list1",
 					Description: "First list",
 					IPs:         []string{"10.0.0.1"},
 				},
 				{
+					Key:         "list2",
 					Source:      "list2",
 					Description: "Second list",
 					IPs:         []string{"10.0.0.2"},
@@ -968,6 +974,214 @@ func TestShouldBlockHostname(t *testing.T) {
 		assert.True(t, ShouldBlockHostname("blocked2.com"))
 		assert.False(t, ShouldBlockHostname("allowed1.com"))
 		assert.False(t, ShouldBlockHostname("allowed2.com"))
+	})
+}
+
+func TestGetMatchingMonitoredIPKeys(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+
+	t.Run("returns matching monitored IP list keys", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			MonitoredIPAddresses: []aikido_types.IPList{
+				{
+					Key:         "tor/exit_nodes",
+					Source:      "tor",
+					Description: "Tor exit nodes",
+					IPs:         []string{"9.9.9.9", "1.2.3.4"},
+				},
+				{
+					Key:         "known_threat_actors/public_scanners",
+					Source:      "scanners",
+					Description: "Public scanners",
+					IPs:         []string{"9.9.9.9"},
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		keys := GetMatchingMonitoredIPKeys("9.9.9.9")
+		assert.Len(t, keys, 2)
+		assert.Contains(t, keys, "tor/exit_nodes")
+		assert.Contains(t, keys, "known_threat_actors/public_scanners")
+
+		keys = GetMatchingMonitoredIPKeys("1.2.3.4")
+		assert.Equal(t, []string{"tor/exit_nodes"}, keys)
+
+		keys = GetMatchingMonitoredIPKeys("7.7.7.7")
+		assert.Empty(t, keys)
+	})
+
+	t.Run("returns nil for invalid IP", func(t *testing.T) {
+		resetServiceConfig()
+
+		keys := GetMatchingMonitoredIPKeys("not-an-ip")
+		assert.Nil(t, keys)
+	})
+}
+
+func TestGetMatchingBlockedIPKeys(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+
+	t.Run("returns matching blocked IP list keys", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			BlockedIPAddresses: []aikido_types.IPList{
+				{
+					Key:         "geoip/Belgium;BE",
+					Source:      "geo-be",
+					Description: "Belgium IPs",
+					IPs:         []string{"8.8.8.8"},
+				},
+				{
+					Key:         "geoip/Germany;DE",
+					Source:      "geo-de",
+					Description: "Germany IPs",
+					IPs:         []string{"8.8.8.8"},
+				},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		keys := GetMatchingBlockedIPKeys("8.8.8.8")
+		assert.Len(t, keys, 2)
+		assert.Contains(t, keys, "geoip/Belgium;BE")
+		assert.Contains(t, keys, "geoip/Germany;DE")
+
+		keys = GetMatchingBlockedIPKeys("7.7.7.7")
+		assert.Empty(t, keys)
+	})
+}
+
+func TestGetMatchingUserAgentKeys(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+
+	t.Run("returns matching user agent keys", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			UserAgentDetails: []aikido_types.UserAgentDetail{
+				{Key: "list1", Pattern: "[abc]"},
+				{Key: "list2", Pattern: "b"},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		keys := GetMatchingUserAgentKeys("a")
+		assert.Equal(t, []string{"list1"}, keys)
+
+		keys = GetMatchingUserAgentKeys("b")
+		assert.Len(t, keys, 2)
+		assert.Contains(t, keys, "list1")
+		assert.Contains(t, keys, "list2")
+
+		keys = GetMatchingUserAgentKeys("d")
+		assert.Empty(t, keys)
+	})
+
+	t.Run("case insensitive matching", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			UserAgentDetails: []aikido_types.UserAgentDetail{
+				{Key: "googlebot", Pattern: "Googlebot"},
+			},
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		keys := GetMatchingUserAgentKeys("googlebot/2.1")
+		assert.Equal(t, []string{"googlebot"}, keys)
+
+		keys = GetMatchingUserAgentKeys("GOOGLEBOT/2.1")
+		assert.Equal(t, []string{"googlebot"}, keys)
+	})
+
+	t.Run("returns empty when no details configured", func(t *testing.T) {
+		resetServiceConfig()
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, nil)
+
+		keys := GetMatchingUserAgentKeys("googlebot")
+		assert.Empty(t, keys)
+	})
+}
+
+func TestIsMonitoredUserAgent(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+
+	t.Run("returns true for monitored user agent", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			MonitoredUserAgents: "Googlebot|Bingbot",
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		assert.True(t, IsMonitoredUserAgent("Googlebot/2.1"))
+		assert.True(t, IsMonitoredUserAgent("Bingbot/1.0"))
+		assert.False(t, IsMonitoredUserAgent("Mozilla/5.0 Chrome/91.0"))
+	})
+
+	t.Run("case insensitive", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			MonitoredUserAgents: "googlebot",
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		assert.True(t, IsMonitoredUserAgent("GOOGLEBOT"))
+		assert.True(t, IsMonitoredUserAgent("googlebot"))
+	})
+
+	t.Run("returns false when not configured", func(t *testing.T) {
+		resetServiceConfig()
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, nil)
+
+		assert.False(t, IsMonitoredUserAgent("googlebot"))
+	})
+
+	t.Run("returns false with empty pattern", func(t *testing.T) {
+		resetServiceConfig()
+
+		listsConfig := &aikido_types.ListsConfigData{
+			MonitoredUserAgents: "",
+		}
+
+		UpdateServiceConfig(&aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+		}, listsConfig)
+
+		assert.False(t, IsMonitoredUserAgent("googlebot"))
 	})
 }
 

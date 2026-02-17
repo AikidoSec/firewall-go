@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -32,6 +33,7 @@ func TestOnInitRequest(t *testing.T) {
 		},
 		BlockedIPAddresses: []aikido_types.IPList{
 			{
+				Key:         "test",
 				Source:      "test",
 				Description: "geo-ip",
 				IPs:         []string{"10.0.0.1"},
@@ -254,5 +256,169 @@ func TestOnInitRequest(t *testing.T) {
 		assert.NotNil(t, resp)
 		assert.Equal(t, 403, resp.StatusCode)
 		assert.Contains(t, resp.Message, "Your IP address is not allowed")
+	})
+}
+
+func TestOnInitRequestStats(t *testing.T) {
+	block := true
+
+	t.Run("records monitored IP stats", func(t *testing.T) {
+		// Clear any previous stats
+		agent.Stats().GetAndClear()
+
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			Block:           &block,
+			ConfigUpdatedAt: 1,
+		}, &aikido_types.ListsConfigData{
+			MonitoredIPAddresses: []aikido_types.IPList{
+				{
+					Key:         "tor/exit_nodes",
+					Source:      "tor",
+					Description: "Tor exit nodes",
+					IPs:         []string{"192.168.1.1"},
+				},
+			},
+		})
+
+		req, _ := http.NewRequest("GET", "/route", http.NoBody)
+		req.RemoteAddr = "192.168.1.1:1234"
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		resp := OnInitRequest(ctx)
+		assert.Nil(t, resp)
+
+		snapshot := agent.Stats().GetAndClear()
+		assert.Equal(t, 1, snapshot.IPAddresses.Breakdown["tor/exit_nodes"])
+	})
+
+	t.Run("records blocked IP stats", func(t *testing.T) {
+		agent.Stats().GetAndClear()
+
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			Block:           &block,
+			ConfigUpdatedAt: 2,
+		}, &aikido_types.ListsConfigData{
+			BlockedIPAddresses: []aikido_types.IPList{
+				{
+					Key:         "geoip/Belgium;BE",
+					Source:      "geo-be",
+					Description: "Belgium",
+					IPs:         []string{"10.0.0.1"},
+				},
+			},
+		})
+
+		req, _ := http.NewRequest("GET", "/route", http.NoBody)
+		req.RemoteAddr = "10.0.0.1:1234"
+		ip := "10.0.0.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		resp := OnInitRequest(ctx)
+		assert.NotNil(t, resp)
+		assert.Equal(t, 403, resp.StatusCode)
+
+		snapshot := agent.Stats().GetAndClear()
+		assert.Equal(t, 1, snapshot.IPAddresses.Breakdown["geoip/Belgium;BE"])
+	})
+
+	t.Run("records user agent stats for blocked bot", func(t *testing.T) {
+		agent.Stats().GetAndClear()
+
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			Block:           &block,
+			ConfigUpdatedAt: 3,
+		}, &aikido_types.ListsConfigData{
+			BlockedUserAgents: "Googlebot",
+			UserAgentDetails: []aikido_types.UserAgentDetail{
+				{Key: "googlebot", Pattern: "Googlebot"},
+			},
+		})
+
+		req, _ := http.NewRequest("GET", "/route", http.NoBody)
+		req.Header.Set("User-Agent", "Googlebot/2.1")
+		req.RemoteAddr = "192.168.1.1:1234"
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		resp := OnInitRequest(ctx)
+		assert.NotNil(t, resp)
+		assert.Equal(t, 403, resp.StatusCode)
+
+		snapshot := agent.Stats().GetAndClear()
+		assert.Equal(t, 1, snapshot.UserAgents.Breakdown["googlebot"])
+	})
+
+	t.Run("records user agent stats for monitored bot", func(t *testing.T) {
+		agent.Stats().GetAndClear()
+
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			Block:           &block,
+			ConfigUpdatedAt: 4,
+		}, &aikido_types.ListsConfigData{
+			MonitoredUserAgents: "Googlebot",
+			UserAgentDetails: []aikido_types.UserAgentDetail{
+				{Key: "googlebot", Pattern: "Googlebot"},
+			},
+		})
+
+		req, _ := http.NewRequest("GET", "/route", http.NoBody)
+		req.Header.Set("User-Agent", "Googlebot/2.1")
+		req.RemoteAddr = "192.168.1.1:1234"
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		resp := OnInitRequest(ctx)
+		// Not blocked (only monitored, not blocked)
+		assert.Nil(t, resp)
+
+		snapshot := agent.Stats().GetAndClear()
+		assert.Equal(t, 1, snapshot.UserAgents.Breakdown["googlebot"])
+	})
+
+	t.Run("does not record stats for non-matching user agent", func(t *testing.T) {
+		agent.Stats().GetAndClear()
+
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			Block:           &block,
+			ConfigUpdatedAt: 5,
+		}, &aikido_types.ListsConfigData{
+			BlockedUserAgents: "BadBot",
+			UserAgentDetails: []aikido_types.UserAgentDetail{
+				{Key: "badbot", Pattern: "BadBot"},
+			},
+		})
+
+		req, _ := http.NewRequest("GET", "/route", http.NoBody)
+		req.Header.Set("User-Agent", "Mozilla/5.0 Chrome/91.0")
+		req.RemoteAddr = "192.168.1.1:1234"
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		resp := OnInitRequest(ctx)
+		assert.Nil(t, resp)
+
+		snapshot := agent.Stats().GetAndClear()
+		assert.Empty(t, snapshot.UserAgents.Breakdown)
 	})
 }

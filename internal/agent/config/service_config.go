@@ -37,6 +37,11 @@ type Endpoint struct {
 	RateLimiting       aikido_types.RateLimiting `json:"rateLimiting"`
 }
 
+type UserAgentDetail struct {
+	Key     string
+	Pattern *regexp.Regexp
+}
+
 type ServiceConfigData struct {
 	ConfigUpdatedAt          time.Time
 	Endpoints                []Endpoint
@@ -44,7 +49,10 @@ type ServiceConfigData struct {
 	BypassedIPs              ipaddr.MatchList
 	AllowedIPs               map[string]ipaddr.MatchList
 	BlockedIPs               map[string]ipaddr.MatchList
+	MonitoredIPs             map[string]ipaddr.MatchList
 	BlockedUserAgents        *regexp.Regexp
+	MonitoredUserAgents      *regexp.Regexp
+	UserAgentDetails         []UserAgentDetail
 	Block                    bool
 	BlockNewOutgoingRequests bool
 	Domains                  []aikido_types.OutboundDomain
@@ -110,10 +118,19 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsC
 
 		serviceConfig.BlockedIPs = map[string]ipaddr.MatchList{}
 		for _, ipBlocklist := range listsConfig.BlockedIPAddresses {
-			serviceConfig.BlockedIPs[ipBlocklist.Source] = ipaddr.BuildMatchList(
+			serviceConfig.BlockedIPs[ipBlocklist.Key] = ipaddr.BuildMatchList(
 				ipBlocklist.Source,
 				ipBlocklist.Description,
 				ipBlocklist.IPs,
+			)
+		}
+
+		serviceConfig.MonitoredIPs = map[string]ipaddr.MatchList{}
+		for _, ipMonitorlist := range listsConfig.MonitoredIPAddresses {
+			serviceConfig.MonitoredIPs[ipMonitorlist.Key] = ipaddr.BuildMatchList(
+				ipMonitorlist.Source,
+				ipMonitorlist.Description,
+				ipMonitorlist.IPs,
 			)
 		}
 
@@ -121,6 +138,24 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsC
 			serviceConfig.BlockedUserAgents, _ = regexp.Compile("(?i)" + listsConfig.BlockedUserAgents)
 		} else {
 			serviceConfig.BlockedUserAgents = nil
+		}
+
+		if listsConfig.MonitoredUserAgents != "" {
+			serviceConfig.MonitoredUserAgents, _ = regexp.Compile("(?i)" + listsConfig.MonitoredUserAgents)
+		} else {
+			serviceConfig.MonitoredUserAgents = nil
+		}
+
+		serviceConfig.UserAgentDetails = nil
+		for _, detail := range listsConfig.UserAgentDetails {
+			pattern, err := regexp.Compile("(?i)" + detail.Pattern)
+			if err != nil {
+				continue
+			}
+			serviceConfig.UserAgentDetails = append(serviceConfig.UserAgentDetails, UserAgentDetail{
+				Key:     detail.Key,
+				Pattern: pattern,
+			})
 		}
 	}
 }
@@ -203,6 +238,70 @@ func IsUserAgentBlocked(userAgent string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+// IsMonitoredUserAgent returns true if the user agent matches the monitored regex.
+func IsMonitoredUserAgent(userAgent string) bool {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	if serviceConfig.MonitoredUserAgents == nil {
+		return false
+	}
+
+	return serviceConfig.MonitoredUserAgents.MatchString(userAgent)
+}
+
+// GetMatchingMonitoredIPKeys returns the keys of all monitored IP lists that match the given IP.
+func GetMatchingMonitoredIPKeys(ip string) []string {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	ipAddress, err := ipaddr.Parse(ip)
+	if err != nil {
+		return nil
+	}
+
+	var keys []string
+	for key, ipList := range serviceConfig.MonitoredIPs {
+		if ipList.Matches(ipAddress) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+// GetMatchingBlockedIPKeys returns the keys of all blocked IP lists that match the given IP.
+func GetMatchingBlockedIPKeys(ip string) []string {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	ipAddress, err := ipaddr.Parse(ip)
+	if err != nil {
+		return nil
+	}
+
+	var keys []string
+	for key, ipList := range serviceConfig.BlockedIPs {
+		if ipList.Matches(ipAddress) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
+// GetMatchingUserAgentKeys returns the keys of all user agent detail patterns that match the given user agent.
+func GetMatchingUserAgentKeys(userAgent string) []string {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	var keys []string
+	for _, detail := range serviceConfig.UserAgentDetails {
+		if detail.Pattern.MatchString(userAgent) {
+			keys = append(keys, detail.Key)
+		}
+	}
+	return keys
 }
 
 func IsUserBlocked(userID string) bool {
