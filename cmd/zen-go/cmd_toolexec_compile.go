@@ -183,7 +183,7 @@ func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string
 		return args, nil
 	}
 
-	updatedArgs := replaceImportcfgArg(args, newImportcfg)
+	updatedArgs := importcfg.ReplaceImportcfgArg(args, newImportcfg)
 	if isDebug() {
 		fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
 	}
@@ -191,22 +191,6 @@ func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string
 	return updatedArgs, nil
 }
 
-func replaceImportcfgArg(args []string, newPath string) []string {
-	result := make([]string, len(args))
-	copy(result, args)
-
-	for i := range len(result) {
-		if result[i] == "-importcfg" && i+1 < len(result) {
-			result[i+1] = newPath
-			return result
-		}
-		if strings.HasPrefix(result[i], "-importcfg=") {
-			result[i] = "-importcfg=" + newPath
-			return result
-		}
-	}
-	return result
-}
 
 // checkZenToolFileIncluded checks if the main package is being compiled
 // without zen.tool.go. This happens when users run e.g. `go build main.go`

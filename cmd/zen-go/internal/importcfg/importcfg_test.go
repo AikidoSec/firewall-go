@@ -108,6 +108,32 @@ func TestFindModuleRoot_NoGoMod(t *testing.T) {
 	assert.Empty(t, root)
 }
 
+func TestReplaceImportcfgArg(t *testing.T) {
+	t.Run("space-separated form", func(t *testing.T) {
+		args := []string{"-p", "main", "-importcfg", "/old/path", "-o", "out.a"}
+		result := ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, "/new/path", result[3])
+	})
+
+	t.Run("equals form", func(t *testing.T) {
+		args := []string{"-p", "main", "-importcfg=/old/path", "-o", "out.a"}
+		result := ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, "-importcfg=/new/path", result[2])
+	})
+
+	t.Run("no importcfg flag", func(t *testing.T) {
+		args := []string{"-p", "main", "-o", "out.a"}
+		result := ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, args, result)
+	})
+
+	t.Run("does not modify original slice", func(t *testing.T) {
+		args := []string{"-importcfg", "/old/path"}
+		_ = ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, "/old/path", args[1])
+	})
+}
+
 func TestExtendImportcfg_ParsesExistingEntries(t *testing.T) {
 	tmpDir := t.TempDir()
 	importcfgPath := filepath.Join(tmpDir, "importcfg")
