@@ -19,6 +19,9 @@ type Collector struct {
 	// [route][method] = hits
 	routes map[string]map[string]*aikido_types.Route
 
+	// Map of users seen during the collection period, keyed by user ID
+	users map[string]aikido_types.User
+
 	middlewareInstalled atomic.Bool
 
 	stats *stats.Stats
@@ -28,6 +31,7 @@ func NewCollector() *Collector {
 	return &Collector{
 		hostnames: make(map[string]map[uint32]uint64),
 		routes:    make(map[string]map[string]*aikido_types.Route),
+		users:     make(map[string]aikido_types.User),
 		stats:     stats.New(),
 	}
 }
