@@ -134,6 +134,48 @@ func TestReplaceImportcfgArg(t *testing.T) {
 	})
 }
 
+func TestExtendImportcfg_DebugLogging(t *testing.T) {
+	t.Run("logs when package already exists", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		importcfgPath := filepath.Join(tmpDir, "importcfg")
+		content := "packagefile fmt=/path/to/fmt.a\n"
+		require.NoError(t, os.WriteFile(importcfgPath, []byte(content), 0600))
+
+		var stderr strings.Builder
+		result, err := ExtendImportcfg(importcfgPath, map[string]string{
+			"fmt": "fmt",
+		}, tmpDir, &stderr, true)
+
+		require.NoError(t, err)
+		assert.Empty(t, result)
+		assert.Contains(t, stderr.String(), "processing import")
+		assert.Contains(t, stderr.String(), "no new imports to add")
+	})
+
+	t.Run("logs when new import is added", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		importcfgPath := filepath.Join(tmpDir, "importcfg")
+		content := "# import config\n"
+		require.NoError(t, os.WriteFile(importcfgPath, []byte(content), 0600))
+
+		var stderr strings.Builder
+		result, err := ExtendImportcfg(importcfgPath, map[string]string{
+			"fmt": "fmt",
+		}, tmpDir, &stderr, true)
+
+		require.NoError(t, err)
+		assert.NotEmpty(t, result)
+		assert.Contains(t, stderr.String(), "processing import")
+		assert.Contains(t, stderr.String(), "adding to importcfg")
+		assert.Contains(t, stderr.String(), "wrote extended importcfg")
+
+		// Verify the new importcfg file contains the added package
+		newContent, err := os.ReadFile(result)
+		require.NoError(t, err)
+		assert.Contains(t, string(newContent), "packagefile fmt=")
+	})
+}
+
 func TestExtendImportcfg_ParsesExistingEntries(t *testing.T) {
 	tmpDir := t.TempDir()
 	importcfgPath := filepath.Join(tmpDir, "importcfg")
