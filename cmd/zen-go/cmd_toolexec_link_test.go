@@ -111,41 +111,6 @@ func TestResolveMissingDeps(t *testing.T) {
 	assert.GreaterOrEqual(t, 1, len(newLines))
 }
 
-func TestReplaceLinkerImportcfgArg(t *testing.T) {
-	tests := []struct {
-		name     string
-		args     []string
-		newPath  string
-		expected []string
-	}{
-		{
-			name:     "space separator",
-			args:     []string{"-o", "out", "-importcfg", "/old/path", "file.a"},
-			newPath:  "/new/path",
-			expected: []string{"-o", "out", "-importcfg", "/new/path", "file.a"},
-		},
-		{
-			name:     "equals separator",
-			args:     []string{"-o=out", "-importcfg=/old/path", "file.a"},
-			newPath:  "/new/path",
-			expected: []string{"-o=out", "-importcfg=/new/path", "file.a"},
-		},
-		{
-			name:     "no importcfg",
-			args:     []string{"-o", "out", "file.a"},
-			newPath:  "/new/path",
-			expected: []string{"-o", "out", "file.a"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := replaceLinkerImportcfgArg(tt.args, tt.newPath)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestWriteExtendedLinkerImportcfg(t *testing.T) {
 	originalContent := []byte("# import config\npackagefile fmt=/path/to/fmt.a")
 	newLines := []string{

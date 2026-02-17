@@ -99,6 +99,26 @@ func createTempFile(objdir string) (*os.File, error) {
 	return os.CreateTemp("", "importcfg_*.txt")
 }
 
+// ReplaceImportcfgArg returns a copy of args with the -importcfg value replaced by newPath.
+// It handles both "-importcfg <path>" and "-importcfg=<path>" forms.
+// If no -importcfg flag is found, args is returned unchanged.
+func ReplaceImportcfgArg(args []string, newPath string) []string {
+	result := make([]string, len(args))
+	copy(result, args)
+
+	for i := range len(result) {
+		if result[i] == "-importcfg" && i+1 < len(result) {
+			result[i+1] = newPath
+			return result
+		}
+		if strings.HasPrefix(result[i], "-importcfg=") {
+			result[i] = "-importcfg=" + newPath
+			return result
+		}
+	}
+	return result
+}
+
 // GetPackageExport returns the file path to the compiled export data for the given import path.
 // It runs 'go list -export' from the module root.
 func GetPackageExport(importPath string) (string, error) {

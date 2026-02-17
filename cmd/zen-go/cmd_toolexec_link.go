@@ -53,7 +53,7 @@ func toolexecLinkCommand(stdout io.Writer, stderr io.Writer, tool string, toolAr
 					fmt.Fprintf(stderr, "zen-go: warning: failed to write extended importcfg: %v\n", err)
 				} else {
 					defer func() { _ = os.Remove(newImportcfgPath) }()
-					args = replaceLinkerImportcfgArg(args, newImportcfgPath)
+					args = importcfg.ReplaceImportcfgArg(args, newImportcfgPath)
 				}
 			}
 		}
@@ -170,23 +170,6 @@ func writeExtendedLinkerImportcfg(originalContent []byte, newLines []string) (st
 	}
 
 	return tmpFile.Name(), nil
-}
-
-func replaceLinkerImportcfgArg(args []string, newPath string) []string {
-	result := make([]string, len(args))
-	copy(result, args)
-
-	for i := range len(result) {
-		if result[i] == "-importcfg" && i+1 < len(result) {
-			result[i+1] = newPath
-			return result
-		}
-		if strings.HasPrefix(result[i], "-importcfg=") {
-			result[i] = "-importcfg=" + newPath
-			return result
-		}
-	}
-	return result
 }
 
 // insertLinkerFlags inserts flags before the last argument (the archive file),
