@@ -6,8 +6,11 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/machine"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/attackwave"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,6 +62,7 @@ type internalMockCloudClient struct {
 func (m *internalMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
+
 func (m *internalMockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
@@ -66,12 +70,15 @@ func (m *internalMockCloudClient) FetchConfigUpdatedAt() time.Time { return time
 func (m *internalMockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
+
 func (m *internalMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
 	return nil, nil
 }
+
 func (m *internalMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 	m.sendAttackDetectedCalled = true
 }
+
 func (m *internalMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 	m.sendAttackWaveDetectedCalled = true
 }
@@ -89,7 +96,18 @@ func TestOnUser(t *testing.T) {
 	})
 }
 
+func initAgentForTest(t *testing.T) {
+	t.Helper()
+	machine.Init()
+	err := config.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{LogLevel: "ERROR"})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestOnAttackDetected(t *testing.T) {
+	initAgentForTest(t)
+
 	t.Run("sends event to cloud client and updates stats", func(t *testing.T) {
 		mock := &internalMockCloudClient{}
 		original := GetCloudClient()
@@ -194,6 +212,8 @@ func TestOnAttackWaveDetected(t *testing.T) {
 	})
 
 	t.Run("sends event when cloud client is set", func(t *testing.T) {
+		initAgentForTest(t)
+
 		mock := &internalMockCloudClient{}
 		original := GetCloudClient()
 		SetCloudClient(mock)
@@ -208,6 +228,34 @@ func TestOnAttackWaveDetected(t *testing.T) {
 
 		OnAttackWaveDetected(ctx)
 		assert.True(t, mock.sendAttackWaveDetectedCalled)
+	})
+
+	t.Run("includes samples in metadata when available", func(t *testing.T) {
+		// Use a detector with a low threshold so we can trigger sample collection
+		originalDetector := attackWaveDetector
+		attackWaveDetector = attackwave.NewDetector(&attackwave.Options{
+			AttackWaveThreshold: 1,
+			MaxSamplesPerIP:     5,
+		})
+		t.Cleanup(func() { attackWaveDetector = originalDetector })
+
+		ip := "10.0.0.1"
+		scanCtx := &request.Context{
+			RemoteAddress: &ip,
+			Method:        "GET",
+			Path:          "/.env",
+			URL:           "http://example.com/.env",
+		}
+		attackWaveDetector.CheckRequest(scanCtx)
+
+		ctx := &request.Context{
+			RemoteAddress: &ip,
+			Source:        "test",
+		}
+
+		assert.NotPanics(t, func() {
+			OnAttackWaveDetected(ctx)
+		})
 	})
 
 	t.Run("does not panic when cloud client is nil", func(t *testing.T) {
