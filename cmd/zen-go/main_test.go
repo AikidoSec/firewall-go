@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,4 +74,100 @@ func TestCLI(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestToolexecZenGoLog(t *testing.T) {
+	t.Run("writes tool stdout to log file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "zen-go.log")
+		t.Setenv("ZENGO_LOG", logFile)
+
+		mockTool := createMockTool(t, "sometool", "success")
+
+		cmd := newCommand()
+		cmd.Writer = os.Stdout
+		cmd.ErrWriter = os.Stderr
+		err := cmd.Run(context.Background(), []string{"zen-go", "toolexec", mockTool})
+		require.NoError(t, err)
+
+		content, err := os.ReadFile(logFile)
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "compiled successfully")
+	})
+
+	t.Run("appends to existing log file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "zen-go.log")
+		require.NoError(t, os.WriteFile(logFile, []byte("previous log\n"), 0o600))
+		t.Setenv("ZENGO_LOG", logFile)
+
+		mockTool := createMockTool(t, "sometool", "success")
+
+		cmd := newCommand()
+		cmd.Writer = os.Stdout
+		cmd.ErrWriter = os.Stderr
+		err := cmd.Run(context.Background(), []string{"zen-go", "toolexec", mockTool})
+		require.NoError(t, err)
+
+		content, err := os.ReadFile(logFile)
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "previous log")
+		assert.Contains(t, string(content), "compiled successfully")
+	})
+
+	t.Run("returns error for invalid log path", func(t *testing.T) {
+		t.Setenv("ZENGO_LOG", "/nonexistent/dir/zen-go.log")
+
+		mockTool := createMockTool(t, "sometool", "success")
+
+		cmd := newCommand()
+		cmd.Writer = os.Stdout
+		cmd.ErrWriter = os.Stderr
+		err := cmd.Run(context.Background(), []string{"zen-go", "toolexec", mockTool})
+		require.Error(t, err)
+	})
+
+	t.Run("writes debug stderr to log file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		logFile := filepath.Join(tmpDir, "zen-go.log")
+		t.Setenv("ZENGO_LOG", logFile)
+		t.Setenv("ZENGO_DEBUG", "1")
+
+		// Use a mock "compile" tool so toolexecCompileCommand runs and emits debug output to stderr
+		mockTool := createVersionMockTool(t, "compile version go1.25.0")
+		// Rename the mock to "compile" so the switch matches
+		compilePath := filepath.Join(filepath.Dir(mockTool), "compile")
+		require.NoError(t, os.Rename(mockTool, compilePath))
+
+		cmd := newCommand()
+		cmd.Writer = os.Stdout
+		cmd.ErrWriter = os.Stderr
+		err := cmd.Run(context.Background(), []string{"zen-go", "toolexec", compilePath, "-V=full"})
+		require.NoError(t, err)
+
+		content, err := os.ReadFile(logFile)
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "zen-go:")
+	})
+}
+
+func TestToolexecNoToolSpecified(t *testing.T) {
+	cmd := newCommand()
+	cmd.Writer = os.Stdout
+	cmd.ErrWriter = os.Stderr
+	err := cmd.Run(context.Background(), []string{"zen-go", "toolexec"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no tool specified")
+}
+
+func TestIsDebug(t *testing.T) {
+	t.Run("returns true when ZENGO_DEBUG is set", func(t *testing.T) {
+		t.Setenv("ZENGO_DEBUG", "1")
+		assert.True(t, isDebug())
+	})
+
+	t.Run("returns false when ZENGO_DEBUG is not set", func(t *testing.T) {
+		t.Setenv("ZENGO_DEBUG", "")
+		assert.False(t, isDebug())
+	})
 }

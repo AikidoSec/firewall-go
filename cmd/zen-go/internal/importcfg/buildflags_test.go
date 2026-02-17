@@ -1,7 +1,11 @@
 package importcfg
 
 import (
+	"os/exec"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExtractBuildFlags(t *testing.T) {
@@ -100,4 +104,30 @@ func TestExtractBuildFlags(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLocateGoBinary(t *testing.T) {
+	path, err := locateGoBinary()
+	require.NoError(t, err)
+	assert.NotEmpty(t, path)
+	assert.FileExists(t, path)
+}
+
+func TestMatchesGoBinary(t *testing.T) {
+	goBinary, err := locateGoBinary()
+	require.NoError(t, err)
+
+	t.Run("matches actual go binary", func(t *testing.T) {
+		goPath, err := exec.LookPath("go")
+		require.NoError(t, err)
+		assert.True(t, matchesGoBinary(goPath, goBinary))
+	})
+
+	t.Run("does not match non-go binary", func(t *testing.T) {
+		assert.False(t, matchesGoBinary("/bin/sh", goBinary))
+	})
+
+	t.Run("returns false for nonexistent path", func(t *testing.T) {
+		assert.False(t, matchesGoBinary("/nonexistent/binary", goBinary))
+	})
 }
