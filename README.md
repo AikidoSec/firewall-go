@@ -2,6 +2,7 @@
 
 # Zen, in-app firewall for Go | by Aikido
 
+[![Codecov](https://img.shields.io/codecov/c/github/AikidoSec/firewall-go?style=flat-square&token=AJK9LU35GY)](https://app.codecov.io/gh/aikidosec/firewall-go)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 [![Unit tests](https://github.com/AikidoSec/firewall-go/actions/workflows/test.yml/badge.svg)](https://github.com/AikidoSec/firewall-go/actions/workflows/unit-test.yml)
 
