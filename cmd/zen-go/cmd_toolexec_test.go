@@ -355,6 +355,18 @@ func TestUpdateImportcfgInArgs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, args, result)
 	})
+
+	t.Run("replaces importcfg arg when new imports are added", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cfgPath := filepath.Join(tmpDir, "importcfg")
+		require.NoError(t, os.WriteFile(cfgPath, []byte("# import config\n"), 0o600))
+
+		args := []string{"-importcfg", cfgPath, "-o", "out.a"}
+		result, err := updateImportcfgInArgs(os.Stderr, args, cfgPath, map[string]string{"fmt": "fmt"}, tmpDir)
+		require.NoError(t, err)
+		assert.NotEqual(t, cfgPath, result[1])
+		assert.NotEqual(t, args, result)
+	})
 }
 
 func TestWriteTempFile(t *testing.T) {
