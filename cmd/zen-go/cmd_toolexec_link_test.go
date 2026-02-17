@@ -111,7 +111,6 @@ func TestResolveMissingDeps(t *testing.T) {
 	assert.GreaterOrEqual(t, 1, len(newLines))
 }
 
-
 func TestWriteExtendedLinkerImportcfg(t *testing.T) {
 	originalContent := []byte("# import config\npackagefile fmt=/path/to/fmt.a")
 	newLines := []string{

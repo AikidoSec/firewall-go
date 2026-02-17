@@ -191,7 +191,6 @@ func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string
 	return updatedArgs, nil
 }
 
-
 // checkZenToolFileIncluded checks if the main package is being compiled
 // without zen.tool.go. This happens when users run e.g. `go build main.go`
 // instead of `go build .`, which causes zen.tool.go to be excluded from the

@@ -132,11 +132,11 @@ func TestIsVersionQuery(t *testing.T) {
 
 func TestExtractCompilerFlags(t *testing.T) {
 	tests := []struct {
-		name           string
-		args           []string
-		wantPkg        string
-		wantImportcfg  string
-		wantOutput     string
+		name          string
+		args          []string
+		wantPkg       string
+		wantImportcfg string
+		wantOutput    string
 	}{
 		{
 			name:          "all flags space-separated",
@@ -335,6 +335,26 @@ func TestPassthrough_WithComplexArgs(t *testing.T) {
 	assert.Contains(t, output, "/tmp/output.o")
 	assert.Contains(t, output, "-trimpath")
 	assert.Contains(t, output, "input.go")
+}
+
+func TestUpdateImportcfgInArgs(t *testing.T) {
+	t.Run("returns error when importcfg file missing", func(t *testing.T) {
+		args := []string{"-importcfg", "/old/path"}
+		result, err := updateImportcfgInArgs(os.Stderr, args, "/nonexistent/importcfg", map[string]string{"pkg": "github.com/some/pkg"}, t.TempDir())
+		require.Error(t, err)
+		assert.Equal(t, args, result)
+	})
+
+	t.Run("returns args unchanged when no new imports needed", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cfgPath := filepath.Join(tmpDir, "importcfg")
+		require.NoError(t, os.WriteFile(cfgPath, []byte("packagefile github.com/some/pkg=/path/to/pkg.a\n"), 0o600))
+
+		args := []string{"-importcfg", cfgPath, "-o", "out.a"}
+		result, err := updateImportcfgInArgs(os.Stderr, args, cfgPath, map[string]string{"pkg": "github.com/some/pkg"}, tmpDir)
+		require.NoError(t, err)
+		assert.Equal(t, args, result)
+	})
 }
 
 func TestWriteTempFile(t *testing.T) {

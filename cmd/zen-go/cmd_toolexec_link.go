@@ -172,7 +172,6 @@ func writeExtendedLinkerImportcfg(originalContent []byte, newLines []string) (st
 	return tmpFile.Name(), nil
 }
 
-
 // insertLinkerFlags inserts flags before the last argument (the archive file),
 // since the Go linker expects flags before positional arguments.
 func insertLinkerFlags(args []string, flags ...string) []string {
