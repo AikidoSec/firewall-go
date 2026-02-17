@@ -77,10 +77,10 @@ func (m *internalMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.Ag
 }
 
 func TestOnUser(t *testing.T) {
-	t.Cleanup(func() { GetUsersAndClear() })
+	t.Cleanup(func() { stateCollector.GetUsersAndClear() })
 
 	t.Run("returns user with correct fields", func(t *testing.T) {
-		GetUsersAndClear()
+		stateCollector.GetUsersAndClear()
 		user := OnUser("id1", "TestUser", "10.0.0.1")
 
 		assert.Equal(t, "id1", user.ID)

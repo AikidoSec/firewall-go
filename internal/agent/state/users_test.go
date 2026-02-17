@@ -1,4 +1,4 @@
-package agent
+package state
 
 import (
 	"testing"
@@ -8,14 +8,10 @@ import (
 )
 
 func TestStoreUser(t *testing.T) {
-	t.Cleanup(func() {
-		GetUsersAndClear()
-	})
+	c := NewCollector()
 
 	t.Run("stores a new user", func(t *testing.T) {
-		GetUsersAndClear()
-
-		user := storeUser("user1", "Alice", "1.2.3.4")
+		user := c.StoreUser("user1", "Alice", "1.2.3.4")
 
 		assert.Equal(t, "user1", user.ID)
 		assert.Equal(t, "Alice", user.Name)
@@ -26,10 +22,9 @@ func TestStoreUser(t *testing.T) {
 	})
 
 	t.Run("preserves FirstSeenAt on update", func(t *testing.T) {
-		GetUsersAndClear()
-
-		first := storeUser("user1", "Alice", "1.2.3.4")
-		second := storeUser("user1", "Alice Updated", "5.6.7.8")
+		c := NewCollector()
+		first := c.StoreUser("user1", "Alice", "1.2.3.4")
+		second := c.StoreUser("user1", "Alice Updated", "5.6.7.8")
 
 		assert.Equal(t, first.FirstSeenAt, second.FirstSeenAt)
 		assert.Equal(t, "Alice Updated", second.Name)
@@ -37,39 +32,32 @@ func TestStoreUser(t *testing.T) {
 	})
 
 	t.Run("stores multiple users independently", func(t *testing.T) {
-		GetUsersAndClear()
+		c := NewCollector()
+		c.StoreUser("user1", "Alice", "1.2.3.4")
+		c.StoreUser("user2", "Bob", "5.6.7.8")
 
-		storeUser("user1", "Alice", "1.2.3.4")
-		storeUser("user2", "Bob", "5.6.7.8")
-
-		result := GetUsersAndClear()
+		result := c.GetUsersAndClear()
 		assert.Len(t, result, 2)
 	})
 }
 
 func TestGetUsersAndClear(t *testing.T) {
-	t.Cleanup(func() {
-		GetUsersAndClear()
-	})
-
 	t.Run("returns empty slice when no users", func(t *testing.T) {
-		GetUsersAndClear()
-
-		result := GetUsersAndClear()
+		c := NewCollector()
+		result := c.GetUsersAndClear()
 		assert.Empty(t, result)
 	})
 
 	t.Run("returns stored users and clears", func(t *testing.T) {
-		GetUsersAndClear()
+		c := NewCollector()
+		c.StoreUser("user1", "Alice", "1.2.3.4")
+		c.StoreUser("user2", "Bob", "5.6.7.8")
 
-		storeUser("user1", "Alice", "1.2.3.4")
-		storeUser("user2", "Bob", "5.6.7.8")
-
-		result := GetUsersAndClear()
+		result := c.GetUsersAndClear()
 		require.Len(t, result, 2)
 
 		// Verify cleared
-		result2 := GetUsersAndClear()
+		result2 := c.GetUsersAndClear()
 		assert.Empty(t, result2)
 	})
 }
