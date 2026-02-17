@@ -122,6 +122,55 @@ func TestExtractFlag(t *testing.T) {
 	}
 }
 
+func TestIsVersionQuery(t *testing.T) {
+	assert.True(t, isVersionQuery([]string{"-V=full"}))
+	assert.True(t, isVersionQuery([]string{"-V"}))
+	assert.True(t, isVersionQuery([]string{"-p", "main", "-V=full"}))
+	assert.False(t, isVersionQuery([]string{"-p", "main", "-o", "out.a"}))
+	assert.False(t, isVersionQuery([]string{}))
+}
+
+func TestExtractCompilerFlags(t *testing.T) {
+	tests := []struct {
+		name           string
+		args           []string
+		wantPkg        string
+		wantImportcfg  string
+		wantOutput     string
+	}{
+		{
+			name:          "all flags space-separated",
+			args:          []string{"-p", "main", "-importcfg", "/tmp/cfg", "-o", "/tmp/out.a"},
+			wantPkg:       "main",
+			wantImportcfg: "/tmp/cfg",
+			wantOutput:    "/tmp/out.a",
+		},
+		{
+			name:          "all flags equals form",
+			args:          []string{"-p=main", "-importcfg=/tmp/cfg", "-o=/tmp/out.a"},
+			wantPkg:       "main",
+			wantImportcfg: "/tmp/cfg",
+			wantOutput:    "/tmp/out.a",
+		},
+		{
+			name:          "missing flags return empty",
+			args:          []string{"-trimpath", "/tmp"},
+			wantPkg:       "",
+			wantImportcfg: "",
+			wantOutput:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkg, importcfg, output := extractCompilerFlags(tt.args)
+			assert.Equal(t, tt.wantPkg, pkg)
+			assert.Equal(t, tt.wantImportcfg, importcfg)
+			assert.Equal(t, tt.wantOutput, output)
+		})
+	}
+}
+
 func TestPassthrough(t *testing.T) {
 	mockTool := createMockTool(t, "tool", "echo")
 
