@@ -337,6 +337,43 @@ func TestPassthrough_WithComplexArgs(t *testing.T) {
 	assert.Contains(t, output, "input.go")
 }
 
+func TestWriteTempFile(t *testing.T) {
+	t.Run("writes to objdir/zen-go/src/", func(t *testing.T) {
+		objdir := t.TempDir()
+		content := []byte("package main")
+
+		out, err := writeTempFile("/src/foo.go", content, objdir)
+
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(objdir, "zen-go", "src", "foo.go"), out)
+		got, err := os.ReadFile(out)
+		require.NoError(t, err)
+		assert.Equal(t, content, got)
+	})
+
+	t.Run("preserves original basename", func(t *testing.T) {
+		objdir := t.TempDir()
+
+		out, err := writeTempFile("/some/deep/path/middleware.go", []byte{}, objdir)
+
+		require.NoError(t, err)
+		assert.Equal(t, "middleware.go", filepath.Base(out))
+	})
+
+	t.Run("falls back to source dir when objdir unusable", func(t *testing.T) {
+		srcDir := t.TempDir()
+		origPath := filepath.Join(srcDir, "foo.go")
+		// Point objdir at an existing file so MkdirAll fails
+		badObjdir := filepath.Join(srcDir, "not-a-dir")
+		require.NoError(t, os.WriteFile(badObjdir, []byte{}, 0o644))
+
+		out, err := writeTempFile(origPath, []byte("package main"), badObjdir)
+
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(srcDir, "foo.go"), out)
+	})
+}
+
 func TestCheckZenToolFileIncluded(t *testing.T) {
 	t.Run("errors when zen.tool.go exists but is not in args", func(t *testing.T) {
 		tmpDir := t.TempDir()
