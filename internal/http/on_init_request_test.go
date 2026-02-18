@@ -26,6 +26,7 @@ func TestOnInitRequest(t *testing.T) {
 	}, &aikido_types.ListsConfigData{
 		AllowedIPAddresses: []aikido_types.IPList{
 			{
+				Key:         "test-allowed",
 				Source:      "test-allowed",
 				Description: "Test allowed IPs",
 				IPs:         []string{"8.8.8.100", "8.8.8.8", "2001:4860:4860::/48", "2001:db8::/32"},

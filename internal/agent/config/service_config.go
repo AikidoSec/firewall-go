@@ -109,7 +109,7 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsC
 				continue
 			}
 
-			serviceConfig.AllowedIPs[ipAllowlist.Source] = ipaddr.BuildMatchList(
+			serviceConfig.AllowedIPs[ipAllowlist.Key] = ipaddr.BuildMatchList(
 				ipAllowlist.Source,
 				ipAllowlist.Description,
 				ipAllowlist.IPs,

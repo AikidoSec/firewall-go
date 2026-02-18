@@ -361,6 +361,7 @@ func TestIsIPAllowed(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			AllowedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "manual",
 					Source:      "manual",
 					Description: "Manually allowed",
 					IPs:         []string{"8.8.8.8", "1.1.1.0/24"},
@@ -391,6 +392,7 @@ func TestIsIPAllowed(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			AllowedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "geo-allowed",
 					Source:      "geo-allowed",
 					Description: "Allowed countries",
 					IPs:         []string{"8.8.8.8"}, // Only allow this public IP
@@ -425,6 +427,7 @@ func TestIsIPAllowed(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			AllowedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "ipv6-test",
 					Source:      "ipv6-test",
 					Description: "IPv6 allowlist",
 					IPs:         []string{"2001:4860:4860::8888", "2606:4700:4700::1111"},
@@ -451,6 +454,7 @@ func TestIsIPAllowed(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			AllowedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "test",
 					Source:      "test",
 					Description: "Test allowlist",
 					IPs:         []string{"8.8.8.8"}, // Public IP in allow list
@@ -475,11 +479,13 @@ func TestIsIPAllowed(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			AllowedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "list1",
 					Source:      "list1",
 					Description: "First list",
 					IPs:         []string{"8.8.8.8"},
 				},
 				{
+					Key:         "list2",
 					Source:      "list2",
 					Description: "Second list",
 					IPs:         []string{"1.1.1.1"},
@@ -504,6 +510,7 @@ func TestIsIPAllowed(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			AllowedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "empty",
 					Source:      "empty",
 					Description: "Empty list",
 					IPs:         []string{},
@@ -529,11 +536,13 @@ func TestIsIPAllowed(t *testing.T) {
 		listsConfig := &aikido_types.ListsConfigData{
 			AllowedIPAddresses: []aikido_types.IPList{
 				{
+					Key:         "geo-us",
 					Source:      "geo-us",
 					Description: "US IPs",
 					IPs:         []string{"8.8.8.0/24"},
 				},
 				{
+					Key:         "geo-eu",
 					Source:      "geo-eu",
 					Description: "EU IPs",
 					IPs:         []string{"1.1.1.0/24"},
