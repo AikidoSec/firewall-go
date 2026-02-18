@@ -25,7 +25,7 @@ func Examine(r *http.Request) error {
 	port := getPort(r)
 
 	// Report any hostnames to the dashboard
-	go agent.OnDomain(hostname, uint32(port))
+	agent.OnDomain(hostname, uint32(port))
 
 	if config.ShouldBlockHostname(hostname) {
 		return zen.ErrOutboundBlocked(hostname)
