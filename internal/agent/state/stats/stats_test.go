@@ -248,6 +248,101 @@ func TestGetAndClearOperations(t *testing.T) {
 	})
 }
 
+func TestOnIPAddressMatches(t *testing.T) {
+	t.Run("increments counters for each key", func(t *testing.T) {
+		stats := New()
+
+		stats.OnIPAddressMatches([]string{"tor/exit_nodes", "known_threat_actors/public_scanners"})
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 1, data.IPAddresses.Breakdown["tor/exit_nodes"])
+		assert.Equal(t, 1, data.IPAddresses.Breakdown["known_threat_actors/public_scanners"])
+	})
+
+	t.Run("accumulates across multiple calls", func(t *testing.T) {
+		stats := New()
+
+		stats.OnIPAddressMatches([]string{"tor/exit_nodes"})
+		stats.OnIPAddressMatches([]string{"tor/exit_nodes"})
+		stats.OnIPAddressMatches([]string{"tor/exit_nodes", "geoip/BE"})
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 3, data.IPAddresses.Breakdown["tor/exit_nodes"])
+		assert.Equal(t, 1, data.IPAddresses.Breakdown["geoip/BE"])
+	})
+
+	t.Run("clears after GetAndClear", func(t *testing.T) {
+		stats := New()
+
+		stats.OnIPAddressMatches([]string{"tor/exit_nodes"})
+		stats.GetAndClear()
+
+		data := stats.GetAndClear()
+
+		assert.Empty(t, data.IPAddresses.Breakdown)
+	})
+
+	t.Run("no-op with empty keys", func(t *testing.T) {
+		stats := New()
+
+		stats.OnIPAddressMatches([]string{})
+		stats.OnIPAddressMatches(nil)
+
+		data := stats.GetAndClear()
+
+		assert.Empty(t, data.IPAddresses.Breakdown)
+	})
+}
+
+func TestOnUserAgentMatches(t *testing.T) {
+	t.Run("increments counters for each key", func(t *testing.T) {
+		stats := New()
+
+		stats.OnUserAgentMatches([]string{"googlebot", "bingbot"})
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 1, data.UserAgents.Breakdown["googlebot"])
+		assert.Equal(t, 1, data.UserAgents.Breakdown["bingbot"])
+	})
+
+	t.Run("accumulates across multiple calls", func(t *testing.T) {
+		stats := New()
+
+		stats.OnUserAgentMatches([]string{"googlebot"})
+		stats.OnUserAgentMatches([]string{"googlebot", "bingbot"})
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 2, data.UserAgents.Breakdown["googlebot"])
+		assert.Equal(t, 1, data.UserAgents.Breakdown["bingbot"])
+	})
+
+	t.Run("clears after GetAndClear", func(t *testing.T) {
+		stats := New()
+
+		stats.OnUserAgentMatches([]string{"googlebot"})
+		stats.GetAndClear()
+
+		data := stats.GetAndClear()
+
+		assert.Empty(t, data.UserAgents.Breakdown)
+	})
+
+	t.Run("no-op with empty keys", func(t *testing.T) {
+		stats := New()
+
+		stats.OnUserAgentMatches([]string{})
+		stats.OnUserAgentMatches(nil)
+
+		data := stats.GetAndClear()
+
+		assert.Empty(t, data.UserAgents.Breakdown)
+	})
+}
+
 func TestMultipleOperationKinds(t *testing.T) {
 	t.Run("tracks different operation kinds separately", func(t *testing.T) {
 		stats := New()
