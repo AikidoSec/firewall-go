@@ -48,7 +48,7 @@ jobs:
           fail_ci_if_error: true
           files: ./coverage.out
           flags: unittests
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           verbose: true
 
       - name: Upload zen-go CLI coverage to Codecov
@@ -57,7 +57,7 @@ jobs:
           fail_ci_if_error: false
           files: ./cmd/zen-go/coverage.out
           flags: cli
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           verbose: true
 
   test-instrumentation-unit:
@@ -87,7 +87,7 @@ jobs:
           fail_ci_if_error: true
           files: ./coverage.out
           flags: instrumentation-unit
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           verbose: true
 
   test-instrumentation-integration:
@@ -122,7 +122,7 @@ jobs:
           fail_ci_if_error: true
           files: ./coverage.out
           flags: instrumentation-integration
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           verbose: true
 
   test-e2e:
