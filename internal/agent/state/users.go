@@ -1,25 +1,18 @@
-package agent
+package state
 
 import (
-	"sync"
-
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
-var (
-	users      = make(map[string]aikido_types.User)
-	usersMutex sync.Mutex
-)
-
-func storeUser(id string, username string, ip string) aikido_types.User {
-	usersMutex.Lock()
-	defer usersMutex.Unlock()
+func (c *Collector) StoreUser(id string, username string, ip string) aikido_types.User {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	now := utils.GetTime()
 	firstSeen := now
 
-	if existing, exists := users[id]; exists {
+	if existing, exists := c.users[id]; exists {
 		firstSeen = existing.FirstSeenAt
 	}
 
@@ -30,19 +23,19 @@ func storeUser(id string, username string, ip string) aikido_types.User {
 		FirstSeenAt:   firstSeen,
 		LastSeenAt:    now,
 	}
-	users[id] = user
+	c.users[id] = user
 	return user
 }
 
-func GetUsersAndClear() []aikido_types.User {
-	usersMutex.Lock()
-	defer usersMutex.Unlock()
+func (c *Collector) GetUsersAndClear() []aikido_types.User {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	var result []aikido_types.User
-	for _, user := range users {
+	for _, user := range c.users {
 		result = append(result, user)
 	}
 
-	users = make(map[string]aikido_types.User)
+	c.users = make(map[string]aikido_types.User)
 	return result
 }
