@@ -49,3 +49,25 @@ func AikidoMiddleware(next http.Handler) http.Handler {
 }
 ```
 The important part here is the call to `zen.ShouldBlockRequest()` which returns whether to block the request and the reason why.
+
+## Proxy settings
+
+The middleware automatically uses the `X-Forwarded-For` header to determine the client's IP address when your app runs behind a reverse proxy or load balancer.
+
+If your server is publicly exposed without a proxy in front of it, set `AIKIDO_TRUST_PROXY=false` to prevent clients from spoofing their IP address (which could bypass rate limiting):
+
+```bash
+AIKIDO_TRUST_PROXY=false ./your-app
+```
+
+If your infrastructure uses a different header to carry the real client IP, set `AIKIDO_CLIENT_IP_HEADER` to its name:
+
+```bash
+# For DigitalOcean App Platform
+AIKIDO_CLIENT_IP_HEADER=do-connecting-ip ./your-app
+```
+
+| Environment variable | Default | Description |
+|---|---|---|
+| `AIKIDO_TRUST_PROXY` | `true` | Trust proxy headers to determine the client IP |
+| `AIKIDO_CLIENT_IP_HEADER` | `X-Forwarded-For` | Header name to read the client IP from |
