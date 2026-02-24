@@ -1,4 +1,3 @@
-comment: false
 ignore:
   - "*_test.go"
   - "sample-apps/"
