@@ -67,12 +67,10 @@ func getClientIPHeaderName() string {
 func extractFirstPublicIPFromHeader(headerValue string) string {
 	for part := range strings.SplitSeq(headerValue, ",") {
 		ip := parseIPFromHeaderPart(strings.TrimSpace(part))
-		if ip == "" {
+		if ip == "" || ipaddr.IsPrivateIP(ip) {
 			continue
 		}
-		if !ipaddr.IsPrivateIP(ip) {
-			return ip
-		}
+		return ip
 	}
 	return ""
 }
