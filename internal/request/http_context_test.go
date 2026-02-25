@@ -190,6 +190,43 @@ func TestGetContext(t *testing.T) {
 	}
 }
 
+func TestEnsureContextPropagated(t *testing.T) {
+	t.Run("returns same context when request data already present", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), reqCtxKey, &Context{Source: "test"})
+		result := EnsureContextPropagated(ctx)
+		assert.Same(t, ctx, result, "should return the same context unchanged")
+	})
+
+	t.Run("copies GLS data into context", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
+		ip := "1.2.3.4"
+		glsCtx := SetContext(context.Background(), req, ContextData{
+			Source:        "test-source",
+			Route:         "/test",
+			RemoteAddress: &ip,
+		})
+
+		// Run inside GLS with the request context, but pass a bare context to EnsureContextPropagated
+		WrapWithGLS(glsCtx, func() {
+			bare := context.Background()
+			result := EnsureContextPropagated(bare)
+
+			// The returned context should contain request data (copied from GLS)
+			reqCtx := GetContext(result)
+			require.NotNil(t, reqCtx)
+			assert.Equal(t, "test-source", reqCtx.Source)
+			assert.Equal(t, "/test", reqCtx.Route)
+		})
+	})
+
+	t.Run("returns same context when no GLS and no request data", func(t *testing.T) {
+		ctx := context.Background()
+		result := EnsureContextPropagated(ctx)
+		// No GLS data and no request data in context — nothing to propagate
+		assert.Nil(t, GetContext(result), "should have no request context")
+	})
+}
+
 func TestFullURL(t *testing.T) {
 	tests := []struct {
 		name     string

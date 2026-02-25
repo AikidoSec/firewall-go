@@ -14,6 +14,31 @@ rules:
       //go:linkname __aikido_http_do github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http.Examine
       func __aikido_http_do(*Request) error
 
+  # Inject go:linkname declaration for WrapTransport
+  - id: net/http.Client.linkname.WrapTransport
+    type: inject-decl
+    package: net/http
+    anchor: transport
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http
+    template: |
+      //go:linkname __aikido_http_wrap_transport github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http.WrapTransport
+      func __aikido_http_wrap_transport(RoundTripper) RoundTripper
+
+  # Prepend to Client.transport to wrap the transport with SSRF check
+  - id: net/http.Client.transport
+    type: prepend
+    receiver: "*net/http.Client"
+    function: transport
+    template: |
+      var _aikido_rt RoundTripper
+      if {{ .Function.Receiver }}.Transport != nil {
+        _aikido_rt = {{ .Function.Receiver }}.Transport
+      } else {
+        _aikido_rt = DefaultTransport
+      }
+      return __aikido_http_wrap_transport(_aikido_rt)
+
   # Prepend to Client.Do
   - id: net/http.Client.Do
     type: prepend
