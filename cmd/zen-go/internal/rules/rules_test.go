@@ -369,6 +369,47 @@ rules:
 	assert.Equal(t, "pgx.rule", rules.PrependRules[0].ID)
 }
 
+func TestLoadRulesFromDir_CollectsMinVersions(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// File with min version
+	dir1 := filepath.Join(tmpDir, "sinks", "sql")
+	require.NoError(t, os.MkdirAll(dir1, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir1, "zen.instrument.yml"), []byte(`
+meta:
+  name: sql
+  min-zen-go-version: "0.3.0"
+rules:
+  - id: sql.rule
+    type: prepend
+    package: sql
+    function: Query
+    imports: {}
+    template: "// instrumented"
+`), 0o600))
+
+	// File without min version
+	dir2 := filepath.Join(tmpDir, "sinks", "os")
+	require.NoError(t, os.MkdirAll(dir2, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir2, "zen.instrument.yml"), []byte(`
+meta:
+  name: os
+rules:
+  - id: os.rule
+    type: prepend
+    package: os
+    function: Open
+    imports: {}
+    template: "// instrumented"
+`), 0o600))
+
+	rules, err := LoadRulesFromDir(tmpDir)
+	require.NoError(t, err)
+	require.Len(t, rules.MinVersions, 1)
+	assert.Equal(t, "0.3.0", rules.MinVersions[0].Version)
+	assert.Contains(t, rules.MinVersions[0].File, "sql")
+}
+
 func TestLoadRulesFromFile_AllRuleTypes(t *testing.T) {
 	tmpDir := t.TempDir()
 	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
