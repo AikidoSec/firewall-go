@@ -775,6 +775,17 @@ type File struct{}
 	assert.Contains(t, string(osResult.Code), "sink.Check(name)")
 }
 
+func TestNewInstrumentorWithRules_MinVersionNotMet(t *testing.T) {
+	r := &rules.InstrumentationRules{
+		MinVersions: []rules.MinVersionEntry{
+			{File: "test/zen.instrument.yml", Version: "1.0.0"},
+		},
+	}
+	_, err := NewInstrumentorWithRules(r, "0.2.0")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "please upgrade")
+}
+
 func TestIsMajorVersion(t *testing.T) {
 	assert.True(t, isMajorVersion("v2"))
 	assert.True(t, isMajorVersion("v5"))
