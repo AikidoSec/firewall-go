@@ -41,20 +41,21 @@ func NewInstrumentor(currentVersion string) (*Instrumentor, error) {
 		allRules.MinVersions = append(allRules.MinVersions, rulesData.MinVersions...)
 	}
 
-	if err := rules.CheckMinVersions(allRules.MinVersions, currentVersion); err != nil {
-		return nil, err
-	}
+	return NewInstrumentorWithRules(allRules, currentVersion)
 
-	return NewInstrumentorWithRules(allRules), nil
 }
 
-// NewInstrumentorWithRules creates an Instrumentor with the given rules
-func NewInstrumentorWithRules(rules *rules.InstrumentationRules) *Instrumentor {
-	return &Instrumentor{
-		WrapRules:       rules.WrapRules,
-		PrependRules:    rules.PrependRules,
-		InjectDeclRules: rules.InjectDeclRules,
+// NewInstrumentorWithRules creates an Instrumentor with the given rules.
+// currentVersion is checked against min-zen-go-version requirements from the rules.
+func NewInstrumentorWithRules(r *rules.InstrumentationRules, currentVersion string) (*Instrumentor, error) {
+	if err := rules.CheckMinVersions(r.MinVersions, currentVersion); err != nil {
+		return nil, err
 	}
+	return &Instrumentor{
+		WrapRules:       r.WrapRules,
+		PrependRules:    r.PrependRules,
+		InjectDeclRules: r.InjectDeclRules,
+	}, nil
 }
 
 type InstrumentFileResult struct {
