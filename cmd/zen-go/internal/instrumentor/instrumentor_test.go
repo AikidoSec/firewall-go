@@ -356,7 +356,7 @@ func main() {
 	tmpFile := filepath.Join(tmpDir, "main.go")
 	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
 
-	inst, err := NewInstrumentor()
+	inst, err := NewInstrumentor("999.0.0")
 	require.NoError(t, err)
 
 	inst.WrapRules = []rules.WrapRule{

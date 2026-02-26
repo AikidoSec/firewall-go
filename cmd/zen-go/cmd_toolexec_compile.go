@@ -119,7 +119,7 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 	newArgs := make([]string, 0, len(toolArgs))
 	allAddedImports := make(map[string]string) // alias -> import path
 	var allAddedLinkDeps []string
-	instrumentor, err := instrumentor.NewInstrumentor()
+	instrumentor, err := instrumentor.NewInstrumentor(version)
 	if err != nil {
 		return nil, nil, nil, err
 	}

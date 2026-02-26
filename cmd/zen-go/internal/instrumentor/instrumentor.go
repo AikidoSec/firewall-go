@@ -20,8 +20,10 @@ type Instrumentor struct {
 	InjectDeclRules []rules.InjectDeclRule
 }
 
-// NewInstrumentor creates a new Instrumentor, loading rules from YAML files
-func NewInstrumentor() (*Instrumentor, error) {
+// NewInstrumentor creates a new Instrumentor, loading rules from YAML files.
+// currentVersion is the zen-go version string used to check min-zen-go-version
+// requirements declared in zen.instrument.yml files.
+func NewInstrumentor(currentVersion string) (*Instrumentor, error) {
 	dirs := paths.FindInstrumentationDirs()
 	if len(dirs) == 0 {
 		return &Instrumentor{}, nil
@@ -36,6 +38,11 @@ func NewInstrumentor() (*Instrumentor, error) {
 		allRules.WrapRules = append(allRules.WrapRules, rulesData.WrapRules...)
 		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
 		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
+		allRules.MinVersions = append(allRules.MinVersions, rulesData.MinVersions...)
+	}
+
+	if err := rules.CheckMinVersions(allRules.MinVersions, currentVersion); err != nil {
+		return nil, err
 	}
 
 	return NewInstrumentorWithRules(allRules), nil
