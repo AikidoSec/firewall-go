@@ -47,8 +47,8 @@ type semver struct {
 }
 
 func parseSemver(s string) (semver, error) {
-	s = strings.TrimPrefix(s, "v")
-	parts := strings.SplitN(s, ".", 3)
+	raw := strings.TrimPrefix(s, "v")
+	parts := strings.SplitN(raw, ".", 3)
 	if len(parts) != 3 {
 		return semver{}, fmt.Errorf("expected format major.minor.patch, got %q", s)
 	}
