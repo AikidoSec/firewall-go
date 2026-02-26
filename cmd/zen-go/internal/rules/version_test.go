@@ -83,6 +83,15 @@ func TestParseSemver(t *testing.T) {
 
 	_, err = parseSemver("abc")
 	assert.Error(t, err)
+
+	_, err = parseSemver("x.0.0")
+	assert.ErrorContains(t, err, "invalid major version")
+
+	_, err = parseSemver("0.x.0")
+	assert.ErrorContains(t, err, "invalid minor version")
+
+	_, err = parseSemver("0.0.x")
+	assert.ErrorContains(t, err, "invalid patch version")
 }
 
 func TestShortPath(t *testing.T) {
