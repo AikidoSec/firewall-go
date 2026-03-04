@@ -20,6 +20,7 @@ type RulesFile struct {
 type RulesMeta struct {
 	Name        string `yaml:"name"`
 	Description string `yaml:"description"`
+	MinVersion  string `yaml:"min-zen-go-version"`
 }
 
 // Rule represents a single instrumentation rule
@@ -38,11 +39,18 @@ type Rule struct {
 	Template  string            `yaml:"template"`
 }
 
+// MinVersionEntry records a minimum zen-go version requirement from a rules file.
+type MinVersionEntry struct {
+	File    string
+	Version string
+}
+
 // InstrumentationRules holds all loaded rules
 type InstrumentationRules struct {
 	WrapRules       []WrapRule
 	PrependRules    []PrependRule
 	InjectDeclRules []InjectDeclRule
+	MinVersions     []MinVersionEntry
 }
 
 // WrapRule wraps a function call expression
@@ -109,6 +117,7 @@ func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
 		result.WrapRules = append(result.WrapRules, rules.WrapRules...)
 		result.PrependRules = append(result.PrependRules, rules.PrependRules...)
 		result.InjectDeclRules = append(result.InjectDeclRules, rules.InjectDeclRules...)
+		result.MinVersions = append(result.MinVersions, rules.MinVersions...)
 		return nil
 	})
 	if err != nil {
@@ -132,6 +141,12 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 	}
 
 	result := &InstrumentationRules{}
+
+	if rulesFile.Meta.MinVersion != "" {
+		result.MinVersions = []MinVersionEntry{
+			{File: path, Version: rulesFile.Meta.MinVersion},
+		}
+	}
 
 	for _, rule := range rulesFile.Rules {
 		switch rule.Type {

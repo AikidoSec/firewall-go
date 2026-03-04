@@ -27,7 +27,7 @@ func toolexecVersionQueryCommand(stdout io.Writer, stderr io.Writer, tool string
 	}
 
 	// Compute hash of instrumentation rules
-	inst, err := instrumentor.NewInstrumentor()
+	inst, err := instrumentor.NewInstrumentor(version)
 	if err != nil {
 		return err
 	}

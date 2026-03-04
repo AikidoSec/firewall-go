@@ -10,7 +10,7 @@ import (
 )
 
 func TestComputeInstrumentationHash(t *testing.T) {
-	inst, err := instrumentor.NewInstrumentor()
+	inst, err := instrumentor.NewInstrumentor("999.0.0")
 	require.NoError(t, err)
 
 	hash := ComputeInstrumentationHash(inst, "test-version")

@@ -20,8 +20,10 @@ type Instrumentor struct {
 	InjectDeclRules []rules.InjectDeclRule
 }
 
-// NewInstrumentor creates a new Instrumentor, loading rules from YAML files
-func NewInstrumentor() (*Instrumentor, error) {
+// NewInstrumentor creates a new Instrumentor, loading rules from YAML files.
+// currentVersion is the zen-go version string used to check min-zen-go-version
+// requirements declared in zen.instrument.yml files.
+func NewInstrumentor(currentVersion string) (*Instrumentor, error) {
 	dirs := paths.FindInstrumentationDirs()
 	if len(dirs) == 0 {
 		return &Instrumentor{}, nil
@@ -36,18 +38,24 @@ func NewInstrumentor() (*Instrumentor, error) {
 		allRules.WrapRules = append(allRules.WrapRules, rulesData.WrapRules...)
 		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
 		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
+		allRules.MinVersions = append(allRules.MinVersions, rulesData.MinVersions...)
 	}
 
-	return NewInstrumentorWithRules(allRules), nil
+	return NewInstrumentorWithRules(allRules, currentVersion)
+
 }
 
-// NewInstrumentorWithRules creates an Instrumentor with the given rules
-func NewInstrumentorWithRules(rules *rules.InstrumentationRules) *Instrumentor {
-	return &Instrumentor{
-		WrapRules:       rules.WrapRules,
-		PrependRules:    rules.PrependRules,
-		InjectDeclRules: rules.InjectDeclRules,
+// NewInstrumentorWithRules creates an Instrumentor with the given rules.
+// currentVersion is checked against min-zen-go-version requirements from the rules.
+func NewInstrumentorWithRules(r *rules.InstrumentationRules, currentVersion string) (*Instrumentor, error) {
+	if err := rules.CheckMinVersions(r.MinVersions, currentVersion); err != nil {
+		return nil, err
 	}
+	return &Instrumentor{
+		WrapRules:       r.WrapRules,
+		PrependRules:    r.PrependRules,
+		InjectDeclRules: r.InjectDeclRules,
+	}, nil
 }
 
 type InstrumentFileResult struct {
