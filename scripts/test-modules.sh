@@ -14,6 +14,8 @@ coverage_dir=""
 modules=()
 test_args=()
 
+current_go_minor=$(go env GOVERSION | sed 's/^go1\.//' | cut -d. -f1)
+
 # --- argument parsing -------------------------------------------------
 
 while [[ $# -gt 0 ]]; do
@@ -64,6 +66,13 @@ i=0
 
 for moddir in "${modules[@]}"; do
 	i=$((i + 1))
+
+	mod_minor=$(sed -n 's/^go 1\.//p' "$moddir/go.mod" | cut -d. -f1)
+	if [[ -n "$mod_minor" ]] && ((mod_minor > current_go_minor)); then
+		echo "Skipping $moddir (requires go 1.$mod_minor, have go 1.$current_go_minor)"
+		continue
+	fi
+
 	echo "Running tests for $moddir"
 
 	cov_args=()

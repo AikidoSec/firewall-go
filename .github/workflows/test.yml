@@ -135,6 +135,7 @@ jobs:
         app:
           - gin-postgres
           - echo-postgres
+          - echo-v5-postgres
           - echo-pgx-sql
           - gin-pgx-native
           - gin-sqlx
