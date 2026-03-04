@@ -183,6 +183,33 @@ func TestContext_SetDeferredAttack_GetDeferredAttack(t *testing.T) {
 	assert.Nil(t, ctx.GetDeferredAttack())
 }
 
+func TestContext_AddOutgoingRedirect_GetOutgoingRedirects(t *testing.T) {
+	ctx := &Context{}
+
+	// Initially empty
+	assert.Empty(t, ctx.GetOutgoingRedirects())
+
+	// Add one entry
+	entry1 := RedirectEntry{
+		SourceHostname: "example.com",
+		SourcePort:     80,
+		DestHostname:   "other.com",
+		DestPort:       443,
+	}
+	ctx.AddOutgoingRedirect(entry1)
+	assert.Equal(t, []RedirectEntry{entry1}, ctx.GetOutgoingRedirects())
+
+	// Add a second entry
+	entry2 := RedirectEntry{
+		SourceHostname: "other.com",
+		SourcePort:     443,
+		DestHostname:   "final.com",
+		DestPort:       8080,
+	}
+	ctx.AddOutgoingRedirect(entry2)
+	assert.Equal(t, []RedirectEntry{entry1, entry2}, ctx.GetOutgoingRedirects())
+}
+
 func TestDeferredAttack_ShouldReport(t *testing.T) {
 	attack := &DeferredAttack{
 		Operation: "test",
