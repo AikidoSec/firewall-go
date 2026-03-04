@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -26,6 +27,11 @@ func OnInitRequest(ctx context.Context) *Response {
 
 	ip := reqCtx.GetIP()
 
+	// Record monitored IP matches for stats
+	if monitoredKeys := config.GetMatchingMonitoredIPKeys(ip); len(monitoredKeys) > 0 {
+		agent.Stats().OnIPAddressMatches(monitoredKeys)
+	}
+
 	// Allowed IP list, global list for allowing traffic by country
 	if ipAllowed := config.IsIPAllowed(ip); !ipAllowed {
 		msg := fmt.Sprintf("Your IP address is not allowed. (Your IP: %s)", ip)
@@ -35,13 +41,28 @@ func OnInitRequest(ctx context.Context) *Response {
 
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
 	if ipBlocked, reason := config.IsIPBlocked(ip); ipBlocked {
+		// Record blocked IP matches for stats
+		if blockedKeys := config.GetMatchingBlockedIPKeys(ip); len(blockedKeys) > 0 {
+			agent.Stats().OnIPAddressMatches(blockedKeys)
+		}
+
 		msg := fmt.Sprintf("Your IP address is blocked due to %s. (Your IP: %s)", reason, ip)
 
 		return &Response{403, msg}
 	}
 
 	// Check for blocked user agents using a regex (e.g. bot blocking)
-	if userAgentBlocked, _ := config.IsUserAgentBlocked(reqCtx.GetUserAgent()); userAgentBlocked {
+	ua := reqCtx.GetUserAgent()
+	userAgentBlocked, _ := config.IsUserAgentBlocked(ua)
+	isMonitoredUA := config.IsMonitoredUserAgent(ua)
+
+	if userAgentBlocked || isMonitoredUA {
+		if uaKeys := config.GetMatchingUserAgentKeys(ua); len(uaKeys) > 0 {
+			agent.Stats().OnUserAgentMatches(uaKeys)
+		}
+	}
+
+	if userAgentBlocked {
 		msg := "You are not allowed to access this resource because you have been identified as a bot."
 		return &Response{403, msg}
 	}

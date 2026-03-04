@@ -233,6 +233,10 @@ func TestInitWithProvidedEndpoints(t *testing.T) {
 	}
 }
 
+func TestVersion(t *testing.T) {
+	require.Equal(t, "0.3.0", Version)
+}
+
 func TestInitReturnsErrorForInvalidConfig(t *testing.T) {
 	err := Init(nil, &aikido_types.AikidoConfigData{
 		LogLevel: "INVALID",

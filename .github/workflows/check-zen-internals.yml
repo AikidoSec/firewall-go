@@ -1,0 +1,37 @@
+name: 🔍 Check zen-internals binary is up to date
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check-zen-internals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Check zen-internals binary matches version in Makefile
+        run: |
+          VERSION=$(grep '^ZEN_INTERNALS_VERSION=' Makefile | cut -d= -f2)
+          echo "ZEN_INTERNALS_VERSION: $VERSION"
+
+          BASE_URL="https://github.com/AikidoSec/zen-internals/releases/download/${VERSION}"
+          EXPECTED=$(curl -fsSL "${BASE_URL}/libzen_internals.wasm.sha256sum")
+          COMMITTED=$(cat internal/vulnerabilities/zeninternals/libzen_internals.wasm.sha256sum)
+
+          if [ "$EXPECTED" != "$COMMITTED" ]; then
+            echo "Error: committed sha256sum does not match version ${VERSION}"
+            echo "Expected: $EXPECTED"
+            echo "Got:      $COMMITTED"
+            echo ""
+            echo "Run 'make binaries' and commit the updated binary."
+            exit 1
+          fi
+
+          echo "Binary matches version ${VERSION}"

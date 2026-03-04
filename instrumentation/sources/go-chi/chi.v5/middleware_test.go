@@ -59,6 +59,24 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	router.ServeHTTP(w, r)
 }
 
+func TestMiddlewareSetsIPInContext(t *testing.T) {
+	router := chi.NewRouter()
+	router.Use(zenchi.GetMiddleware())
+
+	router.Get("/route", func(w http.ResponseWriter, r *http.Request) {
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "192.168.1.1", ctx.GetIP())
+	})
+
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
+	r.RemoteAddr = "192.168.1.1:1234"
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+}
+
 func TestMiddlewareGLSFallback(t *testing.T) {
 	router := chi.NewRouter()
 	router.Use(zenchi.GetMiddleware())
@@ -333,6 +351,49 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		stats := agent.Stats().GetAndClear()
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestGetRoutePattern_RawPath(t *testing.T) {
+	router := chi.NewRouter()
+	router.Use(zenchi.GetMiddleware())
+
+	var capturedRoute string
+	router.Get("/files/{name}", func(w http.ResponseWriter, r *http.Request) {
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx)
+		capturedRoute = ctx.Route
+	})
+
+	// Percent-encoded path: /files/hello%2Fworld → RawPath is set, Path is decoded
+	r := httptest.NewRequest("GET", "/files/hello%2Fworld", http.NoBody)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, "/files/{name}", capturedRoute)
+}
+
+func TestGetRoutePattern_NoMatch(t *testing.T) {
+	router := chi.NewRouter()
+	router.Use(zenchi.GetMiddleware())
+
+	router.Get("/known", func(w http.ResponseWriter, r *http.Request) {})
+
+	var capturedRoute string
+	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx)
+		capturedRoute = ctx.Route
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	r := httptest.NewRequest("GET", "/unknown/path", http.NoBody)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, "/unknown/path", capturedRoute)
 }
 
 func TestMiddlewareNestedRouters(t *testing.T) {

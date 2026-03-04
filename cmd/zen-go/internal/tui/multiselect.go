@@ -163,8 +163,7 @@ func (m *multiSelectModel) renderItem(index int) string {
 	return cursor + checkbox + " " + name + desc
 }
 
-func RunMultiSelect(title, subtitle string, items []SelectItem) ([]string, error) {
-	// Start cursor on first optional item
+func newMultiSelectModel(title, subtitle string, items []SelectItem) *multiSelectModel {
 	cursor := 0
 	for i, item := range items {
 		if !item.Locked {
@@ -172,15 +171,28 @@ func RunMultiSelect(title, subtitle string, items []SelectItem) ([]string, error
 			break
 		}
 	}
-
-	m := multiSelectModel{
+	return &multiSelectModel{
 		title:    title,
 		subtitle: subtitle,
 		items:    items,
 		cursor:   cursor,
 	}
+}
 
-	p := tea.NewProgram(&m)
+func (m *multiSelectModel) selectedItems() []string {
+	var selected []string
+	for _, item := range m.items {
+		if item.selected && !item.Locked {
+			selected = append(selected, item.Name)
+		}
+	}
+	return selected
+}
+
+func RunMultiSelect(title, subtitle string, items []SelectItem) ([]string, error) {
+	m := newMultiSelectModel(title, subtitle, items)
+
+	p := tea.NewProgram(m)
 	result, err := p.Run()
 	if err != nil {
 		return nil, err
@@ -191,12 +203,5 @@ func RunMultiSelect(title, subtitle string, items []SelectItem) ([]string, error
 		return nil, fmt.Errorf("selection aborted")
 	}
 
-	var selected []string
-	for _, item := range final.items {
-		if item.selected && !item.Locked {
-			selected = append(selected, item.Name)
-		}
-	}
-
-	return selected, nil
+	return final.selectedItems(), nil
 }

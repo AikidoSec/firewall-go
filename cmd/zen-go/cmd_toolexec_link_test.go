@@ -111,41 +111,6 @@ func TestResolveMissingDeps(t *testing.T) {
 	assert.GreaterOrEqual(t, 1, len(newLines))
 }
 
-func TestReplaceLinkerImportcfgArg(t *testing.T) {
-	tests := []struct {
-		name     string
-		args     []string
-		newPath  string
-		expected []string
-	}{
-		{
-			name:     "space separator",
-			args:     []string{"-o", "out", "-importcfg", "/old/path", "file.a"},
-			newPath:  "/new/path",
-			expected: []string{"-o", "out", "-importcfg", "/new/path", "file.a"},
-		},
-		{
-			name:     "equals separator",
-			args:     []string{"-o=out", "-importcfg=/old/path", "file.a"},
-			newPath:  "/new/path",
-			expected: []string{"-o=out", "-importcfg=/new/path", "file.a"},
-		},
-		{
-			name:     "no importcfg",
-			args:     []string{"-o", "out", "file.a"},
-			newPath:  "/new/path",
-			expected: []string{"-o", "out", "file.a"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := replaceLinkerImportcfgArg(tt.args, tt.newPath)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestWriteExtendedLinkerImportcfg(t *testing.T) {
 	originalContent := []byte("# import config\npackagefile fmt=/path/to/fmt.a")
 	newLines := []string{
@@ -163,6 +128,47 @@ func TestWriteExtendedLinkerImportcfg(t *testing.T) {
 	assert.Contains(t, string(content), "packagefile fmt=/path/to/fmt.a")
 	assert.Contains(t, string(content), "packagefile os=/path/to/os.a")
 	assert.Contains(t, string(content), "packagefile io=/path/to/io.a")
+}
+
+func TestInsertLinkerFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		flags    []string
+		expected []string
+	}{
+		{
+			name:     "inserts before archive file",
+			args:     []string{"-o", "output", "-importcfg", "/tmp/cfg", "main.a"},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-o", "output", "-importcfg", "/tmp/cfg", "-X", "pkg.Var=value", "main.a"},
+		},
+		{
+			name:     "works with existing -X flags",
+			args:     []string{"-X", "main.version=1.0", "main.a"},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-X", "main.version=1.0", "-X", "pkg.Var=value", "main.a"},
+		},
+		{
+			name:     "empty args",
+			args:     []string{},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-X", "pkg.Var=value"},
+		},
+		{
+			name:     "single arg",
+			args:     []string{"main.a"},
+			flags:    []string{"-X", "pkg.Var=value"},
+			expected: []string{"-X", "pkg.Var=value", "main.a"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := insertLinkerFlags(tt.args, tt.flags...)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 func TestWriteLinkDepsForArchive_NoLinkDeps(t *testing.T) {

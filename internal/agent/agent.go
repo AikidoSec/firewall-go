@@ -116,7 +116,7 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 // preserving the original first seen time. Safe for concurrent use.
 func OnUser(id string, username string, ip string) aikido_types.User {
 	log.Debug("Received user event", slog.String("id", id))
-	return storeUser(id, username, ip)
+	return stateCollector.StoreUser(id, username, ip)
 }
 
 type DetectedAttack struct {

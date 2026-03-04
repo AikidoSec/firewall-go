@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -22,7 +22,7 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 			return
 		}
 
-		ip := r.RemoteAddr
+		ip := zenhttp.GetClientIP(r)
 
 		pattern := r.Pattern
 		// ServeMux patterns can start with the method and/or host

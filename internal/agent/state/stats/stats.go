@@ -21,13 +21,17 @@ type Stats struct {
 	attacks             int
 	attacksBlocked      int
 	operations          map[string]operationData
+	ipAddressBreakdown  map[string]int
+	userAgentBreakdown  map[string]int
 
 	mu sync.Mutex
 }
 
 func New() *Stats {
 	return &Stats{
-		operations: make(map[string]operationData),
+		operations:         make(map[string]operationData),
+		ipAddressBreakdown: make(map[string]int),
+		userAgentBreakdown: make(map[string]int),
 	}
 }
 
@@ -47,7 +51,9 @@ func (s *Stats) GetAndClear() Snapshot {
 			},
 			RateLimited: s.requestsRateLimited,
 		},
-		Operations: s.getAndClearOperations(),
+		Operations:  s.getAndClearOperations(),
+		IPAddresses: IPAddressBreakdown{Breakdown: s.ipAddressBreakdown},
+		UserAgents:  UserAgentBreakdown{Breakdown: s.userAgentBreakdown},
 	}
 
 	s.startedAt = utils.GetTime()
@@ -56,6 +62,8 @@ func (s *Stats) GetAndClear() Snapshot {
 	s.requestsRateLimited = 0
 	s.attacks = 0
 	s.attacksBlocked = 0
+	s.ipAddressBreakdown = make(map[string]int)
+	s.userAgentBreakdown = make(map[string]int)
 
 	return result
 }
@@ -89,6 +97,32 @@ func (s *Stats) OnRateLimit() {
 	defer s.mu.Unlock()
 
 	s.requestsRateLimited++
+}
+
+func (s *Stats) OnIPAddressMatches(keys []string) {
+	if len(keys) == 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, key := range keys {
+		s.ipAddressBreakdown[key]++
+	}
+}
+
+func (s *Stats) OnUserAgentMatches(keys []string) {
+	if len(keys) == 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, key := range keys {
+		s.userAgentBreakdown[key]++
+	}
 }
 
 func (s *Stats) OnOperationCall(operation string, kind OperationKind) {

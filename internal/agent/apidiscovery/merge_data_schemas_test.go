@@ -8,6 +8,55 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIsSameType(t *testing.T) {
+	t.Run("matching strings", func(t *testing.T) {
+		assert.True(t, isSameType("string", "string"))
+	})
+
+	t.Run("non-matching strings", func(t *testing.T) {
+		assert.False(t, isSameType("string", "number"))
+	})
+
+	t.Run("different reflect types", func(t *testing.T) {
+		assert.False(t, isSameType("string", []string{"string"}))
+	})
+
+	t.Run("unsupported type returns false", func(t *testing.T) {
+		assert.False(t, isSameType(123, 123))
+	})
+}
+
+func TestMergeTypeArrays(t *testing.T) {
+	t.Run("merges single string types", func(t *testing.T) {
+		result := mergeTypeArrays("string", "number")
+		assert.Equal(t, []string{"string", "number"}, result)
+	})
+
+	t.Run("merges string with slice", func(t *testing.T) {
+		result := mergeTypeArrays("string", []string{"number", "boolean"})
+		assert.Equal(t, []string{"string", "number", "boolean"}, result)
+	})
+}
+
+func TestMergeDataSchemasNilInputs(t *testing.T) {
+	schema := &aikido_types.DataSchema{Type: []string{"string"}}
+
+	t.Run("returns second when first is nil", func(t *testing.T) {
+		result := MergeDataSchemas(nil, schema)
+		assert.Equal(t, schema, result)
+	})
+
+	t.Run("returns first when second is nil", func(t *testing.T) {
+		result := MergeDataSchemas(schema, nil)
+		assert.Equal(t, schema, result)
+	})
+
+	t.Run("returns nil when both are nil", func(t *testing.T) {
+		result := MergeDataSchemas(nil, nil)
+		assert.Nil(t, result)
+	})
+}
+
 func TestMergeDataSchemas(t *testing.T) {
 	// Example 1
 	schema1 := GetDataSchema(map[string]any{"test": "abc"}, 0)

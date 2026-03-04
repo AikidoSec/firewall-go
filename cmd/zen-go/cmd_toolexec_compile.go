@@ -10,7 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/importcfg"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
 )
 
 func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
@@ -118,7 +119,7 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 	newArgs := make([]string, 0, len(toolArgs))
 	allAddedImports := make(map[string]string) // alias -> import path
 	var allAddedLinkDeps []string
-	instrumentor, err := internal.NewInstrumentor()
+	instrumentor, err := instrumentor.NewInstrumentor()
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -173,7 +174,7 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 }
 
 func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string, addedImports map[string]string, objdir string) ([]string, error) {
-	newImportcfg, err := internal.ExtendImportcfg(importcfgPath, addedImports, objdir, stderr, isDebug())
+	newImportcfg, err := importcfg.ExtendImportcfg(importcfgPath, addedImports, objdir, stderr, isDebug())
 	if err != nil {
 		return args, err
 	}
@@ -182,29 +183,12 @@ func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string
 		return args, nil
 	}
 
-	updatedArgs := replaceImportcfgArg(args, newImportcfg)
+	updatedArgs := importcfg.ReplaceImportcfgArg(args, newImportcfg)
 	if isDebug() {
 		fmt.Fprintf(stderr, "zen-go: replaced importcfg with %s\n", newImportcfg)
 	}
 
 	return updatedArgs, nil
-}
-
-func replaceImportcfgArg(args []string, newPath string) []string {
-	result := make([]string, len(args))
-	copy(result, args)
-
-	for i := range len(result) {
-		if result[i] == "-importcfg" && i+1 < len(result) {
-			result[i+1] = newPath
-			return result
-		}
-		if strings.HasPrefix(result[i], "-importcfg=") {
-			result[i] = "-importcfg=" + newPath
-			return result
-		}
-	}
-	return result
 }
 
 // checkZenToolFileIncluded checks if the main package is being compiled

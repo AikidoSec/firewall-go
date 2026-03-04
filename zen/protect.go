@@ -89,11 +89,11 @@ func SetDisabled(disabled bool) {
 
 // Config holds configuration options for the Zen firewall
 type Config struct {
-	// LogLevel sets the logging level (DEBUG, INFO, WARN, ERROR)
+	// LogLevel sets the logging level (DEBUG, INFO, WARN, ERROR). Ignored if Logger is set.
 	LogLevel string
-	// LogFormat sets the logging format (text, json)
+	// LogFormat sets the logging format (text, json). Ignored if Logger is set.
 	LogFormat string
-	// Logger provides a custom slog instance that overrrides LogLevel and LogFormat
+	// Logger provides a custom slog instance that overrides LogLevel and LogFormat.
 	Logger *slog.Logger
 	// Debug enables debug logging (overrides LogLevel)
 	Debug bool
@@ -179,6 +179,10 @@ func doProtect(cfg *Config) {
 	}
 
 	config.SetZenLoaded(true)
+
+	if !config.IsCompiledWithZenGo() {
+		log.Warn("This application is not compiled with zen-go. Instrumentation is not active and requests will not be protected.")
+	}
 
 	log.Info("Aikido Zen loaded!",
 		slog.String("version", globals.EnvironmentConfig.Version))

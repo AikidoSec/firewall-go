@@ -180,6 +180,65 @@ func TestIsDisabled(t *testing.T) {
 	}
 }
 
+func TestPopulateConfigFromEnv_Block(t *testing.T) {
+	t.Run("AIKIDO_BLOCK env var sets Block field", func(t *testing.T) {
+		t.Setenv("AIKIDO_BLOCK", "true")
+
+		result := populateConfigFromEnv(nil)
+		require.True(t, result.Block)
+	})
+
+	t.Run("explicit Block=true not overridden", func(t *testing.T) {
+		t.Setenv("AIKIDO_BLOCK", "false")
+
+		result := populateConfigFromEnv(&Config{Block: true})
+		require.True(t, result.Block)
+	})
+
+	t.Run("Block defaults to false when env not set", func(t *testing.T) {
+		t.Setenv("AIKIDO_BLOCK", "")
+
+		result := populateConfigFromEnv(nil)
+		require.False(t, result.Block)
+	})
+}
+
+func TestDoProtect_InvalidLogLevel(t *testing.T) {
+	originalDisabled := IsDisabled()
+	t.Cleanup(func() {
+		SetDisabled(originalDisabled)
+		protectOnce = sync.Once{}
+		protectErr = nil
+	})
+
+	SetDisabled(false)
+	protectOnce = sync.Once{}
+	protectErr = nil
+
+	err := ProtectWithConfig(&Config{LogLevel: "INVALID_LEVEL"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid log level")
+}
+
+func TestDoProtect_InvalidLogFormat(t *testing.T) {
+	originalDisabled := IsDisabled()
+	t.Cleanup(func() {
+		SetDisabled(originalDisabled)
+		protectOnce = sync.Once{}
+		protectErr = nil
+	})
+
+	SetDisabled(false)
+	protectOnce = sync.Once{}
+	protectErr = nil
+
+	err := ProtectWithConfig(&Config{LogFormat: "xml"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid log format")
+}
+
 func TestProtectWithConfig_AikidoDisabled(t *testing.T) {
 	originalDisabled := IsDisabled()
 	t.Cleanup(func() { SetDisabled(originalDisabled) })

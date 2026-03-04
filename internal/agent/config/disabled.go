@@ -7,6 +7,10 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
+// compiledWithZenGo is set to "true" at link time by zen-go toolexec via -ldflags -X.
+// When empty, the binary was not compiled with zen-go and instrumentation is inactive.
+var compiledWithZenGo string
+
 var (
 	isZenDisabled atomic.Bool
 	isZenLoaded   atomic.Bool
@@ -45,6 +49,11 @@ func WarnIfNotProtected() {
 	warnOnce.Do(func() {
 		log.Warn("Aikido middleware is active but zen.Protect() was not called. Requests will not be protected.")
 	})
+}
+
+// IsCompiledWithZenGo returns true if the binary was compiled with zen-go toolexec.
+func IsCompiledWithZenGo() bool {
+	return compiledWithZenGo == "true"
 }
 
 // ResetWarnOnce resets the WarnIfNotProtected once guard.

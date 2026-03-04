@@ -92,6 +92,24 @@ func TestShouldBlockRequest(t *testing.T) {
 	require.Nil(t, result, "Expected nil result for empty context")
 }
 
+func TestShouldBlockRequest_MiddlewareAlreadyExecuted(t *testing.T) {
+	req := httptest.NewRequest("GET", "/route", http.NoBody)
+	ip := "127.0.0.1"
+	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	// First call: marks middleware as executed and returns nil (no block).
+	result1 := zen.ShouldBlockRequest(reqCtx)
+	assert.Nil(t, result1)
+
+	// Second call: middleware already executed, must return nil without running checks.
+	result2 := zen.ShouldBlockRequest(reqCtx)
+	assert.Nil(t, result2)
+}
+
 func TestShouldBlockRequest_BlockedUser(t *testing.T) {
 	req := httptest.NewRequest("GET", "/route", http.NoBody)
 	ip := "127.0.0.1"

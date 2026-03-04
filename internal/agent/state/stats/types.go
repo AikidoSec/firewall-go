@@ -19,10 +19,20 @@ type OperationStats struct {
 }
 
 type Snapshot struct {
-	Operations map[string]OperationStats `json:"operations"`
-	StartedAt  int64                     `json:"startedAt"`
-	EndedAt    int64                     `json:"endedAt"`
-	Requests   Requests                  `json:"requests"`
+	Operations  map[string]OperationStats `json:"operations"`
+	StartedAt   int64                     `json:"startedAt"`
+	EndedAt     int64                     `json:"endedAt"`
+	Requests    Requests                  `json:"requests"`
+	IPAddresses IPAddressBreakdown        `json:"ipAddresses"`
+	UserAgents  UserAgentBreakdown        `json:"userAgents"`
+}
+
+type IPAddressBreakdown struct {
+	Breakdown map[string]int `json:"breakdown"`
+}
+
+type UserAgentBreakdown struct {
+	Breakdown map[string]int `json:"breakdown"`
 }
 
 type AttacksDetected struct {

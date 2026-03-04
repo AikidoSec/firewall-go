@@ -65,7 +65,7 @@ func sendHeartbeatEvent() {
 		cloud.HeartbeatData{
 			Hostnames:           stateCollector.GetAndClearHostnames(),
 			Routes:              stateCollector.GetRoutesAndClear(),
-			Users:               GetUsersAndClear(),
+			Users:               stateCollector.GetUsersAndClear(),
 			Stats:               stateCollector.Stats().GetAndClear(),
 			MiddlewareInstalled: stateCollector.IsMiddlewareInstalled(),
 		})

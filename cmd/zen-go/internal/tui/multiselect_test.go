@@ -172,6 +172,26 @@ func TestMultiSelect_NoLockedItems(t *testing.T) {
 	assert.NotContains(t, view, "---")
 }
 
+func TestNewMultiSelectModel_CursorSkipsLeadingLockedItems(t *testing.T) {
+	m := newMultiSelectModel("title", "subtitle", []SelectItem{
+		{Name: "a", Locked: true},
+		{Name: "b"},
+		{Name: "c"},
+	})
+	assert.Equal(t, 1, m.cursor)
+}
+
+func TestMultiSelectModel_SelectedNames(t *testing.T) {
+	m := &multiSelectModel{
+		items: []SelectItem{
+			{Name: "a", selected: true},
+			{Name: "b", selected: false},
+			{Name: "c", selected: true, Locked: true},
+		},
+	}
+	assert.Equal(t, []string{"a"}, m.selectedItems())
+}
+
 func TestMultiSelect_NoOptionalItems(t *testing.T) {
 	m := &multiSelectModel{
 		title: "Test",

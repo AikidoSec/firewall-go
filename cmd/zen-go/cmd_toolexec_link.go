@@ -6,7 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/importcfg"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/linkdeps"
 )
 
 // toolexecLinkCommand is invoked by Go's -toolexec flag when linking.
@@ -14,6 +15,11 @@ import (
 //
 //	tool: "/usr/local/go/pkg/tool/darwin_arm64/link"
 //	toolArgs: ["-o", "/path/to/output", "-importcfg", "/tmp/importcfg", "-buildmode=exe", "main.a"]
+//
+// zenGoBuildFlag is the -X linker flag that marks the binary as compiled with zen-go.
+// zen.Protect() checks this at runtime to warn if the binary was not compiled with zen-go.
+const zenGoBuildFlag = "github.com/AikidoSec/firewall-go/internal/agent/config.compiledWithZenGo=true"
+
 func toolexecLinkCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
 	importcfgPath := extractLinkerImportcfg(toolArgs)
 	if importcfgPath == "" {
@@ -24,40 +30,39 @@ func toolexecLinkCommand(stdout io.Writer, stderr io.Writer, tool string, toolAr
 		fmt.Fprintf(stderr, "zen-go: intercepting linker\n")
 	}
 
+	args := make([]string, len(toolArgs))
+	copy(args, toolArgs)
+
 	// Read the importcfg to find all archives
 	// #nosec G304 - importcfgPath comes from Go toolchain args, not user input
 	content, err := os.ReadFile(importcfgPath)
 	if err != nil {
-		return passthrough(stdout, stderr, tool, toolArgs)
+		fmt.Fprintf(stderr, "zen-go: warning: failed to read importcfg: %v\n", err)
+	} else {
+		// Collect all link deps from all archives
+		allLinkDeps := collectLinkDeps(content, stderr)
+		if len(allLinkDeps) > 0 {
+			// Find deps we introduced that aren't in the original importcfg.
+			// Example: if we injected a go:linkname pointing to
+			// github.com/AikidoSec/firewall-go/instrumentation/sinks/os,
+			// that package won't be in the importcfg unless the app already used it.
+			newLines := resolveMissingDeps(content, allLinkDeps, stderr)
+			if len(newLines) > 0 {
+				newImportcfgPath, err := writeExtendedLinkerImportcfg(content, newLines)
+				if err != nil {
+					fmt.Fprintf(stderr, "zen-go: warning: failed to write extended importcfg: %v\n", err)
+				} else {
+					defer func() { _ = os.Remove(newImportcfgPath) }()
+					args = importcfg.ReplaceImportcfgArg(args, newImportcfgPath)
+				}
+			}
+		}
 	}
 
-	// Collect all link deps from all archives
-	allLinkDeps := collectLinkDeps(content, stderr)
-	if len(allLinkDeps) == 0 {
-		return passthrough(stdout, stderr, tool, toolArgs)
-	}
+	// Inject build marker so zen.Protect() can detect zen-go compilation
+	args = insertLinkerFlags(args, "-X", zenGoBuildFlag)
 
-	// Find deps we introduced that aren't in the original importcfg.
-	// Example: if we injected a go:linkname pointing to
-	// github.com/AikidoSec/firewall-go/instrumentation/sinks/os,
-	// that package won't be in the importcfg unless the app already used it.
-	newLines := resolveMissingDeps(content, allLinkDeps, stderr)
-	if len(newLines) == 0 {
-		return passthrough(stdout, stderr, tool, toolArgs)
-	}
-
-	// Write new importcfg with additional dependencies
-	newImportcfgPath, err := writeExtendedLinkerImportcfg(content, newLines)
-	if err != nil {
-		fmt.Fprintf(stderr, "zen-go: warning: failed to write extended importcfg: %v\n", err)
-		return passthrough(stdout, stderr, tool, toolArgs)
-	}
-	defer func() { _ = os.Remove(newImportcfgPath) }()
-
-	// Update args with new importcfg
-	newArgs := replaceLinkerImportcfgArg(toolArgs, newImportcfgPath)
-
-	return passthrough(stdout, stderr, tool, newArgs)
+	return passthrough(stdout, stderr, tool, args)
 }
 
 func extractLinkerImportcfg(args []string) string {
@@ -84,7 +89,7 @@ func collectLinkDeps(importcfgContent []byte, stderr io.Writer) map[string]bool 
 		}
 
 		archivePath := parts[1]
-		deps, err := internal.ReadLinkDeps(archivePath)
+		deps, err := linkdeps.ReadLinkDeps(archivePath)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: could not read linkdeps: %v\n", err)
 			continue
@@ -126,7 +131,7 @@ func resolveMissingDeps(importcfgContent []byte, allLinkDeps map[string]bool, st
 			continue
 		}
 
-		exportPath, err := internal.GetPackageExport(dep)
+		exportPath, err := importcfg.GetPackageExport(dep)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: could not find export for link dep %s: %v\n", dep, err)
 			continue
@@ -167,20 +172,16 @@ func writeExtendedLinkerImportcfg(originalContent []byte, newLines []string) (st
 	return tmpFile.Name(), nil
 }
 
-func replaceLinkerImportcfgArg(args []string, newPath string) []string {
-	result := make([]string, len(args))
-	copy(result, args)
-
-	for i := range len(result) {
-		if result[i] == "-importcfg" && i+1 < len(result) {
-			result[i+1] = newPath
-			return result
-		}
-		if strings.HasPrefix(result[i], "-importcfg=") {
-			result[i] = "-importcfg=" + newPath
-			return result
-		}
+// insertLinkerFlags inserts flags before the last argument (the archive file),
+// since the Go linker expects flags before positional arguments.
+func insertLinkerFlags(args []string, flags ...string) []string {
+	if len(args) == 0 {
+		return flags
 	}
+	result := make([]string, 0, len(args)+len(flags))
+	result = append(result, args[:len(args)-1]...)
+	result = append(result, flags...)
+	result = append(result, args[len(args)-1])
 	return result
 }
 
@@ -199,7 +200,7 @@ func writeLinkDepsForArchive(stderr io.Writer, outputPath string, linkDeps []str
 		return
 	}
 
-	if err := internal.WriteLinkDeps(outputPath, linkDeps, stderr, isDebug()); err != nil {
+	if err := linkdeps.WriteLinkDeps(outputPath, linkDeps, stderr, isDebug()); err != nil {
 		fmt.Fprintf(stderr, "zen-go: warning: failed to write link deps: %v\n", err)
 	}
 }

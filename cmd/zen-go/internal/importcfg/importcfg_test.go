@@ -1,4 +1,4 @@
-package internal
+package importcfg
 
 import (
 	"os"
@@ -106,6 +106,74 @@ func TestFindModuleRoot_NoGoMod(t *testing.T) {
 
 	root := paths.FindModuleRoot()
 	assert.Empty(t, root)
+}
+
+func TestReplaceImportcfgArg(t *testing.T) {
+	t.Run("space-separated form", func(t *testing.T) {
+		args := []string{"-p", "main", "-importcfg", "/old/path", "-o", "out.a"}
+		result := ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, "/new/path", result[3])
+	})
+
+	t.Run("equals form", func(t *testing.T) {
+		args := []string{"-p", "main", "-importcfg=/old/path", "-o", "out.a"}
+		result := ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, "-importcfg=/new/path", result[2])
+	})
+
+	t.Run("no importcfg flag", func(t *testing.T) {
+		args := []string{"-p", "main", "-o", "out.a"}
+		result := ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, args, result)
+	})
+
+	t.Run("does not modify original slice", func(t *testing.T) {
+		args := []string{"-importcfg", "/old/path"}
+		_ = ReplaceImportcfgArg(args, "/new/path")
+		assert.Equal(t, "/old/path", args[1])
+	})
+}
+
+func TestExtendImportcfg_DebugLogging(t *testing.T) {
+	t.Run("logs when package already exists", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		importcfgPath := filepath.Join(tmpDir, "importcfg")
+		content := "packagefile fmt=/path/to/fmt.a\n"
+		require.NoError(t, os.WriteFile(importcfgPath, []byte(content), 0600))
+
+		var stderr strings.Builder
+		result, err := ExtendImportcfg(importcfgPath, map[string]string{
+			"fmt": "fmt",
+		}, tmpDir, &stderr, true)
+
+		require.NoError(t, err)
+		assert.Empty(t, result)
+		assert.Contains(t, stderr.String(), "processing import")
+		assert.Contains(t, stderr.String(), "no new imports to add")
+	})
+
+	t.Run("logs when new import is added", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		importcfgPath := filepath.Join(tmpDir, "importcfg")
+		content := "# import config\n"
+		require.NoError(t, os.WriteFile(importcfgPath, []byte(content), 0600))
+
+		var stderr strings.Builder
+		result, err := ExtendImportcfg(importcfgPath, map[string]string{
+			"fmt": "fmt",
+		}, tmpDir, &stderr, true)
+
+		require.NoError(t, err)
+		assert.NotEmpty(t, result)
+		assert.Contains(t, stderr.String(), "processing import")
+		assert.Contains(t, stderr.String(), "adding to importcfg")
+		assert.Contains(t, stderr.String(), "wrote extended importcfg")
+
+		// Verify the new importcfg file contains the added package
+		newContent, err := os.ReadFile(result)
+		require.NoError(t, err)
+		assert.Contains(t, string(newContent), "packagefile fmt=")
+	})
 }
 
 func TestExtendImportcfg_ParsesExistingEntries(t *testing.T) {

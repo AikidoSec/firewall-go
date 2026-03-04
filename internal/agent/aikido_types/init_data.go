@@ -63,17 +63,26 @@ func (c *CloudConfigData) UpdatedAt() time.Time {
 }
 
 type IPList struct {
+	Key         string   `json:"key"`
 	Source      string   `json:"source"`
 	Description string   `json:"description"`
 	IPs         []string `json:"ips"`
 }
 
+type UserAgentDetail struct {
+	Key     string `json:"key"`
+	Pattern string `json:"pattern"`
+}
+
 type ListsConfigData struct {
-	Success            bool     `json:"success"`
-	ServiceID          int      `json:"serviceId"`
-	BlockedIPAddresses []IPList `json:"blockedIPAddresses"`
-	BlockedUserAgents  string   `json:"blockedUserAgents"`
-	AllowedIPAddresses []IPList `json:"allowedIPAddresses"`
+	Success              bool              `json:"success"`
+	ServiceID            int               `json:"serviceId"`
+	BlockedIPAddresses   []IPList          `json:"blockedIPAddresses"`
+	MonitoredIPAddresses []IPList          `json:"monitoredIPAddresses"`
+	BlockedUserAgents    string            `json:"blockedUserAgents"`
+	MonitoredUserAgents  string            `json:"monitoredUserAgents"`
+	AllowedIPAddresses   []IPList          `json:"allowedIPAddresses"`
+	UserAgentDetails     []UserAgentDetail `json:"userAgentDetails"`
 }
 
 type CloudConfigUpdatedAt struct {

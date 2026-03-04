@@ -122,6 +122,55 @@ func TestExtractFlag(t *testing.T) {
 	}
 }
 
+func TestIsVersionQuery(t *testing.T) {
+	assert.True(t, isVersionQuery([]string{"-V=full"}))
+	assert.True(t, isVersionQuery([]string{"-V"}))
+	assert.True(t, isVersionQuery([]string{"-p", "main", "-V=full"}))
+	assert.False(t, isVersionQuery([]string{"-p", "main", "-o", "out.a"}))
+	assert.False(t, isVersionQuery([]string{}))
+}
+
+func TestExtractCompilerFlags(t *testing.T) {
+	tests := []struct {
+		name          string
+		args          []string
+		wantPkg       string
+		wantImportcfg string
+		wantOutput    string
+	}{
+		{
+			name:          "all flags space-separated",
+			args:          []string{"-p", "main", "-importcfg", "/tmp/cfg", "-o", "/tmp/out.a"},
+			wantPkg:       "main",
+			wantImportcfg: "/tmp/cfg",
+			wantOutput:    "/tmp/out.a",
+		},
+		{
+			name:          "all flags equals form",
+			args:          []string{"-p=main", "-importcfg=/tmp/cfg", "-o=/tmp/out.a"},
+			wantPkg:       "main",
+			wantImportcfg: "/tmp/cfg",
+			wantOutput:    "/tmp/out.a",
+		},
+		{
+			name:          "missing flags return empty",
+			args:          []string{"-trimpath", "/tmp"},
+			wantPkg:       "",
+			wantImportcfg: "",
+			wantOutput:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkg, importcfg, output := extractCompilerFlags(tt.args)
+			assert.Equal(t, tt.wantPkg, pkg)
+			assert.Equal(t, tt.wantImportcfg, importcfg)
+			assert.Equal(t, tt.wantOutput, output)
+		})
+	}
+}
+
 func TestPassthrough(t *testing.T) {
 	mockTool := createMockTool(t, "tool", "echo")
 
@@ -286,6 +335,75 @@ func TestPassthrough_WithComplexArgs(t *testing.T) {
 	assert.Contains(t, output, "/tmp/output.o")
 	assert.Contains(t, output, "-trimpath")
 	assert.Contains(t, output, "input.go")
+}
+
+func TestUpdateImportcfgInArgs(t *testing.T) {
+	t.Run("returns error when importcfg file missing", func(t *testing.T) {
+		args := []string{"-importcfg", "/old/path"}
+		result, err := updateImportcfgInArgs(os.Stderr, args, "/nonexistent/importcfg", map[string]string{"pkg": "github.com/some/pkg"}, t.TempDir())
+		require.Error(t, err)
+		assert.Equal(t, args, result)
+	})
+
+	t.Run("returns args unchanged when no new imports needed", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cfgPath := filepath.Join(tmpDir, "importcfg")
+		require.NoError(t, os.WriteFile(cfgPath, []byte("packagefile github.com/some/pkg=/path/to/pkg.a\n"), 0o600))
+
+		args := []string{"-importcfg", cfgPath, "-o", "out.a"}
+		result, err := updateImportcfgInArgs(os.Stderr, args, cfgPath, map[string]string{"pkg": "github.com/some/pkg"}, tmpDir)
+		require.NoError(t, err)
+		assert.Equal(t, args, result)
+	})
+
+	t.Run("replaces importcfg arg when new imports are added", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		cfgPath := filepath.Join(tmpDir, "importcfg")
+		require.NoError(t, os.WriteFile(cfgPath, []byte("# import config\n"), 0o600))
+
+		args := []string{"-importcfg", cfgPath, "-o", "out.a"}
+		result, err := updateImportcfgInArgs(os.Stderr, args, cfgPath, map[string]string{"fmt": "fmt"}, tmpDir)
+		require.NoError(t, err)
+		assert.NotEqual(t, cfgPath, result[1])
+		assert.NotEqual(t, args, result)
+	})
+}
+
+func TestWriteTempFile(t *testing.T) {
+	t.Run("writes to objdir/zen-go/src/", func(t *testing.T) {
+		objdir := t.TempDir()
+		content := []byte("package main")
+
+		out, err := writeTempFile("/src/foo.go", content, objdir)
+
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(objdir, "zen-go", "src", "foo.go"), out)
+		got, err := os.ReadFile(out)
+		require.NoError(t, err)
+		assert.Equal(t, content, got)
+	})
+
+	t.Run("preserves original basename", func(t *testing.T) {
+		objdir := t.TempDir()
+
+		out, err := writeTempFile("/some/deep/path/middleware.go", []byte{}, objdir)
+
+		require.NoError(t, err)
+		assert.Equal(t, "middleware.go", filepath.Base(out))
+	})
+
+	t.Run("falls back to source dir when objdir unusable", func(t *testing.T) {
+		srcDir := t.TempDir()
+		origPath := filepath.Join(srcDir, "foo.go")
+		// Point objdir at an existing file so MkdirAll fails
+		badObjdir := filepath.Join(srcDir, "not-a-dir")
+		require.NoError(t, os.WriteFile(badObjdir, []byte{}, 0o644))
+
+		out, err := writeTempFile(origPath, []byte("package main"), badObjdir)
+
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(srcDir, "foo.go"), out)
+	})
 }
 
 func TestCheckZenToolFileIncluded(t *testing.T) {
