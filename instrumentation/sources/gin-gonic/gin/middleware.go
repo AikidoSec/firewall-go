@@ -1,7 +1,7 @@
 package gin
 
 import (
-	"github.com/AikidoSec/firewall-go/internal/http"
+	"github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"

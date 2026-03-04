@@ -4,7 +4,7 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	zenhttp "github.com/AikidoSec/firewall-go/internal/http"
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/go-chi/chi/v5"
