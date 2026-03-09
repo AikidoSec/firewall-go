@@ -119,14 +119,9 @@ func defineAPIRoutes(mux *http.ServeMux, db *DatabaseHelper) {
 		}
 	})
 
-	mux.HandleFunc("/api/execute/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			command := r.URL.Path[len("/api/execute/"):]
-			executeCommandParamHandler(w, r, command)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
+	mux.HandleFunc("GET /api/execute/{command}", func(w http.ResponseWriter, r *http.Request) {
+		command := r.PathValue("command")
+		executeCommandParamHandler(w, r, command)
 	})
 
 	mux.HandleFunc("/api/request", func(w http.ResponseWriter, r *http.Request) {
