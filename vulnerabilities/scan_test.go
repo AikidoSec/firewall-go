@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -227,6 +228,70 @@ func TestScanWithOptions_AllSourcesScannedWhenNoAttack(t *testing.T) {
 	assert.True(t, scannedInputs["cookieValue"], "cookies should be scanned")
 	assert.True(t, scannedInputs["routeValue"], "routeParams should be scanned")
 	assert.True(t, scannedInputs["bodyValue"], "body should be scanned")
+}
+
+func TestScanWithOptions_PathFallbackDetectsAttackWhenRouteParamsEmpty(t *testing.T) {
+	ip := "127.0.0.1"
+	args := mockScanArgs{Value: "test"}
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer config.SetBlocking(original)
+
+	// Vulnerability that detects shell-injection-like content in path
+	pathAttackVuln := Vulnerability[mockScanArgs]{
+		ScanFunction: func(input string, args mockScanArgs) (*ScanResult, error) {
+			if len(input) > 0 && (strings.Contains(input, "/etc/passwd") || strings.Contains(input, "ls;cat")) {
+				return &ScanResult{DetectedAttack: true, Metadata: map[string]string{"source": "path"}}, nil
+			}
+			return &ScanResult{DetectedAttack: false}, nil
+		},
+		Kind:  KindShellInjection,
+		Error: "shell injection",
+	}
+
+	req := httptest.NewRequest("GET", "/api/execute/ls%3Bcat%20%2Fetc%2Fpasswd", http.NoBody)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/api/execute/:cmd",
+		RemoteAddress: &ip,
+		RouteParams:   nil, // Empty so extractRouteParams fallback runs.
+	})
+
+	err := ScanWithOptions(ctx, "testOperation", pathAttackVuln, args, ScanOptions{})
+	require.Error(t, err, "path fallback should scan extracted segments and detect attack")
+	assert.Contains(t, err.Error(), "shell injection")
+}
+
+func TestScanWithOptions_PathFallbackScannedWhenRouteParamsEmpty(t *testing.T) {
+	ip := "127.0.0.1"
+	args := mockScanArgs{Value: "test"}
+
+	scannedInputs := make(map[string]bool)
+	trackingVuln := Vulnerability[mockScanArgs]{
+		ScanFunction: func(input string, args mockScanArgs) (*ScanResult, error) {
+			scannedInputs[input] = true
+			return &ScanResult{DetectedAttack: false}, nil
+		},
+		Kind:  KindSQLInjection,
+		Error: "",
+	}
+
+	// Path that extractRouteParams will turn into segments (e.g. user@example.com), no RouteParams
+	req := httptest.NewRequest("GET", "/api/users/user@example.com/posts", http.NoBody)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/api/users/:user/posts",
+		RemoteAddress: &ip,
+		RouteParams:   nil,
+	})
+
+	err := ScanWithOptions(ctx, "testOperation", trackingVuln, args, ScanOptions{})
+	assert.NoError(t, err)
+
+	// Fallback should have run and scanned extracted path segments
+	assert.True(t, scannedInputs["user@example.com"], "extracted path segment (email) should be scanned via fallback")
+	assert.True(t, scannedInputs["api/users/user@example.com/posts"], "full path should be scanned via fallback")
 }
 
 func TestScanWithOptions_NilContext(t *testing.T) {

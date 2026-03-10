@@ -83,6 +83,19 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 		return err
 	}
 
+	// Fallback: if no route params were extracted by the framework, attempt to
+	// extract potentially suspicious parts from the URL path. This covers
+	// pre-Go 1.22 routing, manual path parsing, and catch-all handlers.
+	if len(reqCtx.RouteParams) == 0 {
+		fallbackParams := extractRouteParams(reqCtx.Path)
+		if len(fallbackParams) > 0 {
+			err = scanSource(ctx, "routeParams", fallbackParams, operation, vulnerability, args, opts)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	err = scanSource(ctx, "body", reqCtx.Body, operation, vulnerability, args, opts)
 	if err != nil {
 		return err
