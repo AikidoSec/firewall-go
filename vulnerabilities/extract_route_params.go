@@ -184,22 +184,22 @@ func looksLikeASecret(s string) bool {
 		return false
 	}
 
-	// Check character uniqueness ratio using sliding window
+	// Check character uniqueness ratio using sliding window.
+	// windowCount is guaranteed >= 1 because len(s) > secretMinLength == windowSize.
 	windowSize := secretMinLength
+	windowCount := len(s) - windowSize + 1
 	totalRatio := 0.0
-	windows := 0
 
-	for i := 0; i <= len(s)-windowSize; i++ {
+	for i := 0; i < windowCount; i++ {
 		window := s[i : i+windowSize]
 		unique := make(map[rune]bool)
 		for _, r := range window {
 			unique[r] = true
 		}
 		totalRatio += float64(len(unique)) / float64(windowSize)
-		windows++
 	}
 
-	return totalRatio/float64(windows) > 0.75
+	return totalRatio/float64(windowCount) > 0.75
 }
 
 func isSpecialChar(r rune) bool {
