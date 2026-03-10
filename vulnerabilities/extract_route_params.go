@@ -199,10 +199,6 @@ func looksLikeASecret(s string) bool {
 		windows++
 	}
 
-	if windows == 0 {
-		return false
-	}
-
 	return totalRatio/float64(windows) > 0.75
 }
 

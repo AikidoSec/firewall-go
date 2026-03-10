@@ -34,6 +34,21 @@ func TestExtractRouteParams(t *testing.T) {
 		{name: "BSON ObjectID", path: "/api/items/507f1f77bcf86cd799439011", want: nil},
 		{name: "ULID", path: "/api/items/01ARZ3NDEKTSV4RRFFQ69G5FAV", want: nil},
 
+		// Invalid percent-encoding - url.PathUnescape returns an error, so the raw
+		// segment is used as-is (decoded = segment). Both the segment-level and the
+		// full-path-level PathUnescape error branches are exercised here.
+		{
+			name: "invalid percent-encoded segment",
+			path: "/api/users/%GGtest",
+			want: []string{"%GGtest", "api/users/%GGtest"},
+		},
+		{
+			// Segment is purely invalid encoding with no other characters.
+			name: "invalid percent-encoding only",
+			path: "/api/users/%ZZ",
+			want: []string{"%ZZ", "api/users/%ZZ"},
+		},
+
 		// URL-encoded characters: decoded segment + full path
 		{
 			name: "shell injection encoded",
