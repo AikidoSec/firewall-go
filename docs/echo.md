@@ -83,7 +83,7 @@ func AikidoMiddleware() echo.MiddlewareFunc {
 		}
 	}
 }
-
+```
 
 ## Proxy settings
 
