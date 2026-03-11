@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/http"
-	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/instrumentation/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/labstack/echo/v4"
 )
@@ -51,7 +51,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			}
 
 			var err error
-			request.WrapWithGLS(reqCtx, func() {
+			request.Wrap(reqCtx, func() {
 				err = next(c)
 			})
 

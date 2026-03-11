@@ -2,7 +2,7 @@ package gin
 
 import (
 	"github.com/AikidoSec/firewall-go/instrumentation/http"
-	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/instrumentation/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"
 )
@@ -56,7 +56,7 @@ func GetMiddleware() gin.HandlerFunc {
 			http.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
 		}()
 
-		request.WrapWithGLS(reqCtx, func() {
+		request.Wrap(reqCtx, func() {
 			c.Next()
 		})
 	}
