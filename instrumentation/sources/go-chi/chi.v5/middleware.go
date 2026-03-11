@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
-	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/instrumentation/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -27,7 +27,7 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 			}
 
 			// If a context is already set, then middleware has already run
-			if request.GetContext(r.Context()) != nil {
+			if request.HasContext(r.Context()) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -71,7 +71,7 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 			// Wrap the ResponseWriter to capture the status code
 			recorder := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-			request.WrapWithGLS(reqCtx, func() {
+			request.Wrap(reqCtx, func() {
 				next.ServeHTTP(recorder, wrappedR)
 			})
 

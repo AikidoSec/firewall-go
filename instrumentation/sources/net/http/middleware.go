@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
+	"github.com/AikidoSec/firewall-go/instrumentation/request"
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
@@ -58,7 +58,7 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 			writer: w,
 		}
 
-		request.WrapWithGLS(ctx, func() {
+		request.Wrap(ctx, func() {
 			orig(recorder, wrappedR)
 		})
 
