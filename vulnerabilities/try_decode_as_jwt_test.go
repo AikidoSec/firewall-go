@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func jsonEqual(a, b interface{}) bool {
@@ -29,6 +31,12 @@ func TestTryDecodeAsJWT(t *testing.T) {
 				t.Errorf("got %v, want %v", result, expected)
 			}
 		}
+	})
+
+	t.Run("it returns false when payload is invalid base64", func(t *testing.T) {
+		// Three parts (header.payload.sig) but middle part is invalid base64 so DecodeString fails
+		result := tryDecodeAsJWT("a.!!!.b")
+		assert.Equal(t, jwtDecodeResult{JWT: false}, result)
 	})
 
 	t.Run("it returns payload for invalid JWT", func(t *testing.T) {
