@@ -16,10 +16,14 @@ import (
 type AttackKind string
 
 const (
-	KindSQLInjection   AttackKind = "sql_injection"
-	KindPathTraversal  AttackKind = "path_traversal"
+	// KindSQLInjection indicates a SQL injection attack was detected.
+	KindSQLInjection AttackKind = "sql_injection"
+	// KindPathTraversal indicates a path traversal attack was detected.
+	KindPathTraversal AttackKind = "path_traversal"
+	// KindShellInjection indicates a shell injection attack was detected.
 	KindShellInjection AttackKind = "shell_injection"
-	KindSSRF           AttackKind = "ssrf"
+	// KindSSRF indicates a server-side request forgery attack was detected.
+	KindSSRF AttackKind = "ssrf"
 )
 
 func getDisplayNameForAttackKind(kind AttackKind) string {
