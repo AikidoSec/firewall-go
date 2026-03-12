@@ -12,6 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestExamine_ReturnsEarlyWhenDisabled(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	zen.SetDisabled(true)
+	require.True(t, zen.IsDisabled())
+
+	err := path.Examine([]string{"..", "etc", "passwd"})
+	require.NoError(t, err)
+}
+
 func TestExamine_TracksOperationStats(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
