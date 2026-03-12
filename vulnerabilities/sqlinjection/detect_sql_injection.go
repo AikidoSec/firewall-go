@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/zeninternals"
+	"github.com/AikidoSec/firewall-go/internal/zeninternals"
 )
 
 func detectSQLInjection(query string, userInput string, dialect int) bool {

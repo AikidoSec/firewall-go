@@ -3,7 +3,7 @@ package shellinjection_test
 import (
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/shellinjection"
+	"github.com/AikidoSec/firewall-go/vulnerabilities/shellinjection"
 
 	"github.com/stretchr/testify/assert"
 )

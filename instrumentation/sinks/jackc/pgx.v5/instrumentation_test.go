@@ -16,7 +16,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -122,7 +122,7 @@ func assertAttackBlocked(t *testing.T, err error) {
 
 	var attackBlockedErr *zen.AttackBlockedError
 	require.ErrorAs(t, err, &attackBlockedErr)
-	require.Equal(t, zen.KindSQLInjection, attackBlockedErr.Kind)
+	require.Equal(t, vulnerabilities.KindSQLInjection, attackBlockedErr.Kind)
 }
 
 func waitForAttackEvent(t *testing.T, client *mockCloudClient) {
@@ -451,7 +451,7 @@ func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 
 		var attackBlockedErr *zen.AttackBlockedError
 		require.ErrorAs(t, err, &attackBlockedErr)
-		require.Equal(t, zen.KindSQLInjection, attackBlockedErr.Kind)
+		require.Equal(t, vulnerabilities.KindSQLInjection, attackBlockedErr.Kind)
 	})
 
 	select {

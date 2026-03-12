@@ -140,17 +140,17 @@ func buildCommandsRegex() *regexp.Regexp {
 
 var commandsRegex = buildCommandsRegex()
 
-type Match struct {
+type match struct {
 	value string
 	start int
 }
 
-func matchAll(str string, regex *regexp.Regexp) []Match {
+func matchAll(str string, regex *regexp.Regexp) []match {
 	matches := regex.FindAllStringSubmatch(str, -1)
 	matches_index := regex.FindAllStringSubmatchIndex(str, -1)
-	result := make([]Match, len(matches))
-	for i, match := range matches {
-		result[i] = Match{value: match[0], start: matches_index[i][0]}
+	result := make([]match, len(matches))
+	for i, m := range matches {
+		result[i] = match{value: m[0], start: matches_index[i][0]}
 	}
 	return result
 }

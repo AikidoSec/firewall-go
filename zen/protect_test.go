@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,13 +68,13 @@ func TestWarnIfNotProtected(t *testing.T) {
 func TestAttackKind_Constants(t *testing.T) {
 	tests := []struct {
 		name     string
-		kind     zen.AttackKind
+		kind     vulnerabilities.AttackKind
 		expected string
 	}{
-		{"SQL injection", zen.KindSQLInjection, "sql_injection"},
-		{"path traversal", zen.KindPathTraversal, "path_traversal"},
-		{"shell injection", zen.KindShellInjection, "shell_injection"},
-		{"SSRF", zen.KindSSRF, "ssrf"},
+		{"SQL injection", vulnerabilities.KindSQLInjection, "sql_injection"},
+		{"path traversal", vulnerabilities.KindPathTraversal, "path_traversal"},
+		{"shell injection", vulnerabilities.KindShellInjection, "shell_injection"},
+		{"SSRF", vulnerabilities.KindSSRF, "ssrf"},
 	}
 
 	for _, tt := range tests {
@@ -87,27 +87,27 @@ func TestAttackKind_Constants(t *testing.T) {
 func TestAttackBlockedError_Error(t *testing.T) {
 	tests := []struct {
 		name     string
-		kind     zen.AttackKind
+		kind     vulnerabilities.AttackKind
 		expected string
 	}{
 		{
 			name:     "SQL injection",
-			kind:     zen.KindSQLInjection,
+			kind:     vulnerabilities.KindSQLInjection,
 			expected: "zen blocked sql_injection attack",
 		},
 		{
 			name:     "path traversal",
-			kind:     zen.KindPathTraversal,
+			kind:     vulnerabilities.KindPathTraversal,
 			expected: "zen blocked path_traversal attack",
 		},
 		{
 			name:     "shell injection",
-			kind:     zen.KindShellInjection,
+			kind:     vulnerabilities.KindShellInjection,
 			expected: "zen blocked shell_injection attack",
 		},
 		{
 			name:     "SSRF",
-			kind:     zen.KindSSRF,
+			kind:     vulnerabilities.KindSSRF,
 			expected: "zen blocked ssrf attack",
 		},
 	}
@@ -122,34 +122,29 @@ func TestAttackBlockedError_Error(t *testing.T) {
 
 func TestErrAttackBlocked(t *testing.T) {
 	tests := []struct {
-		name         string
-		kind         vulnerabilities.AttackKind
-		expectedKind zen.AttackKind
-		expectedMsg  string
+		name        string
+		kind        vulnerabilities.AttackKind
+		expectedMsg string
 	}{
 		{
-			name:         "SQL injection",
-			kind:         vulnerabilities.KindSQLInjection,
-			expectedKind: zen.KindSQLInjection,
-			expectedMsg:  "zen blocked sql_injection attack",
+			name:        "SQL injection",
+			kind:        vulnerabilities.KindSQLInjection,
+			expectedMsg: "zen blocked sql_injection attack",
 		},
 		{
-			name:         "path traversal",
-			kind:         vulnerabilities.KindPathTraversal,
-			expectedKind: zen.KindPathTraversal,
-			expectedMsg:  "zen blocked path_traversal attack",
+			name:        "path traversal",
+			kind:        vulnerabilities.KindPathTraversal,
+			expectedMsg: "zen blocked path_traversal attack",
 		},
 		{
-			name:         "shell injection",
-			kind:         vulnerabilities.KindShellInjection,
-			expectedKind: zen.KindShellInjection,
-			expectedMsg:  "zen blocked shell_injection attack",
+			name:        "shell injection",
+			kind:        vulnerabilities.KindShellInjection,
+			expectedMsg: "zen blocked shell_injection attack",
 		},
 		{
-			name:         "SSRF",
-			kind:         vulnerabilities.KindSSRF,
-			expectedKind: zen.KindSSRF,
-			expectedMsg:  "zen blocked ssrf attack",
+			name:        "SSRF",
+			kind:        vulnerabilities.KindSSRF,
+			expectedMsg: "zen blocked ssrf attack",
 		},
 	}
 
@@ -165,7 +160,7 @@ func TestErrAttackBlocked(t *testing.T) {
 			require.True(t, errors.As(err, &attackErr), "errors.As should extract *AttackBlockedError")
 
 			// Verify the kind was correctly set
-			assert.Equal(t, tt.expectedKind, attackErr.Kind)
+			assert.Equal(t, tt.kind, attackErr.Kind)
 		})
 	}
 }
@@ -175,7 +170,7 @@ func TestAttackBlockedError_ErrorsAs(t *testing.T) {
 
 	var attackErr *zen.AttackBlockedError
 	require.True(t, errors.As(err, &attackErr), "errors.As should work with *AttackBlockedError")
-	assert.Equal(t, zen.KindSQLInjection, attackErr.Kind)
+	assert.Equal(t, vulnerabilities.KindSQLInjection, attackErr.Kind)
 }
 
 func TestAttackBlockedError_ErrorsIs(t *testing.T) {

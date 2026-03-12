@@ -6,8 +6,8 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/sqlinjection"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/vulnerabilities/sqlinjection"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 

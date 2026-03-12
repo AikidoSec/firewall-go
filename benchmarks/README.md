@@ -22,7 +22,7 @@ We benchmark the middleware for each supported framework to measure the overhead
 
 ### SQL Injection Detection
 
-- `BenchmarkDetectSQLInjection` - `internal/vulnerabilities/sqlinjection`
+- `BenchmarkDetectSQLInjection` - `vulnerabilities/sqlinjection`
 
 Measures the performance of SQL injection detection across various input patterns.
 

@@ -15,9 +15,9 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/state"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
+	"github.com/AikidoSec/firewall-go/internal/attackwave"
 	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/attackwave"
 )
 
 var (

@@ -23,7 +23,7 @@ jobs:
 
           BASE_URL="https://github.com/AikidoSec/zen-internals/releases/download/${VERSION}"
           EXPECTED=$(curl -fsSL "${BASE_URL}/libzen_internals.wasm.sha256sum")
-          COMMITTED=$(cat internal/vulnerabilities/zeninternals/libzen_internals.wasm.sha256sum)
+          COMMITTED=$(cat internal/zeninternals/libzen_internals.wasm.sha256sum)
 
           if [ "$EXPECTED" != "$COMMITTED" ]; then
             echo "Error: committed sha256sum does not match version ${VERSION}"

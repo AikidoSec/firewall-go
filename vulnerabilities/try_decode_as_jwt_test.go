@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func jsonEqual(a, b interface{}) bool {
@@ -14,7 +16,7 @@ func jsonEqual(a, b interface{}) bool {
 func TestTryDecodeAsJWT(t *testing.T) {
 	t.Run("it returns false for empty string", func(t *testing.T) {
 		result := tryDecodeAsJWT("")
-		expected := JWTDecodeResult{JWT: false}
+		expected := jwtDecodeResult{JWT: false}
 		if result != expected {
 			t.Errorf("got %v, want %v", result, expected)
 		}
@@ -22,7 +24,7 @@ func TestTryDecodeAsJWT(t *testing.T) {
 
 	t.Run("it returns false for invalid JWT", func(t *testing.T) {
 		invalidJWTs := []string{"invalid", "invalid.invalid", "invalid.invalid.invalid", "invalid.invalid.invalid.invalid"}
-		expected := JWTDecodeResult{JWT: false}
+		expected := jwtDecodeResult{JWT: false}
 		for _, jwt := range invalidJWTs {
 			result := tryDecodeAsJWT(jwt)
 			if result != expected {
@@ -31,13 +33,19 @@ func TestTryDecodeAsJWT(t *testing.T) {
 		}
 	})
 
+	t.Run("it returns false when payload is invalid base64", func(t *testing.T) {
+		// Three parts (header.payload.sig) but middle part is invalid base64 so DecodeString fails
+		result := tryDecodeAsJWT("a.!!!.b")
+		assert.Equal(t, jwtDecodeResult{JWT: false}, result)
+	})
+
 	t.Run("it returns payload for invalid JWT", func(t *testing.T) {
 		testCases := []struct {
 			input    string
-			expected JWTDecodeResult
+			expected jwtDecodeResult
 		}{
-			{"/;ping%20localhost;.e30=.", JWTDecodeResult{JWT: true, Object: map[string]interface{}{}}},
-			{"/;ping%20localhost;.W10=.", JWTDecodeResult{JWT: true, Object: []interface{}{}}},
+			{"/;ping%20localhost;.e30=.", jwtDecodeResult{JWT: true, Object: map[string]interface{}{}}},
+			{"/;ping%20localhost;.W10=.", jwtDecodeResult{JWT: true, Object: []interface{}{}}},
 		}
 
 		for _, testCase := range testCases {
@@ -50,7 +58,7 @@ func TestTryDecodeAsJWT(t *testing.T) {
 
 	t.Run("it returns the decoded JWT for valid JWT", func(t *testing.T) {
 		input := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwidXNlcm5hbWUiOnsiJG5lIjpudWxsfSwiaWF0IjoxNTE2MjM5MDIyfQ._jhGJw9WzB6gHKPSozTFHDo9NOHs3CNOlvJ8rWy6VrQ"
-		expected := JWTDecodeResult{
+		expected := jwtDecodeResult{
 			JWT: true,
 			Object: map[string]interface{}{
 				"sub": "1234567890",
@@ -68,7 +76,7 @@ func TestTryDecodeAsJWT(t *testing.T) {
 
 	t.Run("it returns the decoded JWT for valid JWT with bearer prefix", func(t *testing.T) {
 		input := "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwidXNlcm5hbWUiOnsiJG5lIjpudWxsfSwiaWF0IjoxNTE2MjM5MDIyfQ._jhGJw9WzB6gHKPSozTFHDo9NOHs3CNOlvJ8rWy6VrQ"
-		expected := JWTDecodeResult{
+		expected := jwtDecodeResult{
 			JWT: true,
 			Object: map[string]interface{}{
 				"sub": "1234567890",

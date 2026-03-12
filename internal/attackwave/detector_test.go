@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/attackwave"
 	"github.com/AikidoSec/firewall-go/internal/request"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/attackwave"
 	"github.com/stretchr/testify/assert"
 )
 
