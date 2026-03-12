@@ -122,7 +122,7 @@ func assertAttackBlocked(t *testing.T, err error) {
 
 	var attackBlockedErr *zen.AttackBlockedError
 	require.ErrorAs(t, err, &attackBlockedErr)
-	require.Equal(t, zen.KindSQLInjection, attackBlockedErr.Kind)
+	require.Equal(t, vulnerabilities.KindSQLInjection, attackBlockedErr.Kind)
 }
 
 func waitForAttackEvent(t *testing.T, client *mockCloudClient) {
@@ -451,7 +451,7 @@ func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 
 		var attackBlockedErr *zen.AttackBlockedError
 		require.ErrorAs(t, err, &attackBlockedErr)
-		require.Equal(t, zen.KindSQLInjection, attackBlockedErr.Kind)
+		require.Equal(t, vulnerabilities.KindSQLInjection, attackBlockedErr.Kind)
 	})
 
 	select {
