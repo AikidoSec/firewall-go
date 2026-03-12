@@ -6,8 +6,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/pathtraversal"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/vulnerabilities/pathtraversal"
 )
 
 func Examine(path string) error {

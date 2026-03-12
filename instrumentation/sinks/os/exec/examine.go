@@ -7,8 +7,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/shellinjection"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/vulnerabilities/shellinjection"
 )
 
 func Examine(cmdCtx context.Context, op string, args []string) error {

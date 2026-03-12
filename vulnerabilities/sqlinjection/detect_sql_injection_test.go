@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/zeninternals"
+	"github.com/AikidoSec/firewall-go/internal/zeninternals"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

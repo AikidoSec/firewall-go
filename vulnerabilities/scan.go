@@ -21,10 +21,6 @@ type Vulnerability[T any] struct {
 	Error        string
 }
 
-type Attack struct {
-	Kind string
-}
-
 type ScanOptions struct {
 	DeferReporting bool
 }

@@ -4,7 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/zeninternals"
+	"github.com/AikidoSec/firewall-go/internal/zeninternals"
 )
 
 // Init initializes the firewall system by loading the zen-internals library.

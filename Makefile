@@ -37,7 +37,7 @@ benchmark:
 .PHONY: test-main
 test-main:
 	@echo "Running main module tests with gotestsum"
-	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./internal/... ./zen/...
+	@$(TOOLS_BIN)/gotestsum --format pkgname -- -race -coverprofile=coverage.out -covermode=atomic ./internal/... ./zen/... ./vulnerabilities/...
 	@echo "✅ Main module tests completed successfully"
 	@echo "Coverage report saved to coverage.out"
 	@go tool cover -func=coverage.out | grep total | awk '{print "Total coverage: " $$3}'
@@ -204,11 +204,11 @@ FILES = \
 binaries: clean-binaries download-binaries
 
 clean-binaries:
-	rm -f $(addprefix internal/vulnerabilities/zeninternals/, $(FILES))
+	rm -f $(addprefix internal/zeninternals/, $(FILES))
 
-download-binaries: $(addprefix internal/vulnerabilities/zeninternals/, $(FILES))
+download-binaries: $(addprefix internal/zeninternals/, $(FILES))
 
-internal/vulnerabilities/zeninternals/%:
+internal/zeninternals/%:
 	@echo "Downloading $*..."
 	curl -L -o $@ $(BASE_URL)/$*
 
