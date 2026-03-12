@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
@@ -40,6 +41,7 @@ type CloudClient interface {
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
 	machine.Init()
+	hooks.Register(agentRuntime{})
 
 	if err := config.Init(environmentConfig, aikidoConfig); err != nil {
 		return err
@@ -81,11 +83,6 @@ func AgentUninit() error {
 	config.Uninit()
 
 	return nil
-}
-
-func OnDomain(domain string, port uint32) {
-	log.Debug("Received domain", slog.String("domain", domain), slog.Uint64("port", uint64(port)))
-	stateCollector.StoreHostname(domain, port)
 }
 
 func GetRateLimitingStatus(method string, route string, user string, ip string, group string) *ratelimiting.Status {
@@ -134,8 +131,20 @@ func OnAttackDetected(attack *DetectedAttack) {
 	Stats().OnAttackDetected(attack.Attack.Blocked)
 }
 
-func OnOperationCall(operation string, kind stats.OperationKind) {
-	Stats().OnOperationCall(operation, kind)
+// agentRuntime implements hooks.Runtime, bridging sink calls into the agent.
+type agentRuntime struct{}
+
+func (agentRuntime) OnOperationCall(operation string, kind hooks.OperationKind) {
+	Stats().OnOperationCall(operation, stats.OperationKind(kind))
+}
+
+func (agentRuntime) OnDomain(domain string, port uint32) {
+	log.Debug("Received domain", slog.String("domain", domain), slog.Uint64("port", uint64(port)))
+	stateCollector.StoreHostname(domain, port)
+}
+
+func (agentRuntime) ShouldBlockHostname(hostname string) bool {
+	return config.ShouldBlockHostname(hostname)
 }
 
 func OnOperationAttack(operation string, blocked bool) {

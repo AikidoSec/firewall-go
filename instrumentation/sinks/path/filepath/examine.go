@@ -4,19 +4,18 @@ import (
 	"context"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
+	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/pathtraversal"
+	"github.com/AikidoSec/firewall-go/zen"
 )
 
 func Examine(args []string) error {
-	if config.IsZenDisabled() {
+	if zen.IsDisabled() {
 		return nil
 	}
 
-	agent.OnOperationCall("path/filepath.Join", stats.OperationKindFileSystem)
+	hooks.OnOperationCall("path/filepath.Join", hooks.OperationKindFileSystem)
 
 	path := strings.Join(args, "")
 

@@ -8,12 +8,41 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/machine"
-	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/attackwave"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAgentRuntime_OnOperationCall(t *testing.T) {
+	rt := agentRuntime{}
+
+	Stats().GetAndClear()
+	rt.OnOperationCall("db.query", "sql_op")
+	rt.OnOperationCall("db.query", "sql_op")
+
+	snap := Stats().GetAndClear()
+	require.Contains(t, snap.Operations, "db.query")
+	assert.Equal(t, 2, snap.Operations["db.query"].Total)
+}
+
+func TestAgentRuntime_OnDomain(t *testing.T) {
+	rt := agentRuntime{}
+	_ = stateCollector.GetAndClearHostnames()
+
+	rt.OnDomain("example.com", 443)
+
+	hostnames := stateCollector.GetAndClearHostnames()
+	require.Contains(t, hostnames, aikido_types.Hostname{URL: "example.com", Port: 443, Hits: 1})
+}
+
+func TestAgentRuntime_ShouldBlockHostname(t *testing.T) {
+	rt := agentRuntime{}
+
+	t.Run("returns false when no block list configured", func(t *testing.T) {
+		assert.False(t, rt.ShouldBlockHostname("example.com"))
+	})
+}
 
 func TestOnMiddlewareInstalled(t *testing.T) {
 	t.Run("sets MiddlewareInstalled to 1", func(t *testing.T) {
@@ -36,21 +65,6 @@ func TestOnMiddlewareInstalled(t *testing.T) {
 
 		value := stateCollector.IsMiddlewareInstalled()
 		assert.True(t, value, "MiddlewareInstalled should remain true")
-	})
-}
-
-func TestOnDomain(t *testing.T) {
-	t.Run("calls storeDomain correctly", func(t *testing.T) {
-		// Reset hostnames before test
-		_ = stateCollector.GetAndClearHostnames()
-
-		OnDomain("example.com", 443)
-
-		hostnames := stateCollector.GetAndClearHostnames()
-
-		require.Contains(t, hostnames, aikido_types.Hostname{
-			URL: "example.com", Port: 443, Hits: 1,
-		}, "domain should be stored")
 	})
 }
 
@@ -81,6 +95,12 @@ func (m *internalMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentI
 
 func (m *internalMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 	m.sendAttackWaveDetectedCalled = true
+}
+
+func TestState(t *testing.T) {
+	t.Run("returns non-nil state collector", func(t *testing.T) {
+		assert.NotNil(t, State())
+	})
 }
 
 func TestOnUser(t *testing.T) {
@@ -144,25 +164,11 @@ func TestOnAttackDetected(t *testing.T) {
 	})
 }
 
-func TestOnOperationCall(t *testing.T) {
-	t.Run("records operation call in stats", func(t *testing.T) {
-		assert.NotPanics(t, func() {
-			OnOperationCall("db.query", stats.OperationKindSQL)
-		})
-	})
-}
-
 func TestOnOperationAttack(t *testing.T) {
 	t.Run("records operation attack in stats", func(t *testing.T) {
 		assert.NotPanics(t, func() {
 			OnOperationAttack("db.query", true)
 		})
-	})
-}
-
-func TestState(t *testing.T) {
-	t.Run("returns non-nil state collector", func(t *testing.T) {
-		assert.NotNil(t, State())
 	})
 }
 

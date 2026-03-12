@@ -4,19 +4,18 @@ import (
 	"context"
 	"strings"
 
-	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
+	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/shellinjection"
+	"github.com/AikidoSec/firewall-go/zen"
 )
 
 func Examine(cmdCtx context.Context, op string, args []string) error {
-	if config.IsZenDisabled() {
+	if zen.IsDisabled() {
 		return nil
 	}
 
-	agent.OnOperationCall(op, stats.OperationKindExec)
+	hooks.OnOperationCall(op, hooks.OperationKindExec)
 
 	ctx := context.Background()
 	if cmdCtx != nil {
