@@ -104,7 +104,7 @@ func scanSource[T any](ctx context.Context, source string, sourceData any, opera
 		}
 
 		if results != nil && results.DetectedAttack {
-			attack := &InterceptorResult{
+			attack := &interceptorResult{
 				Operation:     operation,
 				Kind:          vulnerability.Kind,
 				Source:        source,

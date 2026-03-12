@@ -42,12 +42,12 @@ func TestGetDisplayNameForAttackKind(t *testing.T) {
 func TestInterceptorResultToString(t *testing.T) {
 	tests := []struct {
 		name     string
-		result   InterceptorResult
+		result   interceptorResult
 		expected string
 	}{
 		{
 			name: "valid JSON",
-			result: InterceptorResult{
+			result: interceptorResult{
 				Kind:          KindSQLInjection,
 				Operation:     "exec",
 				Source:        "body",
@@ -62,7 +62,7 @@ func TestInterceptorResultToString(t *testing.T) {
 			result := tt.result.ToString()
 
 			// Verify it's valid JSON
-			var decoded InterceptorResult
+			var decoded interceptorResult
 			err := json.Unmarshal([]byte(result), &decoded)
 			require.NoError(t, err)
 
@@ -74,7 +74,7 @@ func TestInterceptorResultToString(t *testing.T) {
 }
 
 func TestBuildAttackDetectedError(t *testing.T) {
-	result := InterceptorResult{
+	result := interceptorResult{
 		Kind:          KindPathTraversal,
 		Operation:     "readFile",
 		Source:        "query",
@@ -103,7 +103,7 @@ func TestGetAttackDetected(t *testing.T) {
 		Body:          map[string]interface{}{"name": "test"},
 	})
 
-	result := InterceptorResult{
+	result := interceptorResult{
 		Kind:          KindSQLInjection,
 		Operation:     "query",
 		Source:        "body",
@@ -126,7 +126,7 @@ func TestGetAttackDetected(t *testing.T) {
 }
 
 func TestGetAttackDetectedWithNilContext(t *testing.T) {
-	result := InterceptorResult{
+	result := interceptorResult{
 		Kind:      KindSQLInjection,
 		Operation: "query",
 	}
@@ -150,7 +150,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 	})
 
 	t.Run("returns nil when context has no request context", func(t *testing.T) {
-		result := &InterceptorResult{
+		result := &interceptorResult{
 			Kind:      KindPathTraversal,
 			Operation: "filepath.Join",
 		}
@@ -167,7 +167,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		result := &InterceptorResult{
+		result := &interceptorResult{
 			Kind:          KindPathTraversal,
 			Operation:     "filepath.Join",
 			Source:        "query",
@@ -204,7 +204,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		result := &InterceptorResult{
+		result := &interceptorResult{
 			Kind:          KindPathTraversal,
 			Operation:     "filepath.Join",
 			Source:        "query",
@@ -304,7 +304,7 @@ func TestReportDeferredAttack(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		result := &InterceptorResult{
+		result := &interceptorResult{
 			Kind:          KindPathTraversal,
 			Operation:     "filepath.Join",
 			Source:        "query",

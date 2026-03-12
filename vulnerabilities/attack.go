@@ -37,7 +37,7 @@ func getDisplayNameForAttackKind(kind AttackKind) string {
 	}
 }
 
-type InterceptorResult struct {
+type interceptorResult struct {
 	Kind          AttackKind
 	Operation     string
 	Source        string
@@ -46,12 +46,12 @@ type InterceptorResult struct {
 	Payload       string
 }
 
-func (i InterceptorResult) ToString() string {
+func (i interceptorResult) ToString() string {
 	json, _ := json.Marshal(i)
 	return string(json)
 }
 
-func getAttackDetected(ctx context.Context, res InterceptorResult) *agent.DetectedAttack {
+func getAttackDetected(ctx context.Context, res interceptorResult) *agent.DetectedAttack {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
@@ -97,7 +97,7 @@ func (e *AttackDetectedError) Error() string {
 		html.EscapeString(e.PathToPayload))
 }
 
-func buildAttackDetectedError(result InterceptorResult) error {
+func buildAttackDetectedError(result interceptorResult) error {
 	return &AttackDetectedError{
 		Kind:          result.Kind,
 		Operation:     result.Operation,
@@ -108,7 +108,7 @@ func buildAttackDetectedError(result InterceptorResult) error {
 
 // onInterceptorResult sends the detected attack to the cloud
 // Returns an error indicating the request should be blocked if blocking is enabled.
-func onInterceptorResult(ctx context.Context, res *InterceptorResult) error {
+func onInterceptorResult(ctx context.Context, res *interceptorResult) error {
 	if res == nil {
 		return nil
 	}
@@ -130,7 +130,7 @@ func onInterceptorResult(ctx context.Context, res *InterceptorResult) error {
 // storeDeferredAttack stores the attack result and error for later reporting/blocking.
 // This is used for functions like filepath.Join that don't return errors.
 // The error is only stored if the attack should be blocked.
-func storeDeferredAttack(ctx context.Context, res *InterceptorResult) error {
+func storeDeferredAttack(ctx context.Context, res *interceptorResult) error {
 	if res == nil {
 		return nil
 	}
@@ -174,7 +174,7 @@ func reportDeferredAttack(ctx context.Context) {
 		return
 	}
 
-	res := &InterceptorResult{
+	res := &interceptorResult{
 		Operation:     deferredAttack.Operation,
 		Kind:          AttackKind(deferredAttack.Kind),
 		Source:        deferredAttack.Source,
