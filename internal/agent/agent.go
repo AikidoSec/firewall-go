@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
@@ -134,8 +135,8 @@ func OnAttackDetected(attack *DetectedAttack) {
 // agentRuntime implements hooks.Runtime, bridging sink calls into the agent.
 type agentRuntime struct{}
 
-func (agentRuntime) OnOperationCall(operation string, kind hooks.OperationKind) {
-	Stats().OnOperationCall(operation, stats.OperationKind(kind))
+func (agentRuntime) OnOperationCall(op string, kind operation.Kind) {
+	Stats().OnOperationCall(op, kind)
 }
 
 func (agentRuntime) OnDomain(domain string, port uint32) {

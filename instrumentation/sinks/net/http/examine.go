@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
@@ -13,7 +14,7 @@ func Examine(r *http.Request) error {
 		return nil
 	}
 
-	hooks.OnOperationCall("net/http.Client.Do", hooks.OperationKindOutgoingHTTP)
+	hooks.OnOperationCall("net/http.Client.Do", operation.KindOutgoingHTTP)
 
 	if r.URL == nil {
 		return nil

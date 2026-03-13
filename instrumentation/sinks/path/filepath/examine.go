@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/pathtraversal"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -15,7 +16,7 @@ func Examine(args []string) error {
 		return nil
 	}
 
-	hooks.OnOperationCall("path/filepath.Join", hooks.OperationKindFileSystem)
+	hooks.OnOperationCall("path/filepath.Join", operation.KindFileSystem)
 
 	path := strings.Join(args, "")
 

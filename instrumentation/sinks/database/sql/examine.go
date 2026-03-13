@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/sqlinjection"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -24,7 +25,7 @@ func ExamineContext(ctx context.Context, query string, op string) error {
 		return nil
 	}
 
-	hooks.OnOperationCall(op, hooks.OperationKindSQL)
+	hooks.OnOperationCall(op, operation.KindSQL)
 
 	err := vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
 		Statement: query,

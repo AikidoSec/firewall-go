@@ -3,6 +3,7 @@ package stats
 import (
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -123,13 +124,13 @@ func TestOnOperationCall(t *testing.T) {
 	t.Run("registers new operation", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
 
 		data := stats.GetAndClear()
 
 		require.Contains(t, data.Operations, "database/sql.DB.Query", "operation should be registered")
 		opStats := data.Operations["database/sql.DB.Query"]
-		assert.Equal(t, OperationKindSQL, opStats.Kind)
+		assert.Equal(t, operation.KindSQL, opStats.Kind)
 		assert.Equal(t, 1, opStats.Total)
 		assert.Equal(t, 0, opStats.AttacksDetected.Total)
 		assert.Equal(t, 0, opStats.AttacksDetected.Blocked)
@@ -138,9 +139,9 @@ func TestOnOperationCall(t *testing.T) {
 	t.Run("increments operation counter", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
 
 		data := stats.GetAndClear()
 
@@ -152,9 +153,9 @@ func TestOnOperationCall(t *testing.T) {
 	t.Run("tracks multiple operations separately", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
-		stats.OnOperationCall("database/sql.DB.Exec", OperationKindSQL)
-		stats.OnOperationCall("os/exec.Cmd.Run", OperationKindExec)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
+		stats.OnOperationCall("database/sql.DB.Exec", operation.KindSQL)
+		stats.OnOperationCall("os/exec.Cmd.Run", operation.KindExec)
 
 		data := stats.GetAndClear()
 
@@ -169,7 +170,7 @@ func TestOnOperationAttack(t *testing.T) {
 	t.Run("tracks attack for registered operation", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
 		stats.OnOperationAttack("database/sql.DB.Query", false)
 
 		data := stats.GetAndClear()
@@ -183,7 +184,7 @@ func TestOnOperationAttack(t *testing.T) {
 	t.Run("tracks blocked attack for registered operation", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
 		stats.OnOperationAttack("database/sql.DB.Query", true)
 
 		data := stats.GetAndClear()
@@ -197,7 +198,7 @@ func TestOnOperationAttack(t *testing.T) {
 	t.Run("accumulates multiple attacks", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
 		stats.OnOperationAttack("database/sql.DB.Query", false)
 		stats.OnOperationAttack("database/sql.DB.Query", true)
 		stats.OnOperationAttack("database/sql.DB.Query", true)
@@ -225,7 +226,7 @@ func TestGetAndClearOperations(t *testing.T) {
 	t.Run("clears operations after retrieval", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
 		stats.OnOperationAttack("database/sql.DB.Query", false)
 
 		data1 := stats.GetAndClear()
@@ -238,8 +239,8 @@ func TestGetAndClearOperations(t *testing.T) {
 	t.Run("includes operations in result", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
-		stats.OnOperationCall("os/exec.Cmd.Run", OperationKindExec)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
+		stats.OnOperationCall("os/exec.Cmd.Run", operation.KindExec)
 
 		data := stats.GetAndClear()
 
@@ -347,17 +348,17 @@ func TestMultipleOperationKinds(t *testing.T) {
 	t.Run("tracks different operation kinds separately", func(t *testing.T) {
 		stats := New()
 
-		stats.OnOperationCall("database/sql.DB.Query", OperationKindSQL)
-		stats.OnOperationCall("net/http.Client.Do", OperationKindOutgoingHTTP)
-		stats.OnOperationCall("os.OpenFile", OperationKindFileSystem)
-		stats.OnOperationCall("os/exec.Cmd.Run", OperationKindExec)
+		stats.OnOperationCall("database/sql.DB.Query", operation.KindSQL)
+		stats.OnOperationCall("net/http.Client.Do", operation.KindOutgoingHTTP)
+		stats.OnOperationCall("os.OpenFile", operation.KindFileSystem)
+		stats.OnOperationCall("os/exec.Cmd.Run", operation.KindExec)
 
 		data := stats.GetAndClear()
 
 		assert.Len(t, data.Operations, 4)
-		assert.Equal(t, OperationKindSQL, data.Operations["database/sql.DB.Query"].Kind)
-		assert.Equal(t, OperationKindOutgoingHTTP, data.Operations["net/http.Client.Do"].Kind)
-		assert.Equal(t, OperationKindFileSystem, data.Operations["os.OpenFile"].Kind)
-		assert.Equal(t, OperationKindExec, data.Operations["os/exec.Cmd.Run"].Kind)
+		assert.Equal(t, operation.KindSQL, data.Operations["database/sql.DB.Query"].Kind)
+		assert.Equal(t, operation.KindOutgoingHTTP, data.Operations["net/http.Client.Do"].Kind)
+		assert.Equal(t, operation.KindFileSystem, data.Operations["os.OpenFile"].Kind)
+		assert.Equal(t, operation.KindExec, data.Operations["os/exec.Cmd.Run"].Kind)
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,7 +12,7 @@ import (
 type captureRuntime struct {
 	operationCalls []struct {
 		op   string
-		kind hooks.OperationKind
+		kind operation.Kind
 	}
 	domainCalls []struct {
 		domain string
@@ -21,10 +22,10 @@ type captureRuntime struct {
 	blockHostReturns bool
 }
 
-func (r *captureRuntime) OnOperationCall(op string, kind hooks.OperationKind) {
+func (r *captureRuntime) OnOperationCall(op string, kind operation.Kind) {
 	r.operationCalls = append(r.operationCalls, struct {
 		op   string
-		kind hooks.OperationKind
+		kind operation.Kind
 	}{op, kind})
 }
 
@@ -44,23 +45,23 @@ func TestRegisterReplacesRuntime(t *testing.T) {
 	r := &captureRuntime{}
 	hooks.Register(r)
 
-	hooks.OnOperationCall("db.query", hooks.OperationKindSQL)
+	hooks.OnOperationCall("db.query", operation.KindSQL)
 
 	assert.Len(t, r.operationCalls, 1)
 	assert.Equal(t, "db.query", r.operationCalls[0].op)
-	assert.Equal(t, hooks.OperationKindSQL, r.operationCalls[0].kind)
+	assert.Equal(t, operation.KindSQL, r.operationCalls[0].kind)
 }
 
 func TestOnOperationCallDelegates(t *testing.T) {
 	r := &captureRuntime{}
 	hooks.Register(r)
 
-	hooks.OnOperationCall("exec.Run", hooks.OperationKindExec)
-	hooks.OnOperationCall("os.OpenFile", hooks.OperationKindFileSystem)
+	hooks.OnOperationCall("exec.Run", operation.KindExec)
+	hooks.OnOperationCall("os.OpenFile", operation.KindFileSystem)
 
 	assert.Len(t, r.operationCalls, 2)
-	assert.Equal(t, hooks.OperationKindExec, r.operationCalls[0].kind)
-	assert.Equal(t, hooks.OperationKindFileSystem, r.operationCalls[1].kind)
+	assert.Equal(t, operation.KindExec, r.operationCalls[0].kind)
+	assert.Equal(t, operation.KindFileSystem, r.operationCalls[1].kind)
 }
 
 func TestOnDomainDelegates(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/shellinjection"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -15,7 +16,7 @@ func Examine(cmdCtx context.Context, op string, args []string) error {
 		return nil
 	}
 
-	hooks.OnOperationCall(op, hooks.OperationKindExec)
+	hooks.OnOperationCall(op, operation.KindExec)
 
 	ctx := context.Background()
 	if cmdCtx != nil {
