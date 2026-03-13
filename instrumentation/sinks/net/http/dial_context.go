@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities"
-	"github.com/AikidoSec/firewall-go/internal/vulnerabilities/ssrf"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
+	"github.com/AikidoSec/firewall-go/vulnerabilities/ssrf"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
