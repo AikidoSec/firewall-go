@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
+	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
@@ -15,7 +14,7 @@ func Examine(r *http.Request) error {
 		return nil
 	}
 
-	agent.OnOperationCall("net/http.Client.Do", stats.OperationKindOutgoingHTTP)
+	hooks.OnOperationCall("net/http.Client.Do", operation.KindOutgoingHTTP)
 
 	if r.URL == nil {
 		return nil
@@ -25,9 +24,9 @@ func Examine(r *http.Request) error {
 	port := getPort(r)
 
 	// Report any hostnames to the dashboard
-	agent.OnDomain(hostname, uint32(port))
+	hooks.OnDomain(hostname, uint32(port))
 
-	if config.ShouldBlockHostname(hostname) {
+	if hooks.ShouldBlockHostname(hostname) {
 		return zen.ErrOutboundBlocked(hostname)
 	}
 

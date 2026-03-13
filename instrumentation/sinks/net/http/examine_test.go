@@ -31,6 +31,19 @@ func TestGetPort(t *testing.T) {
 	}
 }
 
+func TestExamine_ReturnsEarlyWhenShouldNotProtect(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+	zen.SetDisabled(true)
+	require.False(t, zen.ShouldProtect())
+
+	req, _ := http.NewRequest("GET", "http://example.com/api", http.NoBody)
+	err := Examine(req)
+	require.NoError(t, err)
+}
+
 func TestExamine_TracksOperationStats(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)

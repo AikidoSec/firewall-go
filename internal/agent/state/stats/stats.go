@@ -3,11 +3,12 @@ package stats
 import (
 	"sync"
 
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
 
 type operationData struct {
-	kind            OperationKind
+	kind            operation.Kind
 	total           int
 	attacksDetected int
 	attacksBlocked  int
@@ -125,7 +126,7 @@ func (s *Stats) OnUserAgentMatches(keys []string) {
 	}
 }
 
-func (s *Stats) OnOperationCall(operation string, kind OperationKind) {
+func (s *Stats) OnOperationCall(operation string, kind operation.Kind) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

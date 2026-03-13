@@ -7,14 +7,16 @@ import (
 
 	"github.com/AikidoSec/firewall-go/instrumentation/sinks/os"
 	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
+	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/require"
 )
 
 func TestExamine_TracksOperationStats(t *testing.T) {
-	originalDisabled := config.IsZenDisabled()
-	defer config.SetZenDisabled(originalDisabled)
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
 
 	originalClient := agent.GetCloudClient()
 	defer agent.SetCloudClient(originalClient)

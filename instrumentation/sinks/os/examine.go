@@ -3,19 +3,19 @@ package os
 import (
 	"context"
 
-	"github.com/AikidoSec/firewall-go/internal/agent"
-	"github.com/AikidoSec/firewall-go/internal/agent/config"
-	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
+	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
+	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/pathtraversal"
+	"github.com/AikidoSec/firewall-go/zen"
 )
 
 func Examine(path string) error {
-	if config.IsZenDisabled() {
+	if zen.IsDisabled() {
 		return nil
 	}
 
-	agent.OnOperationCall("os.OpenFile", stats.OperationKindFileSystem)
+	hooks.OnOperationCall("os.OpenFile", operation.KindFileSystem)
 
 	// The error that the vulnerability scan returns is NOT deferred with os.OpenFile
 	// We block and report immediately
