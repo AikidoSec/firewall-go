@@ -30,7 +30,34 @@ type Context struct {
 
 	deferredAttack *DeferredAttack
 
+	// outgoingRedirects tracks redirect chains for SSRF detection.
+	// When an outgoing request results in a redirect, the source hostname
+	// and port are recorded so that the SSRF check on the redirect target
+	// can trace back to user input.
+	outgoingRedirects []RedirectEntry
+
 	mu sync.RWMutex
+}
+
+// RedirectEntry records that an outgoing request to SourceHostname:SourcePort
+// resulted in a redirect to DestHostname:DestPort.
+type RedirectEntry struct {
+	SourceHostname string
+	SourcePort     uint32
+	DestHostname   string
+	DestPort       uint32
+}
+
+func (ctx *Context) AddOutgoingRedirect(entry RedirectEntry) {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+	ctx.outgoingRedirects = append(ctx.outgoingRedirects, entry)
+}
+
+func (ctx *Context) GetOutgoingRedirects() []RedirectEntry {
+	ctx.mu.RLock()
+	defer ctx.mu.RUnlock()
+	return ctx.outgoingRedirects
 }
 
 func (ctx *Context) GetUserAgent() string {
