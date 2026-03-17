@@ -1,0 +1,22 @@
+package ssrf
+
+// StoredSSRFResult holds the details of a detected stored SSRF attack.
+type StoredSSRFResult struct {
+	Hostname  string
+	PrivateIP string
+}
+
+// CheckStoredSSRF checks if a hostname resolves to an IMDS IP address,
+// indicating a potential stored SSRF attack (e.g., DNS spoofing or /etc/hosts poisoning).
+// Returns nil if no attack is detected.
+func CheckStoredSSRF(hostname string, resolvedIPs []string) *StoredSSRFResult {
+	imdsIP := resolvesToIMDSIP(resolvedIPs, hostname)
+	if imdsIP == "" {
+		return nil
+	}
+
+	return &StoredSSRFResult{
+		Hostname:  hostname,
+		PrivateIP: imdsIP,
+	}
+}

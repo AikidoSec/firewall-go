@@ -24,6 +24,8 @@ const (
 	KindShellInjection AttackKind = "shell_injection"
 	// KindSSRF indicates a server-side request forgery attack was detected.
 	KindSSRF AttackKind = "ssrf"
+	// KindStoredSSRF indicates a stored server-side request forgery attack was detected.
+	KindStoredSSRF AttackKind = "stored_ssrf"
 )
 
 func getDisplayNameForAttackKind(kind AttackKind) string {
@@ -36,6 +38,8 @@ func getDisplayNameForAttackKind(kind AttackKind) string {
 		return "a shell injection"
 	case KindSSRF:
 		return "a server-side request forgery"
+	case KindStoredSSRF:
+		return "a stored server-side request forgery"
 	default:
 		return "unknown attack type"
 	}
@@ -164,6 +168,59 @@ func storeDeferredAttack(ctx context.Context, res *interceptorResult) error {
 	reqCtx.SetDeferredAttack(deferredAttack)
 
 	return nil
+}
+
+// OnStoredSSRF reports a stored SSRF attack and returns an error if blocking is enabled.
+// Unlike regular SSRF, this works without request context.
+func OnStoredSSRF(ctx context.Context, operation string, hostname string, privateIP string) error {
+	if !config.ShouldProtect() {
+		return nil
+	}
+
+	blocked := config.IsBlockingEnabled()
+
+	var reqInfo aikido_types.RequestInfo
+	var user *aikido_types.User
+	reqCtx := request.GetContext(ctx)
+	if reqCtx != nil {
+		reqInfo = aikido_types.RequestInfo{
+			Method:    reqCtx.Method,
+			IPAddress: *reqCtx.RemoteAddress,
+			UserAgent: reqCtx.GetUserAgent(),
+			URL:       reqCtx.URL,
+			Source:    reqCtx.Source,
+			Route:     reqCtx.Route,
+		}
+		user = reqCtx.GetUser()
+	}
+
+	attack := &agent.DetectedAttack{
+		Request: reqInfo,
+		Attack: aikido_types.AttackDetails{
+			Kind:      string(KindStoredSSRF),
+			Operation: operation,
+			Module:    "Module",
+			Blocked:   blocked,
+			Metadata: map[string]string{
+				"hostname":  hostname,
+				"privateIP": privateIP,
+			},
+			Payload: hostname,
+			User:    user,
+		},
+	}
+
+	go agent.OnOperationAttack(operation, blocked)
+	go agent.OnAttackDetected(attack)
+
+	if !blocked {
+		return nil
+	}
+
+	return &AttackDetectedError{
+		Kind:      KindStoredSSRF,
+		Operation: operation,
+	}
 }
 
 // reportDeferredAttack reports a previously stored attack to the cloud.
