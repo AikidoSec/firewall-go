@@ -2,6 +2,7 @@ package ssrf
 
 import (
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -43,24 +44,14 @@ func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 		// already normalized. We must normalize the user input side to match.
 		parsedHostname = norm.NFKC.String(parsedHostname)
 		parsedPort := getPortFromURL(parsed)
-		for _, option := range hostnameOptions {
-			if parsedHostname != option {
-				continue
-			}
 
-			// Unable to parse port (e.g. invalid port string) — assume match
-			if parsedPort < 0 {
-				return true
-			}
+		// Skip if both ports are set, in valid range, and don't match
+		if port != 0 && parsedPort >= 0 && parsedPort <= 65535 && uint32(parsedPort) != port { //nolint:gosec // overflow impossible: guarded by parsedPort <= 65535
+			continue
+		}
 
-			// No port requirement specified
-			if port == 0 {
-				return true
-			}
-
-			if parsedPort >= 0 && parsedPort <= 65535 && uint32(parsedPort) == port {
-				return true
-			}
+		if slices.Contains(hostnameOptions, parsedHostname) {
+			return true
 		}
 	}
 
