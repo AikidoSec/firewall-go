@@ -1,6 +1,7 @@
 package ssrf
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -148,5 +149,21 @@ func TestFindHostnameInUserInput(t *testing.T) {
 		// Go's HTTP transport NFKC-normalizes ⓛocalhost → localhost before dialing,
 		// so the hostname argument here is "localhost" (what DialContext receives).
 		assert.True(t, findHostnameInUserInput("http://ⓛocalhost:4000/", "localhost", 4000))
+	})
+
+	t.Run("returns false for single character user input", func(t *testing.T) {
+		assert.False(t, findHostnameInUserInput("x", "localhost", 0))
+	})
+}
+
+func TestGetPortFromURL(t *testing.T) {
+	t.Run("returns default 0 for unknown scheme without port", func(t *testing.T) {
+		u, _ := url.Parse("ftp://example.com/path")
+		assert.Equal(t, 0, getPortFromURL(u))
+	})
+
+	t.Run("returns 443 for https without port", func(t *testing.T) {
+		u, _ := url.Parse("https://example.com/path")
+		assert.Equal(t, 443, getPortFromURL(u))
 	})
 }

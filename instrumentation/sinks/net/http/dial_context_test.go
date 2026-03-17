@@ -4,6 +4,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http/httptest"
 	"strings"
@@ -223,6 +224,70 @@ func TestSsrfDialContext_BlocksRedirectToPrivateIP(t *testing.T) {
 
 	assert.Error(t, err, "should block redirect to private IP when origin hostname is in user input")
 	assert.Nil(t, conn, "should not return a connection when blocked")
+}
+
+func TestSsrfDialContext_PropagatesDialError(t *testing.T) {
+	setupProtection(t)
+
+	ctx := context.Background()
+	dialErr := errors.New("connection refused")
+	original := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return nil, dialErr
+	}
+
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "example.com:80")
+
+	assert.ErrorIs(t, err, dialErr)
+	assert.Nil(t, conn)
+}
+
+func TestSsrfDialContext_HandlesInvalidAddr(t *testing.T) {
+	setupProtection(t)
+
+	ctx := context.Background()
+	original := dialerReturning("93.184.216.34:80")
+	wrapped := ssrfDialContext(original)
+
+	// addr without port — SplitHostPort fails, should return conn without error
+	conn, err := wrapped(ctx, "tcp", "no-port")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, conn)
+}
+
+// mockStringAddr implements net.Addr with a custom string representation.
+type mockStringAddr string
+
+func (a mockStringAddr) Network() string { return "tcp" }
+func (a mockStringAddr) String() string  { return string(a) }
+
+func TestSsrfDialContext_HandlesInvalidRemoteAddr(t *testing.T) {
+	setupProtection(t)
+
+	ctx := context.Background()
+	original := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return &mockConn{remoteAddr: mockStringAddr("not-host-port")}, nil
+	}
+
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "example.com:80")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, conn)
+}
+
+func TestSsrfDialContext_AllowsWhenNoRequestContext(t *testing.T) {
+	setupProtection(t)
+
+	// Plain context with no request context — scanSSRF should return nil
+	ctx := context.Background()
+	original := dialerReturning("10.0.0.1:80")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "10.0.0.1:80")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, conn)
 }
 
 func TestSsrfDialContext_AllowsPrivateIPNotInUserInput(t *testing.T) {
