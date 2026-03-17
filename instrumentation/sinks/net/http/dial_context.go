@@ -18,9 +18,9 @@ import (
 // connection's remote address. If it's a private IP and the hostname originates
 // from user input, the connection is closed and an error is returned before any
 // HTTP data is sent.
-func ssrfDialContext(original func(ctx context.Context, network, addr string) (net.Conn, error)) func(ctx context.Context, network, addr string) (net.Conn, error) {
+func ssrfDialContext(originalDialContext func(ctx context.Context, network, addr string) (net.Conn, error)) func(ctx context.Context, network, addr string) (net.Conn, error) {
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
-		conn, dialErr := original(ctx, network, addr)
+		conn, dialErr := originalDialContext(ctx, network, addr)
 		if dialErr != nil {
 			return conn, dialErr
 		}
