@@ -43,22 +43,24 @@ func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 		// already normalized. We must normalize the user input side to match.
 		parsedHostname = norm.NFKC.String(parsedHostname)
 		for _, option := range hostnameOptions {
-			if parsedHostname == option {
-				parsedPort := getPortFromURL(parsed)
+			if parsedHostname != option {
+				continue
+			}
 
-				// Unable to parse port (e.g. invalid port string) — assume match
-				if parsedPort < 0 {
-					return true
-				}
+			parsedPort := getPortFromURL(parsed)
 
-				// No port requirement specified
-				if port == 0 {
-					return true
-				}
+			// Unable to parse port (e.g. invalid port string) — assume match
+			if parsedPort < 0 {
+				return true
+			}
 
-				if parsedPort >= 0 && parsedPort <= 65535 && uint32(parsedPort) == port {
-					return true
-				}
+			// No port requirement specified
+			if port == 0 {
+				return true
+			}
+
+			if parsedPort >= 0 && parsedPort <= 65535 && uint32(parsedPort) == port {
+				return true
 			}
 		}
 	}
