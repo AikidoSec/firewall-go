@@ -14,6 +14,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -316,7 +317,7 @@ func TestSsrfDialContext_HandlesInvalidRemoteAddr(t *testing.T) {
 func TestSsrfDialContext_AllowsWhenNoRequestContext(t *testing.T) {
 	setupProtection(t)
 
-	// Plain context with no request context — scanSSRF should return nil
+	// Without request context, regular private IPs are allowed (only IMDS IPs are blocked)
 	ctx := context.Background()
 	original := dialerReturning("10.0.0.1:80")
 	wrapped := ssrfDialContext(original)
@@ -324,6 +325,69 @@ func TestSsrfDialContext_AllowsWhenNoRequestContext(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
+}
+
+func TestStoredSsrf(t *testing.T) {
+	tests := []struct {
+		name       string
+		hostname   string
+		remoteAddr string
+		useReqCtx  bool
+		wantBlock  bool
+	}{
+		{"blocks IMDS IP with request context", "evil.com", "169.254.169.254:80", true, true},
+		{"blocks IMDS IP without request context", "evil.com", "169.254.169.254:80", false, true},
+		{"allows trusted hostname", "metadata.google.internal", "169.254.169.254:80", false, false},
+		{"allows IP literal matching IMDS", "169.254.169.254", "169.254.169.254:80", false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupProtection(t)
+
+			var ctx context.Context
+			if tt.useReqCtx {
+				incomingReq := httptest.NewRequest("GET", "/test", nil)
+				ip := "1.2.3.4"
+				ctx = request.SetContext(context.Background(), incomingReq, request.ContextData{
+					Source:        "test",
+					Route:         "/test",
+					RemoteAddress: &ip,
+				})
+			} else {
+				ctx = context.Background()
+			}
+
+			original := dialerReturning(tt.remoteAddr)
+			wrapped := ssrfDialContext(original)
+			conn, err := wrapped(ctx, "tcp", tt.hostname+":80")
+
+			if tt.wantBlock {
+				assert.Error(t, err)
+				assert.Nil(t, conn)
+				var attackErr *zen.AttackBlockedError
+				require.True(t, errors.As(err, &attackErr))
+				assert.Equal(t, vulnerabilities.KindStoredSSRF, attackErr.Kind)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, conn)
+			}
+		})
+	}
+
+	t.Run("closes connection on block", func(t *testing.T) {
+		setupProtection(t)
+
+		mc := &mockConn{remoteAddr: mockTCPAddr("169.254.169.254:80")}
+		original := func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return mc, nil
+		}
+
+		wrapped := ssrfDialContext(original)
+		_, _ = wrapped(context.Background(), "tcp", "evil.com:80")
+
+		assert.True(t, mc.closed)
+	})
 }
 
 func TestSsrfDialContext_AllowsPrivateIPNotInUserInput(t *testing.T) {
