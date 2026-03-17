@@ -42,12 +42,11 @@ func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 		// before dialing, so the hostname we receive at DialContext level is
 		// already normalized. We must normalize the user input side to match.
 		parsedHostname = norm.NFKC.String(parsedHostname)
+		parsedPort := getPortFromURL(parsed)
 		for _, option := range hostnameOptions {
 			if parsedHostname != option {
 				continue
 			}
-
-			parsedPort := getPortFromURL(parsed)
 
 			// Unable to parse port (e.g. invalid port string) — assume match
 			if parsedPort < 0 {
