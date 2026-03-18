@@ -21,20 +21,36 @@ if [ ! -d "$TEST_DIR" ]; then
 	exit 1
 fi
 
+MOCK_PORT=$((PORT + 1000))
+MOCK_PID_FILE="/tmp/mock-server-$MOCK_PORT.pid"
+MOCK_LOG="/tmp/mock-server-$MOCK_PORT.log"
+MOCK_BINARY="/tmp/end2end-mock-server"
+
+stop_mock_server() {
+	if [ -f "$MOCK_PID_FILE" ]; then
+		MOCK_PID=$(cat "$MOCK_PID_FILE")
+		kill "$MOCK_PID" 2>/dev/null || true
+		rm -f "$MOCK_PID_FILE"
+	fi
+}
+
+trap 'stop_mock_server; "$SCRIPT_DIR/stop-app.sh" "$APP" 2>/dev/null || true' EXIT
+
 echo "=================================================="
 echo "Running suite: $SUITE_NAME"
 echo "App: $APP"
 echo "Port: $PORT"
+echo "Mock server port: $MOCK_PORT"
 echo "Test directory: tests/$SUITE_NAME"
 
 # Load environment variables from suite.env file if it exists
 ENV_FILE="$TEST_DIR/suite.env"
 if [ -f "$ENV_FILE" ]; then
 	echo "Loading environment from: tests/$SUITE_NAME/suite.env"
-	set -a  # automatically export all variables
+	set -a # automatically export all variables
 	source "$ENV_FILE"
 	set +a
-	
+
 	# Show what was loaded
 	echo "Environment variables:"
 	while IFS= read -r line; do
@@ -42,10 +58,43 @@ if [ -f "$ENV_FILE" ]; then
 		[[ "$line" =~ ^#.*$ ]] && continue
 		[[ -z "$line" ]] && continue
 		echo "  - $line"
-	done < "$ENV_FILE"
+	done <"$ENV_FILE"
 else
 	echo "No suite.env file found (using defaults)"
 fi
+
+# Build mock server binary if needed
+if [ ! -f "$MOCK_BINARY" ]; then
+	echo "Building mock server..."
+	go build -o "$MOCK_BINARY" "$END2END_DIR/mock-server/"
+	echo "✓ Mock server built"
+fi
+
+# Start mock server
+echo ""
+echo "Starting mock server on port $MOCK_PORT..."
+MOCK_SERVER_PORT=$MOCK_PORT "$MOCK_BINARY" >"$MOCK_LOG" 2>&1 &
+echo $! >"$MOCK_PID_FILE"
+
+# Wait for mock server to be ready
+for i in {1..10}; do
+	if curl -sf "http://localhost:$MOCK_PORT/mock/events" >/dev/null 2>&1; then
+		echo "✓ Mock server ready on port $MOCK_PORT"
+		break
+	fi
+	if [ "$i" -eq 10 ]; then
+		echo "❌ Mock server failed to start. Logs:"
+		cat "$MOCK_LOG"
+		exit 1
+	fi
+	sleep 0.5
+done
+
+# Point the agent at the mock server
+export AIKIDO_TOKEN=mock-token
+export AIKIDO_ENDPOINT="http://localhost:$MOCK_PORT"
+export AIKIDO_REALTIME_ENDPOINT="http://localhost:$MOCK_PORT"
+export MOCK_SERVER_URL="http://localhost:$MOCK_PORT"
 
 echo "=================================================="
 echo ""
@@ -65,6 +114,10 @@ TEST_EXIT_CODE=$?
 # Stop the app
 echo ""
 "$SCRIPT_DIR/stop-app.sh" "$APP"
+
+# Stop mock server
+stop_mock_server
+trap - EXIT
 
 if [ $TEST_EXIT_CODE -eq 0 ]; then
 	echo "✓ Suite '$SUITE_NAME' passed"

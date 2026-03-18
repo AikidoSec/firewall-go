@@ -63,6 +63,16 @@ ANOTHER_VAR=another-value
 make run-suite SUITE=my-suite APP=gin-postgres
 ```
 
+## Mock Server
+
+Each suite run automatically starts a mock Aikido cloud server. The agent is pointed at it via `AIKIDO_ENDPOINT`/`AIKIDO_REALTIME_ENDPOINT`, and tests can query recorded events at `GET /mock/events` using the `MOCK_SERVER_URL` env var.
+
+If you change `mock-server/` code, force a rebuild before the next run:
+
+```bash
+make build-mock-server
+```
+
 ## Manual Control
 
 For debugging, you can manually start/stop an app:
