@@ -47,7 +47,7 @@ func TestExamineContext_Disabled(t *testing.T) {
 
 	maliciousQuery := "SELECT * FROM users WHERE id = '1' OR 1=1"
 
-	err := sql.ExamineContext(ctx, maliciousQuery, "database/sql.DB.QueryContext")
+	err := sql.ExamineContext(ctx, maliciousQuery, "database/sql.DB.QueryContext", "generic")
 
 	require.NoError(t, err, "ExamineContext should return early with no error when zen is disabled")
 
@@ -92,7 +92,7 @@ func TestExamineContext_NotLoaded(t *testing.T) {
 
 	maliciousQuery := "SELECT * FROM users WHERE id = '1' OR 1=1"
 
-	err := sql.ExamineContext(ctx, maliciousQuery, "database/sql.DB.QueryContext")
+	err := sql.ExamineContext(ctx, maliciousQuery, "database/sql.DB.QueryContext", "generic")
 
 	require.NoError(t, err, "ExamineContext should return early with no error when zen is not loaded")
 

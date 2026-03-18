@@ -589,13 +589,54 @@ func TestQueryContextIsAutomaticallyInstrumented(t *testing.T) {
 		assert.Equal(t, ".query", client.capturedAttack.Path)
 		assert.Equal(t, "1' OR 1=1", client.capturedAttack.Payload)
 		assert.Equal(t, map[string]string{
-			"dialect": "default",
+			"dialect": "generic",
 			"sql":     "SELECT * FROM users WHERE id = '1' OR 1=1",
 		}, client.capturedAttack.Metadata)
 		assert.Nil(t, nil, client.capturedAttack.User)
 
 		assert.NotEmpty(t, client.capturedAgentInfo)
 
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
+func TestDialectIsPassedThrough(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}),
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	db, err := sql.Open("fake-mysql", "")
+	require.NoError(t, err)
+
+	request.WrapWithGLS(ctx, func() {
+		_, err := db.QueryContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+		require.Error(t, err)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "mysql", client.capturedAttack.Metadata["dialect"])
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for attack event")
 	}

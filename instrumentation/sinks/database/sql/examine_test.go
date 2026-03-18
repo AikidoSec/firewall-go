@@ -40,9 +40,9 @@ func TestExamineContext_TracksOperationStats(t *testing.T) {
 
 	// Execute multiple queries
 	query := "SELECT * FROM users WHERE id = 1"
-	_ = sql.ExamineContext(ctx, query, "database/sql.DB.Query")
-	_ = sql.ExamineContext(ctx, query, "database/sql.DB.Query")
-	_ = sql.ExamineContext(ctx, "INSERT INTO users VALUES (1)", "database/sql.DB.Exec")
+	_ = sql.ExamineContext(ctx, query, "database/sql.DB.Query", "generic")
+	_ = sql.ExamineContext(ctx, query, "database/sql.DB.Query", "generic")
+	_ = sql.ExamineContext(ctx, "INSERT INTO users VALUES (1)", "database/sql.DB.Exec", "generic")
 
 	// Get stats and verify operations were tracked
 	stats := agent.Stats().GetAndClear()

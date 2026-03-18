@@ -8,6 +8,13 @@ import (
 
 func init() {
 	sql.Register("test", &testDriver{})
+	sql.Register("fake-mysql", &fakeMysqlDriver{})
+}
+
+type fakeMysqlDriver struct{}
+
+func (d *fakeMysqlDriver) Open(name string) (driver.Conn, error) {
+	return &testConn{}, nil
 }
 
 type testDriver struct{}
