@@ -66,7 +66,7 @@ fi
 # Build mock server binary if needed
 if [ ! -f "$MOCK_BINARY" ]; then
 	echo "Building mock server..."
-	go build -o "$MOCK_BINARY" "$END2END_DIR/mock-server/"
+	(cd "$END2END_DIR/mock-server/" && go build -o "$MOCK_BINARY" .)
 	echo "✓ Mock server built"
 fi
 
