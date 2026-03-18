@@ -11,12 +11,6 @@ import (
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
-// Examine checks for SQL injection on non-context database methods.
-// Use this for methods like Query, QueryRow, Exec, and Prepare.
-func Examine(query string, op string, dialect string) error {
-	return ExamineContext(context.Background(), query, op, dialect)
-}
-
 // ExamineContext checks for SQL injection vulnerabilities in database queries.
 // This function is called by the instrumentation framework to scan SQL queries
 // before they are executed against the database.
