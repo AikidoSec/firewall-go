@@ -112,8 +112,13 @@ func main() {
 	mux.HandleFunc("GET /mock/events", handleGetEvents)
 	mux.HandleFunc("DELETE /mock/events", handleDeleteEvents)
 
+	server := &http.Server{
+		Addr:        ":" + port,
+		Handler:     mux,
+		ReadTimeout: 10 * time.Second,
+	}
 	log.Printf("Mock server listening on :%s", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
