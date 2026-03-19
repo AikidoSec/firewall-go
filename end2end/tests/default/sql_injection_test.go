@@ -7,15 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/end2end/tests/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-var dialectPayloads = map[string]string{
-	"postgres": "Fluffy' || current_user || '",
-	"mysql":    "Fluffy' OR '1'='1",
-	"generic":  "Fluffy' OR '1'='1",
-}
 
 func TestSQLInjection(t *testing.T) {
 	dialect := appSQLDialect()
@@ -23,7 +18,7 @@ func TestSQLInjection(t *testing.T) {
 		t.Skip("APP_SQL_DIALECT not set, skipping SQL injection tests")
 	}
 
-	maliciousInput, ok := dialectPayloads[dialect]
+	maliciousInput, ok := testutil.DialectPayloads[dialect]
 	if !ok {
 		maliciousInput = "Fluffy' OR '1'='1"
 	}

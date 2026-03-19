@@ -5,7 +5,7 @@ gin-pgx-native:
   sql_dialect: postgres
 
 gin-sqlx:
-  sql_dialect: postgres
+  sql_dialect: mysql
 
 echo-postgres:
   sql_dialect: postgres

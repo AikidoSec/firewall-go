@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 )
 
 // Pet represents a pet entity
@@ -41,7 +42,7 @@ func (dh *DatabaseHelper) GetAllPets(ctx context.Context) ([]Pet, error) {
 // GetPetByID retrieves a pet by its ID
 func (dh *DatabaseHelper) GetPetByID(ctx context.Context, id int) (Pet, error) {
 	var pet Pet
-	err := dh.db.GetContext(ctx, &pet, "SELECT pet_id, pet_name, owner FROM pets WHERE pet_id = $1", id)
+	err := dh.db.GetContext(ctx, &pet, "SELECT pet_id, pet_name, owner FROM pets WHERE pet_id = ?", id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Pet{ID: 0, Name: "Unknown", Owner: "Unknown"}, nil
@@ -54,13 +55,12 @@ func (dh *DatabaseHelper) GetPetByID(ctx context.Context, id int) (Pet, error) {
 // CreatePetByName inserts a new pet into the database
 func (dh *DatabaseHelper) CreatePetByName(ctx context.Context, petName string) (int64, error) {
 	// Intentionally vulnerable to SQL injection
-	sqlStatement := "INSERT INTO pets (pet_name, owner) VALUES ('" + petName + "', 'Aikido Security') RETURNING pet_id"
-	var petID int64
-	err := dh.db.QueryRowxContext(ctx, sqlStatement).Scan(&petID)
+	sqlStatement := "INSERT INTO pets (pet_name, owner) VALUES ('" + petName + "', 'Aikido Security')"
+	result, err := dh.db.ExecContext(ctx, sqlStatement)
 	if err != nil {
 		return 0, err // Return 0 and the error if something goes wrong
 	}
-	return petID, nil // Return the petID and nil error if successful
+	return result.LastInsertId() // Return the petID and nil error if successful
 }
 
 // Close closes the database connection
@@ -69,19 +69,16 @@ func (dh *DatabaseHelper) Close() error {
 }
 
 func connectToDb() *sqlx.DB {
-	var err error
-	var db *sqlx.DB
-	// Connect to PostgreSQL
-	connStr := "postgresql://localhost:5432/db?user=user&password=password&sslmode=disable"
-	db, err = sqlx.Connect("postgres", connStr)
-	if err != nil {
-		log.Fatal(err)
+	// Connect to MySQL
+	connStr := "user:password@tcp(localhost:3306)/db"
+	for range 30 {
+		db, err := sqlx.Connect("mysql", connStr)
+		if err == nil {
+			return db
+		}
+		log.Println("Waiting for database...", err)
+		time.Sleep(2 * time.Second)
 	}
-
-	// Ping the database to check if the connection is established
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
-	}
-
-	return db
+	log.Fatal("Could not connect to database after 30 attempts")
+	return nil
 }
