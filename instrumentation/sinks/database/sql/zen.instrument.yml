@@ -3,15 +3,27 @@ meta:
   description: Protection from SQL Injection.
 
 rules:
+  # Inject go:linkname declarations for ExamineContext and GetDialectFromDriver
+  - id: database/sql.linkname
+    type: inject-decl
+    package: database/sql
+    anchor: Open
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
+    template: |
+      //go:linkname __aikido_sql_ExamineContext github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql.ExamineContext
+      func __aikido_sql_ExamineContext(context.Context, string, string, string) error
+
+      //go:linkname __aikido_sql_GetDialectFromDriver github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql.GetDialectFromDriver
+      func __aikido_sql_GetDialectFromDriver(driver.Driver) string
+
   # DB methods
   - id: database/sql.DB.QueryContext
     type: prepend
     receiver: "*database/sql.DB"
     function: QueryContext
-    imports:
-      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
     template: |
-      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.Query(Row)Context")
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.Query(Row)Context", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.Driver()))
       if _aikido_block != nil {
         return nil, _aikido_block
       }
@@ -20,10 +32,8 @@ rules:
     type: prepend
     receiver: "*database/sql.DB"
     function: ExecContext
-    imports:
-      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
     template: |
-      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.ExecContext")
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.ExecContext", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.Driver()))
       if _aikido_block != nil {
         return nil, _aikido_block
       }
@@ -32,10 +42,8 @@ rules:
     type: prepend
     receiver: "*database/sql.DB"
     function: PrepareContext
-    imports:
-      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
     template: |
-      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.PrepareContext")
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.DB.PrepareContext", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.Driver()))
       if _aikido_block != nil {
         return nil, _aikido_block
       }
@@ -45,10 +53,8 @@ rules:
     type: prepend
     receiver: "*database/sql.Tx"
     function: QueryContext
-    imports:
-      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
     template: |
-      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.Query(Row)Context")
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.Query(Row)Context", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.db.Driver()))
       if _aikido_block != nil {
         return nil, _aikido_block
       }
@@ -57,10 +63,8 @@ rules:
     type: prepend
     receiver: "*database/sql.Tx"
     function: ExecContext
-    imports:
-      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
     template: |
-      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.ExecContext")
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.ExecContext", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.db.Driver()))
       if _aikido_block != nil {
         return nil, _aikido_block
       }
@@ -69,11 +73,8 @@ rules:
     type: prepend
     receiver: "*database/sql.Tx"
     function: PrepareContext
-    imports:
-      sink: github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql
     template: |
-      _aikido_block := sink.ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.PrepareContext")
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Tx.PrepareContext", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.db.Driver()))
       if _aikido_block != nil {
         return nil, _aikido_block
       }
-
