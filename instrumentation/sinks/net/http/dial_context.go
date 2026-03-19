@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"slices"
 	"strconv"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -49,8 +50,8 @@ func ssrfDialContext(originalDialContext func(ctx context.Context, network, addr
 // scanSSRF runs the SSRF vulnerability scan with the given hostname and resolved IPs.
 // The hostname is used for user-input matching; the resolved IPs are checked for
 // private addresses inside the scan function.
-// If no direct match is found, it checks redirect origins: if this connection is
-// the result of following a redirect, the original hostname may be in user input.
+// If no direct match is found, it walks the redirect chain to find the origin
+// hostname and checks that against user input instead.
 func scanSSRF(ctx context.Context, hostname string, port uint32, resolvedIPs []string) error {
 	scanErr := vulnerabilities.Scan(ctx, "net/http.Client.Do",
 		ssrf.SSRFVulnerability, &ssrf.ScanArgs{
@@ -67,24 +68,54 @@ func scanSSRF(ctx context.Context, hostname string, port uint32, resolvedIPs []s
 		return nil
 	}
 
-	// Check redirect origins: if this hostname was reached via a redirect,
-	// check whether the original (source) hostname was in user input.
-	for _, redirect := range reqCtx.GetOutgoingRedirects() {
-		if redirect.DestHostname != hostname || (redirect.DestPort != port && redirect.DestPort != 0 && port != 0) {
-			continue
-		}
-		scanErr := vulnerabilities.Scan(ctx, "net/http.Client.Do",
-			ssrf.SSRFVulnerability, &ssrf.ScanArgs{
-				Hostname:    redirect.SourceHostname,
-				Port:        redirect.SourcePort,
-				ResolvedIPs: resolvedIPs,
-			})
-		if scanErr != nil {
-			return wrapSSRFError(scanErr)
-		}
+	originHostname, originPort, found := findRedirectOrigin(reqCtx.GetOutgoingRedirects(), hostname, port)
+	if !found {
+		return nil
+	}
+
+	scanErr = vulnerabilities.Scan(ctx, "net/http.Client.Do",
+		ssrf.SSRFVulnerability, &ssrf.ScanArgs{
+			Hostname:    originHostname,
+			Port:        originPort,
+			ResolvedIPs: resolvedIPs,
+		})
+	if scanErr != nil {
+		return wrapSSRFError(scanErr)
 	}
 
 	return nil
+}
+
+const maxRedirectChainDepth = 100
+
+// findRedirectOrigin walks the redirect chain backwards from hostname:port and
+// returns the origin - the furthest-back source that ultimately led here.
+// Returns false if hostname:port is not the destination of any recorded redirect.
+func findRedirectOrigin(redirects []request.RedirectEntry, hostname string, port uint32) (string, uint32, bool) {
+	visited := map[request.RedirectEntry]bool{{DestHostname: hostname, DestPort: port}: true}
+	current := request.RedirectEntry{DestHostname: hostname, DestPort: port}
+
+	for range maxRedirectChainDepth {
+		idx := slices.IndexFunc(redirects, func(r request.RedirectEntry) bool {
+			return r.DestHostname == current.DestHostname &&
+				(r.DestPort == current.DestPort || r.DestPort == 0 || current.DestPort == 0)
+		})
+		if idx == -1 {
+			break
+		}
+		next := redirects[idx]
+		step := request.RedirectEntry{DestHostname: next.SourceHostname, DestPort: next.SourcePort}
+		if visited[step] {
+			break
+		}
+		visited[step] = true
+		current = step
+	}
+
+	if current.DestHostname == hostname && current.DestPort == port {
+		return "", 0, false
+	}
+	return current.DestHostname, current.DestPort, true
 }
 
 func wrapSSRFError(scanErr error) error {

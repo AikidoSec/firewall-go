@@ -226,6 +226,42 @@ func TestSsrfDialContext_BlocksRedirectToPrivateIP(t *testing.T) {
 	assert.Nil(t, conn, "should not return a connection when blocked")
 }
 
+// Two-hop redirect: user input has hop1.example.com, which redirects to hop2.example.com,
+// which then redirects to 127.0.0.1.
+func TestSsrfDialContext_BlocksDoubleHopRedirectToPrivateIP(t *testing.T) {
+	setupProtection(t)
+
+	incomingReq := httptest.NewRequest("GET",
+		"/api/request?url=http%3A%2F%2Fhop1.example.com", nil)
+	ip := "1.2.3.4"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source:        "test",
+		Route:         "/api/request",
+		RemoteAddress: &ip,
+	})
+
+	reqCtx := request.GetContext(ctx)
+	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
+		SourceHostname: "hop1.example.com",
+		SourcePort:     80,
+		DestHostname:   "hop2.example.com",
+		DestPort:       80,
+	})
+	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
+		SourceHostname: "hop2.example.com",
+		SourcePort:     80,
+		DestHostname:   "127.0.0.1",
+		DestPort:       4000,
+	})
+
+	original := dialerReturning("127.0.0.1:4000")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "127.0.0.1:4000")
+
+	assert.Error(t, err, "should block double-hop redirect to private IP when chain origin is in user input")
+	assert.Nil(t, conn, "should not return a connection when blocked")
+}
+
 func TestSsrfDialContext_PropagatesDialError(t *testing.T) {
 	setupProtection(t)
 
