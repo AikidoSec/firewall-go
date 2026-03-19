@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/end2end/tests/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,8 +27,16 @@ func TestDisabled(t *testing.T) {
 	}
 
 	t.Run("does not block SQL injection when disabled", func(t *testing.T) {
+		dialect := testutil.AppSQLDialect()
+		if dialect == "" {
+			t.Skip("APP_SQL_DIALECT not set, skipping SQL injection test")
+		}
+
 		// SQL injection attack in POST body
-		maliciousInput := "Fluffy' || current_user || '"
+		maliciousInput, ok := testutil.DialectPayloads[dialect]
+		if !ok {
+			maliciousInput = "Fluffy' OR '1'='1"
+		}
 		body := map[string]string{"name": maliciousInput}
 		jsonBody, err := json.Marshal(body)
 		require.NoError(t, err)

@@ -7,15 +7,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/end2end/tests/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSQLInjection(t *testing.T) {
+	dialect := appSQLDialect()
+	if dialect == "" {
+		t.Skip("APP_SQL_DIALECT not set, skipping SQL injection tests")
+	}
+
+	maliciousInput, ok := testutil.DialectPayloads[dialect]
+	if !ok {
+		maliciousInput = "Fluffy' OR '1'='1"
+	}
+
 	client := &http.Client{Timeout: 5 * time.Second}
 
 	t.Run("blocks SQL injection attack", func(t *testing.T) {
-		maliciousInput := "Fluffy' || current_user || '"
 		body := map[string]string{"name": maliciousInput}
 		jsonBody, err := json.Marshal(body)
 		require.NoError(t, err)
@@ -34,6 +44,10 @@ func TestSQLInjection(t *testing.T) {
 		assert.Equal(t, "sql_injection", attack["kind"])
 		assert.Equal(t, true, attack["blocked"])
 		assert.Contains(t, attack["payload"], maliciousInput)
+
+		metadata, ok := attack["metadata"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, dialect, metadata["dialect"])
 
 		request, ok := event["request"].(map[string]any)
 		require.True(t, ok)

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/end2end/tests/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,6 +16,10 @@ func appURL() string {
 		return u
 	}
 	return "http://localhost:8080"
+}
+
+func appSQLDialect() string {
+	return testutil.AppSQLDialect()
 }
 
 func mockServerURL() string {

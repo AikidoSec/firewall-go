@@ -1,5 +1,5 @@
 PORT ?= 8080
-DB_SERVICE := postgres_database
+DB_SERVICE := mysql_database
 
 include ../common.mk
 

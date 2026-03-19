@@ -6,11 +6,12 @@ require (
 	github.com/AikidoSec/firewall-go v1.0.0
 	github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.11.0
+	github.com/go-sql-driver/mysql v1.8.1
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/lib/pq v1.10.9
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect

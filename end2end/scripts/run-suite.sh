@@ -103,12 +103,22 @@ echo ""
 echo "Starting app with configuration..."
 "$SCRIPT_DIR/start-app.sh" "$APP" "$PORT"
 
+# Read app config from apps.yml
+APPS_CONFIG="$END2END_DIR/apps.yml"
+APP_SQL_DIALECT=""
+if [ -f "$APPS_CONFIG" ]; then
+	APP_SQL_DIALECT=$(awk -v app="$APP" '
+		/^[a-zA-Z]/ { current = substr($1, 1, length($1)-1) }
+		current == app && /sql_dialect:/ { print $2; exit }
+	' "$APPS_CONFIG")
+fi
+
 # Run the tests
 echo ""
 echo "Running tests..."
 cd "$END2END_DIR"
 PORT_VALUE=$(cat "/tmp/$APP.port")
-APP_NAME=$APP APP_URL="http://localhost:$PORT_VALUE" go test -count=1 -v "./tests/$SUITE_NAME/..."
+APP_NAME=$APP APP_URL="http://localhost:$PORT_VALUE" APP_SQL_DIALECT=$APP_SQL_DIALECT go test -count=1 -v "./tests/$SUITE_NAME/..."
 TEST_EXIT_CODE=$?
 
 # Stop the app

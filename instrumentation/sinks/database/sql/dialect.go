@@ -11,7 +11,12 @@ func GetDialectFromDriver(d driver.Driver) string {
 	if d == nil {
 		return "generic"
 	}
-	return resolveDialectFromDriverType(reflect.TypeOf(d).String())
+	t := reflect.TypeOf(d)
+	typeName := t.String()
+	if t.Kind() == reflect.Pointer {
+		typeName += " " + t.Elem().PkgPath()
+	}
+	return resolveDialectFromDriverType(typeName)
 }
 
 func resolveDialectFromDriverType(typeName string) string {
