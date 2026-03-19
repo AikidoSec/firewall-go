@@ -1,6 +1,6 @@
 MAKEFLAGS += --no-print-directory
 
-.PHONY: run-suite test-all-suites list-suites test-interactive start-app stop-app
+.PHONY: run-suite test-all-suites list-suites test-interactive start-app stop-app build-mock-server
 
 # Run a specific test suite
 run-suite:
@@ -58,3 +58,9 @@ ifndef APP
 	$(error APP is required. Usage: make stop-app APP=gin-postgres)
 endif
 	@./scripts/stop-app.sh $(APP)
+
+# Build the mock server binary (cached at /tmp/end2end-mock-server)
+# Run this after changing mock-server/ code to force a rebuild
+build-mock-server:
+	@(cd mock-server && go build -o /tmp/end2end-mock-server .)
+	@echo "✓ Mock server built"
