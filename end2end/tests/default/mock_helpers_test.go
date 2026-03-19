@@ -17,6 +17,10 @@ func appURL() string {
 	return "http://localhost:8080"
 }
 
+func appSQLDialect() string {
+	return os.Getenv("APP_SQL_DIALECT")
+}
+
 func mockServerURL() string {
 	return os.Getenv("MOCK_SERVER_URL")
 }

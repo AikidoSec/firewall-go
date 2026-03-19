@@ -1,0 +1,23 @@
+gin-postgres:
+  sql_dialect: postgres
+
+gin-pgx-native:
+  sql_dialect: postgres
+
+gin-sqlx:
+  sql_dialect: postgres
+
+echo-postgres:
+  sql_dialect: postgres
+
+echo-pgx-sql:
+  sql_dialect: postgres
+
+echo-v5-postgres:
+  sql_dialect: postgres
+
+chi-postgres:
+  sql_dialect: postgres
+
+http-postgres:
+  sql_dialect: postgres
