@@ -11,8 +11,10 @@ import (
 )
 
 type contextKey struct{}
+type bypassedContextKey struct{}
 
 var reqCtxKey contextKey
+var bypassedCtxKey bypassedContextKey
 
 type ContextData struct {
 	Source        string
@@ -24,7 +26,7 @@ type ContextData struct {
 
 func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
 	if data.RemoteAddress != nil && config.IsIPBypassed(*data.RemoteAddress) {
-		return ctx
+		return context.WithValue(ctx, bypassedCtxKey, true)
 	}
 
 	route := data.Route
@@ -57,6 +59,17 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 		executedMiddleware: false, // We start with no middleware executed.
 	}
 	return context.WithValue(ctx, reqCtxKey, c)
+}
+
+func IsBypassed(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	v := ctx.Value(bypassedCtxKey)
+	if v == nil {
+		return false
+	}
+	return v.(bool)
 }
 
 func GetContext(ctx context.Context) *Context {
