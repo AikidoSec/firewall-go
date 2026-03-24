@@ -3,6 +3,7 @@ package vulnerabilities
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -28,6 +29,7 @@ func TestGetDisplayNameForAttackKind(t *testing.T) {
 		{"PathTraversal", KindPathTraversal, "a path traversal attack"},
 		{"ShellInjection", KindShellInjection, "a shell injection"},
 		{"SSRF", KindSSRF, "a server-side request forgery"},
+		{"StoredSSRF", KindStoredSSRF, "a stored server-side request forgery"},
 		{"Unknown", AttackKind("unknown"), "unknown attack type"},
 	}
 
@@ -331,6 +333,96 @@ func TestReportDeferredAttack(t *testing.T) {
 			// Success! No duplicate
 		}
 	})
+}
+
+func setupOnStoredSSRF(t *testing.T) (*mockCloudClient, func()) {
+	t.Helper()
+	require.NoError(t, agent.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{}))
+
+	originalClient := agent.GetCloudClient()
+	client := &mockCloudClient{attackDetectedEventSent: make(chan struct{}, 1)}
+	agent.SetCloudClient(client)
+
+	return client, func() { agent.SetCloudClient(originalClient) }
+}
+
+func TestOnStoredSSRF(t *testing.T) {
+	t.Run("returns nil when protection is disabled", func(t *testing.T) {
+		originalLoaded := config.IsZenLoaded()
+		config.SetZenLoaded(false)
+		t.Cleanup(func() { config.SetZenLoaded(originalLoaded) })
+
+		err := OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+		assert.NoError(t, err)
+	})
+
+	for _, blocking := range []bool{false, true} {
+		t.Run(fmt.Sprintf("blocking=%v", blocking), func(t *testing.T) {
+			_, cleanup := setupOnStoredSSRF(t)
+			t.Cleanup(cleanup)
+
+			original := config.IsBlockingEnabled()
+			config.SetBlocking(blocking)
+			t.Cleanup(func() { config.SetBlocking(original) })
+
+			err := OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+			if !blocking {
+				assert.NoError(t, err)
+				return
+			}
+			var attackErr *AttackDetectedError
+			require.ErrorAs(t, err, &attackErr)
+			assert.Equal(t, KindStoredSSRF, attackErr.Kind)
+			assert.Equal(t, "net/http.Client.Do", attackErr.Operation)
+		})
+	}
+
+	t.Run("reports attack with hostname and privateIP in metadata", func(t *testing.T) {
+		client, cleanup := setupOnStoredSSRF(t)
+		t.Cleanup(cleanup)
+
+		original := config.IsBlockingEnabled()
+		config.SetBlocking(true)
+		t.Cleanup(func() { config.SetBlocking(original) })
+
+		_ = OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+
+		select {
+		case <-client.attackDetectedEventSent:
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for attack event")
+		}
+
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		assert.Equal(t, string(KindStoredSSRF), client.capturedAttack.Kind)
+		assert.Equal(t, "evil.com", client.capturedAttack.Metadata["hostname"])
+		assert.Equal(t, "169.254.169.254", client.capturedAttack.Metadata["privateIP"])
+		assert.Equal(t, "evil.com", client.capturedAttack.Payload)
+	})
+
+	t.Run("works without request context", func(t *testing.T) {
+		client, cleanup := setupOnStoredSSRF(t)
+		t.Cleanup(cleanup)
+
+		original := config.IsBlockingEnabled()
+		config.SetBlocking(true)
+		t.Cleanup(func() { config.SetBlocking(original) })
+
+		err := OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+		require.Error(t, err)
+
+		select {
+		case <-client.attackDetectedEventSent:
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for attack event")
+		}
+
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		assert.Empty(t, client.capturedRequest.IPAddress, "request info should be empty without context")
+	})
+
 }
 
 type mockCloudClient struct {
