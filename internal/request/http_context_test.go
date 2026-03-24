@@ -237,6 +237,24 @@ func TestEnsureContextPropagated(t *testing.T) {
 		// No GLS data and no request data in context — nothing to propagate
 		assert.Nil(t, GetContext(result), "should have no request context")
 	})
+
+	t.Run("copies bypassed flag from GLS into bare context", func(t *testing.T) {
+		block := true
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			BypassedIPs: []string{"10.10.10.10"},
+			Block:       &block,
+		}, nil)
+
+		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
+		ip := "10.10.10.10"
+		bypassedCtx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+		require.True(t, IsBypassed(bypassedCtx))
+
+		WrapWithGLS(bypassedCtx, func() {
+			result := EnsureContextPropagated(context.Background())
+			assert.True(t, IsBypassed(result), "should propagate bypass flag from GLS into bare context")
+		})
+	})
 }
 
 func TestFullURL(t *testing.T) {
