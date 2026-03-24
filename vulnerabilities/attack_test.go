@@ -337,12 +337,9 @@ func TestReportDeferredAttack(t *testing.T) {
 
 func setupOnStoredSSRF(t *testing.T) (*mockCloudClient, func()) {
 	t.Helper()
-	require.NoError(t, agent.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{}))
-
 	originalClient := agent.GetCloudClient()
 	client := &mockCloudClient{attackDetectedEventSent: make(chan struct{}, 1)}
 	agent.SetCloudClient(client)
-
 	return client, func() { agent.SetCloudClient(originalClient) }
 }
 
@@ -358,7 +355,7 @@ func TestOnStoredSSRF(t *testing.T) {
 
 	for _, blocking := range []bool{false, true} {
 		t.Run(fmt.Sprintf("blocking=%v", blocking), func(t *testing.T) {
-			_, cleanup := setupOnStoredSSRF(t)
+			client, cleanup := setupOnStoredSSRF(t)
 			t.Cleanup(cleanup)
 
 			original := config.IsBlockingEnabled()
@@ -366,6 +363,15 @@ func TestOnStoredSSRF(t *testing.T) {
 			t.Cleanup(func() { config.SetBlocking(original) })
 
 			err := OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+
+			// OnStoredSSRF always fires go agent.OnAttackDetected regardless of blocking.
+			// Wait for it to complete before the next subtest calls agent.Init().
+			select {
+			case <-client.attackDetectedEventSent:
+			case <-time.After(time.Second):
+				t.Fatal("timeout waiting for attack event")
+			}
+
 			if !blocking {
 				assert.NoError(t, err)
 				return
