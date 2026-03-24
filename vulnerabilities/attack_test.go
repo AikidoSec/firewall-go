@@ -401,6 +401,34 @@ func TestOnStoredSSRF(t *testing.T) {
 		assert.Equal(t, "evil.com", client.capturedAttack.Payload)
 	})
 
+	t.Run("returns nil when forceProtectionOff is set for the endpoint", func(t *testing.T) {
+		_, cleanup := setupOnStoredSSRF(t)
+		t.Cleanup(cleanup)
+
+		block := true
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			Block: &block,
+			Endpoints: []aikido_types.Endpoint{
+				{Method: "POST", Route: "/api/stored_ssrf", ForceProtectionOff: true},
+			},
+		}, nil)
+
+		original := config.IsBlockingEnabled()
+		config.SetBlocking(true)
+		t.Cleanup(func() { config.SetBlocking(original) })
+
+		ip := "1.2.3.4"
+		req := httptest.NewRequest("POST", "/api/stored_ssrf", http.NoBody)
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/api/stored_ssrf",
+			RemoteAddress: &ip,
+		})
+
+		err := OnStoredSSRF(ctx, "net/http.Client.Do", "evil.com", "169.254.169.254")
+		assert.NoError(t, err)
+	})
+
 	t.Run("works without request context", func(t *testing.T) {
 		client, cleanup := setupOnStoredSSRF(t)
 		t.Cleanup(cleanup)

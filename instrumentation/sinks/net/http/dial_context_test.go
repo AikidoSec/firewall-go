@@ -391,6 +391,18 @@ func TestStoredSsrf(t *testing.T) {
 	})
 }
 
+func TestStoredSsrf_NonBlocking(t *testing.T) {
+	setupProtection(t)
+	config.SetBlocking(false)
+
+	original := dialerReturning("169.254.169.254:80")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(context.Background(), "tcp", "evil.com:80")
+
+	assert.NoError(t, err, "should not block IMDS connection when blocking is disabled")
+	assert.NotNil(t, conn)
+}
+
 func bypassedContext(t *testing.T) context.Context {
 	t.Helper()
 	block := true

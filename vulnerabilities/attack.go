@@ -177,11 +177,15 @@ func OnStoredSSRF(ctx context.Context, operation string, hostname string, privat
 		return nil
 	}
 
+	reqCtx := request.GetContext(ctx)
+	if reqCtx != nil && isForceProtectionOff(reqCtx.Method, reqCtx.Route) {
+		return nil
+	}
+
 	blocked := config.IsBlockingEnabled()
 
 	var reqInfo aikido_types.RequestInfo
 	var user *aikido_types.User
-	reqCtx := request.GetContext(ctx)
 	if reqCtx != nil {
 		reqInfo = aikido_types.RequestInfo{
 			Method:    reqCtx.Method,
