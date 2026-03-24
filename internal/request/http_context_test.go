@@ -151,6 +151,18 @@ func TestSetContext_BypassedIP(t *testing.T) {
 
 	result := GetContext(setCtx)
 	require.Nil(t, result)
+	assert.True(t, IsBypassed(setCtx))
+}
+
+func TestIsBypassed(t *testing.T) {
+	t.Run("returns false for nil context", func(t *testing.T) {
+		//nolint:staticcheck // We want to test the nil case
+		assert.False(t, IsBypassed(nil))
+	})
+
+	t.Run("returns false for context without bypass flag", func(t *testing.T) {
+		assert.False(t, IsBypassed(context.Background()))
+	})
 }
 
 func TestGetContext(t *testing.T) {
