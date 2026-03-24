@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
@@ -387,6 +388,55 @@ func TestStoredSsrf(t *testing.T) {
 		_, _ = wrapped(context.Background(), "tcp", "evil.com:80")
 
 		assert.True(t, mc.closed)
+	})
+}
+
+func bypassedContext(t *testing.T) context.Context {
+	t.Helper()
+	block := true
+	ip := "10.10.10.10"
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		BypassedIPs: []string{ip},
+		Block:       &block,
+	}, nil)
+	incomingReq := httptest.NewRequest("GET", "/test", nil)
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		RemoteAddress: &ip,
+	})
+	require.True(t, request.IsBypassed(ctx))
+	return ctx
+}
+
+func TestStoredSsrf_BypassedIPAllowsIMDS(t *testing.T) {
+	setupProtection(t)
+
+	ctx := bypassedContext(t)
+
+	original := dialerReturning("169.254.169.254:80")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "evil.com:80")
+
+	assert.NoError(t, err, "bypassed IP should be allowed to connect to IMDS address")
+	assert.NotNil(t, conn)
+}
+
+func TestStoredSsrf_BypassedIPViaGLS(t *testing.T) {
+	setupProtection(t)
+
+	ctx := bypassedContext(t)
+
+	// Simulate the case where the handler makes an outgoing request with a fresh
+	// context. RoundTrip calls EnsureContextPropagated before DialContext sees
+	// the context, so the bypass flag is recovered from GLS at that point.
+	request.WrapWithGLS(ctx, func() {
+		propagated := request.EnsureContextPropagated(context.Background())
+
+		original := dialerReturning("169.254.169.254:80")
+		wrapped := ssrfDialContext(original)
+		conn, err := wrapped(propagated, "tcp", "evil.com:80")
+
+		assert.NoError(t, err, "bypassed IP should be allowed even when bypass flag comes from GLS")
+		assert.NotNil(t, conn)
 	})
 }
 

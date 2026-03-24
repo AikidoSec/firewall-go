@@ -133,6 +133,10 @@ func wrapSSRFError(scanErr error) error {
 }
 
 func checkStoredSSRF(ctx context.Context, hostname string, resolvedIPs []string) error {
+	if request.IsBypassed(ctx) {
+		return nil
+	}
+
 	result := ssrf.CheckStoredSSRF(hostname, resolvedIPs)
 	if result == nil {
 		return nil
