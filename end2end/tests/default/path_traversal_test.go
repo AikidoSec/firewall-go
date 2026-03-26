@@ -21,7 +21,11 @@ func TestPathTraversal(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
 		event := waitForEvent(t, 5*time.Second, func(ev map[string]any) bool {
-			return ev["type"] == "detected_attack"
+			if ev["type"] != "detected_attack" {
+				return false
+			}
+			attack, ok := ev["attack"].(map[string]any)
+			return ok && attack["kind"] == "path_traversal"
 		})
 
 		attack, ok := event["attack"].(map[string]any)
