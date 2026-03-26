@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -55,4 +56,8 @@ func (m *MockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 }
 
 func (m *MockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+
+func (m *MockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	return nil
 }
