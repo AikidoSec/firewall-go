@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/tools
 
-go 1.24.2
+go 1.25
 
 require gotest.tools/gotestsum v1.13.0
 

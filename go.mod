@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go
 
-go 1.24.2
+go 1.25.0
 
 require (
 	github.com/jtolds/gls v4.20.0+incompatible
