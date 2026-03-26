@@ -6,11 +6,16 @@ import (
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
 func Examine(r *http.Request) error {
 	if !zen.ShouldProtect() {
+		return nil
+	}
+
+	if request.IsBypassed(r.Context()) {
 		return nil
 	}
 
