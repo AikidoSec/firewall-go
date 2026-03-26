@@ -80,8 +80,11 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 
 	r.Get("/api/read", func(w http.ResponseWriter, r *http.Request) {
 		filePath := r.URL.Query().Get("path")
-		content := readFile(filePath)
-		w.WriteHeader(http.StatusOK)
+		content, err := readFile(filePath)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		_, _ = w.Write([]byte(content))
 	})
 }

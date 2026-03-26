@@ -39,11 +39,11 @@ func makeHTTPRequest(url string) string {
 }
 
 // readFile reads the content of a file and returns it as a string.
-func readFile(filePath string) string {
+func readFile(filePath string) (string, error) {
 	// #nosec G304 - intentional path traversal vulnerability
 	content, err := os.ReadFile("content/blogs/" + filePath)
 	if err != nil {
-		return fmt.Sprintf("Error: %s", err.Error())
+		return "", err
 	}
-	return string(content)
+	return string(content), nil
 }

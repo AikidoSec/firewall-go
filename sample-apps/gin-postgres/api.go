@@ -73,7 +73,11 @@ func defineAPIRoutes(r *gin.Engine, db *DatabaseHelper) {
 
 	r.GET("/api/read", func(c *gin.Context) {
 		filePath := c.Query("path")
-		content := readFile(filePath)
+		content, err := readFile(filePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.String(http.StatusOK, content)
 	})
 }
