@@ -108,7 +108,18 @@ func TestExamine_BypassedIPSkipsOutboundBlocking(t *testing.T) {
 	})
 	require.True(t, request.IsBypassed(ctx), "context should be marked as bypassed")
 
+	agent.State().GetAndClearHostnames()
+	agent.Stats().GetAndClear()
+
 	outboundReq, _ := http.NewRequestWithContext(ctx, "GET", "http://malicious.com", http.NoBody)
 	err := Examine(outboundReq)
+
 	assert.NoError(t, err, "bypassed IP should not trigger outbound blocking")
+
+	stats := agent.Stats().GetAndClear()
+	require.Contains(t, stats.Operations, "net/http.Client.Do", "should still track operation stats for bypassed IPs")
+
+	hostnames := agent.State().GetAndClearHostnames()
+	require.Len(t, hostnames, 1, "should still report hostname for bypassed IPs")
+	assert.Equal(t, "malicious.com", hostnames[0].URL)
 }
