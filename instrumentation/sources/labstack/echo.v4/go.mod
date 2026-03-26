@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4
 
-go 1.24.2
+go 1.25.0
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
