@@ -3,10 +3,16 @@
 package http
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
@@ -72,4 +78,48 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	stats := agent.Stats().GetAndClear()
 	require.Contains(t, stats.Operations, "net/http.Client.Do")
 	require.Equal(t, 3, stats.Operations["net/http.Client.Do"].Total, "should track 3 HTTP calls")
+}
+
+func TestExamine_BypassedIPSkipsOutboundBlocking(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	originalClient := agent.GetCloudClient()
+	defer func() {
+		zen.SetDisabled(originalDisabled)
+		agent.SetCloudClient(originalClient)
+	}()
+
+	require.NoError(t, zen.Protect())
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		ConfigUpdatedAt: time.Now().UnixMilli(),
+		BypassedIPs:     []string{"10.10.10.10"},
+		Block:           &block,
+		Domains: []aikido_types.OutboundDomain{
+			{Hostname: "malicious.com", Mode: "block"},
+		},
+	}, nil)
+
+	incomingReq := httptest.NewRequest("GET", "/api/fetch?url=http://malicious.com", nil)
+	ip := "10.10.10.10"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		RemoteAddress: &ip,
+	})
+	require.True(t, request.IsBypassed(ctx), "context should be marked as bypassed")
+
+	agent.State().GetAndClearHostnames()
+	agent.Stats().GetAndClear()
+
+	outboundReq, _ := http.NewRequestWithContext(ctx, "GET", "http://malicious.com", http.NoBody)
+	err := Examine(outboundReq)
+
+	assert.NoError(t, err, "bypassed IP should not trigger outbound blocking")
+
+	stats := agent.Stats().GetAndClear()
+	require.Contains(t, stats.Operations, "net/http.Client.Do", "should still track operation stats for bypassed IPs")
+
+	hostnames := agent.State().GetAndClearHostnames()
+	require.Len(t, hostnames, 1, "should still report hostname for bypassed IPs")
+	assert.Equal(t, "malicious.com", hostnames[0].URL)
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
@@ -25,6 +26,11 @@ func Examine(r *http.Request) error {
 
 	// Report any hostnames to the dashboard
 	hooks.OnDomain(hostname, uint32(port))
+
+	// If bypassed IP, report hostname, but don't attempt to block it
+	if request.IsBypassed(r.Context()) {
+		return nil
+	}
 
 	if hooks.ShouldBlockHostname(hostname) {
 		return zen.ErrOutboundBlocked(hostname)
