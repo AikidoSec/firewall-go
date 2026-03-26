@@ -46,7 +46,7 @@ func TestPathTraversal(t *testing.T) {
 	})
 
 	t.Run("allows normal requests", func(t *testing.T) {
-		resp, err := client.Get(appURL() + "/api/read?path=hello.txt")
+		resp, err := client.Get(appURL() + "/api/read?path=home.txt")
 		require.NoError(t, err)
 		defer resp.Body.Close()
 		assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)

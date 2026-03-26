@@ -80,11 +80,12 @@ func makeRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 func readFileHandler(w http.ResponseWriter, r *http.Request) {
 	filePath := r.URL.Query().Get("path")
-	content := readFile(filePath)
-	if _, err := w.Write([]byte(content)); err != nil {
+	content, err := readFile(filePath)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	_, _ = w.Write([]byte(content))
 }
 
 func defineAPIRoutes(mux *http.ServeMux, db *DatabaseHelper) {
