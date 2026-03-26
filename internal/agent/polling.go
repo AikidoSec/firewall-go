@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 var (
 	heartbeatRoutine     *polling.Routine
 	configPollingRoutine *polling.Routine
+	sseCancel            context.CancelFunc
 
 	minHeartbeatIntervalInMS = 120000
 )
@@ -20,6 +22,10 @@ var (
 func startPolling() {
 	heartbeatRoutine = polling.Start(10*time.Minute, sendHeartbeatEvent)
 	configPollingRoutine = polling.Start(1*time.Minute, refreshCloudConfig)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	sseCancel = cancel
+	go runSSESubscription(ctx)
 }
 
 func stopPolling() {
@@ -29,6 +35,71 @@ func stopPolling() {
 	if configPollingRoutine != nil {
 		configPollingRoutine.Stop()
 	}
+	if sseCancel != nil {
+		sseCancel()
+	}
+}
+
+// runSSESubscription connects to the realtime SSE endpoint and calls
+// refreshCloudConfig immediately on each config-updated event. Reconnects
+// with backoff on failure. The 60s poll remains as a fallback.
+func runSSESubscription(ctx context.Context) {
+	backoff := 5 * time.Second
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		client := GetCloudClient()
+		if client == nil {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(backoff):
+			}
+			continue
+		}
+
+		err := client.SubscribeToConfigUpdates(ctx, func() {
+			log.Info("Realtime config update received")
+			forceRefreshCloudConfig()
+		})
+		if ctx.Err() != nil {
+			return
+		}
+		if err != nil {
+			log.Warn("SSE config stream disconnected", slog.Any("error", err))
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(backoff):
+			if backoff < 30*time.Second {
+				backoff *= 2
+			}
+		}
+	}
+}
+
+// forceRefreshCloudConfig fetches and applies the full cloud config unconditionally.
+// Used when the server has explicitly pushed a config-updated signal via SSE —
+// we trust the signal and skip the timestamp pre-check.
+func forceRefreshCloudConfig() {
+	client := GetCloudClient()
+	if client == nil {
+		return
+	}
+
+	cloudConfig, err := client.FetchConfig()
+	if err != nil {
+		log.Warn("Error fetching cloud config after realtime update", slog.Any("error", err))
+		return
+	}
+
+	applyCloudConfig(client, cloudConfig)
 }
 
 // refreshCloudConfig checks if config has changed before fetching the full config
