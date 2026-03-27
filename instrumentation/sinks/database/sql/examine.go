@@ -21,10 +21,10 @@ func ExamineContext(ctx context.Context, query string, op string, dialect string
 
 	hooks.OnOperationCall(op, operation.KindSQL)
 
-	err := vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
+	err := vulnerabilities.ScanWithOptions(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
 		Statement: query,
 		Dialect:   dialect,
-	})
+	}, vulnerabilities.ScanOptions{Module: "database/sql"})
 	if err != nil {
 		// Extract attack kind from error if available, otherwise default to SQL injection
 		attackKind := vulnerabilities.KindSQLInjection

@@ -106,6 +106,7 @@ func TestGetAttackDetected(t *testing.T) {
 	result := interceptorResult{
 		Kind:          KindSQLInjection,
 		Operation:     "query",
+		Module:        "database/sql",
 		Source:        "body",
 		PathToPayload: ".name",
 		Payload:       "1 OR 1=1",
@@ -119,6 +120,7 @@ func TestGetAttackDetected(t *testing.T) {
 	assert.Equal(t, "POST", atk.Request.Method)
 	assert.Equal(t, string(KindSQLInjection), atk.Attack.Kind)
 	assert.Equal(t, "query", atk.Attack.Operation)
+	assert.Equal(t, "database/sql", atk.Attack.Module)
 
 	// Verify metadata is cloned
 	atk.Attack.Metadata["key"] = "modified"
@@ -170,6 +172,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 		result := &interceptorResult{
 			Kind:          KindPathTraversal,
 			Operation:     "filepath.Join",
+			Module:        "path/filepath",
 			Source:        "query",
 			PathToPayload: ".path",
 			Payload:       "../etc/passwd",
@@ -189,6 +192,7 @@ func TestStoreDeferredAttack(t *testing.T) {
 		require.NotNil(t, deferredAttack)
 
 		assert.Equal(t, "filepath.Join", deferredAttack.Operation)
+		assert.Equal(t, "path/filepath", deferredAttack.Module)
 		assert.Equal(t, string(KindPathTraversal), deferredAttack.Kind)
 		assert.Equal(t, "../etc/passwd", deferredAttack.Payload)
 		assert.NotNil(t, deferredAttack.Error)
@@ -307,6 +311,7 @@ func TestReportDeferredAttack(t *testing.T) {
 		result := &interceptorResult{
 			Kind:          KindPathTraversal,
 			Operation:     "filepath.Join",
+			Module:        "path/filepath",
 			Source:        "query",
 			PathToPayload: ".path",
 			Payload:       "../etc/passwd",
@@ -320,6 +325,7 @@ func TestReportDeferredAttack(t *testing.T) {
 
 		select {
 		case <-client.attackDetectedEventSent:
+			assert.Equal(t, "path/filepath", client.capturedAttack.Module)
 		case <-time.After(1 * time.Second):
 			t.Fatal("timeout waiting for first attack event")
 		}

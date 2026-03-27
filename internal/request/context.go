@@ -135,6 +135,7 @@ func (ctx *Context) GetIP() string {
 // DeferredAttack stores attack information and error to be reported/blocked later
 type DeferredAttack struct {
 	Operation     string
+	Module        string
 	Kind          string
 	Source        string
 	PathToPayload string

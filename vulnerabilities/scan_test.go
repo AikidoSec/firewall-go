@@ -7,7 +7,9 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -421,6 +423,39 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 				assert.NoError(t, err, tt.description)
 			}
 		})
+	}
+}
+
+func TestScanWithOptions_ModuleIsPassedThrough(t *testing.T) {
+	ip := "127.0.0.1"
+	args := mockScanArgs{Value: "test"}
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+	defer config.SetBlocking(original)
+
+	originalClient := agent.GetCloudClient()
+	t.Cleanup(func() { agent.SetCloudClient(originalClient) })
+
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}, 1),
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/test?q=attack", http.NoBody)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
+	_ = ScanWithOptions(ctx, "testOp", mockVulnerability, args, ScanOptions{Module: "my-module"})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "my-module", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
 	}
 }
 

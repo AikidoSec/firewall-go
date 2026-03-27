@@ -23,6 +23,7 @@ type Vulnerability[T any] struct {
 
 type ScanOptions struct {
 	DeferReporting bool
+	Module         string
 }
 
 func Scan[T any](ctx context.Context, operation string, vulnerability Vulnerability[T], args T) error {
@@ -118,6 +119,7 @@ func scanSource[T any](ctx context.Context, source string, sourceData any, opera
 		if results != nil && results.DetectedAttack {
 			attack := &interceptorResult{
 				Operation:     operation,
+				Module:        opts.Module,
 				Kind:          vulnerability.Kind,
 				Source:        source,
 				PathToPayload: path,

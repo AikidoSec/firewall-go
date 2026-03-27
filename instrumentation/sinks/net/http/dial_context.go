@@ -53,12 +53,13 @@ func ssrfDialContext(originalDialContext func(ctx context.Context, network, addr
 // If no direct match is found, it walks the redirect chain to find the origin
 // hostname and checks that against user input instead.
 func scanSSRF(ctx context.Context, hostname string, port uint32, resolvedIPs []string) error {
-	scanErr := vulnerabilities.Scan(ctx, "net/http.Client.Do",
+	scanOpts := vulnerabilities.ScanOptions{Module: "net/http"}
+	scanErr := vulnerabilities.ScanWithOptions(ctx, "net/http.Client.Do",
 		ssrf.SSRFVulnerability, &ssrf.ScanArgs{
 			Hostname:    hostname,
 			Port:        port,
 			ResolvedIPs: resolvedIPs,
-		})
+		}, scanOpts)
 	if scanErr != nil {
 		return wrapSSRFError(scanErr)
 	}
@@ -73,12 +74,12 @@ func scanSSRF(ctx context.Context, hostname string, port uint32, resolvedIPs []s
 		return nil
 	}
 
-	scanErr = vulnerabilities.Scan(ctx, "net/http.Client.Do",
+	scanErr = vulnerabilities.ScanWithOptions(ctx, "net/http.Client.Do",
 		ssrf.SSRFVulnerability, &ssrf.ScanArgs{
 			Hostname:    originHostname,
 			Port:        originPort,
 			ResolvedIPs: resolvedIPs,
-		})
+		}, scanOpts)
 	if scanErr != nil {
 		return wrapSSRFError(scanErr)
 	}

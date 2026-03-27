@@ -102,7 +102,7 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 		assert.True(t, client.capturedAttack.Blocked)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
 		assert.Equal(t, "os.OpenFile", client.capturedAttack.Operation)
-		assert.Equal(t, "Module", client.capturedAttack.Module)
+		assert.Equal(t, "os", client.capturedAttack.Module)
 		assert.Equal(t, ".path", client.capturedAttack.Path)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
 		assert.Equal(t, map[string]string{
@@ -166,7 +166,7 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 		assert.False(t, client.capturedAttack.Blocked)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
 		assert.Equal(t, "os.OpenFile", client.capturedAttack.Operation)
-		assert.Equal(t, "Module", client.capturedAttack.Module)
+		assert.Equal(t, "os", client.capturedAttack.Module)
 		assert.Equal(t, ".path", client.capturedAttack.Path)
 		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
 		assert.Equal(t, map[string]string{

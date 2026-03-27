@@ -44,6 +44,7 @@ func getDisplayNameForAttackKind(kind AttackKind) string {
 type interceptorResult struct {
 	Kind          AttackKind
 	Operation     string
+	Module        string
 	Source        string
 	PathToPayload string
 	Metadata      map[string]string
@@ -75,7 +76,7 @@ func getAttackDetected(ctx context.Context, res interceptorResult) *agent.Detect
 		Attack: aikido_types.AttackDetails{
 			Kind:      string(res.Kind),
 			Operation: res.Operation,
-			Module:    "Module",
+			Module:    res.Module,
 			Blocked:   config.IsBlockingEnabled(),
 			Source:    res.Source,
 			Path:      res.PathToPayload,
@@ -154,6 +155,7 @@ func storeDeferredAttack(ctx context.Context, res *interceptorResult) error {
 
 	deferredAttack := &request.DeferredAttack{
 		Operation:     res.Operation,
+		Module:        res.Module,
 		Kind:          string(res.Kind),
 		Source:        res.Source,
 		PathToPayload: res.PathToPayload,
@@ -180,6 +182,7 @@ func reportDeferredAttack(ctx context.Context) {
 
 	res := &interceptorResult{
 		Operation:     deferredAttack.Operation,
+		Module:        deferredAttack.Module,
 		Kind:          AttackKind(deferredAttack.Kind),
 		Source:        deferredAttack.Source,
 		PathToPayload: deferredAttack.PathToPayload,

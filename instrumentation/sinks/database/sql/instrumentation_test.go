@@ -585,7 +585,7 @@ func TestQueryContextIsAutomaticallyInstrumented(t *testing.T) {
 		assert.Equal(t, "sql_injection", client.capturedAttack.Kind)
 		assert.True(t, client.capturedAttack.Blocked)
 		assert.Equal(t, "database/sql.DB.Query(Row)Context", client.capturedAttack.Operation)
-		assert.Equal(t, "Module", client.capturedAttack.Module)
+		assert.Equal(t, "database/sql", client.capturedAttack.Module)
 		assert.Equal(t, ".query", client.capturedAttack.Path)
 		assert.Equal(t, "1' OR 1=1", client.capturedAttack.Payload)
 		assert.Equal(t, map[string]string{
