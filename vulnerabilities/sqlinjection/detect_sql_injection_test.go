@@ -39,8 +39,6 @@ func TestIsNotSQLInjection(t *testing.T) {
 		{"SELECT * FROM hashtags WHERE name = '#hashtag'", "#hashtag"},
 
 		// It checks whether the string is safely escaped
-		{"SELECT * FROM comments WHERE comment = 'I'm writing you'", "I'm writing you"},
-		{"SELECT * FROM comments WHERE comment = \"I\"m writing you\"", "I\"m writing you"},
 		{"SELECT * FROM comments WHERE comment = \"I'm writing you\"", "I'm writing you"},
 		{"SELECT * FROM comments WHERE comment = 'I\"m writing you'", "I\"m writing you"},
 		{"SELECT * FROM comments WHERE comment = \"I`m writing you\"", "I`m writing you"},
@@ -75,7 +73,7 @@ func TestIsNotSQLInjection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			assert.False(t, detectSQLInjection(tt.query, tt.input, 0), "Expected no SQL injection")
+			assert.Equal(t, 0, detectSQLInjection(tt.query, tt.input, 0), "Expected no SQL injection")
 		})
 	}
 }
@@ -131,7 +129,25 @@ func TestIsSQLInjection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			assert.True(t, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection detected")
+			assert.Equal(t, 1, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection detected")
+		})
+	}
+}
+
+func TestFailedToTokenize(t *testing.T) {
+	require.NoError(t, internal.Init())
+
+	tests := []struct {
+		query string
+		input string
+	}{
+		{"SELECT * FROM comments WHERE comment = 'I'm writing you'", "I'm writing you"},
+		{"SELECT * FROM comments WHERE comment = \"I\"m writing you\"", "I\"m writing you"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			assert.Equal(t, 3, detectSQLInjection(tt.query, tt.input, 0), "Expected failed to tokenize")
 		})
 	}
 }

@@ -7,17 +7,17 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/zeninternals"
 )
 
-func detectSQLInjection(query string, userInput string, dialect int) bool {
+func detectSQLInjection(query string, userInput string, dialect int) int {
 	// Lowercase versions of query and user input
 	queryLowercase := strings.ToLower(query)
 	userInputLowercase := strings.ToLower(userInput)
 
 	if shouldReturnEarly(queryLowercase, userInputLowercase) {
-		return false
+		return 0
 	}
 
 	// Executing our final check with zen_internals
-	return zeninternals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect) == 1
+	return zeninternals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect)
 }
 
 var isAlphanumeric = regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString
