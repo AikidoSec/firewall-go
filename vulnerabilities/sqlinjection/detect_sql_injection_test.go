@@ -147,7 +147,7 @@ func TestFailedToTokenize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			assert.Equal(t, 3, detectSQLInjection(tt.query, tt.input, 0), "Expected failed to tokenize")
+			assert.Equal(t, 3, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection because query is not valid SQL")
 		})
 	}
 }
