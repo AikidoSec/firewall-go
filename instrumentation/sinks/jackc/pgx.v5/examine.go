@@ -21,10 +21,10 @@ func ExamineContext(ctx context.Context, query string, op string) error {
 
 	hooks.OnOperationCall(op, operation.KindSQL)
 
-	err := vulnerabilities.Scan(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
+	err := vulnerabilities.ScanWithOptions(ctx, op, sqlinjection.SQLInjectionVulnerability, &sqlinjection.ScanArgs{
 		Statement: query,
 		Dialect:   "postgres",
-	})
+	}, vulnerabilities.ScanOptions{Module: "github.com/jackc/pgx/v5"})
 	if err != nil {
 		// Extract attack kind from error if available, otherwise default to SQL injection
 		attackKind := vulnerabilities.KindSQLInjection

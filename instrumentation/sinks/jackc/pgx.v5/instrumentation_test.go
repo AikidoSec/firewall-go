@@ -467,7 +467,7 @@ func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 		assert.Equal(t, "sql_injection", client.capturedAttack.Kind)
 		assert.True(t, client.capturedAttack.Blocked)
 		assert.Equal(t, "pgx.Conn.Query", client.capturedAttack.Operation)
-		assert.Equal(t, "Module", client.capturedAttack.Module)
+		assert.Equal(t, "github.com/jackc/pgx/v5", client.capturedAttack.Module)
 		assert.Equal(t, ".query", client.capturedAttack.Path)
 		assert.Equal(t, "1' OR 1=1", client.capturedAttack.Payload)
 		assert.Equal(t, map[string]string{

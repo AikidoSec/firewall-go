@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -470,4 +471,30 @@ func TestSsrfDialContext_AllowsPrivateIPNotInUserInput(t *testing.T) {
 
 	assert.NoError(t, err, "should allow private IP not originating from user input")
 	assert.NotNil(t, conn, "should return the connection")
+}
+
+func TestSsrfDialContext_ReportsModuleName(t *testing.T) {
+	setupProtection(t)
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2F10.0.0.1%2Finternal", nil)
+	ip := "1.2.3.4"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
+	original := dialerReturning("10.0.0.1:80")
+	wrapped := ssrfDialContext(original)
+	_, _ = wrapped(ctx, "tcp", "10.0.0.1:80")
+
+	select {
+	case <-mockClient.AttackDetectedEventSent:
+		assert.Equal(t, "net/http", mockClient.CapturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
 }

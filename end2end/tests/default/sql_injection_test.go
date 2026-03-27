@@ -48,6 +48,7 @@ func TestSQLInjection(t *testing.T) {
 		assert.Equal(t, "sql_injection", attack["kind"])
 		assert.Equal(t, true, attack["blocked"])
 		assert.Contains(t, attack["payload"], maliciousInput)
+		assert.NotEmpty(t, attack["module"])
 
 		metadata, ok := attack["metadata"].(map[string]any)
 		require.True(t, ok)

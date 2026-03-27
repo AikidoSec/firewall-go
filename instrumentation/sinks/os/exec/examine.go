@@ -43,7 +43,7 @@ func Examine(cmdCtx context.Context, op string, args []string) error {
 	//   cmd := exec.Command("sh", "-c", "$0", userInput)
 	fullCommand := strings.Join(commandsToScan, " ")
 
-	return vulnerabilities.Scan(ctx, op, shellinjection.ShellInjectionVulnerability, &shellinjection.ScanArgs{
+	return vulnerabilities.ScanWithOptions(ctx, op, shellinjection.ShellInjectionVulnerability, &shellinjection.ScanArgs{
 		Command: fullCommand,
-	})
+	}, vulnerabilities.ScanOptions{Module: "os/exec"})
 }

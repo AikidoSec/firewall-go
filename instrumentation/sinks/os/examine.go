@@ -24,6 +24,7 @@ func Examine(path string) error {
 		CheckPathStart: true,
 	}, vulnerabilities.ScanOptions{
 		DeferReporting: false,
+		Module:         "os",
 	})
 
 	return err
