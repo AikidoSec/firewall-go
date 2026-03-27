@@ -17,6 +17,7 @@ func CheckStoredSSRF(hostname string, resolvedIPs []string) *StoredSSRFResult {
 	}
 
 	if slices.Contains(resolvedIPs, hostname) {
+        // if the hostname itself is an IP then we don't want to block this, as it's just an IMDS request, not stored ssrf.
 		return nil
 	}
 
