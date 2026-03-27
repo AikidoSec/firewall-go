@@ -1,5 +1,5 @@
 ZEN_INTERNALS_VERSION=v0.1.60
-GOLANGCI_LINT_VERSION=v2.8.0
+GOLANGCI_LINT_VERSION=v2.11.4
 
 TOOLS_BIN := $(shell pwd)/tools/bin
 CURRENT_GO_MINOR := $(shell go env GOVERSION | sed 's/^go1\.//' | cut -d. -f1)
