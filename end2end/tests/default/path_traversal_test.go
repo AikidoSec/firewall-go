@@ -33,6 +33,7 @@ func TestPathTraversal(t *testing.T) {
 		assert.Equal(t, "path_traversal", attack["kind"])
 		assert.Equal(t, true, attack["blocked"])
 		assert.Contains(t, attack["payload"], maliciousPath)
+		assert.Equal(t, "os", attack["module"])
 
 		request, ok := event["request"].(map[string]any)
 		require.True(t, ok)
