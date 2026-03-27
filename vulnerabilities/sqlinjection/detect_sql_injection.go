@@ -16,7 +16,6 @@ func detectSQLInjection(query string, userInput string, dialect int) int {
 		return 0
 	}
 
-	// Executing our final check with zen_internals
 	return zeninternals.DetectSQLInjection(queryLowercase, userInputLowercase, dialect)
 }
 
