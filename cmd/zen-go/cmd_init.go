@@ -77,7 +77,7 @@ import (
 		sb.WriteString("\n	// Aikido Zen: Sources\n")
 		for _, source := range config.sources {
 			if pkgPath, ok := availableSources[source]; ok {
-				sb.WriteString(fmt.Sprintf("	_ %q\n", pkgPath))
+				fmt.Fprintf(&sb, "	_ %q\n", pkgPath)
 			}
 		}
 	}
@@ -87,7 +87,7 @@ import (
 		sb.WriteString("\n	// Aikido Zen: Sinks\n")
 		for _, sink := range config.sinks {
 			if pkgPath, ok := availableSinks[sink]; ok {
-				sb.WriteString(fmt.Sprintf("	_ %q\n", pkgPath))
+				fmt.Fprintf(&sb, "	_ %q\n", pkgPath)
 			}
 		}
 	}

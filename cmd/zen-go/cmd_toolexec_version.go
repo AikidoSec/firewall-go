@@ -17,6 +17,7 @@ import (
 // and rebuild packages.
 func toolexecVersionQueryCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
 	// Run the actual compiler to get its version string
+	// #nosec G204 - tool is the Go toolchain binary passed by Go's -toolexec mechanism, not user input
 	cmd := exec.Command(tool, toolArgs...)
 	var versionOutput bytes.Buffer
 	cmd.Stdout = &versionOutput

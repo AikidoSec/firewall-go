@@ -78,6 +78,7 @@ func extractFlag(args []string, i int, flag string) (string, bool) {
 // passthrough runs the given Golang tool
 // For example, it will run the compiler with the arguments originally passed our toolexec command
 func passthrough(stdout io.Writer, stderr io.Writer, tool string, args []string) error {
+	// #nosec G204 - tool is the Go toolchain binary passed by Go's -toolexec mechanism, not user input
 	cmd := exec.Command(tool, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = stdout

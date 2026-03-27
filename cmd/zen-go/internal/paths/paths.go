@@ -57,6 +57,7 @@ func collectInstrumentationDirs(rootModuleDir string, submoduleDirs []string) []
 
 // findModuleDir returns the directory for a specific Go module.
 func findModuleDir(modRoot string, modulePath string) string {
+	// #nosec G204 - modulePath is a Go module path from the project's dependency graph, not user input
 	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", modulePath)
 	if modRoot != "" {
 		cmd.Dir = modRoot

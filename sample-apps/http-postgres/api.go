@@ -45,13 +45,13 @@ func createPetHandler(w http.ResponseWriter, r *http.Request, db *DatabaseHelper
 }
 
 func executeCommandHandler(w http.ResponseWriter, r *http.Request) {
-	userCommand := r.FormValue("user_command")
+	userCommand := r.FormValue("user_command") // #nosec G120 - intentional vulnerability, sample app only
 	if userCommand == "" {
 		http.Error(w, "user_command is required", http.StatusBadRequest)
 		return
 	}
 	result := executeShellCommand(userCommand)
-	if _, err := w.Write([]byte(result)); err != nil {
+	if _, err := w.Write([]byte(result)); err != nil { // #nosec G705 - intentional vulnerability, sample app only
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -59,7 +59,7 @@ func executeCommandHandler(w http.ResponseWriter, r *http.Request) {
 
 func executeCommandParamHandler(w http.ResponseWriter, r *http.Request, command string) {
 	result := executeShellCommand(command)
-	if _, err := w.Write([]byte(result)); err != nil {
+	if _, err := w.Write([]byte(result)); err != nil { // #nosec G705 - intentional vulnerability, sample app only
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -72,7 +72,7 @@ func makeRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := makeHTTPRequest(req.URL)
-	if _, err := w.Write([]byte(response)); err != nil {
+	if _, err := w.Write([]byte(response)); err != nil { // #nosec G705 - intentional vulnerability, sample app only
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -85,7 +85,7 @@ func readFileHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, _ = w.Write([]byte(content))
+	_, _ = w.Write([]byte(content)) // #nosec G705 - intentional vulnerability, sample app only
 }
 
 func defineAPIRoutes(mux *http.ServeMux, db *DatabaseHelper) {

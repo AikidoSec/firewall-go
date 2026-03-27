@@ -11,6 +11,7 @@ import (
 // executeShellCommand executes a shell command and returns the output.
 func executeShellCommand(command string) (string, error) {
 	var output bytes.Buffer
+	// #nosec G204 G702 - intentional command injection vulnerability
 	cmd := exec.Command("sh", "-c", command)
 	cmd.Stdout = &output
 	cmd.Stderr = &output
@@ -39,7 +40,7 @@ func makeHTTPRequest(url string) (string, error) {
 
 // readFile reads the content of a file and returns it as a string.
 func readFile(filePath string) (string, error) {
-	// #nosec G304 - intentional path traversal vulnerability
+	// #nosec G304 G703 - intentional path traversal vulnerability
 	content, err := os.ReadFile("content/blogs/" + filePath)
 	if err != nil {
 		return "", err
