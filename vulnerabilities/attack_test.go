@@ -349,7 +349,7 @@ func TestOnStoredSSRF(t *testing.T) {
 		config.SetZenLoaded(false)
 		t.Cleanup(func() { config.SetZenLoaded(originalLoaded) })
 
-		err := OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+		err := OnStoredSSRF(context.Background(), "net/http", "net/http.Client.Do", "evil.com", "169.254.169.254")
 		assert.NoError(t, err)
 	})
 
@@ -362,7 +362,7 @@ func TestOnStoredSSRF(t *testing.T) {
 			config.SetBlocking(blocking)
 			t.Cleanup(func() { config.SetBlocking(original) })
 
-			err := OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+			err := OnStoredSSRF(context.Background(), "net/http", "net/http.Client.Do", "evil.com", "169.254.169.254")
 
 			// OnStoredSSRF always fires go agent.OnAttackDetected regardless of blocking.
 			// Wait for it to complete before the next subtest calls agent.Init().
@@ -383,7 +383,7 @@ func TestOnStoredSSRF(t *testing.T) {
 		})
 	}
 
-	t.Run("reports attack with hostname and privateIP in metadata", func(t *testing.T) {
+	t.Run("passes all args through to the captured attack", func(t *testing.T) {
 		client, cleanup := setupOnStoredSSRF(t)
 		t.Cleanup(cleanup)
 
@@ -391,7 +391,7 @@ func TestOnStoredSSRF(t *testing.T) {
 		config.SetBlocking(true)
 		t.Cleanup(func() { config.SetBlocking(original) })
 
-		_ = OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+		_ = OnStoredSSRF(context.Background(), "net/http", "net/http.Client.Do", "evil.com", "169.254.169.254")
 
 		select {
 		case <-client.attackDetectedEventSent:
@@ -402,9 +402,12 @@ func TestOnStoredSSRF(t *testing.T) {
 		client.mu.Lock()
 		defer client.mu.Unlock()
 		assert.Equal(t, string(KindStoredSSRF), client.capturedAttack.Kind)
+		assert.Equal(t, "net/http", client.capturedAttack.Module)
+		assert.Equal(t, "net/http.Client.Do", client.capturedAttack.Operation)
+		assert.True(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "evil.com", client.capturedAttack.Payload)
 		assert.Equal(t, "evil.com", client.capturedAttack.Metadata["hostname"])
 		assert.Equal(t, "169.254.169.254", client.capturedAttack.Metadata["privateIP"])
-		assert.Equal(t, "evil.com", client.capturedAttack.Payload)
 	})
 
 	t.Run("returns nil when forceProtectionOff is set for the endpoint", func(t *testing.T) {
@@ -431,7 +434,7 @@ func TestOnStoredSSRF(t *testing.T) {
 			RemoteAddress: &ip,
 		})
 
-		err := OnStoredSSRF(ctx, "net/http.Client.Do", "evil.com", "169.254.169.254")
+		err := OnStoredSSRF(ctx, "net/http", "net/http.Client.Do", "evil.com", "169.254.169.254")
 		assert.NoError(t, err)
 	})
 
@@ -443,7 +446,7 @@ func TestOnStoredSSRF(t *testing.T) {
 		config.SetBlocking(true)
 		t.Cleanup(func() { config.SetBlocking(original) })
 
-		err := OnStoredSSRF(context.Background(), "net/http.Client.Do", "evil.com", "169.254.169.254")
+		err := OnStoredSSRF(context.Background(), "net/http", "net/http.Client.Do", "evil.com", "169.254.169.254")
 		require.Error(t, err)
 
 		select {
@@ -456,7 +459,6 @@ func TestOnStoredSSRF(t *testing.T) {
 		defer client.mu.Unlock()
 		assert.Empty(t, client.capturedRequest.IPAddress, "request info should be empty without context")
 	})
-
 }
 
 type mockCloudClient struct {

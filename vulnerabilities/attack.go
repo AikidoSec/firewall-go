@@ -172,7 +172,7 @@ func storeDeferredAttack(ctx context.Context, res *interceptorResult) error {
 
 // OnStoredSSRF reports a stored SSRF attack and returns an error if blocking is enabled.
 // Unlike regular SSRF, this works without request context.
-func OnStoredSSRF(ctx context.Context, operation string, hostname string, privateIP string) error {
+func OnStoredSSRF(ctx context.Context, module string, operation string, hostname string, privateIP string) error {
 	if !config.ShouldProtect() {
 		return nil
 	}
@@ -203,7 +203,7 @@ func OnStoredSSRF(ctx context.Context, operation string, hostname string, privat
 		Attack: aikido_types.AttackDetails{
 			Kind:      string(KindStoredSSRF),
 			Operation: operation,
-			Module:    "Module",
+			Module:    module,
 			Blocked:   blocked,
 			Metadata: map[string]string{
 				"hostname":  hostname,

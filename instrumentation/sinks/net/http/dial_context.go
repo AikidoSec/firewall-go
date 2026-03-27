@@ -142,7 +142,7 @@ func checkStoredSSRF(ctx context.Context, hostname string, resolvedIPs []string)
 		return nil
 	}
 
-	scanErr := vulnerabilities.OnStoredSSRF(ctx, "net/http.Client.Do", result.Hostname, result.PrivateIP)
+	scanErr := vulnerabilities.OnStoredSSRF(ctx, "net/http", "net/http.Client.Do", result.Hostname, result.PrivateIP)
 	if scanErr != nil {
 		return errors.Join(zen.ErrAttackBlocked(vulnerabilities.KindStoredSSRF), scanErr)
 	}
