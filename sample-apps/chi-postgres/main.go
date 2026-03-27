@@ -51,7 +51,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	log.Printf("Starting HTTP server on :%s\n", port)
+	log.Printf("Starting HTTP server on :%s\n", port) // #nosec G706 - port is a trusted env var
 	if err = server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

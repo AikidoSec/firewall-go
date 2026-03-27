@@ -48,7 +48,7 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 	})
 
 	r.Post("/api/execute", func(w http.ResponseWriter, r *http.Request) {
-		userCommand := r.FormValue("user_command")
+		userCommand := r.FormValue("user_command") // #nosec G120 - intentional vulnerability, sample app only
 
 		if userCommand == "" {
 			http.Error(w, "user_command is required", http.StatusBadRequest)
@@ -57,14 +57,14 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 
 		result := executeShellCommand(userCommand)
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(result))
+		_, _ = w.Write([]byte(result)) // #nosec G705 - intentional vulnerability, sample app only
 	})
 
 	r.Get("/api/execute/{command}", func(w http.ResponseWriter, r *http.Request) {
 		userCommand := chi.URLParam(r, "command")
 		result := executeShellCommand(userCommand)
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(result))
+		_, _ = w.Write([]byte(result)) // #nosec G705 - intentional vulnerability, sample app only
 	})
 
 	r.Post("/api/request", func(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +75,7 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 		}
 		response := makeHTTPRequest(req.URL)
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(response))
+		_, _ = w.Write([]byte(response)) // #nosec G705 - intentional vulnerability, sample app only
 	})
 
 	r.Get("/api/read", func(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +85,6 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		_, _ = w.Write([]byte(content))
+		_, _ = w.Write([]byte(content)) // #nosec G705 - intentional vulnerability, sample app only
 	})
 }

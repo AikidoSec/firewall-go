@@ -117,7 +117,7 @@ func main() {
 		Handler:     mux,
 		ReadTimeout: 10 * time.Second,
 	}
-	log.Printf("Mock server listening on :%s", port)
+	log.Printf("Mock server listening on :%s", port) // #nosec G706 - port is a trusted env var, not user-controlled input
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}

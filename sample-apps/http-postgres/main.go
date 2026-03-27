@@ -41,7 +41,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	log.Printf("Starting HTTP server on :%s\n", port)
+	log.Printf("Starting HTTP server on :%s\n", port) // #nosec G706 - port is a trusted env var
 	if err = server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func SetUserMiddleware(next http.Handler) http.Handler {
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = w.Write([]byte(err.Error()))
+				_, _ = w.Write([]byte(err.Error())) // #nosec G705 - internal error message, sample app only
 				return
 			}
 		}

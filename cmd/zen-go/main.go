@@ -68,7 +68,7 @@ func newCommand() *cli.Command {
 					outErr := io.Writer(os.Stderr)
 
 					if logPath := os.Getenv("ZENGO_LOG"); logPath != "" {
-						// #nosec G304 - logPath is from environment variable set by user
+						// #nosec G304 G703 - logPath is from environment variable set by user
 						logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600)
 						if err != nil {
 							return err

@@ -52,6 +52,7 @@ func toolexecLinkCommand(stdout io.Writer, stderr io.Writer, tool string, toolAr
 				if err != nil {
 					fmt.Fprintf(stderr, "zen-go: warning: failed to write extended importcfg: %v\n", err)
 				} else {
+					// #nosec G703 - newImportcfgPath is from os.CreateTemp, not user input
 					defer func() { _ = os.Remove(newImportcfgPath) }()
 					args = importcfg.ReplaceImportcfgArg(args, newImportcfgPath)
 				}
