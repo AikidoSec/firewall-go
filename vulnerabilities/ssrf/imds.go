@@ -30,18 +30,10 @@ func isTrustedHostname(hostname string) bool {
 	return trustedHostnames[hostname]
 }
 
-// resolvesToIMDSIP checks whether any of the resolved IPs are IMDS addresses,
-// skipping cases where hostname equals the IP (direct IP literal, not DNS spoofing).
+// resolvesToIMDSIP checks whether any of the resolved IPs are IMDS addresses.
 // Returns the offending IMDS IP or empty string.
-func resolvesToIMDSIP(resolvedIPs []string, hostname string) string {
-	if isTrustedHostname(hostname) {
-		return ""
-	}
-
+func resolvesToIMDSIP(resolvedIPs []string) string {
 	for _, ip := range resolvedIPs {
-		if hostname == ip {
-			continue
-		}
 		if isIMDSIPAddress(ip) {
 			return ip
 		}

@@ -33,4 +33,8 @@ func TestCheckStoredSSRF(t *testing.T) {
 	t.Run("returns nil when hostname is IPv6-mapped IMDS IP literal", func(t *testing.T) {
 		assert.Nil(t, CheckStoredSSRF("::ffff:169.254.169.254", []string{"::ffff:169.254.169.254"}))
 	})
+
+	t.Run("returns nil for trusted hostname", func(t *testing.T) {
+		assert.Nil(t, CheckStoredSSRF("metadata.google.internal", []string{"169.254.169.254"}))
+	})
 }
