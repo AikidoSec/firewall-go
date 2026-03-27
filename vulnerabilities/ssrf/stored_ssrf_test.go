@@ -18,4 +18,19 @@ func TestCheckStoredSSRF(t *testing.T) {
 	t.Run("returns nil when no IMDS IP", func(t *testing.T) {
 		assert.Nil(t, CheckStoredSSRF("example.com", []string{"8.8.8.8"}))
 	})
+
+	t.Run("detects IPv6-mapped IMDS IP", func(t *testing.T) {
+		result := CheckStoredSSRF("evil.com", []string{"::ffff:169.254.169.254"})
+		require.NotNil(t, result)
+		assert.Equal(t, "evil.com", result.Hostname)
+		assert.Equal(t, "::ffff:169.254.169.254", result.PrivateIP)
+	})
+
+	t.Run("returns nil when hostname is IPv4 IMDS IP literal", func(t *testing.T) {
+		assert.Nil(t, CheckStoredSSRF("169.254.169.254", []string{"169.254.169.254"}))
+	})
+
+	t.Run("returns nil when hostname is IPv6-mapped IMDS IP literal", func(t *testing.T) {
+		assert.Nil(t, CheckStoredSSRF("::ffff:169.254.169.254", []string{"::ffff:169.254.169.254"}))
+	})
 }
