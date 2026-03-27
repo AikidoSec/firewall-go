@@ -73,7 +73,7 @@ func TestIsNotSQLInjection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			assert.Equal(t, 0, detectSQLInjection(tt.query, tt.input, 0), "Expected no SQL injection")
+			assert.Equal(t, sqlInjectionSafe, detectSQLInjection(tt.query, tt.input, 0), "Expected no SQL injection")
 		})
 	}
 }
@@ -129,7 +129,7 @@ func TestIsSQLInjection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			assert.Equal(t, 1, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection detected")
+			assert.Equal(t, sqlInjectionDetected, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection detected")
 		})
 	}
 }
@@ -147,7 +147,7 @@ func TestFailedToTokenize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			assert.Equal(t, 3, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection because query is not valid SQL")
+			assert.Equal(t, sqlInjectionFailedToTokenize, detectSQLInjection(tt.query, tt.input, 0), "Expected SQL injection because query is not valid SQL")
 		})
 	}
 }
