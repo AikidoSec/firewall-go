@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -75,6 +77,26 @@ func TestWrapWithGLS(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWrapWithGLS_BypassedContext(t *testing.T) {
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		BypassedIPs: []string{"10.10.10.10"},
+		Block:       &block,
+	}, nil)
+
+	req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
+	ip := "10.10.10.10"
+	ctx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+	require.True(t, IsBypassed(ctx))
+
+	var capturedBypassed bool
+	WrapWithGLS(ctx, func() {
+		capturedBypassed = isLocalBypassed()
+	})
+
+	assert.True(t, capturedBypassed, "WrapWithGLS should store bypass flag in GLS for bypassed context")
 }
 
 func TestGetLocalContext_WithoutWrap(t *testing.T) {

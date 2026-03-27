@@ -25,6 +25,19 @@ type ScanOptions struct {
 	DeferReporting bool
 }
 
+func isForceProtectionOff(method, route string) bool {
+	matches := endpoints.FindMatches(config.GetEndpoints(), endpoints.RouteMetadata{
+		Method: method,
+		Route:  route,
+	})
+	for _, match := range matches {
+		if match.ForceProtectionOff {
+			return true
+		}
+	}
+	return false
+}
+
 func Scan[T any](ctx context.Context, operation string, vulnerability Vulnerability[T], args T) error {
 	return ScanWithOptions(ctx, operation, vulnerability, args, ScanOptions{})
 }
@@ -40,17 +53,8 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 	}
 
 	// Check if route has force protection off, if so, we don't run any scans
-	matches := endpoints.FindMatches(
-		config.GetEndpoints(),
-		endpoints.RouteMetadata{
-			Method: reqCtx.Method,
-			Route:  reqCtx.Route,
-		},
-	)
-	for _, match := range matches {
-		if match.ForceProtectionOff {
-			return nil
-		}
+	if isForceProtectionOff(reqCtx.Method, reqCtx.Route) {
+		return nil
 	}
 
 	deferredAttack := reqCtx.GetDeferredAttack()

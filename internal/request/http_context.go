@@ -97,6 +97,9 @@ func EnsureContextPropagated(ctx context.Context) context.Context {
 	if c := getLocalContext(); c != nil {
 		return context.WithValue(ctx, reqCtxKey, c)
 	}
+	if ctx.Value(bypassedCtxKey) == nil && isLocalBypassed() {
+		return context.WithValue(ctx, bypassedCtxKey, true)
+	}
 	return ctx
 }
 

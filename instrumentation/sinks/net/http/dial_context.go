@@ -38,6 +38,11 @@ func ssrfDialContext(originalDialContext func(ctx context.Context, network, addr
 
 		portNum, _ := strconv.ParseUint(port, 10, 32)
 
+		if err := checkStoredSSRF(ctx, host, []string{remoteIP}); err != nil {
+			_ = conn.Close()
+			return nil, err
+		}
+
 		if err := scanSSRF(ctx, host, uint32(portNum), []string{remoteIP}); err != nil {
 			_ = conn.Close()
 			return nil, err
@@ -125,4 +130,21 @@ func wrapSSRFError(scanErr error) error {
 		attackKind = attackErr.Kind
 	}
 	return errors.Join(zen.ErrAttackBlocked(attackKind), scanErr)
+}
+
+func checkStoredSSRF(ctx context.Context, hostname string, resolvedIPs []string) error {
+	if request.IsBypassed(ctx) {
+		return nil
+	}
+
+	result := ssrf.CheckStoredSSRF(hostname, resolvedIPs)
+	if result == nil {
+		return nil
+	}
+
+	scanErr := vulnerabilities.OnStoredSSRF(ctx, "net/http", "net/http.Client.Do", result.Hostname, result.PrivateIP)
+	if scanErr != nil {
+		return errors.Join(zen.ErrAttackBlocked(vulnerabilities.KindStoredSSRF), scanErr)
+	}
+	return nil
 }

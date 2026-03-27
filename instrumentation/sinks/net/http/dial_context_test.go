@@ -11,9 +11,11 @@ import (
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
+	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -316,7 +318,7 @@ func TestSsrfDialContext_HandlesInvalidRemoteAddr(t *testing.T) {
 func TestSsrfDialContext_AllowsWhenNoRequestContext(t *testing.T) {
 	setupProtection(t)
 
-	// Plain context with no request context — scanSSRF should return nil
+	// Without request context, regular private IPs are allowed (only IMDS IPs are blocked)
 	ctx := context.Background()
 	original := dialerReturning("10.0.0.1:80")
 	wrapped := ssrfDialContext(original)
@@ -324,6 +326,130 @@ func TestSsrfDialContext_AllowsWhenNoRequestContext(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
+}
+
+func TestStoredSsrf(t *testing.T) {
+	tests := []struct {
+		name       string
+		hostname   string
+		remoteAddr string
+		useReqCtx  bool
+		wantBlock  bool
+	}{
+		{"blocks IMDS IP with request context", "evil.com", "169.254.169.254:80", true, true},
+		{"blocks IMDS IP without request context", "evil.com", "169.254.169.254:80", false, true},
+		{"allows trusted hostname", "metadata.google.internal", "169.254.169.254:80", false, false},
+		{"allows IP literal matching IMDS", "169.254.169.254", "169.254.169.254:80", false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupProtection(t)
+
+			var ctx context.Context
+			if tt.useReqCtx {
+				incomingReq := httptest.NewRequest("GET", "/test", nil)
+				ip := "1.2.3.4"
+				ctx = request.SetContext(context.Background(), incomingReq, request.ContextData{
+					Source:        "test",
+					Route:         "/test",
+					RemoteAddress: &ip,
+				})
+			} else {
+				ctx = context.Background()
+			}
+
+			original := dialerReturning(tt.remoteAddr)
+			wrapped := ssrfDialContext(original)
+			conn, err := wrapped(ctx, "tcp", tt.hostname+":80")
+
+			if tt.wantBlock {
+				assert.Error(t, err)
+				assert.Nil(t, conn)
+				var attackErr *zen.AttackBlockedError
+				require.True(t, errors.As(err, &attackErr))
+				assert.Equal(t, vulnerabilities.KindStoredSSRF, attackErr.Kind)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, conn)
+			}
+		})
+	}
+
+	t.Run("closes connection on block", func(t *testing.T) {
+		setupProtection(t)
+
+		mc := &mockConn{remoteAddr: mockTCPAddr("169.254.169.254:80")}
+		original := func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return mc, nil
+		}
+
+		wrapped := ssrfDialContext(original)
+		_, _ = wrapped(context.Background(), "tcp", "evil.com:80")
+
+		assert.True(t, mc.closed)
+	})
+}
+
+func TestStoredSsrf_NonBlocking(t *testing.T) {
+	setupProtection(t)
+	config.SetBlocking(false)
+
+	original := dialerReturning("169.254.169.254:80")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(context.Background(), "tcp", "evil.com:80")
+
+	assert.NoError(t, err, "should not block IMDS connection when blocking is disabled")
+	assert.NotNil(t, conn)
+}
+
+func bypassedContext(t *testing.T) context.Context {
+	t.Helper()
+	block := true
+	ip := "10.10.10.10"
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		BypassedIPs: []string{ip},
+		Block:       &block,
+	}, nil)
+	incomingReq := httptest.NewRequest("GET", "/test", nil)
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		RemoteAddress: &ip,
+	})
+	require.True(t, request.IsBypassed(ctx))
+	return ctx
+}
+
+func TestStoredSsrf_BypassedIPAllowsIMDS(t *testing.T) {
+	setupProtection(t)
+
+	ctx := bypassedContext(t)
+
+	original := dialerReturning("169.254.169.254:80")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "evil.com:80")
+
+	assert.NoError(t, err, "bypassed IP should be allowed to connect to IMDS address")
+	assert.NotNil(t, conn)
+}
+
+func TestStoredSsrf_BypassedIPViaGLS(t *testing.T) {
+	setupProtection(t)
+
+	ctx := bypassedContext(t)
+
+	// Simulate the case where the handler makes an outgoing request with a fresh
+	// context. RoundTrip calls EnsureContextPropagated before DialContext sees
+	// the context, so the bypass flag is recovered from GLS at that point.
+	request.WrapWithGLS(ctx, func() {
+		propagated := request.EnsureContextPropagated(context.Background())
+
+		original := dialerReturning("169.254.169.254:80")
+		wrapped := ssrfDialContext(original)
+		conn, err := wrapped(propagated, "tcp", "evil.com:80")
+
+		assert.NoError(t, err, "bypassed IP should be allowed even when bypass flag comes from GLS")
+		assert.NotNil(t, conn)
+	})
 }
 
 func TestSsrfDialContext_AllowsPrivateIPNotInUserInput(t *testing.T) {
