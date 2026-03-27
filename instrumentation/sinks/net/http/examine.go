@@ -3,11 +3,13 @@ package http
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
+	"golang.org/x/net/idna"
 )
 
 func Examine(r *http.Request) error {
@@ -22,6 +24,14 @@ func Examine(r *http.Request) error {
 	}
 
 	hostname := r.URL.Hostname()
+	// Normalise to lowercase Unicode so block list entries (stored as Unicode)
+	// match regardless of whether the URL used punycode or Unicode labels
+	// (e.g. "xn--mnchen-3ya.de" and "münchen.de" both become "münchen.de").
+	if normalised, err := idna.Lookup.ToUnicode(hostname); err == nil {
+		hostname = normalised
+	} else {
+		hostname = strings.ToLower(hostname)
+	}
 	port := getPort(r)
 
 	// Report any hostnames to the dashboard

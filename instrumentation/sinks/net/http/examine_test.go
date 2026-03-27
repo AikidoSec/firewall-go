@@ -50,6 +50,39 @@ func TestExamine_ReturnsEarlyWhenShouldNotProtect(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestExamine_IDNANormalisationForBlocking(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+
+	// Block list stores the Unicode form of the domain.
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		Domains: []aikido_types.OutboundDomain{
+			{Hostname: "münchen.de", Mode: "block"},
+		},
+	}, nil)
+
+	var blockedErr *zen.OutboundConnectionBlocked
+
+	// A request using the punycode form should be blocked.
+	punycodeReq, _ := http.NewRequest("GET", "http://xn--mnchen-3ya.de/", http.NoBody)
+	require.ErrorAs(t, Examine(punycodeReq), &blockedErr, "punycode form should be blocked")
+
+	// A request using the Unicode form directly should also be blocked.
+	unicodeReq, _ := http.NewRequest("GET", "http://münchen.de/", http.NoBody)
+	require.ErrorAs(t, Examine(unicodeReq), &blockedErr, "unicode form should be blocked")
+
+	// A request using mixed case should be blocked.
+	mixedCaseReq, _ := http.NewRequest("GET", "http://MÜNCHEN.DE/", http.NoBody)
+	require.ErrorAs(t, Examine(mixedCaseReq), &blockedErr, "mixed case should be blocked")
+}
+
 func TestExamine_TracksOperationStats(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
