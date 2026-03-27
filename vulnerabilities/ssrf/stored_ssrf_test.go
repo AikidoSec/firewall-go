@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckStoredSSRF(t *testing.T) {
 	t.Run("returns result with hostname and privateIP", func(t *testing.T) {
 		result := CheckStoredSSRF("evil.com", []string{"169.254.169.254"})
-		assert.NotNil(t, result)
+		require.NotNil(t, result)
 		assert.Equal(t, "evil.com", result.Hostname)
 		assert.Equal(t, "169.254.169.254", result.PrivateIP)
 	})

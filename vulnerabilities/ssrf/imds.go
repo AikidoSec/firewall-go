@@ -8,8 +8,6 @@ var imdsIPList = ipaddr.BuildMatchList("imds", "IMDS IP addresses", []string{
 	"169.254.169.254",
 	"100.100.100.200",
 	"fd00:ec2::254",
-	"::ffff:169.254.169.254",
-	"::ffff:100.100.100.200",
 })
 
 var trustedHostnames = map[string]bool{
