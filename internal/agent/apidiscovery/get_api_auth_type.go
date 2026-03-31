@@ -30,7 +30,7 @@ var commonAuthCookieNames = append([]string{
 
 // GetApiAuthType returns the authentication type of the API request.
 // Returns nil if the authentication type could not be determined.
-func GetApiAuthType(headers map[string][]string, cookies map[string]string) []*aikido_types.APIAuthType {
+func GetApiAuthType(headers map[string][]string, cookies map[string][]string) []*aikido_types.APIAuthType {
 	var result []*aikido_types.APIAuthType
 
 	// Check the Authorization header
@@ -79,7 +79,7 @@ func getPhpHttpHeaderEquivalent(apiKey string) string {
 }
 
 // findAPIKeys searches for API keys in headers and cookies.
-func findAPIKeys(headers map[string][]string, cookies map[string]string) []*aikido_types.APIAuthType {
+func findAPIKeys(headers map[string][]string, cookies map[string][]string) []*aikido_types.APIAuthType {
 	var result []*aikido_types.APIAuthType
 
 	for headerIndex, header := range commonApiKeyHeaderNames {

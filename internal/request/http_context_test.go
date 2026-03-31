@@ -129,6 +129,46 @@ func TestSetContext(t *testing.T) {
 	}
 }
 
+func TestCookiesToMap(t *testing.T) {
+	t.Run("single value per cookie name", func(t *testing.T) {
+		cookies := []*http.Cookie{
+			{Name: "session", Value: "abc"},
+			{Name: "token", Value: "xyz"},
+		}
+		result := cookiesToMap(cookies)
+		assert.Equal(t, map[string][]string{
+			"session": {"abc"},
+			"token":   {"xyz"},
+		}, result)
+	})
+
+	t.Run("multiple values for same cookie name are all kept", func(t *testing.T) {
+		cookies := []*http.Cookie{
+			{Name: "session", Value: "first"},
+			{Name: "session", Value: "second"},
+		}
+		result := cookiesToMap(cookies)
+		assert.Equal(t, map[string][]string{
+			"session": {"first", "second"},
+		}, result)
+	})
+}
+
+func TestSetContext_DuplicateCookies(t *testing.T) {
+	req, err := http.NewRequest("GET", "http://example.com/", http.NoBody)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	// Manually set the Cookie header to include two values for the same name,
+	// since http.Request.AddCookie does not support duplicates via the API.
+	req.Header.Set("Cookie", "session=first; session=second")
+
+	resultCtx := SetContext(context.Background(), req, ContextData{Source: "test"})
+	reqCtx := GetContext(resultCtx)
+
+	assert.Equal(t, []string{"first", "second"}, reqCtx.Cookies["session"])
+}
+
 func TestSetContext_BypassedIP(t *testing.T) {
 	block := true
 	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
