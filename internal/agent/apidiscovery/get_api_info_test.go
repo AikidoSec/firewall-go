@@ -104,7 +104,7 @@ func TestGetAPIInfo(t *testing.T) {
 
 		ctx := &request.Context{
 			Headers: map[string][]string{},
-			Cookies: map[string]string{"session": "abc123"},
+			Cookies: map[string][]string{"session": {"abc123"}},
 		}
 
 		result := GetAPIInfo(ctx)

@@ -12,7 +12,7 @@ func TestDetectAuthorizationHeader(t *testing.T) {
 	headers := map[string][]string{
 		"authorization": {"Bearer token"},
 	}
-	cookies := map[string]string{}
+	cookies := map[string][]string{}
 	assert.Equal(t, []*aikido_types.APIAuthType{
 		{Type: "http", Scheme: "bearer"},
 	}, GetApiAuthType(headers, cookies))
@@ -37,7 +37,7 @@ func TestDetectApiKeys(t *testing.T) {
 	headers := map[string][]string{
 		"x_api_key": {"token"},
 	}
-	cookies := map[string]string{}
+	cookies := map[string][]string{}
 	assert.Equal(t, []*aikido_types.APIAuthType{
 		{Type: "apiKey", In: ("header"), Name: ("x-api-key")},
 	}, GetApiAuthType(headers, cookies))
@@ -53,16 +53,16 @@ func TestDetectApiKeys(t *testing.T) {
 // Test for detecting auth cookies
 func TestDetectAuthCookies(t *testing.T) {
 	headers := map[string][]string{}
-	cookies := map[string]string{
-		"api-key": "token",
+	cookies := map[string][]string{
+		"api-key": {"token"},
 	}
 
 	assert.Equal(t, []*aikido_types.APIAuthType{
 		{Type: "apiKey", In: ("cookie"), Name: ("api-key")},
 	}, GetApiAuthType(headers, cookies))
 
-	cookies = map[string]string{
-		"session": "test",
+	cookies = map[string][]string{
+		"session": {"test"},
 	}
 	assert.Equal(t, []*aikido_types.APIAuthType{
 		{Type: "apiKey", In: ("cookie"), Name: ("session")},
@@ -72,7 +72,7 @@ func TestDetectAuthCookies(t *testing.T) {
 // Test for no authentication
 func TestNoAuth(t *testing.T) {
 	headers := map[string][]string{}
-	cookies := map[string]string{}
+	cookies := map[string][]string{}
 
 	assert.Empty(t, GetApiAuthType(headers, cookies))
 

@@ -20,7 +20,7 @@ type Context struct {
 	RouteParams        map[string]string
 	RemoteAddress      *string
 	Body               any
-	Cookies            map[string]string
+	Cookies            map[string][]string
 	Source             string
 	Route              string
 	executedMiddleware bool

@@ -114,10 +114,10 @@ func headersToMap(headers http.Header) map[string][]string {
 	return headerInfo
 }
 
-func cookiesToMap(cookies []*http.Cookie) map[string]string {
-	cookieInfo := make(map[string]string)
+func cookiesToMap(cookies []*http.Cookie) map[string][]string {
+	cookieInfo := make(map[string][]string)
 	for _, cookie := range cookies {
-		cookieInfo[cookie.Name] = cookie.Value
+		cookieInfo[cookie.Name] = append(cookieInfo[cookie.Name], cookie.Value)
 	}
 	return cookieInfo
 }
