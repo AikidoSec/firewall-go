@@ -1,8 +1,10 @@
 package transform
 
 import (
+	"bytes"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"testing"
 
@@ -262,6 +264,38 @@ func Foo(x int) {}`
 
 	err := TransformDeclsPrepend(decls, "p", rule, new(bool), map[string]string{})
 	require.Error(t, err)
+}
+
+func TestTransformDeclsPrepend_ResultMutatesPrintedOutput(t *testing.T) {
+	src := `package p
+
+func Foo() (int, error) {
+	return 0, nil
+}`
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "test.go", src, 0)
+	require.NoError(t, err)
+
+	rule := rules.PrependRule{
+		Package:     "p",
+		FuncNames:   []string{"Foo"},
+		PrependTmpl: `defer func() { _ = {{ .Function.Result 0 }} }()`,
+	}
+
+	modified := false
+	err = TransformDeclsPrepend(f.Decls, "p", rule, &modified, map[string]string{})
+	require.NoError(t, err)
+	assert.True(t, modified)
+
+	var buf bytes.Buffer
+	err = printer.Fprint(&buf, fset, f)
+	require.NoError(t, err)
+
+	output := buf.String()
+	// The function signature must have named returns in the printed output.
+	assert.Contains(t, output, "(_aikido_r0 int, _aikido_r1 error)")
+	// The prepended defer must reference the correct return variable name.
+	assert.Contains(t, output, "_ = _aikido_r0")
 }
 
 func TestMatchesFuncName(t *testing.T) {

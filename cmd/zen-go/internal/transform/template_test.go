@@ -84,3 +84,44 @@ func TestFunction_Receiver_UnnamedReceiver(t *testing.T) {
 	f := &function{fn: fn}
 	assert.Equal(t, "", f.Receiver())
 }
+
+func TestFunction_Result_NamedReturns(t *testing.T) {
+	fn := parseFunc(t, `package p; func Foo() (result int, err error) { return 0, nil }`)
+	f := &function{fn: fn}
+
+	assert.Equal(t, "result", f.Result(0))
+	assert.Equal(t, "err", f.Result(1))
+	assert.Equal(t, "", f.Result(2))
+}
+
+func TestFunction_Result_UnnamedReturns(t *testing.T) {
+	fn := parseFunc(t, `package p; func Foo() (int, error) { return 0, nil }`)
+	f := &function{fn: fn}
+
+	assert.Equal(t, "_aikido_r0", f.Result(0))
+	assert.Equal(t, "_aikido_r1", f.Result(1))
+	assert.Equal(t, "", f.Result(2))
+}
+
+func TestFunction_Result_NoReturns(t *testing.T) {
+	fn := parseFunc(t, `package p; func Foo() {}`)
+	f := &function{fn: fn}
+	assert.Equal(t, "", f.Result(0))
+}
+
+func TestFunction_Result_SingleUnnamedReturn(t *testing.T) {
+	fn := parseFunc(t, `package p; func Foo() error { return nil }`)
+	f := &function{fn: fn}
+	assert.Equal(t, "_aikido_r0", f.Result(0))
+	assert.Equal(t, "", f.Result(1))
+}
+
+func TestFunction_Result_CalledTwice(t *testing.T) {
+	fn := parseFunc(t, `package p; func Foo() (int, error) { return 0, nil }`)
+	f := &function{fn: fn}
+
+	// Calling Result multiple times should be idempotent
+	assert.Equal(t, "_aikido_r0", f.Result(0))
+	assert.Equal(t, "_aikido_r1", f.Result(1))
+	assert.Equal(t, "_aikido_r0", f.Result(0))
+}
