@@ -3,6 +3,8 @@ package vulnerabilities
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExtractStringsFromUserInput(t *testing.T) {
@@ -287,5 +289,15 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
+	})
+
+	t.Run("it stops recursing at max depth", func(t *testing.T) {
+		path := make([]pathPart, maxDepth)
+		for i := range path {
+			path[i] = pathPart{Type: "object", Key: "k"}
+		}
+		obj := map[string]interface{}{"key": "value"}
+		actual := extractStringsFromUserInput(obj, path)
+		assert.Empty(t, actual)
 	})
 }
