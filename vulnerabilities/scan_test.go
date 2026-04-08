@@ -333,6 +333,23 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 	config.SetBlocking(true)
 	defer config.SetBlocking(original)
 
+	// Install a mock client and drain its goroutines before restoring, to prevent
+	// stray OnAttackDetected goroutines from bleeding into subsequent tests.
+	originalClient := agent.GetCloudClient()
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}, 2),
+	}
+	agent.SetCloudClient(client)
+	t.Cleanup(func() {
+		for i := 0; i < 2; i++ {
+			select {
+			case <-client.attackDetectedEventSent:
+			case <-time.After(time.Second):
+			}
+		}
+		agent.SetCloudClient(originalClient)
+	})
+
 	block := true
 	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
 		Block: &block,
