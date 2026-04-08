@@ -10,7 +10,7 @@ import (
 )
 
 // executeShellCommand executes a shell command and returns the output.
-func executeShellCommand(command string) string {
+func executeShellCommand(command string) (string, error) {
 	var output bytes.Buffer
 	// #nosec G204 G702 - intentional command injection vulnerability
 	cmd := exec.Command("sh", "-c", command)
@@ -18,9 +18,9 @@ func executeShellCommand(command string) string {
 	cmd.Stderr = &output
 	err := cmd.Run()
 	if err != nil {
-		return fmt.Sprintf("Error: %s", err.Error())
+		return "", err
 	}
-	return output.String()
+	return output.String(), nil
 }
 
 // makeHTTPRequest makes a simple HTTP GET request and returns the response.
