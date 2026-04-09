@@ -83,11 +83,18 @@ func portFromURL(u *url.URL) uint32 {
 	}
 }
 
-var wrappedTransports sync.Map // map[*http.Transport]*ssrfTransport
+var (
+	wrappedTransports sync.Map   // map[*http.Transport]*ssrfTransport
+	wrapMu            sync.Mutex // guards first-time DialContext injection per transport
+)
 
 // WrapTransport wraps an http.RoundTripper with SSRF DNS resolution checking.
 // Only *http.Transport is wrapped (DialContext is needed); other RoundTrippers
 // are returned as-is. Wrapped transports are cached per original transport pointer.
+//
+// Rather than cloning the transport (which can interfere with HTTP/2 connection
+// state), we inject the SSRF DialContext directly onto the original transport.
+// This preserves the transport's existing h2 configuration.
 func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	if !zen.ShouldProtect() {
 		return rt
@@ -107,15 +114,23 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 		return cached.(*ssrfTransport)
 	}
 
-	clone := t.Clone()
-	originalDialContext := clone.DialContext
+	// Mutex prevents two goroutines from both reading t.DialContext before
+	// either has written the SSRF wrapper back, which would cause double-wrapping.
+	wrapMu.Lock()
+	defer wrapMu.Unlock()
+
+	if cached, ok := wrappedTransports.Load(t); ok {
+		return cached.(*ssrfTransport)
+	}
+
+	originalDialContext := t.DialContext
 	if originalDialContext == nil {
 		var d net.Dialer
 		originalDialContext = d.DialContext
 	}
-	clone.DialContext = ssrfDialContext(originalDialContext)
+	t.DialContext = ssrfDialContext(originalDialContext)
 
-	wrapped := &ssrfTransport{inner: clone}
+	wrapped := &ssrfTransport{inner: t}
 	wrappedTransports.Store(t, wrapped)
 	return wrapped
 }

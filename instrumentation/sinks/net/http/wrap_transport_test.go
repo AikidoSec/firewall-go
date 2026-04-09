@@ -63,7 +63,7 @@ func TestWrapTransport_CachesWrappedTransport(t *testing.T) {
 
 	wrapped, ok := result1.(*ssrfTransport)
 	assert.True(t, ok, "should return an *ssrfTransport")
-	assert.NotSame(t, tr, wrapped.inner, "inner transport should be a clone, not the original")
+	assert.Same(t, tr, wrapped.inner, "inner transport should be the original, not a clone")
 }
 
 func TestWrapTransport_DoesNotDoubleWrap(t *testing.T) {
@@ -154,7 +154,6 @@ func TestRecordRedirect(t *testing.T) {
 		assert.Equal(t, "example.com", redirects[0].DestHostname)
 		assert.Equal(t, uint32(443), redirects[0].DestPort)
 	})
-
 }
 
 func TestRoundTrip_PropagatesInnerError(t *testing.T) {
