@@ -55,14 +55,22 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 			return
 		}
 
-		result := executeShellCommand(userCommand)
+		result, err := executeShellCommand(userCommand)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(result)) // #nosec G705 - intentional vulnerability, sample app only
 	})
 
 	r.Get("/api/execute/{command}", func(w http.ResponseWriter, r *http.Request) {
 		userCommand := chi.URLParam(r, "command")
-		result := executeShellCommand(userCommand)
+		result, err := executeShellCommand(userCommand)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(result)) // #nosec G705 - intentional vulnerability, sample app only
 	})

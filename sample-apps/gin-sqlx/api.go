@@ -51,13 +51,21 @@ func defineAPIRoutes(r *gin.Engine, db *DatabaseHelper) {
 			return
 		}
 
-		result := executeShellCommand(userCommand)
+		result, err := executeShellCommand(userCommand)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.String(http.StatusOK, result)
 	})
 
 	r.GET("/api/execute/:command", func(c *gin.Context) {
 		userCommand := c.Param("command")
-		result := executeShellCommand(userCommand)
+		result, err := executeShellCommand(userCommand)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		c.String(http.StatusOK, result)
 	})
 

@@ -50,7 +50,11 @@ func executeCommandHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "user_command is required", http.StatusBadRequest)
 		return
 	}
-	result := executeShellCommand(userCommand)
+	result, err := executeShellCommand(userCommand)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	if _, err := w.Write([]byte(result)); err != nil { // #nosec G705 - intentional vulnerability, sample app only
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -58,7 +62,11 @@ func executeCommandHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func executeCommandParamHandler(w http.ResponseWriter, r *http.Request, command string) {
-	result := executeShellCommand(command)
+	result, err := executeShellCommand(command)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	if _, err := w.Write([]byte(result)); err != nil { // #nosec G705 - intentional vulnerability, sample app only
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
