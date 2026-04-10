@@ -110,10 +110,6 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 		return rt
 	}
 
-	if cached, ok := wrappedTransports.Load(t); ok {
-		return cached.(*ssrfTransport)
-	}
-
 	// Mutex prevents two goroutines from both reading t.DialContext before
 	// either has written the SSRF wrapper back, which would cause double-wrapping.
 	wrapMu.Lock()
