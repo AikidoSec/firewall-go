@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -109,14 +110,13 @@ func TestHTTPClientInstrumentation(t *testing.T) {
 // Regression test for https://github.com/AikidoSec/firewall-go/issues/400
 //
 // WrapTransport used to call t.Clone() before injecting the SSRF DialContext.
-// Calling Clone() on a transport that has already negotiated h2 shares the
-// underlying http2Transport (and its connection pool) between the original and
-// the clone. Any subsequent h2 POST to a different authority through that clone
-// would fail with EOF.
+// Cloning a transport that has already negotiated h2 shares the underlying
+// http2Transport (and its connection pool) between the original and the clone,
+// so a subsequent h2 POST to a different authority through the clone would fail with EOF.
 //
 // The fix injects DialContext directly onto the original transport instead.
-// Note: this test does not reproduce the EOF locally (httptest loopback doesn't
-// trigger it), but documents the scenario and guards against the pattern returning.
+// Note: this doesn't reproduce the EOF locally (httptest loopback doesn't trigger it),
+// but it documents the scenario and guards against the pattern coming back.
 func TestHTTPClientInstrumentation_H2ReverseProxy(t *testing.T) {
 	require.NoError(t, zen.Protect())
 	require.True(t, zen.ShouldProtect(), "protection must be active — test is meaningless without instrumentation wrapping transports")
@@ -199,4 +199,56 @@ func TestHTTPClientInstrumentation_H2ReverseProxy(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "proxy should not return 502 (EOF from wrapped h2 transport)")
 	assert.Equal(t, "upstream2-ok", string(body))
 	assert.Equal(t, "HTTP/2.0", upstream2Proto, "outbound request to upstream2 should use HTTP/2")
+}
+
+// Reproduces https://github.com/AikidoSec/firewall-go/issues/400 against a real
+// external h2 server. Three conditions are needed to trigger the bug:
+//  1. No TLSClientConfig on the transport - setting one disables onceSetNextProtoDefaults,
+//     which installs the h2 handler, silently falling back to HTTP/1.1 and masking the bug.
+//  2. net/http's built-in ALPN h2 auto-upgrade (onceSetNextProtoDefaults), not
+//     golang.org/x/net/http2.ConfigureTransport.
+//  3. A real external h2 server - loopback httptest servers don't trigger it.
+//
+// Without the fix, WrapTransport clones the transport before the h2 handler is
+// installed, so the clone falls back to HTTP/1.1 on an h2-only connection and
+// the server's SETTINGS frame is parsed as a malformed HTTP/1.1 response.
+//
+// Run with: EXTERNAL_TESTS=1 make test-instrumentation-integration
+func TestHTTPClientInstrumentation_H2External(t *testing.T) {
+	if os.Getenv("EXTERNAL_TESTS") == "" {
+		t.Skip("skipping: set EXTERNAL_TESTS=1 to run against a real external h2 server")
+	}
+
+	require.NoError(t, zen.Protect())
+	require.True(t, zen.ShouldProtect(), "protection must be active")
+
+	// Allowlist the external host so zen doesn't block the outbound connection.
+	block := true
+	cloudConfig := &aikido_types.CloudConfigData{
+		ConfigUpdatedAt: time.Now().UnixMilli(),
+		Domains: []aikido_types.OutboundDomain{
+			{Hostname: "postman-echo.com", Mode: "allow"},
+		},
+		BlockNewOutgoingRequests: true,
+		Block:                    &block,
+	}
+	config.UpdateServiceConfig(cloudConfig, nil)
+
+	// No TLSClientConfig - required to reproduce the bug. See comment above.
+	client := &http.Client{
+		Transport: &http.Transport{},
+	}
+
+	body := strings.NewReader(`{"messages":[{"role":"user","content":"ping"}]}`)
+	req, err := http.NewRequest(http.MethodPost, "https://postman-echo.com/post", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	require.NoError(t, err, "POST to external h2 server failed")
+	defer resp.Body.Close()
+
+	io.Copy(io.Discard, resp.Body)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "HTTP/2.0", resp.Proto, "expected h2; HTTP/1.1 means TLSClientConfig masked the bug")
 }

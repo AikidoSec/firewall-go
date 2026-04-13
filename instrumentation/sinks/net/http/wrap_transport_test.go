@@ -4,6 +4,7 @@ package http
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -64,6 +65,49 @@ func TestWrapTransport_CachesWrappedTransport(t *testing.T) {
 	wrapped, ok := result1.(*ssrfTransport)
 	assert.True(t, ok, "should return an *ssrfTransport")
 	assert.Same(t, tr, wrapped.inner, "inner transport should be the original, not a clone")
+}
+
+func TestWrapTransport_SetsForceAttemptHTTP2_WhenDialContextWasNil(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+
+	wrappedTransports.Range(func(key, value any) bool {
+		wrappedTransports.Delete(key)
+		return true
+	})
+
+	tr := &http.Transport{}
+	assert.False(t, tr.ForceAttemptHTTP2)
+	WrapTransport(tr)
+	assert.True(t, tr.ForceAttemptHTTP2, "should set ForceAttemptHTTP2 when we inject DialContext onto a transport that had none")
+}
+
+func TestWrapTransport_PreservesForceAttemptHTTP2_WhenDialContextWasSet(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+
+	wrappedTransports.Range(func(key, value any) bool {
+		wrappedTransports.Delete(key)
+		return true
+	})
+
+	var d net.Dialer
+	tr := &http.Transport{DialContext: d.DialContext}
+	assert.False(t, tr.ForceAttemptHTTP2)
+	WrapTransport(tr)
+	assert.False(t, tr.ForceAttemptHTTP2, "should not set ForceAttemptHTTP2 when transport already had a custom DialContext")
 }
 
 func TestWrapTransport_DoesNotDoubleWrap(t *testing.T) {
