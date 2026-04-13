@@ -45,17 +45,18 @@ type OutboundDomain struct {
 }
 
 type CloudConfigData struct {
-	Success                  bool             `json:"success"`
-	ServiceID                int              `json:"serviceId"`
-	ConfigUpdatedAt          int64            `json:"configUpdatedAt"`
-	HeartbeatIntervalInMS    int              `json:"heartbeatIntervalInMS"`
-	Endpoints                []Endpoint       `json:"endpoints"`
-	BlockedUserIds           []string         `json:"blockedUserIds"`
-	BypassedIPs              []string         `json:"allowedIPAddresses"`
-	ReceivedAnyStats         bool             `json:"receivedAnyStats"`
-	Block                    *bool            `json:"block,omitempty"`
-	BlockNewOutgoingRequests bool             `json:"blockNewOutgoingRequests"`
-	Domains                  []OutboundDomain `json:"domains"`
+	Success                         bool             `json:"success"`
+	ServiceID                       int              `json:"serviceId"`
+	ConfigUpdatedAt                 int64            `json:"configUpdatedAt"`
+	HeartbeatIntervalInMS           int              `json:"heartbeatIntervalInMS"`
+	Endpoints                       []Endpoint       `json:"endpoints"`
+	BlockedUserIds                  []string         `json:"blockedUserIds"`
+	ExcludedUserIdsFromRateLimiting []string         `json:"excludedUserIdsFromRateLimiting"`
+	BypassedIPs                     []string         `json:"allowedIPAddresses"`
+	ReceivedAnyStats                bool             `json:"receivedAnyStats"`
+	Block                           *bool            `json:"block,omitempty"`
+	BlockNewOutgoingRequests        bool             `json:"blockNewOutgoingRequests"`
+	Domains                         []OutboundDomain `json:"domains"`
 }
 
 func (c *CloudConfigData) UpdatedAt() time.Time {

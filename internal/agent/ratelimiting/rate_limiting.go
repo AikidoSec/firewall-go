@@ -105,6 +105,10 @@ func getOrCreateCounts(m map[entityKey]*slidingwindow.Window, key entityKey, win
 
 // ShouldRateLimitRequest checks if a request should be rate limited based on user or IP
 func (rl *RateLimiter) ShouldRateLimitRequest(method string, route string, user string, ip string, group string) *Status {
+	if user != "" && config.IsUserExcludedFromRateLimiting(user) {
+		return &Status{Block: false}
+	}
+
 	// Priority: group > user > ip
 	switch {
 	case group != "":
