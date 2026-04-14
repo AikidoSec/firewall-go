@@ -65,10 +65,11 @@ func TestUpdateServiceConfig(t *testing.T) {
 					AllowedIPAddresses: []string{"192.168.1.1"},
 				},
 			},
-			BlockedUserIds:   []string{"user1", "user2"},
-			BypassedIPs:      []string{"10.0.0.1"},
-			ReceivedAnyStats: true,
-			Block:            &blockTrue,
+			BlockedUserIds:                  []string{"user1", "user2"},
+			ExcludedUserIdsFromRateLimiting: []string{"excluded1", "excluded2"},
+			BypassedIPs:                     []string{"10.0.0.1"},
+			ReceivedAnyStats:                true,
+			Block:                           &blockTrue,
 		}
 
 		listsConfig := &aikido_types.ListsConfigData{
@@ -102,6 +103,11 @@ func TestUpdateServiceConfig(t *testing.T) {
 		assert.True(t, IsUserBlocked("user1"))
 		assert.True(t, IsUserBlocked("user2"))
 		assert.False(t, IsUserBlocked("user3"))
+
+		// Verify excluded users from rate limiting
+		assert.True(t, IsUserExcludedFromRateLimiting("excluded1"))
+		assert.True(t, IsUserExcludedFromRateLimiting("excluded2"))
+		assert.False(t, IsUserExcludedFromRateLimiting("excluded3"))
 
 		// Verify bypassed IPs
 		assert.True(t, IsIPBypassed("10.0.0.1"))

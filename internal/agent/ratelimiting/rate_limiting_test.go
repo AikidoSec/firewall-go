@@ -5,10 +5,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/slidingwindow"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func setupExcludedUsers(userIDs []string) {
+	blockFalse := false
+	globals.AikidoConfig = &aikido_types.AikidoConfigData{}
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		ExcludedUserIdsFromRateLimiting: userIDs,
+		Block:                           &blockFalse,
+	}, nil)
+}
 
 var fiveMinutesInMS = int(time.Duration(5 * time.Minute).Milliseconds())
 
@@ -159,6 +171,54 @@ func TestShouldRateLimitRequest(t *testing.T) {
 		status := rl.ShouldRateLimitRequest("GET", "/api/test", "user1", "192.168.1.1", "group1")
 		assert.True(t, status.Block)
 		assert.Equal(t, "group", status.Trigger)
+	})
+
+	t.Run("excluded user is not rate limited", func(t *testing.T) {
+		setupExcludedUsers([]string{"excluded-user"})
+		rl := New()
+		key := endpointKey{Method: "POST", Route: "/login"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		for range 5 {
+			status := rl.ShouldRateLimitRequest("POST", "/login", "excluded-user", "192.168.1.1", "")
+			assert.False(t, status.Block)
+		}
+	})
+
+	t.Run("excluded user is not rate limited even in a group", func(t *testing.T) {
+		setupExcludedUsers([]string{"excluded-user"})
+		rl := New()
+		key := endpointKey{Method: "POST", Route: "/login"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		for range 5 {
+			status := rl.ShouldRateLimitRequest("POST", "/login", "excluded-user", "192.168.1.1", "group1")
+			assert.False(t, status.Block)
+		}
+	})
+
+	t.Run("non-excluded user is still rate limited", func(t *testing.T) {
+		setupExcludedUsers([]string{"excluded-user"})
+		rl := New()
+		key := endpointKey{Method: "POST", Route: "/login"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 3, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		rl.ShouldRateLimitRequest("POST", "/login", "normal-user", "192.168.1.1", "")
+		rl.ShouldRateLimitRequest("POST", "/login", "normal-user", "192.168.1.1", "")
+		rl.ShouldRateLimitRequest("POST", "/login", "normal-user", "192.168.1.1", "")
+
+		status := rl.ShouldRateLimitRequest("POST", "/login", "normal-user", "192.168.1.1", "")
+		assert.True(t, status.Block)
+		assert.Equal(t, "user", status.Trigger)
 	})
 }
 

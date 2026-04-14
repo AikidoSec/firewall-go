@@ -43,19 +43,20 @@ type UserAgentDetail struct {
 }
 
 type ServiceConfigData struct {
-	ConfigUpdatedAt          time.Time
-	Endpoints                []Endpoint
-	BlockedUserIDs           map[string]bool
-	BypassedIPs              ipaddr.MatchList
-	AllowedIPs               map[string]ipaddr.MatchList
-	BlockedIPs               map[string]ipaddr.MatchList
-	MonitoredIPs             map[string]ipaddr.MatchList
-	BlockedUserAgents        *regexp.Regexp
-	MonitoredUserAgents      *regexp.Regexp
-	UserAgentDetails         []UserAgentDetail
-	Block                    bool
-	BlockNewOutgoingRequests bool
-	Domains                  []aikido_types.OutboundDomain
+	ConfigUpdatedAt                 time.Time
+	Endpoints                       []Endpoint
+	BlockedUserIDs                  map[string]bool
+	ExcludedUserIDsFromRateLimiting map[string]bool
+	BypassedIPs                     ipaddr.MatchList
+	AllowedIPs                      map[string]ipaddr.MatchList
+	BlockedIPs                      map[string]ipaddr.MatchList
+	MonitoredIPs                    map[string]ipaddr.MatchList
+	BlockedUserAgents               *regexp.Regexp
+	MonitoredUserAgents             *regexp.Regexp
+	UserAgentDetails                []UserAgentDetail
+	Block                           bool
+	BlockNewOutgoingRequests        bool
+	Domains                         []aikido_types.OutboundDomain
 }
 
 func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsConfig *aikido_types.ListsConfigData) {
@@ -90,6 +91,11 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsC
 	serviceConfig.BlockedUserIDs = map[string]bool{}
 	for _, userID := range cloudConfigFromAgent.BlockedUserIds {
 		serviceConfig.BlockedUserIDs[userID] = true
+	}
+
+	serviceConfig.ExcludedUserIDsFromRateLimiting = map[string]bool{}
+	for _, userID := range cloudConfigFromAgent.ExcludedUserIdsFromRateLimiting {
+		serviceConfig.ExcludedUserIDsFromRateLimiting[userID] = true
 	}
 
 	serviceConfig.BypassedIPs = ipaddr.BuildMatchList("bypassedIPs", "bypassed", cloudConfigFromAgent.BypassedIPs)
@@ -309,6 +315,13 @@ func IsUserBlocked(userID string) bool {
 	defer serviceConfigMutex.RUnlock()
 
 	return keyExists(serviceConfig.BlockedUserIDs, userID)
+}
+
+func IsUserExcludedFromRateLimiting(userID string) bool {
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	return keyExists(serviceConfig.ExcludedUserIDsFromRateLimiting, userID)
 }
 
 func SetUserBlocked(userID string) {
