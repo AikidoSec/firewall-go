@@ -83,11 +83,18 @@ func portFromURL(u *url.URL) uint32 {
 	}
 }
 
-var wrappedTransports sync.Map // map[*http.Transport]*ssrfTransport
+var (
+	wrappedTransports sync.Map   // map[*http.Transport]*ssrfTransport
+	wrapMu            sync.Mutex // guards first-time DialContext injection per transport
+)
 
 // WrapTransport wraps an http.RoundTripper with SSRF DNS resolution checking.
 // Only *http.Transport is wrapped (DialContext is needed); other RoundTrippers
 // are returned as-is. Wrapped transports are cached per original transport pointer.
+//
+// Rather than cloning the transport (which can interfere with HTTP/2 connection
+// state), we inject the SSRF DialContext directly onto the original transport.
+// This preserves the transport's existing h2 configuration.
 func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	if !zen.ShouldProtect() {
 		return rt
@@ -103,19 +110,36 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 		return rt
 	}
 
+	// Mutex prevents two goroutines from both reading t.DialContext before
+	// either has written the SSRF wrapper back, which would cause double-wrapping.
+	wrapMu.Lock()
+	defer wrapMu.Unlock()
+
 	if cached, ok := wrappedTransports.Load(t); ok {
 		return cached.(*ssrfTransport)
 	}
 
-	clone := t.Clone()
-	originalDialContext := clone.DialContext
+	originalDialContext := t.DialContext
+	hadCustomDialContext := originalDialContext != nil
 	if originalDialContext == nil {
 		var d net.Dialer
 		originalDialContext = d.DialContext
 	}
-	clone.DialContext = ssrfDialContext(originalDialContext)
+	t.DialContext = ssrfDialContext(originalDialContext)
 
-	wrapped := &ssrfTransport{inner: clone}
+	// Go disables h2 auto-upgrade when any of Dial, DialTLS, DialContext, or
+	// TLSClientConfig is set and ForceAttemptHTTP2 is false. We've just injected
+	// a DialContext, so if none of those other fields were set beforehand, we're
+	// the sole reason h2 would now be disabled, so restore the default behavior.
+	if !hadCustomDialContext &&
+		!t.ForceAttemptHTTP2 &&
+		t.TLSClientConfig == nil &&
+		t.Dial == nil && //nolint:staticcheck // intentionally checking deprecated field to preserve user intent
+		t.DialTLS == nil { //nolint:staticcheck // intentionally checking deprecated field to preserve user intent
+		t.ForceAttemptHTTP2 = true
+	}
+
+	wrapped := &ssrfTransport{inner: t}
 	wrappedTransports.Store(t, wrapped)
 	return wrapped
 }
