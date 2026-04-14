@@ -134,8 +134,8 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	if !hadCustomDialContext &&
 		!t.ForceAttemptHTTP2 &&
 		t.TLSClientConfig == nil &&
-		t.Dial == nil &&
-		t.DialTLS == nil {
+		t.Dial == nil && //nolint:staticcheck // intentionally checking deprecated field to preserve user intent
+		t.DialTLS == nil { //nolint:staticcheck // intentionally checking deprecated field to preserve user intent
 		t.ForceAttemptHTTP2 = true
 	}
 
