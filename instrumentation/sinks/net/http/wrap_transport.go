@@ -127,11 +127,15 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	}
 	t.DialContext = ssrfDialContext(originalDialContext)
 
-	// Setting a non-nil DialContext causes Go to conservatively disable h2
-	// auto-upgrade (see Transport.ForceAttemptHTTP2 docs). If the transport
-	// didn't already have a custom DialContext, we're the ones breaking h2
-	// by injecting ours, so restore the default h2 behavior.
-	if !hadCustomDialContext && !t.ForceAttemptHTTP2 {
+	// Go disables h2 auto-upgrade when any of Dial, DialTLS, DialContext, or
+	// TLSClientConfig is set and ForceAttemptHTTP2 is false. We've just injected
+	// a DialContext, so if none of those other fields were set beforehand, we're
+	// the sole reason h2 would now be disabled, so restore the default behavior.
+	if !hadCustomDialContext &&
+		!t.ForceAttemptHTTP2 &&
+		t.TLSClientConfig == nil &&
+		t.Dial == nil &&
+		t.DialTLS == nil {
 		t.ForceAttemptHTTP2 = true
 	}
 

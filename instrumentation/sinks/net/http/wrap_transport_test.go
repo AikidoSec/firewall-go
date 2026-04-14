@@ -4,6 +4,7 @@ package http
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -108,6 +109,27 @@ func TestWrapTransport_PreservesForceAttemptHTTP2_WhenDialContextWasSet(t *testi
 	assert.False(t, tr.ForceAttemptHTTP2)
 	WrapTransport(tr)
 	assert.False(t, tr.ForceAttemptHTTP2, "should not set ForceAttemptHTTP2 when transport already had a custom DialContext")
+}
+
+func TestWrapTransport_PreservesForceAttemptHTTP2_WhenTLSClientConfigWasSet(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+
+	wrappedTransports.Range(func(key, value any) bool {
+		wrappedTransports.Delete(key)
+		return true
+	})
+
+	tr := &http.Transport{TLSClientConfig: &tls.Config{}}
+	assert.False(t, tr.ForceAttemptHTTP2)
+	WrapTransport(tr)
+	assert.False(t, tr.ForceAttemptHTTP2, "should not set ForceAttemptHTTP2 when transport already had a TLSClientConfig")
 }
 
 func TestWrapTransport_DoesNotDoubleWrap(t *testing.T) {
