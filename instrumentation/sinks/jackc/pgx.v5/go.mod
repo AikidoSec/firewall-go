@@ -6,7 +6,7 @@ replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.0
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.0
 	github.com/stretchr/testify v1.11.1
 )
 
