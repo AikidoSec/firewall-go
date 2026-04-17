@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -44,6 +45,9 @@ func (m *pollingMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigDa
 func (m *pollingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 }
 func (m *pollingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+func (m *pollingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func()) error {
+	return nil
 }
 
 func TestCalculateHeartbeatInterval(t *testing.T) {

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"sync"
@@ -38,6 +39,7 @@ type CloudClient interface {
 	FetchListsConfig() (*aikido_types.ListsConfigData, error)
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 	SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails)
+	SubscribeToConfigUpdates(ctx context.Context, onUpdate func()) error
 }
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
