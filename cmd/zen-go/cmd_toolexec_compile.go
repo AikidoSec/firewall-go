@@ -12,6 +12,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/importcfg"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 )
 
 func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
@@ -34,6 +35,10 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 	}
 
 	if err := checkZenToolFileIncluded(pkgPath, toolArgs); err != nil {
+		return err
+	}
+
+	if err := checkVersionSync(toolArgs); err != nil {
 		return err
 	}
 
@@ -228,6 +233,26 @@ func checkZenToolFileIncluded(pkgPath string, toolArgs []string) error {
 	}
 
 	return nil
+}
+
+func checkVersionSync(toolArgs []string) error {
+	var sourceDir string
+	for _, arg := range toolArgs {
+		if strings.HasSuffix(arg, ".go") {
+			sourceDir = filepath.Dir(arg)
+			break
+		}
+	}
+	if sourceDir == "" {
+		return nil
+	}
+
+	gomodPath := rules.FindGoMod(sourceDir)
+	if gomodPath == "" {
+		return nil
+	}
+
+	return rules.CheckModuleVersionSync(gomodPath)
 }
 
 func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
