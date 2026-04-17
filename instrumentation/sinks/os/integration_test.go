@@ -54,6 +54,49 @@ func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 	m.attackDetectedEventSent <- struct{}{}
 }
 
+func setupBlockingTest(t *testing.T) (*mockCloudClient, context.Context) {
+	t.Helper()
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := &mockCloudClient{
+		attackDetectedEventSent: make(chan struct{}),
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	return client, ctx
+}
+
+func assertAttackDetected(t *testing.T, client *mockCloudClient, operation string) {
+	t.Helper()
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.True(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
+		assert.Equal(t, operation, client.capturedAttack.Operation)
+		assert.Equal(t, "os", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
 func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
@@ -179,6 +222,79 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for attack event")
 	}
+}
+
+// TestRemoveIsAutomaticallyInstrumented covers single-path ops that return error (Chmod, Chown, etc.)
+func TestRemoveIsAutomaticallyInstrumented(t *testing.T) {
+	client, ctx := setupBlockingTest(t)
+
+	request.WrapWithGLS(ctx, func() {
+		err := os.Remove("/tmp/" + "../test.txt")
+
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	assertAttackDetected(t, client, "os.Remove")
+}
+
+// TestRenameIsAutomaticallyInstrumented covers two-path ops, verifying both arguments are checked.
+func TestRenameIsAutomaticallyInstrumented(t *testing.T) {
+	t.Run("first path", func(t *testing.T) {
+		client, ctx := setupBlockingTest(t)
+
+		request.WrapWithGLS(ctx, func() {
+			err := os.Rename("/tmp/"+"../test.txt", "/tmp/newname.txt")
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr)
+		})
+
+		assertAttackDetected(t, client, "os.Rename")
+	})
+
+	t.Run("second path", func(t *testing.T) {
+		client, ctx := setupBlockingTest(t)
+
+		request.WrapWithGLS(ctx, func() {
+			err := os.Rename("/tmp/oldname.txt", "/tmp/"+"../test.txt")
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr)
+		})
+
+		assertAttackDetected(t, client, "os.Rename")
+	})
+}
+
+// TestReadlinkIsAutomaticallyInstrumented covers single-path ops that return (string, error).
+func TestReadlinkIsAutomaticallyInstrumented(t *testing.T) {
+	client, ctx := setupBlockingTest(t)
+
+	request.WrapWithGLS(ctx, func() {
+		result, err := os.Readlink("/tmp/" + "../test.txt")
+
+		require.Empty(t, result)
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	assertAttackDetected(t, client, "os.Readlink")
+}
+
+// TestReadDirIsAutomaticallyInstrumented covers ReadDir which returns ([]DirEntry, error).
+func TestReadDirIsAutomaticallyInstrumented(t *testing.T) {
+	client, ctx := setupBlockingTest(t)
+
+	request.WrapWithGLS(ctx, func() {
+		entries, err := os.ReadDir("/tmp/" + "../test.txt")
+
+		require.Nil(t, entries)
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	assertAttackDetected(t, client, "os.ReadDir")
 }
 
 func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
