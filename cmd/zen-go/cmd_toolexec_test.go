@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -418,7 +420,7 @@ func TestCheckZenToolFileIncluded(t *testing.T) {
 		mainGoPath := filepath.Join(tmpDir, "main.go")
 		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a", mainGoPath}
 
-		err = checkZenToolFileIncluded("main", toolArgs)
+		err = checkZenToolFileIncluded("main", toolArgs, io.Discard)
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "zen.tool.go exists but was not included in the build")
@@ -432,20 +434,23 @@ func TestCheckZenToolFileIncluded(t *testing.T) {
 
 		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a", mainGoPath, zenToolPath}
 
-		err := checkZenToolFileIncluded("main", toolArgs)
+		err := checkZenToolFileIncluded("main", toolArgs, io.Discard)
 
 		assert.NoError(t, err)
 	})
 
-	t.Run("no error when zen.tool.go does not exist", func(t *testing.T) {
+	t.Run("warns when zen.tool.go does not exist", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		mainGoPath := filepath.Join(tmpDir, "main.go")
 
 		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a", mainGoPath}
 
-		err := checkZenToolFileIncluded("main", toolArgs)
+		var stderr strings.Builder
+		err := checkZenToolFileIncluded("main", toolArgs, &stderr)
 
 		assert.NoError(t, err)
+		assert.Contains(t, stderr.String(), "zen.tool.go not found in")
+		assert.Contains(t, stderr.String(), "must be in the same directory as your main package")
 	})
 
 	t.Run("no error for non-main packages", func(t *testing.T) {
@@ -460,7 +465,7 @@ func TestCheckZenToolFileIncluded(t *testing.T) {
 
 		toolArgs := []string{"-p", "github.com/example/pkg", "-o", "/tmp/out.a", goFilePath}
 
-		err = checkZenToolFileIncluded("github.com/example/pkg", toolArgs)
+		err = checkZenToolFileIncluded("github.com/example/pkg", toolArgs, io.Discard)
 
 		assert.NoError(t, err)
 	})
@@ -468,7 +473,7 @@ func TestCheckZenToolFileIncluded(t *testing.T) {
 	t.Run("no error when no go files in args", func(t *testing.T) {
 		toolArgs := []string{"-p", "main", "-o", "/tmp/out.a"}
 
-		err := checkZenToolFileIncluded("main", toolArgs)
+		err := checkZenToolFileIncluded("main", toolArgs, io.Discard)
 
 		assert.NoError(t, err)
 	})
