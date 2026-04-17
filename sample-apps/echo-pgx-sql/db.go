@@ -80,7 +80,7 @@ func connectToDb() *sql.DB {
 	var err error
 	var db *sql.DB
 	// Connect to PostgreSQL
-	connStr := "postgresql://localhost:5432/db?user=user&password=password"
+	connStr := "postgresql://localhost:5432/db?user=user&password=password&sslmode=disable"
 	db, err = sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
