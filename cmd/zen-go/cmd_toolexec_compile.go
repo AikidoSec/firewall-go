@@ -12,6 +12,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/importcfg"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 )
 
 func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
@@ -34,6 +35,10 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 	}
 
 	if err := checkZenToolFileIncluded(pkgPath, toolArgs, stderr); err != nil {
+		return err
+	}
+
+	if err := checkVersionSync(toolArgs); err != nil {
 		return err
 	}
 
@@ -229,6 +234,26 @@ func checkZenToolFileIncluded(pkgPath string, toolArgs []string, stderr io.Write
 
 	fmt.Fprintf(stderr, "zen-go: warning: zen.tool.go not found in %s. zen.tool.go must be in the same directory as your main package. Run 'zen-go init' from that directory to set up instrumentation.\n", sourceDir)
 	return nil
+}
+
+func checkVersionSync(toolArgs []string) error {
+	var sourceDir string
+	for _, arg := range toolArgs {
+		if strings.HasSuffix(arg, ".go") {
+			sourceDir = filepath.Dir(arg)
+			break
+		}
+	}
+	if sourceDir == "" {
+		return nil
+	}
+
+	gomodPath := rules.FindGoMod(sourceDir)
+	if gomodPath == "" {
+		return nil
+	}
+
+	return rules.CheckModuleVersionSync(gomodPath)
 }
 
 func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
