@@ -7,7 +7,7 @@ require (
 	github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5 v0.0.0-00010101000000-000000000000
 	github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.11.0
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.0
 )
 
 require (
