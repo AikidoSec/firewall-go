@@ -19,7 +19,7 @@ dev: check-zen-go
 	@PORT=$(PORT) go run -toolexec="$(ZENGO) toolexec" .
 
 start-database:
-	@cd ../databases/ && docker compose up $(DB_SERVICE) -d
+	@cd ../databases/ && docker compose up $(DB_SERVICE) -d --wait
 
 stop-database:
 	@cd ../databases/ && docker compose down
