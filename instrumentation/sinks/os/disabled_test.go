@@ -13,33 +13,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExamine_Disabled(t *testing.T) {
-	originalDisabled := config.IsZenDisabled()
-	defer config.SetZenDisabled(originalDisabled)
+func setupDisabledTest(t *testing.T) *testutil.MockCloudClient {
+	t.Helper()
 
+	originalDisabled := config.IsZenDisabled()
 	originalClient := agent.GetCloudClient()
 	originalBlocking := config.IsBlockingEnabled()
+
 	config.SetBlocking(true)
-	defer func() {
-		config.SetBlocking(originalBlocking)
-		agent.SetCloudClient(originalClient)
-	}()
+	config.SetZenDisabled(true)
 
 	mockClient := testutil.NewMockCloudClient()
 	agent.SetCloudClient(mockClient)
 
-	config.SetZenDisabled(true)
+	t.Cleanup(func() {
+		config.SetZenDisabled(originalDisabled)
+		config.SetBlocking(originalBlocking)
+		agent.SetCloudClient(originalClient)
+	})
 
-	maliciousPath := "../../etc/passwd"
+	return mockClient
+}
 
-	err := os.Examine(maliciousPath)
+func TestExamineOp_Disabled(t *testing.T) {
+	mockClient := setupDisabledTest(t)
 
-	require.NoError(t, err, "Examine should return early with no error when zen is disabled")
+	err := os.ExamineOp("os.Chmod", "../../etc/passwd")
+
+	require.NoError(t, err, "ExamineOp should return early with no error when zen is disabled")
 
 	select {
 	case <-mockClient.AttackDetectedEventSent:
 		t.Fatal("No attack should be detected when zen is disabled")
 	case <-time.After(50 * time.Millisecond):
-		// Expected: no attack detected
 	}
 }
