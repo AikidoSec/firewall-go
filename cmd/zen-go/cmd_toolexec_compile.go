@@ -33,7 +33,7 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 		fmt.Fprintf(stderr, "zen-go: compiling package %s\n", pkgPath)
 	}
 
-	if err := checkZenToolFileIncluded(pkgPath, toolArgs); err != nil {
+	if err := checkZenToolFileIncluded(pkgPath, toolArgs, stderr); err != nil {
 		return err
 	}
 
@@ -196,7 +196,7 @@ func updateImportcfgInArgs(stderr io.Writer, args []string, importcfgPath string
 // without zen.tool.go. This happens when users run e.g. `go build main.go`
 // instead of `go build .`, which causes zen.tool.go to be excluded from the
 // build and results in cryptic compiler errors.
-func checkZenToolFileIncluded(pkgPath string, toolArgs []string) error {
+func checkZenToolFileIncluded(pkgPath string, toolArgs []string, stderr io.Writer) error {
 	if pkgPath != "main" {
 		return nil
 	}
@@ -227,6 +227,7 @@ func checkZenToolFileIncluded(pkgPath string, toolArgs []string) error {
 		return errors.New("zen-go: zen.tool.go exists but was not included in the build, use 'go build -toolexec=\"zen-go toolexec\" .' instead of specifying individual files")
 	}
 
+	fmt.Fprintf(stderr, "zen-go: warning: zen.tool.go not found in %s. zen.tool.go must be in the same directory as your main package. Run 'zen-go init' from that directory to set up instrumentation.\n", sourceDir)
 	return nil
 }
 
