@@ -139,6 +139,88 @@ func TestTryExtractBody(t *testing.T) {
 	})
 }
 
+func TestTryExtractBodyBypassVectors(t *testing.T) {
+	t.Run("empty JSON object prefix does not suppress multipart field extraction", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		_ = writer.WriteField("name", "injected")
+		writer.Close()
+
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader("{}\n"+body.String()))
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		formValues, ok := result.(url.Values)
+		require.True(t, ok, "expected url.Values for multipart/form-data request, got %T: %v", result, result)
+		assert.Equal(t, "injected", formValues.Get("name"))
+	})
+
+	t.Run("non-empty JSON object prefix does not suppress multipart field extraction", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		_ = writer.WriteField("name", "injected")
+		writer.Close()
+
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"key":"val"}`+"\n"+body.String()))
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		formValues, ok := result.(url.Values)
+		require.True(t, ok, "expected url.Values for multipart/form-data request, got %T: %v", result, result)
+		assert.Equal(t, "injected", formValues.Get("name"))
+	})
+
+	t.Run("empty JSON array prefix does not suppress multipart field extraction", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		_ = writer.WriteField("name", "injected")
+		writer.Close()
+
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader("[]\n"+body.String()))
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		formValues, ok := result.(url.Values)
+		require.True(t, ok, "expected url.Values for multipart/form-data request, got %T: %v", result, result)
+		assert.Equal(t, "injected", formValues.Get("name"))
+	})
+
+	t.Run("JSON body is scanned even when Content-Type is multipart", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"name":"injected"}`))
+		req.Header.Set("Content-Type", "multipart/form-data; boundary=----boundary")
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok, "expected map, got %T: %v", result, result)
+		assert.Equal(t, "injected", resultMap["name"])
+	})
+
+	t.Run("NDJSON body returns all objects for inspection", func(t *testing.T) {
+		body := `{"payload":"safe"}` + "\n" + `{"payload":"danger"}`
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		resultSlice, ok := result.([]interface{})
+		require.True(t, ok, "expected []interface{} for NDJSON body, got %T: %v", result, result)
+		require.Len(t, resultSlice, 2)
+
+		second, ok := resultSlice[1].(map[string]interface{})
+		require.True(t, ok, "expected second element to be a map")
+		assert.Equal(t, "danger", second["payload"])
+	})
+}
+
 func TestBodyStillReadableAfterExtraction(t *testing.T) {
 	t.Run("body readable after form extraction", func(t *testing.T) {
 		formData := url.Values{}

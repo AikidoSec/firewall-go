@@ -17,24 +17,25 @@ type MultipartFormParser interface {
 	MultipartForm() (*multipart.Form, error)
 }
 
-// TryExtractBody attempts to extract body data from a request, trying JSON first, then forms
+// TryExtractBody attempts to extract body data from a request using both JSON
+// and form parsers, returning whichever finds data. Both are always attempted
+// so the firewall does not depend on Content-Type to decide what the backend
+// will process.
 func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
 	if req.Body == nil || req.Body == http.NoBody {
 		return nil
 	}
 
 	bodyFromJSON := tryExtractJSON(req)
+	bodyFromForm := tryExtractFormBody(req, parser)
+
+	if bodyFromJSON != nil && bodyFromForm != nil {
+		return []any{bodyFromJSON, bodyFromForm}
+	}
 	if bodyFromJSON != nil {
 		return bodyFromJSON
 	}
-
-	bodyFromForm := tryExtractFormBody(req, parser)
-	if bodyFromForm != nil {
-		return bodyFromForm
-	}
-
-	// No usable data found, returning nil
-	return nil
+	return bodyFromForm
 }
 
 // tryExtractFormBody attempts to extract form data (urlencoded or multipart)
