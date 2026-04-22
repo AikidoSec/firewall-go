@@ -20,7 +20,8 @@ Zen will autonomously protect your Go applications from the inside against:
 - 🛡️ [SQL injection attacks](https://www.aikido.dev/blog/the-state-of-sql-injections)
 - 🛡️ [Command injection attacks](https://www.aikido.dev/blog/command-injection-in-2024-unpacked)
 - 🛡️ [Path traversal attacks](https://owasp.org/www-community/attacks/Path_Traversal)
-- 🚧 Server-side request forgery (SSRF)
+- 🛡️ [Server-side request forgery (SSRF)](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery)
+- 🛡️ [Attack wave detection](https://help.aikido.dev/zen-firewall/zen-features/attack-wave-protection)
 
 Zen operates autonomously on the same server as your Go app to:
 
