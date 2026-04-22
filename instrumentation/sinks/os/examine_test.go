@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExamine_TracksOperationStats(t *testing.T) {
+func TestExamineOp_TracksOperationStats(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
 
@@ -24,16 +24,13 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	mockClient := testutil.NewMockCloudClient()
 	agent.SetCloudClient(mockClient)
 
-	// Clear stats before test
 	agent.Stats().GetAndClear()
 
-	// Open multiple files
-	_ = os.Examine("/tmp/file1.txt")
-	_ = os.Examine("/tmp/file2.txt")
-	_ = os.Examine("/var/log/test.log")
+	_ = os.ExamineOp("os.OpenFile", "/tmp/file1.txt")
+	_ = os.ExamineOp("os.OpenFile", "/tmp/file2.txt")
+	_ = os.ExamineOp("os.Chmod", "/tmp/test.txt")
 
-	// Get stats and verify operations were tracked
 	stats := agent.Stats().GetAndClear()
-	require.Contains(t, stats.Operations, "os.OpenFile")
-	require.Equal(t, 3, stats.Operations["os.OpenFile"].Total, "should track 3 file operations")
+	require.Equal(t, 2, stats.Operations["os.OpenFile"].Total)
+	require.Equal(t, 1, stats.Operations["os.Chmod"].Total)
 }
