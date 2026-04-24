@@ -62,14 +62,12 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 }
 
 func IsBypassed(ctx context.Context) bool {
-	if ctx == nil {
-		return false
+	if ctx != nil {
+		if v := ctx.Value(bypassedCtxKey); v != nil {
+			return v.(bool)
+		}
 	}
-	v := ctx.Value(bypassedCtxKey)
-	if v == nil {
-		return false
-	}
-	return v.(bool)
+	return isLocalBypassed()
 }
 
 func GetContext(ctx context.Context) *Context {

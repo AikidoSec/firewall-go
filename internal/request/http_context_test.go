@@ -203,6 +203,45 @@ func TestIsBypassed(t *testing.T) {
 	t.Run("returns false for context without bypass flag", func(t *testing.T) {
 		assert.False(t, IsBypassed(context.Background()))
 	})
+
+	t.Run("falls back to GLS when context is nil", func(t *testing.T) {
+		block := true
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			BypassedIPs: []string{"10.10.10.10"},
+			Block:       &block,
+		}, nil)
+
+		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
+		ip := "10.10.10.10"
+		bypassedCtx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+		require.True(t, IsBypassed(bypassedCtx))
+
+		var result bool
+		WrapWithGLS(bypassedCtx, func() {
+			//nolint:staticcheck // We want to test the nil case
+			result = IsBypassed(nil)
+		})
+		assert.True(t, result)
+	})
+
+	t.Run("falls back to GLS when context has no bypass flag", func(t *testing.T) {
+		block := true
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			BypassedIPs: []string{"10.10.10.10"},
+			Block:       &block,
+		}, nil)
+
+		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
+		ip := "10.10.10.10"
+		bypassedCtx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+		require.True(t, IsBypassed(bypassedCtx))
+
+		var result bool
+		WrapWithGLS(bypassedCtx, func() {
+			result = IsBypassed(context.Background())
+		})
+		assert.True(t, result)
+	})
 }
 
 func TestGetContext(t *testing.T) {
