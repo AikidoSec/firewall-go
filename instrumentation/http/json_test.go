@@ -5,7 +5,48 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestTryExtractJSONStreamingBehavior(t *testing.T) {
+	t.Run("returns all objects when body contains multiple JSON objects", func(t *testing.T) {
+		body := `{"first":true}` + "\n" + `{"second":true}`
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got := tryExtractJSON(r)
+
+		gotSlice, ok := got.([]interface{})
+		require.True(t, ok, "expected []interface{}, got %T: %v", got, got)
+		require.Len(t, gotSlice, 2)
+		assert.Equal(t, true, gotSlice[0].(map[string]interface{})["first"])
+		assert.Equal(t, true, gotSlice[1].(map[string]interface{})["second"])
+
+		restoredBody, _ := io.ReadAll(r.Body)
+		assert.Equal(t, body, string(restoredBody))
+	})
+
+	t.Run("returns nil when valid JSON is followed by non-JSON content", func(t *testing.T) {
+		multipartTrailer := "\n------boundary\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n------boundary--"
+		body := "{}" + multipartTrailer
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got := tryExtractJSON(r)
+
+		assert.Nil(t, got)
+	})
+
+	t.Run("returns nil when valid JSON array is followed by non-JSON content", func(t *testing.T) {
+		multipartTrailer := "\n------boundary\r\nContent-Disposition: form-data; name=\"field\"\r\n\r\nvalue\r\n------boundary--"
+		body := "[]" + multipartTrailer
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got := tryExtractJSON(r)
+
+		assert.Nil(t, got)
+	})
+}
 
 func TestTryExtractJSON(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
