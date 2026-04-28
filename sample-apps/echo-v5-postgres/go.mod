@@ -3,7 +3,7 @@ module echo-postgres
 go 1.25.5
 
 require (
-	github.com/AikidoSec/firewall-go v1.2.0
+	github.com/AikidoSec/firewall-go v1.2.1
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v5 v0.0.0-00010101000000-000000000000
 	github.com/labstack/echo/v5 v5.0.3
 	github.com/lib/pq v1.10.2

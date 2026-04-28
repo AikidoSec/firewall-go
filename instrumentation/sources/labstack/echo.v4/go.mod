@@ -5,7 +5,7 @@ go 1.25.0
 replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (
-	github.com/AikidoSec/firewall-go v1.2.0
+	github.com/AikidoSec/firewall-go v1.2.1
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/stretchr/testify v1.11.1
 )
