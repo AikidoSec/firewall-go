@@ -330,3 +330,7 @@ func TestPathTraversalBlockedInChildGoroutine(t *testing.T) {
 func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 	panic("not implemented")
 }
+
+func (m *mockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	return nil
+}
