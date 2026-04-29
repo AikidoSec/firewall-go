@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/module"
 )
 
 const aikidoMainModule = "github.com/AikidoSec/firewall-go"
@@ -57,6 +58,10 @@ func CheckModuleVersionSync(gomodPath string) error {
 	}
 
 	if mainVersion == "" {
+		return nil
+	}
+
+	if module.IsPseudoVersion(mainVersion) {
 		return nil
 	}
 

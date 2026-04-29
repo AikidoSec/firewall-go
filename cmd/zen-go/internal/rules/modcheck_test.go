@@ -133,6 +133,20 @@ replace github.com/AikidoSec/firewall-go => ../../
 	require.NoError(t, CheckModuleVersionSync(path))
 }
 
+func TestCheckModuleVersionSync_PseudoVersionSkipped(t *testing.T) {
+	dir := t.TempDir()
+	path := writeGoMod(t, dir, `module example.com/app
+
+go 1.22
+
+require (
+	github.com/AikidoSec/firewall-go v1.2.2-0.20260428123005-0cdd21ca0d12
+	github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin v1.2.1-beta.1.0.20260428123005-0cdd21ca0d12
+)
+`)
+	require.NoError(t, CheckModuleVersionSync(path))
+}
+
 func TestFindGoMod_Found(t *testing.T) {
 	root := t.TempDir()
 	gomodPath := filepath.Join(root, "go.mod")
