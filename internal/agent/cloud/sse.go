@@ -20,7 +20,6 @@ const configStreamRoute = "/api/runtime/stream"
 var ErrNotRetryable = errors.New("not retryable")
 
 type configUpdatedData struct {
-	ServiceID       int   `json:"serviceId"`
 	ConfigUpdatedAt int64 `json:"configUpdatedAt"`
 }
 
@@ -69,7 +68,9 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 		case line == "":
 			if eventName == "config-updated" {
 				var data configUpdatedData
-				if err := json.Unmarshal([]byte(dataLine), &data); err == nil {
+				if err := json.Unmarshal([]byte(dataLine), &data); err != nil {
+					log.Debug("SSE: failed to parse config-updated payload", slog.Any("error", err))
+				} else {
 					onUpdate(data.ConfigUpdatedAt)
 				}
 			}
