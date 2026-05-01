@@ -47,6 +47,10 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 				if newExpr != nil {
 					s.Rhs[i] = newExpr
 				}
+
+				if err := transformFuncLitWrap(rhs, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
+					return err
+				}
 			}
 		case *ast.ExprStmt:
 			newExpr, err := tryTransformCall(s.X, fset, pkgName, funcName, rule, modified, importsToAdd)
@@ -57,6 +61,10 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 			if newExpr != nil {
 				s.X = newExpr
 			}
+
+			if err := transformFuncLitWrap(s.X, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
+				return err
+			}
 		case *ast.ReturnStmt:
 			for i, result := range s.Results {
 				newExpr, err := tryTransformCall(result, fset, pkgName, funcName, rule, modified, importsToAdd)
@@ -66,6 +74,10 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 
 				if newExpr != nil {
 					s.Results[i] = newExpr
+				}
+
+				if err := transformFuncLitWrap(result, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
+					return err
 				}
 			}
 		case *ast.IfStmt:
@@ -127,6 +139,22 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 		}
 	}
 
+	return nil
+}
+
+// transformFuncLitWrap recurses into the body of a function literal so that
+// calls inside anonymous functions are instrumented. It handles two forms:
+//   - *ast.FuncLit: the expression is a plain function literal (e.g. assigned or returned)
+//   - *ast.CallExpr whose Fun is a *ast.FuncLit: an immediately invoked function literal
+func transformFuncLitWrap(expr ast.Expr, fset *token.FileSet, pkgName, funcName string, rule rules.WrapRule, modified *bool, importsToAdd map[string]string) error {
+	switch e := expr.(type) {
+	case *ast.FuncLit:
+		return transformStmtsWrap(e.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+	case *ast.CallExpr:
+		if lit, ok := e.Fun.(*ast.FuncLit); ok {
+			return transformStmtsWrap(lit.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+		}
+	}
 	return nil
 }
 

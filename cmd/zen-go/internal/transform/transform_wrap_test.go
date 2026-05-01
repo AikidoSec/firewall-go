@@ -179,6 +179,48 @@ func main() {
 				return cc.Body[0].(*ast.AssignStmt).Rhs[0]
 			},
 		},
+		{
+			name: "anonymous function assigned to variable",
+			src: `package p
+func main() {
+	f := func() {
+		r := gin.Default()
+		_ = r
+	}
+	f()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "immediately invoked anonymous function",
+			src: `package p
+func main() {
+	r := func() interface{} { return gin.Default() }()
+	_ = r
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				iife := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.CallExpr)
+				lit := iife.Fun.(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.ReturnStmt).Results[0]
+			},
+		},
+		{
+			name: "anonymous function returned from outer function",
+			src: `package p
+func main() interface{} {
+	return func() interface{} {
+		r := gin.Default()
+		return r
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.ReturnStmt).Results[0].(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
 	}
 
 	for _, tt := range tests {
