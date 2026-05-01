@@ -180,6 +180,33 @@ func main() {
 			},
 		},
 		{
+			name: "type switch case",
+			src: `package p
+func main() {
+	var x interface{}
+	switch x.(type) {
+	case int:
+		r := gin.Default()
+		_ = r
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				cc := fn.Body.List[1].(*ast.TypeSwitchStmt).Body.List[0].(*ast.CaseClause)
+				return cc.Body[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "send statement",
+			src: `package p
+func main() {
+	ch := make(chan interface{})
+	ch <- gin.Default()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[1].(*ast.SendStmt).Value
+			},
+		},
+		{
 			name: "anonymous function assigned to variable",
 			src: `package p
 func main() {
@@ -205,6 +232,49 @@ func main() {
 				iife := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.CallExpr)
 				lit := iife.Fun.(*ast.FuncLit)
 				return lit.Body.List[0].(*ast.ReturnStmt).Results[0]
+			},
+		},
+		{
+			name: "anonymous function passed as argument",
+			src: `package p
+func main() {
+	doTransaction(ctx, func() {
+		r := gin.Default()
+		_ = r
+	})
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				call := fn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
+				lit := call.Args[1].(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "goroutine anonymous function",
+			src: `package p
+func main() {
+	go func() {
+		r := gin.Default()
+		_ = r
+	}()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.GoStmt).Call.Fun.(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "deferred anonymous function",
+			src: `package p
+func main() {
+	defer func() {
+		r := gin.Default()
+		_ = r
+	}()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.DeferStmt).Call.Fun.(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
 			},
 		},
 		{

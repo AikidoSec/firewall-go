@@ -120,6 +120,17 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 					}
 				}
 			}
+		case *ast.TypeSwitchStmt:
+			if s.Body != nil {
+				for _, clause := range s.Body.List {
+					if cc, ok := clause.(*ast.CaseClause); ok {
+						err := transformStmtsWrap(cc.Body, fset, pkgName, funcName, rule, modified, importsToAdd)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
 		case *ast.SelectStmt:
 			if s.Body != nil {
 				for _, clause := range s.Body.List {
@@ -134,6 +145,27 @@ func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName
 		case *ast.BlockStmt:
 			err := transformStmtsWrap(s.List, fset, pkgName, funcName, rule, modified, importsToAdd)
 			if err != nil {
+				return err
+			}
+		case *ast.SendStmt:
+			newExpr, err := tryTransformCall(s.Value, fset, pkgName, funcName, rule, modified, importsToAdd)
+			if err != nil {
+				return err
+			}
+
+			if newExpr != nil {
+				s.Value = newExpr
+			}
+
+			if err := transformFuncLitWrap(s.Value, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
+				return err
+			}
+		case *ast.GoStmt:
+			if err := transformFuncLitWrap(s.Call, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
+				return err
+			}
+		case *ast.DeferStmt:
+			if err := transformFuncLitWrap(s.Call, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
 				return err
 			}
 		}
@@ -153,6 +185,13 @@ func transformFuncLitWrap(expr ast.Expr, fset *token.FileSet, pkgName, funcName 
 	case *ast.CallExpr:
 		if lit, ok := e.Fun.(*ast.FuncLit); ok {
 			return transformStmtsWrap(lit.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd)
+		}
+		for _, arg := range e.Args {
+			if lit, ok := arg.(*ast.FuncLit); ok {
+				if err := transformStmtsWrap(lit.Body.List, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
