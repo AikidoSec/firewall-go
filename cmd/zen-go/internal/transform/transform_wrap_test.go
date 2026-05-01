@@ -52,6 +52,22 @@ func main() { r := gin.Default(); _ = r }`
 	assert.Equal(t, "Default", origSel.Sel.Name)
 }
 
+func TestTransformDeclsWrap_InAssignment_Reassign(t *testing.T) {
+	src := `package p
+func main() { var r interface{}; r = gin.Default(); _ = r }`
+	f, fset := parseFile(t, src)
+	rule := rules.WrapRule{WrapTmpl: `mw.Wrap({{.}})`}
+
+	modified := false
+	err := TransformDeclsWrap(f.Decls, fset, "gin", "Default", rule, &modified, map[string]string{})
+	require.NoError(t, err)
+	assert.True(t, modified)
+
+	fn := findFunc(t, f.Decls, "main")
+	assign := fn.Body.List[1].(*ast.AssignStmt)
+	requireWrappedCall(t, assign.Rhs[0], "mw", "Wrap")
+}
+
 func TestTransformDeclsWrap_InExprStmt(t *testing.T) {
 	src := `package p
 func main() { gin.Default() }`
@@ -177,6 +193,18 @@ func main() {
 			getExpr: func(fn *ast.FuncDecl) ast.Expr {
 				cc := fn.Body.List[1].(*ast.SelectStmt).Body.List[0].(*ast.CommClause)
 				return cc.Body[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "var declaration",
+			src: `package p
+func main() {
+	var r = gin.Default()
+	_ = r
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				decl := fn.Body.List[0].(*ast.DeclStmt).Decl.(*ast.GenDecl)
+				return decl.Specs[0].(*ast.ValueSpec).Values[0]
 			},
 		},
 		{

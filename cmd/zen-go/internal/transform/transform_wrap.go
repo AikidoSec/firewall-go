@@ -37,6 +37,29 @@ func TransformDeclsWrap(decls []ast.Decl, fset *token.FileSet, pkgName, funcName
 func transformStmtsWrap(stmts []ast.Stmt, fset *token.FileSet, pkgName, funcName string, rule rules.WrapRule, modified *bool, importsToAdd map[string]string) error {
 	for _, stmt := range stmts {
 		switch s := stmt.(type) {
+		case *ast.DeclStmt:
+			genDecl, ok := s.Decl.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+			for _, spec := range genDecl.Specs {
+				valueSpec, ok := spec.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				for i, val := range valueSpec.Values {
+					newExpr, err := tryTransformCall(val, fset, pkgName, funcName, rule, modified, importsToAdd)
+					if err != nil {
+						return err
+					}
+					if newExpr != nil {
+						valueSpec.Values[i] = newExpr
+					}
+					if err := transformFuncLitWrap(val, fset, pkgName, funcName, rule, modified, importsToAdd); err != nil {
+						return err
+					}
+				}
+			}
 		case *ast.AssignStmt:
 			for i, rhs := range s.Rhs {
 				newExpr, err := tryTransformCall(rhs, fset, pkgName, funcName, rule, modified, importsToAdd)
