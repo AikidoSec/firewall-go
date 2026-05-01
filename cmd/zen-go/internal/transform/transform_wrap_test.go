@@ -52,6 +52,22 @@ func main() { r := gin.Default(); _ = r }`
 	assert.Equal(t, "Default", origSel.Sel.Name)
 }
 
+func TestTransformDeclsWrap_InAssignment_Reassign(t *testing.T) {
+	src := `package p
+func main() { var r interface{}; r = gin.Default(); _ = r }`
+	f, fset := parseFile(t, src)
+	rule := rules.WrapRule{WrapTmpl: `mw.Wrap({{.}})`}
+
+	modified := false
+	err := TransformDeclsWrap(f.Decls, fset, "gin", "Default", rule, &modified, map[string]string{})
+	require.NoError(t, err)
+	assert.True(t, modified)
+
+	fn := findFunc(t, f.Decls, "main")
+	assign := fn.Body.List[1].(*ast.AssignStmt)
+	requireWrappedCall(t, assign.Rhs[0], "mw", "Wrap")
+}
+
 func TestTransformDeclsWrap_InExprStmt(t *testing.T) {
 	src := `package p
 func main() { gin.Default() }`
@@ -177,6 +193,130 @@ func main() {
 			getExpr: func(fn *ast.FuncDecl) ast.Expr {
 				cc := fn.Body.List[1].(*ast.SelectStmt).Body.List[0].(*ast.CommClause)
 				return cc.Body[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "var declaration",
+			src: `package p
+func main() {
+	var r = gin.Default()
+	_ = r
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				decl := fn.Body.List[0].(*ast.DeclStmt).Decl.(*ast.GenDecl)
+				return decl.Specs[0].(*ast.ValueSpec).Values[0]
+			},
+		},
+		{
+			name: "type switch case",
+			src: `package p
+func main() {
+	var x interface{}
+	switch x.(type) {
+	case int:
+		r := gin.Default()
+		_ = r
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				cc := fn.Body.List[1].(*ast.TypeSwitchStmt).Body.List[0].(*ast.CaseClause)
+				return cc.Body[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "send statement",
+			src: `package p
+func main() {
+	ch := make(chan interface{})
+	ch <- gin.Default()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[1].(*ast.SendStmt).Value
+			},
+		},
+		{
+			name: "anonymous function assigned to variable",
+			src: `package p
+func main() {
+	f := func() {
+		r := gin.Default()
+		_ = r
+	}
+	f()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "immediately invoked anonymous function",
+			src: `package p
+func main() {
+	r := func() interface{} { return gin.Default() }()
+	_ = r
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				iife := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.CallExpr)
+				lit := iife.Fun.(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.ReturnStmt).Results[0]
+			},
+		},
+		{
+			name: "anonymous function passed as argument",
+			src: `package p
+func main() {
+	doTransaction(ctx, func() {
+		r := gin.Default()
+		_ = r
+	})
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				call := fn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
+				lit := call.Args[1].(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "goroutine anonymous function",
+			src: `package p
+func main() {
+	go func() {
+		r := gin.Default()
+		_ = r
+	}()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.GoStmt).Call.Fun.(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "deferred anonymous function",
+			src: `package p
+func main() {
+	defer func() {
+		r := gin.Default()
+		_ = r
+	}()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.DeferStmt).Call.Fun.(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "anonymous function returned from outer function",
+			src: `package p
+func main() interface{} {
+	return func() interface{} {
+		r := gin.Default()
+		return r
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.ReturnStmt).Results[0].(*ast.FuncLit)
+				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
 			},
 		},
 	}
