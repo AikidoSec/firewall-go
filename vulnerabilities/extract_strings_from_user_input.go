@@ -31,9 +31,15 @@ func buildPathToPayload(pathToPayload []pathPart) string {
 	return path
 }
 
+const maxDepth = 1024
+
 // extractStringsFromUserInput recursively extracts strings from user input
 func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[string]string {
 	results := make(map[string]string)
+
+	if len(pathToPayload) >= maxDepth {
+		return results
+	}
 
 	val := reflect.ValueOf(obj)
 	switch val.Kind() {
