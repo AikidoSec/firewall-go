@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -12,14 +15,16 @@ import (
 )
 
 type pollingMockCloudClient struct {
-	fetchConfigUpdatedAt time.Time
-	fetchConfigResult    *aikido_types.CloudConfigData
-	fetchConfigErr       error
-	fetchListsResult     *aikido_types.ListsConfigData
-	fetchListsErr        error
-	heartbeatResult      *aikido_types.CloudConfigData
-	heartbeatErr         error
-	heartbeatCalled      bool
+	fetchConfigUpdatedAt  time.Time
+	fetchConfigResult     *aikido_types.CloudConfigData
+	fetchConfigErr        error
+	fetchConfigCallCount  int
+	fetchListsResult      *aikido_types.ListsConfigData
+	fetchListsErr         error
+	heartbeatResult       *aikido_types.CloudConfigData
+	heartbeatErr          error
+	heartbeatCalled       bool
+	subscribeFn           func(ctx context.Context, onUpdate func(int64)) error
 }
 
 func (m *pollingMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
@@ -33,6 +38,7 @@ func (m *pollingMockCloudClient) FetchConfigUpdatedAt() time.Time {
 	return m.fetchConfigUpdatedAt
 }
 func (m *pollingMockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
+	m.fetchConfigCallCount++
 	return m.fetchConfigResult, m.fetchConfigErr
 }
 func (m *pollingMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
@@ -44,6 +50,12 @@ func (m *pollingMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigDa
 func (m *pollingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 }
 func (m *pollingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+func (m *pollingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	if m.subscribeFn != nil {
+		return m.subscribeFn(ctx, onUpdate)
+	}
+	return nil
 }
 
 func TestCalculateHeartbeatInterval(t *testing.T) {
@@ -182,5 +194,195 @@ func TestSendHeartbeatEvent(t *testing.T) {
 
 		sendHeartbeatEvent()
 		assert.True(t, mock.heartbeatCalled)
+	})
+}
+
+func TestRefreshCloudConfigIfNewer(t *testing.T) {
+	err := config.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{LogLevel: "ERROR"})
+	require.NoError(t, err)
+
+	t.Run("does nothing when client is nil", func(t *testing.T) {
+		original := GetCloudClient()
+		SetCloudClient(nil)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		assert.NotPanics(t, func() {
+			refreshCloudConfigIfNewer(time.Now().Add(time.Hour).UnixMilli())
+		})
+	})
+
+	resetConfigUpdatedAt := func(t *testing.T) {
+		t.Helper()
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{ConfigUpdatedAt: 0}, &aikido_types.ListsConfigData{})
+	}
+
+	t.Run("skips fetch when timestamp is not newer than stored", func(t *testing.T) {
+		futureTs := time.Now().Add(time.Hour).UnixMilli()
+		config.UpdateServiceConfig(
+			&aikido_types.CloudConfigData{ConfigUpdatedAt: futureTs},
+			&aikido_types.ListsConfigData{},
+		)
+		t.Cleanup(func() { resetConfigUpdatedAt(t) })
+
+		mock := &pollingMockCloudClient{}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		refreshCloudConfigIfNewer(time.Now().UnixMilli())
+		assert.Equal(t, 0, mock.fetchConfigCallCount)
+	})
+
+	t.Run("fetches and applies config when timestamp is newer", func(t *testing.T) {
+		resetConfigUpdatedAt(t)
+
+		mock := &pollingMockCloudClient{
+			fetchConfigResult: &aikido_types.CloudConfigData{
+				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
+			},
+		}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		refreshCloudConfigIfNewer(time.Now().Add(time.Hour).UnixMilli())
+		assert.Equal(t, 1, mock.fetchConfigCallCount)
+	})
+
+	t.Run("does not panic on fetch error", func(t *testing.T) {
+		resetConfigUpdatedAt(t)
+
+		mock := &pollingMockCloudClient{
+			fetchConfigErr: errors.New("network error"),
+		}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		assert.NotPanics(t, func() {
+			refreshCloudConfigIfNewer(time.Now().Add(time.Hour).UnixMilli())
+		})
+		assert.Equal(t, 1, mock.fetchConfigCallCount)
+	})
+}
+
+func TestRunSSESubscription(t *testing.T) {
+	t.Run("exits when context is cancelled", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			mock := &pollingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				runSSESubscription(ctx)
+			}()
+
+			synctest.Wait()
+			cancel()
+			<-done
+		})
+	})
+
+	t.Run("exits immediately on non-retryable error", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			mock := &pollingMockCloudClient{
+				subscribeFn: func(_ context.Context, _ func(int64)) error {
+					return cloud.ErrNotRetryable
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				runSSESubscription(context.Background())
+			}()
+
+			<-done
+		})
+	})
+
+	t.Run("reconnects after transient error", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			callCount := 0
+			mock := &pollingMockCloudClient{
+				subscribeFn: func(_ context.Context, _ func(int64)) error {
+					callCount++
+					if callCount == 1 {
+						return errors.New("transient error")
+					}
+					return cloud.ErrNotRetryable
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				runSSESubscription(context.Background())
+			}()
+
+			<-done
+			assert.Equal(t, 2, callCount)
+		})
+	})
+
+	t.Run("reconnects on clean close", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			callCount := 0
+			mock := &pollingMockCloudClient{
+				subscribeFn: func(_ context.Context, _ func(int64)) error {
+					callCount++
+					if callCount == 1 {
+						return nil
+					}
+					return cloud.ErrNotRetryable
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				runSSESubscription(context.Background())
+			}()
+
+			<-done
+			assert.Equal(t, 2, callCount)
+		})
+	})
+
+	t.Run("exits during nil-client backoff wait when context is cancelled", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			original := GetCloudClient()
+			SetCloudClient(nil)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				runSSESubscription(ctx)
+			}()
+
+			synctest.Wait()
+			cancel()
+			<-done
+		})
 	})
 }

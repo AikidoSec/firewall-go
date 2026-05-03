@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -95,6 +96,9 @@ func (m *internalMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentI
 
 func (m *internalMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 	m.sendAttackWaveDetectedCalled = true
+}
+func (m *internalMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	return nil
 }
 
 func TestState(t *testing.T) {

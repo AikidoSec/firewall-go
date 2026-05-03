@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -35,6 +36,9 @@ func (m *configTestCloudClient) FetchListsConfig() (*aikido_types.ListsConfigDat
 func (m *configTestCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 }
 func (m *configTestCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+func (m *configTestCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	return nil
 }
 
 func TestApplyCloudConfig(t *testing.T) {

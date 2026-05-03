@@ -1,6 +1,7 @@
 package agent_test
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -34,6 +35,9 @@ func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 }
 
 func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+func (m *mockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	panic("not implemented")
 }
 
 func TestCloudClient(t *testing.T) {
