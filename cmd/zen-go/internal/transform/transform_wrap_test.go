@@ -196,6 +196,82 @@ func main() {
 			},
 		},
 		{
+			name: "type switch init statement",
+			src: `package p
+func main() {
+	var x interface{}
+	switch r := gin.Default(); x.(type) {
+	case int:
+		_ = r
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[1].(*ast.TypeSwitchStmt).Init.(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "for init statement",
+			src: `package p
+func main() {
+	for r := gin.Default(); r != nil; {
+		_ = r
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[0].(*ast.ForStmt).Init.(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "switch init statement",
+			src: `package p
+func main() {
+	switch r := gin.Default(); {
+	case r != nil:
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[0].(*ast.SwitchStmt).Init.(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "composite literal field value",
+			src: `package p
+func main() {
+	cfg := MyStruct{Field: gin.Default()}
+	_ = cfg
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.CompositeLit)
+				return lit.Elts[0].(*ast.KeyValueExpr).Value
+			},
+		},
+		{
+			name: "if init statement",
+			src: `package p
+func main() {
+	if r := gin.Default(); r != nil {
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[0].(*ast.IfStmt).Init.(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "else if body",
+			src: `package p
+func main() {
+	if false {
+	} else if true {
+		r := gin.Default()
+		_ = r
+	}
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				elseIf := fn.Body.List[0].(*ast.IfStmt).Else.(*ast.IfStmt)
+				return elseIf.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
 			name: "var declaration",
 			src: `package p
 func main() {
@@ -303,6 +379,73 @@ func main() {
 			getExpr: func(fn *ast.FuncDecl) ast.Expr {
 				lit := fn.Body.List[0].(*ast.DeferStmt).Call.Fun.(*ast.FuncLit)
 				return lit.Body.List[0].(*ast.AssignStmt).Rhs[0]
+			},
+		},
+		{
+			name: "multiple return values",
+			src: `package p
+func main() (interface{}, error) { return gin.Default(), nil }`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[0].(*ast.ReturnStmt).Results[0]
+			},
+		},
+		{
+			name: "unkeyed composite literal element",
+			src: `package p
+func main() {
+	s := []interface{}{gin.Default()}
+	_ = s
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				lit := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.CompositeLit)
+				return lit.Elts[0]
+			},
+		},
+		{
+			name: "nested composite literal field value",
+			src: `package p
+func main() {
+	cfg := Outer{Inner: Inner{Field: gin.Default()}}
+	_ = cfg
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				outer := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.CompositeLit)
+				inner := outer.Elts[0].(*ast.KeyValueExpr).Value.(*ast.CompositeLit)
+				return inner.Elts[0].(*ast.KeyValueExpr).Value
+			},
+		},
+		{
+			name: "regular function call argument",
+			src: `package p
+func main() {
+	r := setup(gin.Default())
+	_ = r
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				call := fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.CallExpr)
+				return call.Args[0]
+			},
+		},
+		{
+			name: "type assertion on result",
+			src: `package p
+func main() {
+	_, ok := gin.Default().(interface{})
+	_ = ok
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				return fn.Body.List[0].(*ast.AssignStmt).Rhs[0].(*ast.TypeAssertExpr).X
+			},
+		},
+		{
+			name: "method call on result",
+			src: `package p
+func main() {
+	gin.Default().Run()
+}`,
+			getExpr: func(fn *ast.FuncDecl) ast.Expr {
+				outer := fn.Body.List[0].(*ast.ExprStmt).X.(*ast.CallExpr)
+				return outer.Fun.(*ast.SelectorExpr).X
 			},
 		},
 		{
