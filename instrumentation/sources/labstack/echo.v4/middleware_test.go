@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+
 	zenecho "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -218,32 +220,197 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 }
 
 func BenchmarkMiddleware(b *testing.B) {
-	b.Run("plain", func(b *testing.B) {
-		router := echo.New()
-		router.GET("/route", func(e echo.Context) error { return nil })
+	b.Run("simple", func(b *testing.B) {
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.GET("/route", func(e echo.Context) error { return nil })
 
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				r := httptest.NewRequest("GET", "/route", http.NoBody)
-				w := httptest.NewRecorder()
-				router.ServeHTTP(w, r)
-			}
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.GET("/route", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
 		})
 	})
 
-	b.Run("zen", func(b *testing.B) {
-		router := echo.New()
-		router.Use(zenecho.GetMiddleware())
-		router.GET("/route", func(e echo.Context) error { return nil })
+	b.Run("json-body", func(b *testing.B) {
+		const body = `{"username":"bob","email":"bob@example.com"}`
 
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				r := httptest.NewRequest("GET", "/route", http.NoBody)
-				w := httptest.NewRecorder()
-				router.ServeHTTP(w, r)
-			}
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.POST("/route", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					r.Header.Set("Content-Type", "application/json")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.POST("/route", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					r.Header.Set("Content-Type", "application/json")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
 		})
 	})
+
+	b.Run("form-body", func(b *testing.B) {
+		const body = "username=bob&password=secret"
+
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.POST("/route", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.POST("/route", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("ip-list", func(b *testing.B) {
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.GET("/route", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					r.RemoteAddr = "192.168.1.1:1234"
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			block := true
+			config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+				Block: &block,
+			}, &aikido_types.ListsConfigData{
+				BlockedIPAddresses: []aikido_types.IPList{
+					{
+						Source:      "benchmark",
+						Description: "benchmark blocked IPs",
+						IPs:         generateIPs(10_000),
+					},
+				},
+			})
+			b.Cleanup(func() {
+				noBlock := false
+				config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+					Block: &noBlock,
+				}, &aikido_types.ListsConfigData{})
+			})
+
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.GET("/route", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					r.RemoteAddr = "192.168.1.1:1234"
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("route-params", func(b *testing.B) {
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.GET("/users/:id", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.GET("/users/:id", func(e echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+}
+
+func generateIPs(n int) []string {
+	ips := make([]string, n)
+	for i := range n {
+		ips[i] = fmt.Sprintf("10.%d.%d.%d", (i/65536)%256, (i/256)%256, i%256)
+	}
+	return ips
 }
 
 func TestMiddlewarePreservesBodyForJSON(t *testing.T) {
