@@ -32,7 +32,7 @@ test: test-main test-zen-go
 .PHONY: benchmark
 benchmark:
 	@echo "Running benchmarks..."
-	@GIN_MODE=release go test -bench=. -benchmem -run=^$$ $$(grep -r "func Benchmark" --include="*_test.go" -l . | xargs -n1 dirname | sort -u)
+	@GIN_MODE=release ./scripts/benchmark.sh
 
 .PHONY: test-main
 test-main:
