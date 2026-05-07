@@ -25,6 +25,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	gin.SetMode(gin.ReleaseMode)
+
 	original := config.IsZenLoaded()
 	config.SetZenLoaded(true)
 
@@ -213,18 +215,33 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 }
 
 func BenchmarkMiddleware(b *testing.B) {
-	router := gin.New()
-	router.ContextWithFallback = true
-	router.Use(zengin.GetMiddleware())
+	b.Run("plain", func(b *testing.B) {
+		router := gin.New()
+		router.ContextWithFallback = true
+		router.GET("/route", func(c *gin.Context) {})
 
-	router.GET("/route", func(c *gin.Context) {})
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				r := httptest.NewRequest("GET", "/route", http.NoBody)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, r)
+			}
+		})
+	})
 
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			r := httptest.NewRequest("GET", "/route", http.NoBody)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, r)
-		}
+	b.Run("zen", func(b *testing.B) {
+		router := gin.New()
+		router.ContextWithFallback = true
+		router.Use(zengin.GetMiddleware())
+		router.GET("/route", func(c *gin.Context) {})
+
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				r := httptest.NewRequest("GET", "/route", http.NoBody)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, r)
+			}
+		})
 	})
 }
 

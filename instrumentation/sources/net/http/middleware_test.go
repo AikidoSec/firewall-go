@@ -232,6 +232,32 @@ func TestExtractRouteParams(t *testing.T) {
 	}
 }
 
+func BenchmarkMiddleware(b *testing.B) {
+	handler := func(w http.ResponseWriter, r *http.Request) {}
+
+	b.Run("plain", func(b *testing.B) {
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				r := httptest.NewRequest("GET", "/route", http.NoBody)
+				w := httptest.NewRecorder()
+				handler(w, r)
+			}
+		})
+	})
+
+	b.Run("zen", func(b *testing.B) {
+		wrapped := Middleware(handler)
+
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				r := httptest.NewRequest("GET", "/route", http.NoBody)
+				w := httptest.NewRecorder()
+				wrapped(w, r)
+			}
+		})
+	})
+}
+
 func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 	agent.Stats().GetAndClear()
 

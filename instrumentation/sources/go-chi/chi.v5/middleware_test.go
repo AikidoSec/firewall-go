@@ -211,17 +211,31 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 }
 
 func BenchmarkMiddleware(b *testing.B) {
-	router := chi.NewRouter()
-	router.Use(zenchi.GetMiddleware())
+	b.Run("plain", func(b *testing.B) {
+		router := chi.NewRouter()
+		router.Get("/route", func(w http.ResponseWriter, r *http.Request) {})
 
-	router.Get("/route", func(w http.ResponseWriter, r *http.Request) {})
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				r := httptest.NewRequest("GET", "/route", http.NoBody)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, r)
+			}
+		})
+	})
 
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			r := httptest.NewRequest("GET", "/route", http.NoBody)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, r)
-		}
+	b.Run("zen", func(b *testing.B) {
+		router := chi.NewRouter()
+		router.Use(zenchi.GetMiddleware())
+		router.Get("/route", func(w http.ResponseWriter, r *http.Request) {})
+
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				r := httptest.NewRequest("GET", "/route", http.NoBody)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, r)
+			}
+		})
 	})
 }
 
