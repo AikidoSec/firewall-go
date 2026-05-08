@@ -244,6 +244,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
 					w := httptest.NewRecorder()
 					handler(w, r)
 				}
@@ -257,6 +258,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
 					w := httptest.NewRecorder()
 					wrapped(w, r)
 				}
@@ -273,6 +275,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
 					r.Header.Set("Content-Type", "application/json")
 					w := httptest.NewRecorder()
 					handler(w, r)
@@ -287,6 +290,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
 					r.Header.Set("Content-Type", "application/json")
 					w := httptest.NewRecorder()
 					wrapped(w, r)
@@ -304,6 +308,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
 					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 					w := httptest.NewRecorder()
 					handler(w, r)
@@ -318,6 +323,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
 					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 					w := httptest.NewRecorder()
 					wrapped(w, r)
@@ -334,6 +340,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
 					r.RemoteAddr = "192.168.1.1:1234"
 					w := httptest.NewRecorder()
 					handler(w, r)
@@ -367,6 +374,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
 					r.RemoteAddr = "192.168.1.1:1234"
 					w := httptest.NewRecorder()
 					wrapped(w, r)
@@ -386,6 +394,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					addBrowserHeaders(r)
 					w := httptest.NewRecorder()
 					mux.ServeHTTP(w, r)
 				}
@@ -400,6 +409,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					addBrowserHeaders(r)
 					w := httptest.NewRecorder()
 					mux.ServeHTTP(w, r)
 				}
@@ -434,4 +444,13 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		stats := agent.Stats().GetAndClear()
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func addBrowserHeaders(r *http.Request) {
+	r.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	r.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+	r.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	r.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	r.Header.Set("Connection", "keep-alive")
+	r.Header.Set("Cache-Control", "max-age=0")
 }
