@@ -470,7 +470,10 @@ func TestScanWithOptions_ModuleIsPassedThrough(t *testing.T) {
 
 	select {
 	case <-client.attackDetectedEventSent:
-		assert.Equal(t, "my-module", client.capturedAttack.Module)
+		client.mu.Lock()
+		module := client.capturedAttack.Module
+		client.mu.Unlock()
+		assert.Equal(t, "my-module", module)
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for attack event")
 	}
