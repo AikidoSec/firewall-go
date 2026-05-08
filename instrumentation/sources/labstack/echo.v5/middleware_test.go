@@ -5,6 +5,7 @@ package echo_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -199,18 +200,207 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 }
 
 func BenchmarkMiddleware(b *testing.B) {
-	router := echo.New()
-	router.Use(zenecho.GetMiddleware())
+	b.Run("simple", func(b *testing.B) {
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.GET("/route", func(e *echo.Context) error { return nil })
 
-	router.GET("/route", func(e *echo.Context) error { return nil })
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
 
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			r := httptest.NewRequest("GET", "/route", http.NoBody)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, r)
-		}
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.GET("/route", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
 	})
+
+	b.Run("json-body", func(b *testing.B) {
+		const body = `{"username":"bob","email":"bob@example.com"}`
+
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.POST("/route", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/json")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.POST("/route", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/json")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("form-body", func(b *testing.B) {
+		const body = "username=bob&password=secret"
+
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.POST("/route", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.POST("/route", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("ip-list", func(b *testing.B) {
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.GET("/route", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					r.RemoteAddr = "192.168.1.1:1234"
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			block := true
+			config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+				Block: &block,
+			}, &aikido_types.ListsConfigData{
+				BlockedIPAddresses: []aikido_types.IPList{
+					{
+						Source:      "benchmark",
+						Description: "benchmark blocked IPs",
+						IPs:         generateIPs(10_000),
+					},
+				},
+			})
+			b.Cleanup(func() {
+				noBlock := false
+				config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+					Block: &noBlock,
+				}, &aikido_types.ListsConfigData{})
+			})
+
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.GET("/route", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					r.RemoteAddr = "192.168.1.1:1234"
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("route-params", func(b *testing.B) {
+		b.Run("plain", func(b *testing.B) {
+			router := echo.New()
+			router.GET("/users/:id", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			router := echo.New()
+			router.Use(zenecho.GetMiddleware())
+			router.GET("/users/:id", func(e *echo.Context) error { return nil })
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					router.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+}
+
+func generateIPs(n int) []string {
+	ips := make([]string, n)
+	for i := range n {
+		ips[i] = fmt.Sprintf("10.%d.%d.%d", (i/65536)%256, (i/256)%256, i%256)
+	}
+	return ips
 }
 
 func TestMiddlewarePreservesBodyForJSON(t *testing.T) {
@@ -332,4 +522,13 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		stats := agent.Stats().GetAndClear()
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func addBrowserHeaders(r *http.Request) {
+	r.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	r.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+	r.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	r.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	r.Header.Set("Connection", "keep-alive")
+	r.Header.Set("Cache-Control", "max-age=0")
 }

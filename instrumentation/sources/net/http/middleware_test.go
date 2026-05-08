@@ -15,7 +15,10 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+
 	"github.com/AikidoSec/firewall-go/internal/agent"
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
@@ -232,6 +235,197 @@ func TestExtractRouteParams(t *testing.T) {
 	}
 }
 
+func BenchmarkMiddleware(b *testing.B) {
+	b.Run("simple", func(b *testing.B) {
+		handler := func(w http.ResponseWriter, r *http.Request) {}
+
+		b.Run("plain", func(b *testing.B) {
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					handler(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			wrapped := Middleware(handler)
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					wrapped(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("json-body", func(b *testing.B) {
+		const body = `{"username":"bob","email":"bob@example.com"}`
+		handler := func(w http.ResponseWriter, r *http.Request) {}
+
+		b.Run("plain", func(b *testing.B) {
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/json")
+					w := httptest.NewRecorder()
+					handler(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			wrapped := Middleware(handler)
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/json")
+					w := httptest.NewRecorder()
+					wrapped(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("form-body", func(b *testing.B) {
+		const body = "username=bob&password=secret"
+		handler := func(w http.ResponseWriter, r *http.Request) {}
+
+		b.Run("plain", func(b *testing.B) {
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					w := httptest.NewRecorder()
+					handler(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			wrapped := Middleware(handler)
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+					addBrowserHeaders(r)
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					w := httptest.NewRecorder()
+					wrapped(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("ip-list", func(b *testing.B) {
+		handler := func(w http.ResponseWriter, r *http.Request) {}
+
+		b.Run("plain", func(b *testing.B) {
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					r.RemoteAddr = "192.168.1.1:1234"
+					w := httptest.NewRecorder()
+					handler(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			block := true
+			config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+				Block: &block,
+			}, &aikido_types.ListsConfigData{
+				BlockedIPAddresses: []aikido_types.IPList{
+					{
+						Source:      "benchmark",
+						Description: "benchmark blocked IPs",
+						IPs:         generateIPs(10_000),
+					},
+				},
+			})
+			b.Cleanup(func() {
+				noBlock := false
+				config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+					Block: &noBlock,
+				}, &aikido_types.ListsConfigData{})
+			})
+
+			wrapped := Middleware(handler)
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/route", http.NoBody)
+					addBrowserHeaders(r)
+					r.RemoteAddr = "192.168.1.1:1234"
+					w := httptest.NewRecorder()
+					wrapped(w, r)
+				}
+			})
+		})
+	})
+
+	b.Run("route-params", func(b *testing.B) {
+		handler := func(w http.ResponseWriter, r *http.Request) {}
+
+		b.Run("plain", func(b *testing.B) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/users/{id}", handler)
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					mux.ServeHTTP(w, r)
+				}
+			})
+		})
+
+		b.Run("zen", func(b *testing.B) {
+			mux := http.NewServeMux()
+			mux.HandleFunc("/users/{id}", Middleware(handler))
+
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+					addBrowserHeaders(r)
+					w := httptest.NewRecorder()
+					mux.ServeHTTP(w, r)
+				}
+			})
+		})
+	})
+}
+
+func generateIPs(n int) []string {
+	ips := make([]string, n)
+	for i := range n {
+		ips[i] = fmt.Sprintf("10.%d.%d.%d", (i/65536)%256, (i/256)%256, i%256)
+	}
+	return ips
+}
+
 func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 	agent.Stats().GetAndClear()
 
@@ -250,4 +444,13 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		stats := agent.Stats().GetAndClear()
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func addBrowserHeaders(r *http.Request) {
+	r.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	r.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
+	r.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	r.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	r.Header.Set("Connection", "keep-alive")
+	r.Header.Set("Cache-Control", "max-age=0")
 }
