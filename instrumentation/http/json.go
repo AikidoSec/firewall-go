@@ -21,9 +21,7 @@ func tryExtractJSON(r *http.Request) any {
 			break
 		}
 		if err != nil {
-			_, _ = io.Copy(io.Discard, tee)
-			r.Body = io.NopCloser(&buf)
-			return nil
+			break
 		}
 		results = append(results, data)
 	}
