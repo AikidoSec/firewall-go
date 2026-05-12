@@ -15,9 +15,10 @@ import (
 )
 
 type Instrumentor struct {
-	WrapRules       []rules.WrapRule
-	PrependRules    []rules.PrependRule
-	InjectDeclRules []rules.InjectDeclRule
+	WrapRules        []rules.WrapRule
+	PrependRules     []rules.PrependRule
+	InjectDeclRules  []rules.InjectDeclRule
+	StructFieldRules []rules.StructFieldRule
 }
 
 // NewInstrumentor creates a new Instrumentor, loading rules from YAML files.
@@ -38,6 +39,7 @@ func NewInstrumentor(currentVersion string) (*Instrumentor, error) {
 		allRules.WrapRules = append(allRules.WrapRules, rulesData.WrapRules...)
 		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
 		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
+		allRules.StructFieldRules = append(allRules.StructFieldRules, rulesData.StructFieldRules...)
 		allRules.MinVersions = append(allRules.MinVersions, rulesData.MinVersions...)
 	}
 
@@ -52,9 +54,10 @@ func NewInstrumentorWithRules(r *rules.InstrumentationRules, currentVersion stri
 		return nil, err
 	}
 	return &Instrumentor{
-		WrapRules:       r.WrapRules,
-		PrependRules:    r.PrependRules,
-		InjectDeclRules: r.InjectDeclRules,
+		WrapRules:        r.WrapRules,
+		PrependRules:     r.PrependRules,
+		InjectDeclRules:  r.InjectDeclRules,
+		StructFieldRules: r.StructFieldRules,
 	}, nil
 }
 
@@ -131,6 +134,14 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 	// Apply prepend rules (for methods and standalone functions)
 	for _, rule := range i.PrependRules {
 		err = transform.TransformDeclsPrepend(file.Decls, compilingPkg, rule, &modified, importsToAdd)
+		if err != nil {
+			return InstrumentFileResult{}, err
+		}
+	}
+
+	// Apply add-field rules (for struct field injection)
+	for _, rule := range i.StructFieldRules {
+		err = transform.TransformDeclsAddField(file.Decls, fset, compilingPkg, rule, &modified, importsToAdd)
 		if err != nil {
 			return InstrumentFileResult{}, err
 		}

@@ -30,13 +30,21 @@ type Rule struct {
 	Match     string            `yaml:"match"`     // For wrap rules: "pkg.Func"
 	Exclude   []string          `yaml:"exclude"`   // For wrap rules: packages to exclude from instrumentation
 	Receiver  string            `yaml:"receiver"`  // For prepend rules with receiver: "*pkg.Type"
-	Package   string            `yaml:"package"`   // For prepend/inject-decl rules: target package (e.g., "os")
+	Package   string            `yaml:"package"`   // For prepend/inject-decl/add-field rules: target package (e.g., "os")
 	Function  string            `yaml:"function"`  // For prepend rules: single "MethodName"
 	Functions []string          `yaml:"functions"` // For prepend rules: multiple method names (one-of)
 	Anchor    string            `yaml:"anchor"`    // For inject-decl rules: anchor function name
 	Links     []string          `yaml:"links"`     // For inject-decl rules: packages to link
+	Struct    string            `yaml:"struct"`    // For add-field rules: target struct name
+	Fields    []StructFieldSpec `yaml:"fields"`    // For add-field rules: fields to add
 	Imports   map[string]string `yaml:"imports"`
 	Template  string            `yaml:"template"`
+}
+
+// StructFieldSpec is the YAML representation of a field to add to a struct.
+type StructFieldSpec struct {
+	Name string `yaml:"name"`
+	Type string `yaml:"type"`
 }
 
 // MinVersionEntry records a minimum zen-go version requirement from a rules file.
@@ -47,10 +55,11 @@ type MinVersionEntry struct {
 
 // InstrumentationRules holds all loaded rules
 type InstrumentationRules struct {
-	WrapRules       []WrapRule
-	PrependRules    []PrependRule
-	InjectDeclRules []InjectDeclRule
-	MinVersions     []MinVersionEntry
+	WrapRules        []WrapRule
+	PrependRules     []PrependRule
+	InjectDeclRules  []InjectDeclRule
+	StructFieldRules []StructFieldRule
+	MinVersions      []MinVersionEntry
 }
 
 // WrapRule wraps a function call expression
@@ -81,6 +90,21 @@ type InjectDeclRule struct {
 	AnchorFunc   string   // Function to attach declaration to (e.g., "Getpid")
 	Links        []string // Packages needed for linking
 	DeclTemplate string   // The declaration to inject
+}
+
+// StructFieldRule adds new fields to a named struct type.
+type StructFieldRule struct {
+	ID         string
+	Package    string            // Package being compiled, e.g., "main"
+	StructName string            // Name of the struct to modify
+	NewFields  []StructFieldDef  // Fields to add
+	Imports    map[string]string // alias -> import path
+}
+
+// StructFieldDef describes a single field to inject into a struct.
+type StructFieldDef struct {
+	Name string
+	Type string
 }
 
 // LoadRulesFromDir loads all zen.instrument.yml files from a directory tree.
@@ -117,6 +141,7 @@ func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
 		result.WrapRules = append(result.WrapRules, rules.WrapRules...)
 		result.PrependRules = append(result.PrependRules, rules.PrependRules...)
 		result.InjectDeclRules = append(result.InjectDeclRules, rules.InjectDeclRules...)
+		result.StructFieldRules = append(result.StructFieldRules, rules.StructFieldRules...)
 		result.MinVersions = append(result.MinVersions, rules.MinVersions...)
 		return nil
 	})
@@ -179,6 +204,21 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 				AnchorFunc:   rule.Anchor,
 				Links:        rule.Links,
 				DeclTemplate: strings.TrimSpace(rule.Template),
+			})
+		case "add-field":
+			if rule.Package == "" {
+				return nil, fmt.Errorf("rule %s: add-field rules require a package", rule.ID)
+			}
+			fields := make([]StructFieldDef, len(rule.Fields))
+			for i, f := range rule.Fields {
+				fields[i] = StructFieldDef(f)
+			}
+			result.StructFieldRules = append(result.StructFieldRules, StructFieldRule{
+				ID:         rule.ID,
+				Package:    rule.Package,
+				StructName: rule.Struct,
+				NewFields:  fields,
+				Imports:    rule.Imports,
 			})
 		}
 	}

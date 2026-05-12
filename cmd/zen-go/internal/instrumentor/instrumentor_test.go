@@ -728,6 +728,7 @@ rules:
 		allRules.WrapRules = append(allRules.WrapRules, rulesData.WrapRules...)
 		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
 		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
+		allRules.StructFieldRules = append(allRules.StructFieldRules, rulesData.StructFieldRules...)
 	}
 
 	inst, err := NewInstrumentorWithRules(allRules, "0.0.0")
@@ -784,6 +785,124 @@ func TestNewInstrumentorWithRules_MinVersionNotMet(t *testing.T) {
 	_, err := NewInstrumentorWithRules(r, "0.2.0")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "please upgrade")
+}
+
+func TestInstrumentFile_AddFieldRule(t *testing.T) {
+	src := `package main
+
+type MyStruct struct {
+	Name string
+}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	structFieldRules := []rules.StructFieldRule{
+		{
+			ID:         "main.MyStruct.ctx",
+			Package:    "main",
+			StructName: "MyStruct",
+			NewFields:  []rules.StructFieldDef{{Name: "ID", Type: "int"}},
+		},
+	}
+
+	inst, err := NewInstrumentorWithRules(&rules.InstrumentationRules{StructFieldRules: structFieldRules}, "0.0.0")
+	require.NoError(t, err)
+	result, err := inst.InstrumentFile(tmpFile, "main")
+
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+
+	resultStr := string(result.Code)
+	assert.Contains(t, resultStr, "Name")
+	assert.Contains(t, resultStr, "ID")
+	assert.Contains(t, resultStr, "int")
+}
+
+func TestInstrumentFile_AddFieldRule_WithImports(t *testing.T) {
+	src := `package main
+
+type MyStruct struct{}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	structFieldRules := []rules.StructFieldRule{
+		{
+			ID:         "main.MyStruct.ctx",
+			Package:    "main",
+			StructName: "MyStruct",
+			NewFields:  []rules.StructFieldDef{{Name: "Ctx", Type: "context.Context"}},
+			Imports:    map[string]string{"context": "context"},
+		},
+	}
+
+	inst, err := NewInstrumentorWithRules(&rules.InstrumentationRules{StructFieldRules: structFieldRules}, "0.0.0")
+	require.NoError(t, err)
+	result, err := inst.InstrumentFile(tmpFile, "main")
+
+	require.NoError(t, err)
+	assert.True(t, result.Modified)
+	assert.Equal(t, map[string]string{"context": "context"}, result.Imports)
+
+	resultStr := string(result.Code)
+	assert.Contains(t, resultStr, "Ctx")
+	assert.Contains(t, resultStr, "context.Context")
+	assert.Contains(t, resultStr, `"context"`)
+}
+
+func TestInstrumentFile_AddFieldRule_WrongPackage_NoModification(t *testing.T) {
+	src := `package other
+
+type MyStruct struct{}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "other.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	structFieldRules := []rules.StructFieldRule{
+		{
+			ID:         "main.MyStruct.f",
+			Package:    "main",
+			StructName: "MyStruct",
+			NewFields:  []rules.StructFieldDef{{Name: "F", Type: "string"}},
+		},
+	}
+
+	inst, err := NewInstrumentorWithRules(&rules.InstrumentationRules{StructFieldRules: structFieldRules}, "0.0.0")
+	require.NoError(t, err)
+	result, err := inst.InstrumentFile(tmpFile, "other")
+
+	require.NoError(t, err)
+	assert.False(t, result.Modified)
+}
+
+func TestInstrumentFile_AddFieldRule_StructNotFound_NoModification(t *testing.T) {
+	src := `package main
+
+type OtherStruct struct{}
+`
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	structFieldRules := []rules.StructFieldRule{
+		{
+			ID:         "main.MyStruct.f",
+			Package:    "main",
+			StructName: "MyStruct",
+			NewFields:  []rules.StructFieldDef{{Name: "F", Type: "string"}},
+		},
+	}
+
+	inst, err := NewInstrumentorWithRules(&rules.InstrumentationRules{StructFieldRules: structFieldRules}, "0.0.0")
+	require.NoError(t, err)
+	result, err := inst.InstrumentFile(tmpFile, "main")
+
+	require.NoError(t, err)
+	assert.False(t, result.Modified)
 }
 
 func TestIsMajorVersion(t *testing.T) {

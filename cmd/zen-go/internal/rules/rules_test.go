@@ -435,6 +435,13 @@ rules:
     anchor: Getpid
     links: []
     template: func __test() {}
+  - id: add-field-rule
+    type: add-field
+    package: main
+    struct: MyStruct
+    fields:
+      - name: NewField
+        type: string
 `
 	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
 	require.NoError(t, err)
@@ -444,4 +451,66 @@ rules:
 	assert.Len(t, rules.WrapRules, 1)
 	assert.Len(t, rules.PrependRules, 1)
 	assert.Len(t, rules.InjectDeclRules, 1)
+	assert.Len(t, rules.StructFieldRules, 1)
+}
+
+func TestLoadRulesFromFile_AddFieldRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: test-package
+
+rules:
+  - id: main.MyStruct.add-field
+    type: add-field
+    package: main
+    struct: MyStruct
+    fields:
+      - name: ctx
+        type: context.Context
+      - name: id
+        type: int
+    imports:
+      context: context
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	rules, err := loadRulesFromFile(yamlPath)
+	require.NoError(t, err)
+	require.Len(t, rules.StructFieldRules, 1)
+	require.Empty(t, rules.WrapRules)
+	require.Empty(t, rules.PrependRules)
+
+	r := rules.StructFieldRules[0]
+	assert.Equal(t, "main.MyStruct.add-field", r.ID)
+	assert.Equal(t, "main", r.Package)
+	assert.Equal(t, "MyStruct", r.StructName)
+	assert.Equal(t, []StructFieldDef{{Name: "ctx", Type: "context.Context"}, {Name: "id", Type: "int"}}, r.NewFields)
+	assert.Equal(t, map[string]string{"context": "context"}, r.Imports)
+}
+
+func TestLoadRulesFromFile_AddFieldRule_MissingPackage_Error(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: test-package
+rules:
+  - id: bad-rule
+    type: add-field
+    struct: MyStruct
+    fields:
+      - name: F
+        type: string
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	_, err = loadRulesFromFile(yamlPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "package")
 }
