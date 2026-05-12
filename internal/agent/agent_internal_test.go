@@ -101,6 +101,9 @@ func (m *internalMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, 
 	return nil
 }
 
+func (m *internalMockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
+
 func TestState(t *testing.T) {
 	t.Run("returns non-nil state collector", func(t *testing.T) {
 		assert.NotNil(t, State())
