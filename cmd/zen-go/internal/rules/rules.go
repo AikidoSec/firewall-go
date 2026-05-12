@@ -36,15 +36,9 @@ type Rule struct {
 	Anchor    string            `yaml:"anchor"`    // For inject-decl rules: anchor function name
 	Links     []string          `yaml:"links"`     // For inject-decl rules: packages to link
 	Struct    string            `yaml:"struct"`    // For add-field rules: target struct name
-	Fields    []StructFieldSpec `yaml:"fields"`    // For add-field rules: fields to add
+	Fields    []StructFieldDef  `yaml:"fields"`    // For add-field rules: fields to add
 	Imports   map[string]string `yaml:"imports"`
 	Template  string            `yaml:"template"`
-}
-
-// StructFieldSpec is the YAML representation of a field to add to a struct.
-type StructFieldSpec struct {
-	Name string `yaml:"name"`
-	Type string `yaml:"type"`
 }
 
 // MinVersionEntry records a minimum zen-go version requirement from a rules file.
@@ -103,8 +97,8 @@ type StructFieldRule struct {
 
 // StructFieldDef describes a single field to inject into a struct.
 type StructFieldDef struct {
-	Name string
-	Type string
+	Name string `yaml:"name"`
+	Type string `yaml:"type"`
 }
 
 // LoadRulesFromDir loads all zen.instrument.yml files from a directory tree.
@@ -209,15 +203,11 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 			if rule.Package == "" {
 				return nil, fmt.Errorf("rule %s: add-field rules require a package", rule.ID)
 			}
-			fields := make([]StructFieldDef, len(rule.Fields))
-			for i, f := range rule.Fields {
-				fields[i] = StructFieldDef(f)
-			}
 			result.StructFieldRules = append(result.StructFieldRules, StructFieldRule{
 				ID:         rule.ID,
 				Package:    rule.Package,
 				StructName: rule.Struct,
-				NewFields:  fields,
+				NewFields:  rule.Fields,
 				Imports:    rule.Imports,
 			})
 		}
