@@ -36,6 +36,8 @@ func (m *configTestCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInf
 }
 func (m *configTestCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
+func (m *configTestCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
 
 func TestApplyCloudConfig(t *testing.T) {
 	err := config.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{LogLevel: "ERROR"})

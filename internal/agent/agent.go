@@ -38,6 +38,7 @@ type CloudClient interface {
 	FetchListsConfig() (*aikido_types.ListsConfigData, error)
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 	SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails)
+	SendCustomEvent(event cloud.CustomEvent)
 }
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
@@ -107,6 +108,18 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 	stateCollector.Stats().OnRequest()
 	go stateCollector.StoreRoute(method, route, apiSpec)
+}
+
+func OnTrackEvent(name, userID, ip string, metadata any) {
+	log.Debug("Received track event", slog.String("name", name))
+	if client := GetCloudClient(); client != nil {
+		go client.SendCustomEvent(cloud.CustomEvent{
+			Name:      name,
+			UserID:    userID,
+			IPAddress: ip,
+			Metadata:  metadata,
+		})
+	}
 }
 
 // OnUser records or updates user activity in the global user registry.

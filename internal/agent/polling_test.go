@@ -46,6 +46,9 @@ func (m *pollingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentIn
 func (m *pollingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
 
+func (m *pollingMockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
+
 func TestCalculateHeartbeatInterval(t *testing.T) {
 	t.Run("returns 1 minute when no stats received yet", func(t *testing.T) {
 		result := calculateHeartbeatInterval(300000, false)

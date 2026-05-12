@@ -56,3 +56,6 @@ func (m *MockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 
 func (m *MockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
+
+func (m *MockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
