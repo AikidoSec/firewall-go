@@ -12,7 +12,7 @@ meta:
 
 rules:
   - id: unique.rule.id
-    type: wrap | prepend | inject-decl
+    type: wrap | prepend | inject-decl | add-field
     # ... type-specific fields
     imports:
       alias: import/path
@@ -120,6 +120,17 @@ This is often paired with a `prepend` rule in the same file that calls the injec
       return nil, _aikido_block
     }
 ```
+
+### `add-field`
+
+Adds new fields to a named struct type. Used to extend existing data structures without modifying original source code.
+
+| Field | Description |
+|---|---|
+| `package` | The package being compiled (required), e.g. `main` |
+| `struct` | Name of the struct to modify |
+| `fields` | List of fields to add, each with `name` and `type` |
+| `imports` | Imports needed by the new field types |
 
 ## Discovery
 
