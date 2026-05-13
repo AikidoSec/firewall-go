@@ -152,8 +152,12 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		parser := &mockParser{req: req}
 		result := TryExtractBody(req, parser)
 
-		formValues, ok := result.(url.Values)
-		require.True(t, ok, "expected url.Values for multipart/form-data request, got %T: %v", result, result)
+		combined, ok := result.([]any)
+		require.True(t, ok, "got %T: %v", result, result)
+		require.Len(t, combined, 2)
+		assert.Equal(t, map[string]interface{}{}, combined[0])
+		formValues, ok := combined[1].(url.Values)
+		require.True(t, ok)
 		assert.Equal(t, "injected", formValues.Get("name"))
 	})
 
@@ -169,8 +173,14 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		parser := &mockParser{req: req}
 		result := TryExtractBody(req, parser)
 
-		formValues, ok := result.(url.Values)
-		require.True(t, ok, "expected url.Values for multipart/form-data request, got %T: %v", result, result)
+		combined, ok := result.([]any)
+		require.True(t, ok, "got %T: %v", result, result)
+		require.Len(t, combined, 2)
+		jsonMap, ok := combined[0].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "val", jsonMap["key"])
+		formValues, ok := combined[1].(url.Values)
+		require.True(t, ok)
 		assert.Equal(t, "injected", formValues.Get("name"))
 	})
 
@@ -186,8 +196,12 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		parser := &mockParser{req: req}
 		result := TryExtractBody(req, parser)
 
-		formValues, ok := result.(url.Values)
-		require.True(t, ok, "expected url.Values for multipart/form-data request, got %T: %v", result, result)
+		combined, ok := result.([]any)
+		require.True(t, ok, "got %T: %v", result, result)
+		require.Len(t, combined, 2)
+		assert.Equal(t, []interface{}{}, combined[0])
+		formValues, ok := combined[1].(url.Values)
+		require.True(t, ok)
 		assert.Equal(t, "injected", formValues.Get("name"))
 	})
 
