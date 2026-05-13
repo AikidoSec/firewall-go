@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/cmd/zen-go
 
-go 1.24.2
+go 1.25.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.1.0
