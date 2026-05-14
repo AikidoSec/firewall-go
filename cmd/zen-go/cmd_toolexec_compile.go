@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,9 +43,14 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 		return err
 	}
 
+	instr, err := instrumentor.NewInstrumentor(version)
+	if err != nil {
+		return err
+	}
+
 	// These are the arguments that we want to pass through to the compiler
 	// If we modify a file, we need to pass the modified file to the compiler instead of the original file
-	newArgs, allAddedImports, allLinkDeps, err := instrumentFiles(stderr, toolArgs, pkgPath, objdir)
+	newArgs, allAddedImports, allLinkDeps, err := instrumentFiles(stderr, instr, toolArgs, pkgPath, objdir)
 	if err != nil {
 		return err
 	}
@@ -121,14 +127,10 @@ func getObjDir(outputPath string) string {
 	return filepath.Dir(outputPath)
 }
 
-func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string) ([]string, map[string]string, []string, error) {
+func instrumentFiles(stderr io.Writer, instr *instrumentor.Instrumentor, toolArgs []string, pkgPath, objdir string) ([]string, map[string]string, []string, error) {
 	newArgs := make([]string, 0, len(toolArgs))
 	allAddedImports := make(map[string]string) // alias -> import path
 	var allAddedLinkDeps []string
-	instrumentor, err := instrumentor.NewInstrumentor(version)
-	if err != nil {
-		return nil, nil, nil, err
-	}
 
 	for _, arg := range toolArgs {
 		// If doesn't end with .go, it's not a Go file
@@ -138,7 +140,7 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 			continue
 		}
 
-		result, err := instrumentor.InstrumentFile(arg, pkgPath)
+		result, err := instr.InstrumentFile(arg, pkgPath)
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: error instrumenting file %s: %v\n", arg, err)
 			newArgs = append(newArgs, arg)
@@ -157,7 +159,7 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 		// Collect link dependencies from each file to pass to the linker later
 		allAddedLinkDeps = append(allAddedLinkDeps, result.LinkDeps...)
 
-		tempFile, err := writeTempFile(arg, result.Code, objdir)
+		tempFile, err := writeTempFile(arg, result.Code, objdir, "")
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: error writing temp file: %v\n", err)
 			newArgs = append(newArgs, arg)
@@ -173,6 +175,26 @@ func instrumentFiles(stderr io.Writer, toolArgs []string, pkgPath, objdir string
 			for _, dep := range result.LinkDeps {
 				fmt.Fprintf(stderr, "zen-go: added link dep %s\n", dep)
 			}
+		}
+	}
+
+	// Handle add-file rules: copy matching source files into the compilation
+	for _, rule := range instr.FilesToAdd(pkgPath) {
+		// #nosec G304 - FilePath is resolved from trusted instrumentation directory
+		content, err := os.ReadFile(rule.FilePath)
+		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: warning: add-file rule %s: reading %s: %v\n", rule.ID, rule.FilePath, err)
+			continue
+		}
+		destPath, err := writeTempFile(rule.FilePath, content, objdir, fmt.Sprintf("%016x_", rand.Uint64()))
+		if err != nil {
+			fmt.Fprintf(stderr, "zen-go: warning: add-file rule %s: writing temp file: %v\n", rule.ID, err)
+			continue
+		}
+		newArgs = append(newArgs, destPath)
+		maps.Copy(allAddedImports, rule.Imports)
+		if isDebug() {
+			fmt.Fprintf(stderr, "zen-go: added file %s for package %s\n", rule.FilePath, pkgPath)
 		}
 	}
 
@@ -256,19 +278,16 @@ func checkVersionSync(toolArgs []string) error {
 	return rules.CheckModuleVersionSync(gomodPath)
 }
 
-func writeTempFile(origPath string, content []byte, objdir string) (string, error) {
-	// Write to objdir/zen-go/src/
+// writeTempFile writes content to objdir/zen-go/src/<prefix><basename>, falling back
+// to origPath's directory if objdir is unusable. prefix is typically empty; add-file
+// rules pass a random prefix to avoid collisions when multiple rules target the same package.
+func writeTempFile(origPath string, content []byte, objdir, prefix string) (string, error) {
 	dir := filepath.Join(objdir, "zen-go", "src")
 	// #nosec G301 - build artifacts need to be readable by the compiler
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		// Fall back to source directory
 		dir = filepath.Dir(origPath)
 	}
-
-	base := filepath.Base(origPath)
-
-	// Use predictable name in objdir
-	outPath := filepath.Join(dir, base)
+	outPath := filepath.Join(dir, prefix+filepath.Base(origPath))
 	// #nosec G306 -- transformed source files need to be readable by the compiler
 	if err := os.WriteFile(outPath, content, 0o644); err != nil {
 		return "", err
