@@ -186,7 +186,7 @@ func instrumentFiles(stderr io.Writer, instr *instrumentor.Instrumentor, toolArg
 			fmt.Fprintf(stderr, "zen-go: warning: add-file rule %s: reading %s: %v\n", rule.ID, rule.FilePath, err)
 			continue
 		}
-		destPath, err := writeTempFile(rule.FilePath, content, objdir, fmt.Sprintf("%016x_", rand.Uint64()))
+		destPath, err := writeTempFile(rule.FilePath, content, objdir, fmt.Sprintf("%016x_", rand.Uint64())) // #nosec G404 -- random prefix is for collision avoidance, not security
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: add-file rule %s: writing temp file: %v\n", rule.ID, err)
 			continue
@@ -288,7 +288,7 @@ func writeTempFile(origPath string, content []byte, objdir, prefix string) (stri
 		dir = filepath.Dir(origPath)
 	}
 	outPath := filepath.Join(dir, prefix+filepath.Base(origPath))
-	// #nosec G306 -- transformed source files need to be readable by the compiler
+	// #nosec G306,G703 -- transformed source files need to be readable by the compiler; path is safe (filepath.Base strips traversal)
 	if err := os.WriteFile(outPath, content, 0o644); err != nil {
 		return "", err
 	}
