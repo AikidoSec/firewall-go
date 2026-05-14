@@ -64,11 +64,10 @@ func NewInstrumentorWithRules(r *rules.InstrumentationRules, currentVersion stri
 	}, nil
 }
 
-// FilesToAdd returns add-file rules targeting the given package.
-func (i *Instrumentor) FilesToAdd(compilingPkg string) []rules.AddFileRule {
+func (i *Instrumentor) AddFileRulesFor(pkg string) []rules.AddFileRule {
 	var result []rules.AddFileRule
 	for _, rule := range i.AddFileRules {
-		if rule.Package == compilingPkg {
+		if rule.Package == pkg {
 			result = append(result, rule)
 		}
 	}

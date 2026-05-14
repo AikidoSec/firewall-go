@@ -906,7 +906,7 @@ type OtherStruct struct{}
 	assert.False(t, result.Modified)
 }
 
-func TestFilesToAdd_ReturnsMatchingRules(t *testing.T) {
+func TestAddFileRulesFor_ReturnsMatchingRules(t *testing.T) {
 	inst := &Instrumentor{
 		AddFileRules: []rules.AddFileRule{
 			{ID: "os.helpers", Package: "os", FilePath: "/sinks/os/helpers.go"},
@@ -914,28 +914,28 @@ func TestFilesToAdd_ReturnsMatchingRules(t *testing.T) {
 		},
 	}
 
-	result := inst.FilesToAdd("os")
+	result := inst.AddFileRulesFor("os")
 
 	require.Len(t, result, 1)
 	assert.Equal(t, "os.helpers", result[0].ID)
 }
 
-func TestFilesToAdd_WrongPackage(t *testing.T) {
+func TestAddFileRulesFor_WrongPackage(t *testing.T) {
 	inst := &Instrumentor{
 		AddFileRules: []rules.AddFileRule{
 			{ID: "os.helpers", Package: "os", FilePath: "/sinks/os/helpers.go"},
 		},
 	}
 
-	result := inst.FilesToAdd("net")
+	result := inst.AddFileRulesFor("net")
 
 	assert.Empty(t, result)
 }
 
-func TestFilesToAdd_EmptyRules(t *testing.T) {
+func TestAddFileRulesFor_EmptyRules(t *testing.T) {
 	inst := &Instrumentor{}
 
-	result := inst.FilesToAdd("os")
+	result := inst.AddFileRulesFor("os")
 
 	assert.Empty(t, result)
 }

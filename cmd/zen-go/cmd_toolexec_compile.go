@@ -179,7 +179,7 @@ func instrumentFiles(stderr io.Writer, instr *instrumentor.Instrumentor, toolArg
 	}
 
 	// Handle add-file rules: copy matching source files into the compilation
-	for _, rule := range instr.FilesToAdd(pkgPath) {
+	for _, rule := range instr.AddFileRulesFor(pkgPath) {
 		// #nosec G304 - FilePath is resolved from trusted instrumentation directory
 		content, err := os.ReadFile(rule.FilePath)
 		if err != nil {
