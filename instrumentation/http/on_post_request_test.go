@@ -106,3 +106,6 @@ func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo,
 		metadata:  attack.Metadata,
 	}
 }
+
+func (m *mockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
