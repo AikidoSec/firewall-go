@@ -9,11 +9,15 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
-const configStreamRoute = "/api/runtime/stream"
+const (
+	configStreamRoute = "/api/runtime/stream"
+	sseReadTimeout    = 70 * time.Second
+)
 
 // ErrNotRetryable is returned when the server responds with a status code that
 // indicates retrying will not help (e.g. 401, 403).
@@ -28,7 +32,10 @@ type configUpdatedData struct {
 // event is received. Blocks until the connection is closed or ctx is cancelled.
 // The caller is responsible for reconnecting on error.
 func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(configUpdatedAt int64)) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+	readCtx, cancelRead := context.WithCancel(ctx)
+	defer cancelRead()
+
+	req, err := http.NewRequestWithContext(readCtx, http.MethodGet,
 		c.realtimeEndpoint+configStreamRoute, nil)
 	if err != nil {
 		return err
@@ -37,7 +44,6 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
 
-	// SSE connections must not time out, use a client without a timeout.
 	resp, err := (&http.Client{}).Do(req)
 	if err != nil {
 		return err
@@ -55,10 +61,38 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
+	resetCh := make(chan struct{}, 1)
+	go func() {
+		idleTimer := time.NewTimer(sseReadTimeout)
+		defer idleTimer.Stop()
+		for {
+			select {
+			case <-resetCh:
+				if !idleTimer.Stop() {
+					select {
+					case <-idleTimer.C:
+					default:
+					}
+				}
+				idleTimer.Reset(sseReadTimeout)
+			case <-idleTimer.C:
+				cancelRead()
+				return
+			case <-readCtx.Done():
+				return
+			}
+		}
+	}()
+
 	scanner := bufio.NewScanner(resp.Body)
 	var eventName, dataLine string
 
 	for scanner.Scan() {
+		select {
+		case resetCh <- struct{}{}:
+		default:
+		}
+
 		line := scanner.Text()
 		switch {
 		case strings.HasPrefix(line, "event:"):
