@@ -37,6 +37,7 @@ type Rule struct {
 	Links     []string          `yaml:"links"`     // For inject-decl rules: packages to link
 	Struct    string            `yaml:"struct"`    // For add-field rules: target struct name
 	Fields    []StructFieldDef  `yaml:"fields"`    // For add-field rules: fields to add
+	File      string            `yaml:"file"`      // For add-file rules: filename to add
 	Imports   map[string]string `yaml:"imports"`
 	Template  string            `yaml:"template"`
 }
@@ -53,6 +54,7 @@ type InstrumentationRules struct {
 	PrependRules     []PrependRule
 	InjectDeclRules  []InjectDeclRule
 	StructFieldRules []StructFieldRule
+	AddFileRules     []AddFileRule
 	MinVersions      []MinVersionEntry
 }
 
@@ -101,6 +103,14 @@ type StructFieldDef struct {
 	Type string `yaml:"type"`
 }
 
+// AddFileRule adds a source file to the target package during compilation.
+type AddFileRule struct {
+	ID       string
+	Package  string            // Package being compiled to inject into, e.g., "os"
+	FilePath string            // Absolute path to the file to add (resolved at load time from the yml directory)
+	Imports  map[string]string // alias -> import path (extra importcfg entries)
+}
+
 // LoadRulesFromDir loads all zen.instrument.yml files from a directory tree.
 // Subdirectories that contain their own go.mod are skipped, since those are
 // separate Go modules whose rules will be discovered independently.
@@ -136,6 +146,7 @@ func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
 		result.PrependRules = append(result.PrependRules, rules.PrependRules...)
 		result.InjectDeclRules = append(result.InjectDeclRules, rules.InjectDeclRules...)
 		result.StructFieldRules = append(result.StructFieldRules, rules.StructFieldRules...)
+		result.AddFileRules = append(result.AddFileRules, rules.AddFileRules...)
 		result.MinVersions = append(result.MinVersions, rules.MinVersions...)
 		return nil
 	})
@@ -209,6 +220,19 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 				StructName: rule.Struct,
 				NewFields:  rule.Fields,
 				Imports:    rule.Imports,
+			})
+		case "add-file":
+			if rule.Package == "" {
+				return nil, fmt.Errorf("rule %s: add-file rules require a package", rule.ID)
+			}
+			if rule.File == "" {
+				return nil, fmt.Errorf("rule %s: add-file rules require a file", rule.ID)
+			}
+			result.AddFileRules = append(result.AddFileRules, AddFileRule{
+				ID:       rule.ID,
+				Package:  rule.Package,
+				FilePath: filepath.Join(filepath.Dir(path), rule.File),
+				Imports:  rule.Imports,
 			})
 		}
 	}

@@ -19,6 +19,7 @@ type Instrumentor struct {
 	PrependRules     []rules.PrependRule
 	InjectDeclRules  []rules.InjectDeclRule
 	StructFieldRules []rules.StructFieldRule
+	AddFileRules     []rules.AddFileRule
 }
 
 // NewInstrumentor creates a new Instrumentor, loading rules from YAML files.
@@ -40,6 +41,7 @@ func NewInstrumentor(currentVersion string) (*Instrumentor, error) {
 		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
 		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
 		allRules.StructFieldRules = append(allRules.StructFieldRules, rulesData.StructFieldRules...)
+		allRules.AddFileRules = append(allRules.AddFileRules, rulesData.AddFileRules...)
 		allRules.MinVersions = append(allRules.MinVersions, rulesData.MinVersions...)
 	}
 
@@ -58,7 +60,18 @@ func NewInstrumentorWithRules(r *rules.InstrumentationRules, currentVersion stri
 		PrependRules:     r.PrependRules,
 		InjectDeclRules:  r.InjectDeclRules,
 		StructFieldRules: r.StructFieldRules,
+		AddFileRules:     r.AddFileRules,
 	}, nil
+}
+
+func (i *Instrumentor) AddFileRulesFor(pkg string) []rules.AddFileRule {
+	var result []rules.AddFileRule
+	for _, rule := range i.AddFileRules {
+		if rule.Package == pkg {
+			result = append(result, rule)
+		}
+	}
+	return result
 }
 
 type InstrumentFileResult struct {

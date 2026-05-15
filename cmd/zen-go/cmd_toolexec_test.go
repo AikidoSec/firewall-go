@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -371,12 +373,103 @@ func TestUpdateImportcfgInArgs(t *testing.T) {
 	})
 }
 
+func TestInstrumentFiles_AddFile(t *testing.T) {
+	srcDir := t.TempDir()
+	fileContent := []byte("package os\n\nfunc Helper() {}\n")
+	helpersPath := filepath.Join(srcDir, "helpers.go")
+	require.NoError(t, os.WriteFile(helpersPath, fileContent, 0o600))
+
+	existingFile := filepath.Join(t.TempDir(), "file.go")
+	require.NoError(t, os.WriteFile(existingFile, []byte("package os\n"), 0o600))
+
+	objdir := t.TempDir()
+
+	instr := &instrumentor.Instrumentor{
+		AddFileRules: []rules.AddFileRule{
+			{ID: "os.helpers", Package: "os", FilePath: helpersPath},
+		},
+	}
+
+	newArgs, addedImports, linkDeps, err := instrumentFiles(io.Discard, instr, []string{"-p", "os", existingFile}, "os", objdir)
+
+	require.NoError(t, err)
+	assert.Empty(t, addedImports)
+	assert.Empty(t, linkDeps)
+
+	// existingFile is unmodified, so it stays in args; the added file is appended
+	require.Len(t, newArgs, 4) // "-p", "os", existingFile, added helpers.go
+	addedPath := newArgs[3]
+	assert.True(t, strings.HasSuffix(addedPath, "helpers.go"))
+	got, err := os.ReadFile(addedPath)
+	require.NoError(t, err)
+	assert.Equal(t, fileContent, got)
+}
+
+func TestInstrumentFiles_AddFile_WithImports(t *testing.T) {
+	srcDir := t.TempDir()
+	helpersPath := filepath.Join(srcDir, "helpers.go")
+	require.NoError(t, os.WriteFile(helpersPath, []byte("package os\n"), 0o600))
+
+	existingFile := filepath.Join(t.TempDir(), "file.go")
+	require.NoError(t, os.WriteFile(existingFile, []byte("package os\n"), 0o600))
+
+	instr := &instrumentor.Instrumentor{
+		AddFileRules: []rules.AddFileRule{
+			{
+				ID: "os.helpers", Package: "os", FilePath: helpersPath,
+				Imports: map[string]string{"extra": "github.com/example/extra"},
+			},
+		},
+	}
+
+	_, addedImports, _, err := instrumentFiles(io.Discard, instr, []string{existingFile}, "os", t.TempDir())
+
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"extra": "github.com/example/extra"}, addedImports)
+}
+
+func TestInstrumentFiles_AddFile_WrongPackage(t *testing.T) {
+	existingFile := filepath.Join(t.TempDir(), "file.go")
+	require.NoError(t, os.WriteFile(existingFile, []byte("package net\n"), 0o600))
+
+	instr := &instrumentor.Instrumentor{
+		AddFileRules: []rules.AddFileRule{
+			{ID: "os.helpers", Package: "os", FilePath: "/nonexistent/helpers.go"},
+		},
+	}
+
+	newArgs, _, _, err := instrumentFiles(io.Discard, instr, []string{existingFile}, "net", t.TempDir())
+
+	require.NoError(t, err)
+	assert.Len(t, newArgs, 1)
+	assert.Equal(t, existingFile, newArgs[0])
+}
+
+func TestInstrumentFiles_AddFile_MissingFile_Warns(t *testing.T) {
+	existingFile := filepath.Join(t.TempDir(), "file.go")
+	require.NoError(t, os.WriteFile(existingFile, []byte("package os\n"), 0o600))
+
+	instr := &instrumentor.Instrumentor{
+		AddFileRules: []rules.AddFileRule{
+			{ID: "os.helpers", Package: "os", FilePath: "/nonexistent/helpers.go"},
+		},
+	}
+
+	var stderr strings.Builder
+	newArgs, _, _, err := instrumentFiles(&stderr, instr, []string{existingFile}, "os", t.TempDir())
+
+	require.NoError(t, err)
+	assert.Len(t, newArgs, 1)
+	assert.Contains(t, stderr.String(), "warning")
+	assert.Contains(t, stderr.String(), "os.helpers")
+}
+
 func TestWriteTempFile(t *testing.T) {
 	t.Run("writes to objdir/zen-go/src/", func(t *testing.T) {
 		objdir := t.TempDir()
 		content := []byte("package main")
 
-		out, err := writeTempFile("/src/foo.go", content, objdir)
+		out, err := writeTempFile("/src/foo.go", content, objdir, "")
 
 		require.NoError(t, err)
 		assert.Equal(t, filepath.Join(objdir, "zen-go", "src", "foo.go"), out)
@@ -388,7 +481,7 @@ func TestWriteTempFile(t *testing.T) {
 	t.Run("preserves original basename", func(t *testing.T) {
 		objdir := t.TempDir()
 
-		out, err := writeTempFile("/some/deep/path/middleware.go", []byte{}, objdir)
+		out, err := writeTempFile("/some/deep/path/middleware.go", []byte{}, objdir, "")
 
 		require.NoError(t, err)
 		assert.Equal(t, "middleware.go", filepath.Base(out))
@@ -401,10 +494,19 @@ func TestWriteTempFile(t *testing.T) {
 		badObjdir := filepath.Join(srcDir, "not-a-dir")
 		require.NoError(t, os.WriteFile(badObjdir, []byte{}, 0o644))
 
-		out, err := writeTempFile(origPath, []byte("package main"), badObjdir)
+		out, err := writeTempFile(origPath, []byte("package main"), badObjdir, "")
 
 		require.NoError(t, err)
 		assert.Equal(t, filepath.Join(srcDir, "foo.go"), out)
+	})
+
+	t.Run("applies prefix to basename", func(t *testing.T) {
+		objdir := t.TempDir()
+
+		out, err := writeTempFile("/src/foo.go", []byte("package main"), objdir, "abc_")
+
+		require.NoError(t, err)
+		assert.Equal(t, filepath.Join(objdir, "zen-go", "src", "abc_foo.go"), out)
 	})
 }
 

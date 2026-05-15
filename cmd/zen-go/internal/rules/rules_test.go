@@ -442,6 +442,10 @@ rules:
     fields:
       - name: NewField
         type: string
+  - id: add-file-rule
+    type: add-file
+    package: os
+    file: zen_helpers.go
 `
 	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
 	require.NoError(t, err)
@@ -452,6 +456,7 @@ rules:
 	assert.Len(t, rules.PrependRules, 1)
 	assert.Len(t, rules.InjectDeclRules, 1)
 	assert.Len(t, rules.StructFieldRules, 1)
+	assert.Len(t, rules.AddFileRules, 1)
 }
 
 func TestLoadRulesFromFile_AddFieldRule(t *testing.T) {
@@ -513,4 +518,74 @@ rules:
 	_, err = loadRulesFromFile(yamlPath)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "package")
+}
+
+func TestLoadRulesFromFile_AddFileRule(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	yamlContent := `
+meta:
+  name: test-package
+
+rules:
+  - id: os.helpers
+    type: add-file
+    package: os
+    file: zen_helpers.go
+    imports:
+      helper: github.com/example/helper
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0o600)
+	require.NoError(t, err)
+
+	rules, err := loadRulesFromFile(yamlPath)
+	require.NoError(t, err)
+	require.Len(t, rules.AddFileRules, 1)
+	require.Empty(t, rules.WrapRules)
+	require.Empty(t, rules.PrependRules)
+
+	r := rules.AddFileRules[0]
+	assert.Equal(t, "os.helpers", r.ID)
+	assert.Equal(t, "os", r.Package)
+	assert.Equal(t, filepath.Join(tmpDir, "zen_helpers.go"), r.FilePath)
+	assert.Equal(t, map[string]string{"helper": "github.com/example/helper"}, r.Imports)
+}
+
+func TestLoadRulesFromFile_AddFileRule_MissingPackage_Error(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	err := os.WriteFile(yamlPath, []byte(`
+meta:
+  name: test
+rules:
+  - id: bad-rule
+    type: add-file
+    file: helpers.go
+`), 0o600)
+	require.NoError(t, err)
+
+	_, err = loadRulesFromFile(yamlPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "package")
+}
+
+func TestLoadRulesFromFile_AddFileRule_MissingFile_Error(t *testing.T) {
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "zen.instrument.yml")
+
+	err := os.WriteFile(yamlPath, []byte(`
+meta:
+  name: test
+rules:
+  - id: bad-rule
+    type: add-file
+    package: os
+`), 0o600)
+	require.NoError(t, err)
+
+	_, err = loadRulesFromFile(yamlPath)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "file")
 }

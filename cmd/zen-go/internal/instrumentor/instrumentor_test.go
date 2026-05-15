@@ -729,6 +729,7 @@ rules:
 		allRules.PrependRules = append(allRules.PrependRules, rulesData.PrependRules...)
 		allRules.InjectDeclRules = append(allRules.InjectDeclRules, rulesData.InjectDeclRules...)
 		allRules.StructFieldRules = append(allRules.StructFieldRules, rulesData.StructFieldRules...)
+		allRules.AddFileRules = append(allRules.AddFileRules, rulesData.AddFileRules...)
 	}
 
 	inst, err := NewInstrumentorWithRules(allRules, "0.0.0")
@@ -903,6 +904,40 @@ type OtherStruct struct{}
 
 	require.NoError(t, err)
 	assert.False(t, result.Modified)
+}
+
+func TestAddFileRulesFor_ReturnsMatchingRules(t *testing.T) {
+	inst := &Instrumentor{
+		AddFileRules: []rules.AddFileRule{
+			{ID: "os.helpers", Package: "os", FilePath: "/sinks/os/helpers.go"},
+			{ID: "net.helpers", Package: "net", FilePath: "/sinks/net/helpers.go"},
+		},
+	}
+
+	result := inst.AddFileRulesFor("os")
+
+	require.Len(t, result, 1)
+	assert.Equal(t, "os.helpers", result[0].ID)
+}
+
+func TestAddFileRulesFor_WrongPackage(t *testing.T) {
+	inst := &Instrumentor{
+		AddFileRules: []rules.AddFileRule{
+			{ID: "os.helpers", Package: "os", FilePath: "/sinks/os/helpers.go"},
+		},
+	}
+
+	result := inst.AddFileRulesFor("net")
+
+	assert.Empty(t, result)
+}
+
+func TestAddFileRulesFor_EmptyRules(t *testing.T) {
+	inst := &Instrumentor{}
+
+	result := inst.AddFileRulesFor("os")
+
+	assert.Empty(t, result)
 }
 
 func TestIsMajorVersion(t *testing.T) {
