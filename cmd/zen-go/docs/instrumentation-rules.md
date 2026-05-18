@@ -12,7 +12,7 @@ meta:
 
 rules:
   - id: unique.rule.id
-    type: wrap | prepend | inject-decl | add-field
+    type: wrap | prepend | inject-decl | add-field | add-file
     # ... type-specific fields
     imports:
       alias: import/path
@@ -131,6 +131,16 @@ Adds new fields to a named struct type. Used to extend existing data structures 
 | `struct` | Name of the struct to modify |
 | `fields` | List of fields to add, each with `name` and `type` |
 | `imports` | Imports needed by the new field types |
+
+### `add-file`
+
+Adds a Go source file from an instrumentation package to the target package during compilation. Used to inject helper functions or declarations that must be compiled as part of the target package.
+
+| Field | Description |
+|---|---|
+| `package` | The package being compiled (required), e.g. `os` |
+| `file` | Filename to add (required), e.g. `zen_helpers.go` — resolved relative to the `zen.instrument.yml` file |
+| `imports` | Optional extra importcfg entries needed by the added file |
 
 ## Discovery
 
