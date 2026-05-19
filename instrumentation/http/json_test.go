@@ -125,6 +125,59 @@ func TestTryExtractJSON(t *testing.T) {
 			t.Errorf("body not restored: got %q, want %q", string(restoredBody), body)
 		}
 	})
+
+	// Regression test for detection bypass via duplicate key with null override.
+	// Standard map decoding keeps the last value (null), hiding the malicious first
+	// value from the firewall. Our custom decoder collects all values into a []any.
+	t.Run("duplicate key null bypass is prevented", func(t *testing.T) {
+		body := `{"field": "malicious", "field": null}`
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got := tryExtractJSON(r)
+
+		m, ok := got.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map, got %T", got)
+		}
+		values, ok := m["field"].([]any)
+		if !ok {
+			t.Fatalf("expected []any for duplicate key, got %T (%v)", m["field"], m["field"])
+		}
+		if len(values) != 2 {
+			t.Fatalf("expected 2 values for duplicate key, got %d", len(values))
+		}
+		if values[0] != "malicious" {
+			t.Errorf("expected first value to be %q, got %v", "malicious", values[0])
+		}
+		if values[1] != nil {
+			t.Errorf("expected second value to be nil, got %v", values[1])
+		}
+
+		// Verify body is restored
+		restoredBody, _ := io.ReadAll(r.Body)
+		if string(restoredBody) != body {
+			t.Errorf("body not restored: got %q, want %q", string(restoredBody), body)
+		}
+	})
+
+	t.Run("duplicate key last value wins without null", func(t *testing.T) {
+		body := `{"field": "first", "field": "second"}`
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got := tryExtractJSON(r)
+
+		m, ok := got.(map[string]any)
+		if !ok {
+			t.Fatalf("expected map, got %T", got)
+		}
+		values, ok := m["field"].([]any)
+		if !ok {
+			t.Fatalf("expected []any for duplicate key, got %T", m["field"])
+		}
+		if values[0] != "first" || values[1] != "second" {
+			t.Errorf("unexpected values: %v", values)
+		}
+	})
 }
 
 func BenchmarkSmallBody(b *testing.B) {
