@@ -25,6 +25,10 @@ func OnInitRequest(ctx context.Context) *Response {
 		return nil
 	}
 
+	if reqCtx.MalformedBody {
+		return &Response{400, "Aikido blocked request: JSON body contains duplicate field names, a known firewall bypass technique."}
+	}
+
 	ip := reqCtx.GetIP()
 
 	// Record monitored IP matches for stats

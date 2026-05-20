@@ -20,6 +20,7 @@ type Context struct {
 	RouteParams        map[string]string
 	RemoteAddress      *string
 	Body               any
+	MalformedBody      bool
 	Cookies            map[string][]string
 	Source             string
 	Route              string

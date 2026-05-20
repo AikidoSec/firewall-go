@@ -34,12 +34,14 @@ func GetMiddleware() echo.MiddlewareFunc {
 				}
 			}
 
+			body, malformedBody := http.TryExtractBody(httpRequest, c)
 			reqCtx := request.SetContext(httpRequest.Context(), httpRequest, request.ContextData{
 				Source:        "echo",
 				Route:         c.Path(),
 				RouteParams:   routeParams,
 				RemoteAddress: &ip,
-				Body:          http.TryExtractBody(httpRequest, c),
+				Body:          body,
+				MalformedBody: malformedBody,
 			})
 			c.SetRequest(httpRequest.WithContext(reqCtx))
 

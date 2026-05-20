@@ -21,21 +21,29 @@ type MultipartFormParser interface {
 // and form parsers, returning whichever finds data. Both are always attempted
 // so the firewall does not depend on Content-Type to decide what the backend
 // will process.
-func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
+//
+// The second return value is true when the JSON body contained duplicate object
+// member names — a known detection-bypass pattern (see AIKIDO-UQJ4BZHJ).
+func TryExtractBody(req *http.Request, parser MultipartFormParser) (any, bool) {
 	if req.Body == nil || req.Body == http.NoBody {
-		return nil
+		return nil, false
 	}
 
-	bodyFromJSON := tryExtractJSON(req)
+	bodyFromJSON, hasDuplicateKeys := tryExtractJSON(req)
+	if hasDuplicateKeys {
+		// Don't attempt form extraction: the JSON body is already an attack.
+		return nil, true
+	}
+
 	bodyFromForm := tryExtractFormBody(req, parser)
 
 	if bodyFromJSON != nil && bodyFromForm != nil {
-		return []any{bodyFromJSON, bodyFromForm}
+		return []any{bodyFromJSON, bodyFromForm}, false
 	}
 	if bodyFromJSON != nil {
-		return bodyFromJSON
+		return bodyFromJSON, false
 	}
-	return bodyFromForm
+	return bodyFromForm, false
 }
 
 // tryExtractFormBody attempts to extract form data (urlencoded or multipart)

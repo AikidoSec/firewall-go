@@ -36,12 +36,14 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 			pattern = pattern[idx:]
 		}
 
+		body, malformedBody := zenhttp.TryExtractBody(r, &requestParser{req: r})
 		ctx := request.SetContext(r.Context(), r, request.ContextData{
 			Source:        "http.ServeMux",
 			Route:         pattern,
 			RouteParams:   extractRouteParams(r, pattern),
 			RemoteAddress: &ip,
-			Body:          zenhttp.TryExtractBody(r, &requestParser{req: r}),
+			Body:          body,
+			MalformedBody: malformedBody,
 		})
 
 		wrappedR := r.WithContext(ctx)

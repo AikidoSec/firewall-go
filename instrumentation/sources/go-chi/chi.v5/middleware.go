@@ -51,12 +51,14 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 				}
 			}
 
+			body, malformedBody := zenhttp.TryExtractBody(r, &requestParser{req: r})
 			reqCtx := request.SetContext(r.Context(), r, request.ContextData{
 				Source:        "chi",
 				Route:         route,
 				RouteParams:   routeParams,
 				RemoteAddress: &ip,
-				Body:          zenhttp.TryExtractBody(r, &requestParser{req: r}),
+				Body:          body,
+				MalformedBody: malformedBody,
 			})
 
 			wrappedR := r.WithContext(reqCtx)

@@ -32,12 +32,14 @@ func GetMiddleware() gin.HandlerFunc {
 			}
 		}
 
+		body, malformedBody := http.TryExtractBody(c.Request, c)
 		reqCtx := request.SetContext(c.Request.Context(), c.Request, request.ContextData{
 			Source:        "gin",
 			Route:         c.FullPath(),
 			RouteParams:   routeParams,
 			RemoteAddress: &ip,
-			Body:          http.TryExtractBody(c.Request, c),
+			Body:          body,
+			MalformedBody: malformedBody,
 		})
 		c.Request = c.Request.WithContext(reqCtx)
 

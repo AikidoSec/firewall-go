@@ -98,7 +98,7 @@ func TestTryExtractBody(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		assert.NotNil(t, result)
 	})
@@ -111,7 +111,7 @@ func TestTryExtractBody(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		assert.NotNil(t, result)
 		formValues, ok := result.(url.Values)
@@ -124,7 +124,7 @@ func TestTryExtractBody(t *testing.T) {
 		req.Header.Set("Content-Type", "multipart/form-data") // Missing boundary
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		assert.Nil(t, result)
 	})
@@ -133,9 +133,20 @@ func TestTryExtractBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", http.NoBody)
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		assert.Nil(t, result)
+	})
+
+	t.Run("flags duplicate JSON keys as attack and returns nil body", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"field":"malicious","field":null}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		parser := &mockParser{req: req}
+		result, malformed := TryExtractBody(req, parser)
+
+		assert.Nil(t, result)
+		assert.True(t, malformed)
 	})
 }
 
@@ -150,7 +161,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		combined, ok := result.([]any)
 		require.True(t, ok, "got %T: %v", result, result)
@@ -171,7 +182,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		combined, ok := result.([]any)
 		require.True(t, ok, "got %T: %v", result, result)
@@ -194,7 +205,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		combined, ok := result.([]any)
 		require.True(t, ok, "got %T: %v", result, result)
@@ -210,7 +221,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req.Header.Set("Content-Type", "multipart/form-data; boundary=----boundary")
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		resultMap, ok := result.(map[string]interface{})
 		require.True(t, ok, "expected map, got %T: %v", result, result)
@@ -223,7 +234,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 
 		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result, _ := TryExtractBody(req, parser)
 
 		resultSlice, ok := result.([]interface{})
 		require.True(t, ok, "expected []interface{} for NDJSON body, got %T: %v", result, result)
