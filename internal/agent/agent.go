@@ -73,11 +73,30 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		applyCloudConfig(client, cloudConfig)
 	}()
 
-	startPolling()
+	go probeAndStartPolling(
+		aikidoConfig.Token,
+		globals.EnvironmentConfig.Endpoint,
+		globals.EnvironmentConfig.RealtimeEndpoint,
+	)
 
 	ratelimiting.Init()
 
 	return nil
+}
+
+func probeAndStartPolling(token, apiEndpoint, realtimeEndpoint string) {
+	resolved, sseEnabled := cloud.ResolveRealtimeURL(realtimeEndpoint, token)
+
+	if resolved != realtimeEndpoint {
+		fallbackClient := cloud.NewClient(&cloud.ClientConfig{
+			Token:            token,
+			APIEndpoint:      apiEndpoint,
+			RealtimeEndpoint: resolved,
+		})
+		SetCloudClient(fallbackClient)
+	}
+
+	startPolling(sseEnabled)
 }
 
 func AgentUninit() error {

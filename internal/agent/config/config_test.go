@@ -206,8 +206,8 @@ func TestInitWithEmptyEndpoints(t *testing.T) {
 			}
 
 			// RealtimeEndpoint should always be the default
-			if globals.EnvironmentConfig.RealtimeEndpoint != "https://runtime.aikido.dev/" {
-				t.Errorf("Expected RealtimeEndpoint to be https://runtime.aikido.dev/, but got %q", globals.EnvironmentConfig.RealtimeEndpoint)
+			if globals.EnvironmentConfig.RealtimeEndpoint != "https://zen.aikido.dev/" {
+				t.Errorf("Expected RealtimeEndpoint to be https://zen.aikido.dev/, but got %q", globals.EnvironmentConfig.RealtimeEndpoint)
 			}
 		})
 	}
