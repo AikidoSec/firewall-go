@@ -1,0 +1,29 @@
+meta:
+  name: runtime
+  description: Automatic propagation of Aikido request context across goroutines.
+
+rules:
+  # Add a field to runtime.g that stores the per-goroutine request state.
+  - id: runtime.g.aikido-field
+    type: add-field
+    package: runtime
+    struct: g
+    fields:
+      - name: aikido_request_context
+        type: interface{}
+
+  # Inject helper functions and an init that registers them with firewall-go.
+  - id: runtime.aikido-gls-helpers
+    type: add-file
+    package: runtime
+    file: _runtime/aikido_gls.go
+
+  # Propagate the field from caller goroutine to newly created goroutine.
+  - id: runtime.newproc1.propagate
+    type: prepend
+    package: runtime
+    function: newproc1
+    template: |
+      defer func() {
+          {{ .Function.Result 0 }}.aikido_request_context = {{ .Function.Argument 1 }}.aikido_request_context
+      }()

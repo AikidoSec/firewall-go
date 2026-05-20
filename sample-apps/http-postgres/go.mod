@@ -8,8 +8,6 @@ require (
 )
 
 require (
-	github.com/gopherjs/gopherjs v1.17.2 // indirect
-	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/net v0.55.0 // indirect

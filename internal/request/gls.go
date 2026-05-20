@@ -2,52 +2,72 @@ package request
 
 import (
 	"context"
-
-	"github.com/jtolds/gls"
 )
 
 var (
-	glsManager     *gls.ContextManager
-	glsCtxKey      = "ctx"
-	glsBypassedKey = "bypassed"
+	glsGet func() interface{}
+	glsSet func(interface{})
 )
 
-func init() {
-	glsManager = gls.NewContextManager()
+// RegisterGLS is linked from runtime by instrumentation/runtime; renaming
+// it requires updating that file's go:linkname directive.
+func RegisterGLS(get func() interface{}, set func(interface{})) {
+	glsGet = get
+	glsSet = set
 }
 
-// getLocalContext attempts to retrieve the request context for the current goroutine
-// This should return the context if it is called within the same callstack as WrapWithGLS
-func getLocalContext() *Context {
-	if ctx, ok := glsManager.GetValue(glsCtxKey); ok && ctx != nil {
-		return ctx.(*Context)
-	}
+type glsState struct {
+	ctx      *Context
+	bypassed bool
+}
 
+func getGLS() *glsState {
+	if glsGet == nil {
+		return nil
+	}
+	v := glsGet()
+	if v == nil {
+		return nil
+	}
+	s, _ := v.(*glsState)
+	return s
+}
+
+func getLocalContext() *Context {
+	if s := getGLS(); s != nil {
+		return s.ctx
+	}
 	return nil
 }
 
-// isLocalBypassed returns true if the current goroutine is running within a bypassed request.
 func isLocalBypassed() bool {
-	v, ok := glsManager.GetValue(glsBypassedKey)
-	return ok && v == true
+	if s := getGLS(); s != nil {
+		return s.bypassed
+	}
+	return false
 }
 
 // WrapWithGLS keeps the context alive in the GLS until the given function has finished executing.
 func WrapWithGLS(ctx context.Context, fn func()) {
-	reqCtx := GetContext(ctx)
-	if reqCtx != nil {
-		glsManager.SetValues(gls.Values{
-			glsCtxKey: reqCtx,
-		}, fn)
+	if glsSet == nil {
+		fn()
 		return
 	}
 
-	if IsBypassed(ctx) {
-		glsManager.SetValues(gls.Values{
-			glsBypassedKey: true,
-		}, fn)
+	var state *glsState
+	if reqCtx := GetContext(ctx); reqCtx != nil {
+		state = &glsState{ctx: reqCtx}
+	} else if IsBypassed(ctx) {
+		state = &glsState{bypassed: true}
+	}
+
+	if state == nil {
+		fn()
 		return
 	}
 
+	prev := glsGet()
+	glsSet(state)
+	defer glsSet(prev)
 	fn()
 }
