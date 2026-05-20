@@ -27,13 +27,15 @@ const (
 	sseStableThreshold = 30 * time.Second
 )
 
-func startPolling() {
+func startPolling(sseEnabled bool) {
 	heartbeatRoutine = polling.Start(10*time.Minute, sendHeartbeatEvent)
 	configPollingRoutine = polling.Start(1*time.Minute, refreshCloudConfig)
 
-	var ctx context.Context
-	ctx, sseCancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is stored in sseCancel and called in stopPolling
-	go runSSESubscription(ctx)
+	if sseEnabled {
+		var ctx context.Context
+		ctx, sseCancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is stored in sseCancel and called in stopPolling
+		go runSSESubscription(ctx)
+	}
 }
 
 func stopPolling() {
