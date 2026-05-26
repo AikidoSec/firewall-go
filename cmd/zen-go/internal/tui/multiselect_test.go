@@ -13,9 +13,9 @@ func newTestModel() *multiSelectModel {
 		title:    "Test",
 		subtitle: "Test subtitle",
 		items: []SelectItem{
-			{Name: "a", Description: "Option A", selected: false, Locked: false},
-			{Name: "b", Description: "Option B", selected: false, Locked: false},
-			{Name: "c", Description: "Always included", selected: false, Locked: true},
+			{Name: "a", Description: "Option A", Selected: false, Locked: false},
+			{Name: "b", Description: "Option B", Selected: false, Locked: false},
+			{Name: "c", Description: "Always included", Selected: false, Locked: true},
 		},
 	}
 }
@@ -32,10 +32,10 @@ func TestMultiSelect_ToggleOptionalItem(t *testing.T) {
 	m := newTestModel()
 
 	m.Update(key(" "))
-	assert.True(t, m.items[0].selected)
+	assert.True(t, m.items[0].Selected)
 
 	m.Update(key(" "))
-	assert.False(t, m.items[0].selected)
+	assert.False(t, m.items[0].Selected)
 }
 
 func TestMultiSelect_CursorSkipsLockedItems(t *testing.T) {
@@ -120,7 +120,7 @@ func TestMultiSelect_SelectedItems(t *testing.T) {
 	// Collect selected non-locked items
 	var selected []string
 	for _, item := range m.items {
-		if item.selected && !item.Locked {
+		if item.Selected && !item.Locked {
 			selected = append(selected, item.Name)
 		}
 	}
@@ -184,9 +184,9 @@ func TestNewMultiSelectModel_CursorSkipsLeadingLockedItems(t *testing.T) {
 func TestMultiSelectModel_SelectedNames(t *testing.T) {
 	m := &multiSelectModel{
 		items: []SelectItem{
-			{Name: "a", selected: true},
-			{Name: "b", selected: false},
-			{Name: "c", selected: true, Locked: true},
+			{Name: "a", Selected: true},
+			{Name: "b", Selected: false},
+			{Name: "c", Selected: true, Locked: true},
 		},
 	}
 	assert.Equal(t, []string{"a"}, m.selectedItems())

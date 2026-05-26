@@ -31,6 +31,10 @@ func newCommand() *cli.Command {
 						Aliases: []string{"f"},
 						Usage:   "Force overwrite existing zen.tool.go file",
 					},
+					&cli.BoolFlag{
+						Name:  "auto",
+						Usage: "Auto-select sources/sinks from go.mod without interactive prompts. Combine with --sources/--sinks to override specific categories.",
+					},
 					&cli.StringFlag{
 						Name:  "sources",
 						Usage: "Comma-separated list of sources to instrument (e.g., 'gin,chi,echo/v4'). Skips interactive prompt.",
@@ -44,6 +48,7 @@ func newCommand() *cli.Command {
 					return initCommand(
 						cmd.Root().Writer,
 						cmd.Bool("force"),
+						cmd.Bool("auto"),
 						cmd.String("sources"),
 						cmd.IsSet("sources"),
 						cmd.String("sinks"),

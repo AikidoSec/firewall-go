@@ -12,22 +12,23 @@ import (
 )
 
 type instrumentOption struct {
-	name        string
-	description string
-	importPath  string // empty for locked/stdlib items
-	locked      bool
+	name         string
+	description  string
+	importPath   string // empty for locked/stdlib items
+	goModulePath string // upstream module path used for go.mod detection; empty for locked items
+	locked       bool
 }
 
 var (
 	sourceOptions = []instrumentOption{
-		{name: "gin", description: "Gin web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin"},
-		{name: "chi", description: "Chi router", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5"},
-		{name: "echo/v4", description: "Echo v4 web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4"},
+		{name: "gin", description: "Gin web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin", goModulePath: "github.com/gin-gonic/gin"},
+		{name: "chi", description: "Chi router", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5", goModulePath: "github.com/go-chi/chi/v5"},
+		{name: "echo/v4", description: "Echo v4 web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4", goModulePath: "github.com/labstack/echo/v4"},
 		{name: "net/http", description: "Standard library (always included)", locked: true},
 	}
 
 	sinkOptions = []instrumentOption{
-		{name: "pgx", description: "PostgreSQL via pgx/v5", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5"},
+		{name: "pgx", description: "PostgreSQL via pgx/v5", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5", goModulePath: "github.com/jackc/pgx/v5"},
 		{name: "os", description: "File system operations (always included)", locked: true},
 		{name: "os/exec", description: "Command execution (always included)", locked: true},
 		{name: "path", description: "Path traversal protection (always included)", locked: true},
@@ -138,7 +139,7 @@ func parseAndValidateList(flagValue string, available map[string]string, itemTyp
 	return result, nil
 }
 
-func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bool, sinksFlag string, sinksSet bool) error {
+func initCommand(stdout io.Writer, force, auto bool, sourcesFlag string, sourcesSet bool, sinksFlag string, sinksSet bool) error {
 	filename := "zen.tool.go"
 
 	// Check if file already exists
@@ -150,11 +151,21 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 		}
 	}
 
+	// Best-effort detection from go.mod. Failure to read/parse is non-fatal:
+	// we proceed with an empty detection set so init still works.
+	requires, modErr := parseGoModRequires("go.mod")
+	if modErr != nil && auto {
+		fmt.Fprintf(stdout, "⚠️  Could not read go.mod for auto-detection: %v\n", modErr)
+	}
+	detectedSources := detectInstalledOptions(sourceOptions, requires)
+	detectedSinks := detectInstalledOptions(sinkOptions, requires)
+
 	var selectedSources, selectedSinks []string
 	var err error
 
-	// Handle sources: use flag if explicitly set, otherwise prompt
-	if sourcesSet {
+	// Handle sources: explicit flag > auto > interactive prompt
+	switch {
+	case sourcesSet:
 		selectedSources, err = parseAndValidateList(sourcesFlag, availableSources, "source")
 		if err != nil {
 			return err
@@ -162,15 +173,18 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 		if len(selectedSources) == 0 && sourcesFlag == "" {
 			fmt.Fprintln(stdout, "No sources selected (empty argument provided)")
 		}
-	} else {
-		selectedSources, err = promptForSources()
+	case auto:
+		selectedSources = detectedSources
+	default:
+		selectedSources, err = promptForSources(detectedSources)
 		if err != nil {
 			return fmt.Errorf("source selection cancelled or failed: %w", err)
 		}
 	}
 
-	// Handle sinks: use flag if explicitly set, otherwise prompt
-	if sinksSet {
+	// Handle sinks: explicit flag > auto > interactive prompt
+	switch {
+	case sinksSet:
 		selectedSinks, err = parseAndValidateList(sinksFlag, availableSinks, "sink")
 		if err != nil {
 			return err
@@ -178,8 +192,10 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 		if len(selectedSinks) == 0 && sinksFlag == "" {
 			fmt.Fprintln(stdout, "No sinks selected (empty argument provided)")
 		}
-	} else {
-		selectedSinks, err = promptForSinks()
+	case auto:
+		selectedSinks = detectedSinks
+	default:
+		selectedSinks, err = promptForSinks(detectedSinks)
 		if err != nil {
 			return fmt.Errorf("sink selection cancelled or failed: %w", err)
 		}
@@ -226,30 +242,37 @@ func initCommand(stdout io.Writer, force bool, sourcesFlag string, sourcesSet bo
 	return nil
 }
 
-func toSelectItems(options []instrumentOption) []tui.SelectItem {
+func toSelectItems(options []instrumentOption, preselected []string) []tui.SelectItem {
+	preset := make(map[string]struct{}, len(preselected))
+	for _, name := range preselected {
+		preset[name] = struct{}{}
+	}
 	items := make([]tui.SelectItem, len(options))
 	for i, opt := range options {
+		_, detected := preset[opt.name]
 		items[i] = tui.SelectItem{
 			Name:        opt.name,
 			Description: opt.description,
 			Locked:      opt.locked,
+			Selected:    detected,
+			Detected:    detected,
 		}
 	}
 	return items
 }
 
-func promptForSources() ([]string, error) {
+func promptForSources(preselected []string) ([]string, error) {
 	return tui.RunMultiSelect(
 		"Sources",
 		"Entry points for incoming requests (web frameworks)",
-		toSelectItems(sourceOptions),
+		toSelectItems(sourceOptions, preselected),
 	)
 }
 
-func promptForSinks() ([]string, error) {
+func promptForSinks(preselected []string) ([]string, error) {
 	return tui.RunMultiSelect(
 		"Sinks",
 		"Operations that need protection & monitoring (database, file system, etc.)",
-		toSelectItems(sinkOptions),
+		toSelectItems(sinkOptions, preselected),
 	)
 }

@@ -24,7 +24,7 @@ func TestInitCommand_DoesNotOverwriteExistingFile(t *testing.T) {
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
-	err = initCommand(&buf, false, "", false, "", false)
+	err = initCommand(&buf, false, false, "", false, "", false)
 	require.NoError(t, err)
 
 	// Verify file content was not overwritten
@@ -143,7 +143,7 @@ func TestInitCommand_WithSourcesAndSinksFlags(t *testing.T) {
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
-	err = initCommand(&buf, false, "gin", true, "pgx", true)
+	err = initCommand(&buf, false, false, "gin", true, "pgx", true)
 	require.NoError(t, err)
 
 	// Verify file was created
@@ -173,7 +173,7 @@ func TestInitCommand_WithInvalidSource(t *testing.T) {
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
-	err = initCommand(&buf, false, "invalid", true, "", false)
+	err = initCommand(&buf, false, false, "invalid", true, "", false)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid source(s): invalid")
 }
@@ -188,7 +188,7 @@ func TestInitCommand_WithEmptySourcesFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
-	err = initCommand(&buf, false, "", true, "pgx", true)
+	err = initCommand(&buf, false, false, "", true, "pgx", true)
 	require.NoError(t, err)
 
 	// Verify file was created
@@ -221,7 +221,7 @@ func TestInitCommand_WithEmptySinksFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	var buf bytes.Buffer
-	err = initCommand(&buf, false, "gin", true, "", true)
+	err = initCommand(&buf, false, false, "gin", true, "", true)
 	require.NoError(t, err)
 
 	// Verify file was created
@@ -242,4 +242,102 @@ func TestInitCommand_WithEmptySinksFlag(t *testing.T) {
 	assert.Contains(t, output, "Created zen.tool.go")
 	assert.Contains(t, output, "Sources: gin")
 	assert.NotContains(t, output, "Sinks:")
+}
+
+func TestInitCommand_AutoSelectsFromGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldDir) }()
+
+	require.NoError(t, os.Chdir(tmpDir))
+	require.NoError(t, os.WriteFile("go.mod", []byte(sampleGoMod), 0o600))
+
+	var buf bytes.Buffer
+	err = initCommand(&buf, false, true, "", false, "", false)
+	require.NoError(t, err)
+
+	content, err := os.ReadFile("zen.tool.go")
+	require.NoError(t, err)
+
+	contentStr := string(content)
+	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin")
+	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5")
+	assert.NotContains(t, contentStr, "labstack/echo")
+	assert.NotContains(t, contentStr, "go-chi/chi")
+
+	output := buf.String()
+	assert.Contains(t, output, "Sources: gin")
+	assert.Contains(t, output, "Sinks: pgx")
+}
+
+func TestInitCommand_AutoWithExplicitSourcesOverride(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldDir) }()
+
+	require.NoError(t, os.Chdir(tmpDir))
+	require.NoError(t, os.WriteFile("go.mod", []byte(sampleGoMod), 0o600))
+
+	var buf bytes.Buffer
+	// --auto plus an explicit --sources=chi: chi should win for sources,
+	// while sinks come from go.mod detection (pgx).
+	err = initCommand(&buf, false, true, "chi", true, "", false)
+	require.NoError(t, err)
+
+	content, err := os.ReadFile("zen.tool.go")
+	require.NoError(t, err)
+	contentStr := string(content)
+
+	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5")
+	assert.NotContains(t, contentStr, "gin-gonic/gin")
+	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5")
+}
+
+func TestInitCommand_AutoWithMissingGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldDir) }()
+
+	require.NoError(t, os.Chdir(tmpDir))
+
+	var buf bytes.Buffer
+	err = initCommand(&buf, false, true, "", false, "", false)
+	require.NoError(t, err)
+
+	content, err := os.ReadFile("zen.tool.go")
+	require.NoError(t, err)
+	contentStr := string(content)
+
+	// Locked sinks/sources are still included via the base import, but no
+	// optional sections should be emitted.
+	assert.NotContains(t, contentStr, "// Aikido Zen: Sources")
+	assert.NotContains(t, contentStr, "// Aikido Zen: Sinks")
+
+	output := buf.String()
+	assert.Contains(t, output, "Could not read go.mod for auto-detection")
+}
+
+func TestToSelectItems_MarksPreselectedAsDetected(t *testing.T) {
+	items := toSelectItems(sourceOptions, []string{"gin"})
+
+	var ginItem, chiItem *struct{ selected, detected bool }
+	for _, it := range items {
+		switch it.Name {
+		case "gin":
+			ginItem = &struct{ selected, detected bool }{it.Selected, it.Detected}
+		case "chi":
+			chiItem = &struct{ selected, detected bool }{it.Selected, it.Detected}
+		}
+	}
+
+	require.NotNil(t, ginItem)
+	assert.True(t, ginItem.selected, "gin should be preselected")
+	assert.True(t, ginItem.detected, "gin should be marked detected")
+
+	require.NotNil(t, chiItem)
+	assert.False(t, chiItem.selected, "chi should not be preselected")
+	assert.False(t, chiItem.detected, "chi should not be marked detected")
 }

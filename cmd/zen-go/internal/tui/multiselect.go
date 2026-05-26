@@ -11,8 +11,9 @@ import (
 type SelectItem struct {
 	Name        string
 	Description string
-	selected    bool
+	Selected    bool
 	Locked      bool
+	Detected    bool
 }
 
 type multiSelectModel struct {
@@ -62,7 +63,7 @@ func (m *multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case " ":
 			if m.cursor < len(m.items) {
-				m.items[m.cursor].selected = !m.items[m.cursor].selected
+				m.items[m.cursor].Selected = !m.items[m.cursor].Selected
 			}
 		case "enter":
 			m.done = true
@@ -144,7 +145,7 @@ func (m *multiSelectModel) renderItem(index int) string {
 	}
 
 	checkbox := "[ ]"
-	if item.selected || item.Locked {
+	if item.Selected || item.Locked {
 		checkbox = checkboxStyle.Render("[x]")
 	}
 
@@ -152,6 +153,9 @@ func (m *multiSelectModel) renderItem(index int) string {
 	desc := ""
 	if item.Description != "" {
 		desc = "  " + descStyle.Render(item.Description)
+	}
+	if item.Detected && !item.Locked {
+		desc += "  " + descStyle.Render("(detected in go.mod)")
 	}
 
 	if item.Locked {
@@ -182,7 +186,7 @@ func newMultiSelectModel(title, subtitle string, items []SelectItem) *multiSelec
 func (m *multiSelectModel) selectedItems() []string {
 	var selected []string
 	for _, item := range m.items {
-		if item.selected && !item.Locked {
+		if item.Selected && !item.Locked {
 			selected = append(selected, item.Name)
 		}
 	}
