@@ -17,15 +17,18 @@ func detectPathTraversal(filePath, userInput string, checkPathStart bool) bool {
 		return false
 	}
 
-	if !strings.Contains(strings.ToLower(filePath), strings.ToLower(userInput)) {
+	// Compared case-insensitively so apps that case-normalize the path
+	// before opening it cannot bypass detection on case-insensitive
+	// file systems (macOS APFS, Windows NTFS).
+	normalisedFilePath := strings.ToLower(filePath)
+	normalisedUserInput := strings.ToLower(userInput)
+
+	if !strings.Contains(normalisedFilePath, normalisedUserInput) {
 		// We ignore cases where the user input is not part of the file path.
-		// Compared case-insensitively so apps that case-normalize the path
-		// before opening it cannot bypass detection on case-insensitive
-		// file systems (macOS APFS, Windows NTFS).
 		return false
 	}
 
-	if containsUnsafePathParts(filePath) && containsUnsafePathParts(userInput) {
+	if containsUnsafePathParts(normalisedFilePath) && containsUnsafePathParts(normalisedUserInput) {
 		return true
 	}
 
