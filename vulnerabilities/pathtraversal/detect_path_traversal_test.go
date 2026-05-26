@@ -149,4 +149,20 @@ func TestDetectPathTraversal(t *testing.T) {
 		assert.True(t, detectPathTraversal("/var/a/b", "/var/a", true))
 		assert.True(t, detectPathTraversal("/var/a/b/test.txt", "/var/a", true))
 	})
+
+	t.Run("detects relative traversal when user input case differs from file path", func(t *testing.T) {
+		// App lowercases user input before opening the file: covers the
+		// bypass where filePath and userInput diverge in case.
+		assert.True(t, detectPathTraversal("/data/../etc/passwd", "../ETC/passwd", true))
+		assert.True(t, detectPathTraversal("/data/../etc/passwd", "../ETC/", true))
+		// App uppercases user input before opening the file.
+		assert.True(t, detectPathTraversal("/DATA/../ETC/PASSWD", "../etc/passwd", true))
+	})
+
+	t.Run("detects absolute paths when case differs", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("/etc/passwd", "/ETC/passwd", true))
+		assert.True(t, detectPathTraversal("/ETC/PASSWD", "/etc/passwd", true))
+		assert.True(t, detectPathTraversal("/Users/admin/secret", "/users/admin/secret", true))
+		assert.True(t, detectPathTraversal("/users/admin/secret", "/Users/admin/secret", true))
+	})
 }
