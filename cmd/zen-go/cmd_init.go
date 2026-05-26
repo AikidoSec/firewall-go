@@ -151,11 +151,15 @@ func initCommand(stdout io.Writer, force, auto bool, sourcesFlag string, sources
 		}
 	}
 
-	// Best-effort detection from go.mod. Failure to read/parse is non-fatal:
-	// we proceed with an empty detection set so init still works.
+	// Detect installed instrumentation targets from go.mod.
+	// Under --auto, any go.mod failure is fatal — the user explicitly delegated
+	// selection to go.mod. Otherwise we log and fall back to empty detection.
 	requires, modErr := parseGoModRequires("go.mod")
-	if modErr != nil && auto {
-		fmt.Fprintf(stdout, "⚠️  Could not read go.mod for auto-detection: %v\n", modErr)
+	if modErr != nil {
+		if auto {
+			return fmt.Errorf("--auto requires a readable go.mod: %w", modErr)
+		}
+		fmt.Fprintf(stdout, "⚠️  Skipping go.mod detection: %v\n", modErr)
 	}
 	detectedSources := detectInstalledOptions(sourceOptions, requires)
 	detectedSinks := detectInstalledOptions(sinkOptions, requires)

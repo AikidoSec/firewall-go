@@ -295,7 +295,7 @@ func TestInitCommand_AutoWithExplicitSourcesOverride(t *testing.T) {
 	assert.Contains(t, contentStr, "github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5")
 }
 
-func TestInitCommand_AutoWithMissingGoMod(t *testing.T) {
+func TestInitCommand_AutoWithMissingGoModFails(t *testing.T) {
 	tmpDir := t.TempDir()
 	oldDir, err := os.Getwd()
 	require.NoError(t, err)
@@ -305,19 +305,45 @@ func TestInitCommand_AutoWithMissingGoMod(t *testing.T) {
 
 	var buf bytes.Buffer
 	err = initCommand(&buf, false, true, "", false, "", false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--auto requires a readable go.mod")
+
+	// File should not be created when --auto can't honor the user's intent.
+	_, statErr := os.Stat("zen.tool.go")
+	assert.True(t, os.IsNotExist(statErr), "zen.tool.go should not be written on --auto failure")
+}
+
+func TestInitCommand_AutoWithMalformedGoModFails(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldDir) }()
+
+	require.NoError(t, os.Chdir(tmpDir))
+	require.NoError(t, os.WriteFile("go.mod", []byte("this is not a valid go.mod\n"), 0o600))
+
+	var buf bytes.Buffer
+	err = initCommand(&buf, false, true, "", false, "", false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--auto requires a readable go.mod")
+}
+
+func TestInitCommand_MalformedGoModWarnsWithFlags(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer func() { _ = os.Chdir(oldDir) }()
+
+	require.NoError(t, os.Chdir(tmpDir))
+	require.NoError(t, os.WriteFile("go.mod", []byte("this is not a valid go.mod\n"), 0o600))
+
+	// Use --sources/--sinks so we don't enter the interactive TUI. The warning
+	// path should fire regardless of --auto.
+	var buf bytes.Buffer
+	err = initCommand(&buf, false, false, "", true, "", true)
 	require.NoError(t, err)
 
-	content, err := os.ReadFile("zen.tool.go")
-	require.NoError(t, err)
-	contentStr := string(content)
-
-	// Locked sinks/sources are still included via the base import, but no
-	// optional sections should be emitted.
-	assert.NotContains(t, contentStr, "// Aikido Zen: Sources")
-	assert.NotContains(t, contentStr, "// Aikido Zen: Sinks")
-
-	output := buf.String()
-	assert.Contains(t, output, "Could not read go.mod for auto-detection")
+	assert.Contains(t, buf.String(), "Skipping go.mod detection")
 }
 
 func TestToSelectItems_MarksPreselectedAsDetected(t *testing.T) {
