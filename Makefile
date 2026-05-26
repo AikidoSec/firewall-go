@@ -39,6 +39,10 @@ benchmark:
 bench-os:
 	@TAGS=sink_bench ./scripts/bench-toolexec.sh ./benchmarks/sinks/os $(COUNT)
 
+.PHONY: bench-runtime
+bench-runtime: build-zen-go
+	@TAGS=runtime_bench ./scripts/bench-toolexec.sh ./benchmarks/runtime $(COUNT)
+
 .PHONY: test-main
 test-main:
 	@echo "Running main module tests with gotestsum"
