@@ -28,6 +28,11 @@ func Examine(operationName, path string) error {
 	})
 }
 
+// ExamineArg is the hook entry point for deferred path-building functions that take a single string path (e.g. Clean).
+func ExamineArg(operationName, arg string) error {
+	return ExamineDeferred(operationName, []string{arg})
+}
+
 // ExamineDeferred is the hook entry point for path-building functions that cannot return an error (e.g. Join).
 // Blocking is deferred until the result is used in a filesystem operation.
 func ExamineDeferred(operationName string, elems []string) error {
