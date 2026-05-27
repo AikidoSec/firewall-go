@@ -479,6 +479,69 @@ func TestScanWithOptions_ModuleIsPassedThrough(t *testing.T) {
 	}
 }
 
+func TestScanWithOptions_DeferReportingReturnsNilWhenDeferredAttackExists(t *testing.T) {
+	ip := "127.0.0.1"
+	args := mockScanArgs{Value: "test"}
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer config.SetBlocking(original)
+
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
+	reqCtx := request.GetContext(ctx)
+	reqCtx.SetDeferredAttack(&request.DeferredAttack{
+		Kind:  string(KindSQLInjection),
+		Error: &AttackDetectedError{Kind: KindSQLInjection, Operation: "testOp"},
+	})
+
+	err := ScanWithOptions(ctx, "testOp", mockVulnerability, args, ScanOptions{DeferReporting: true})
+	assert.NoError(t, err, "DeferReporting: true should return nil even when a deferred attack with a block error exists")
+}
+
+func TestScanWithOptions_NonDeferredBlocksAndReportsExistingDeferredAttack(t *testing.T) {
+	ip := "127.0.0.1"
+	args := mockScanArgs{Value: "test"}
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+	defer config.SetBlocking(original)
+
+	originalClient := agent.GetCloudClient()
+	client := &mockCloudClient{attackDetectedEventSent: make(chan struct{}, 1)}
+	agent.SetCloudClient(client)
+	t.Cleanup(func() { agent.SetCloudClient(originalClient) })
+
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/test",
+		RemoteAddress: &ip,
+	})
+
+	blockErr := &AttackDetectedError{Kind: KindSQLInjection, Operation: "testOp"}
+	reqCtx := request.GetContext(ctx)
+	reqCtx.SetDeferredAttack(&request.DeferredAttack{
+		Kind:  string(KindSQLInjection),
+		Error: blockErr,
+	})
+
+	err := ScanWithOptions(ctx, "testOp", mockVulnerability, args, ScanOptions{DeferReporting: false})
+	require.ErrorAs(t, err, new(*AttackDetectedError), "should return the block error from the deferred attack")
+
+	select {
+	case <-client.attackDetectedEventSent:
+		// reported correctly
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
 func TestScan_ShouldProtect(t *testing.T) {
 	ip := "127.0.0.1"
 	args := mockScanArgs{Value: "test"}

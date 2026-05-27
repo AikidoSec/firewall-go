@@ -60,12 +60,11 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 
 	deferredAttack := reqCtx.GetDeferredAttack()
 	if deferredAttack != nil && deferredAttack.Kind == string(vulnerability.Kind) {
-		reportDeferredAttack(ctx)
-
-		// If blocking is enabled, there will be an error to return to block the request
-		if deferredAttack.Error != nil {
+		if !opts.DeferReporting {
+			reportDeferredAttack(ctx)
 			return deferredAttack.Error
 		}
+		return nil
 	}
 
 	err := scanSource(ctx, "query", reqCtx.Query, operation, vulnerability, args, opts)

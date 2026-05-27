@@ -236,6 +236,104 @@ func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 	}
 }
 
+func TestChainedJoinsNoAttackWhenOpenFileNotCalled(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	request.WrapWithGLS(ctx, func() {
+		// First join stores a deferred attack
+		first := filepath.Join("/tmp/", "../test.txt")
+		// Second join should not prematurely report the deferred attack
+		_ = filepath.Join(first, "extra")
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		t.Fatal("attack should not be reported when os.OpenFile is not called")
+	case <-time.After(100 * time.Millisecond):
+		// Success - no attack event should be sent
+	}
+}
+
+func TestChainedJoinsAttackReportedOnceWhenOpenFileCalled(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	attackCount := int64(0)
+	client := newMockClient()
+	originalSend := client.sendAttackDetectedEvent
+	client.sendAttackDetectedEvent = func(agentInfo cloud.AgentInfo, req aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+		atomic.AddInt64(&attackCount, 1)
+		originalSend(agentInfo, req, attack)
+	}
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	request.WrapWithGLS(ctx, func() {
+		first := filepath.Join("/tmp/", "../test.txt")
+		second := filepath.Join(first, "extra")
+		_, _ = os.OpenFile(second, os.O_RDONLY, 0o600)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "GET", client.capturedRequest.Method)
+		assert.Equal(t, "127.0.0.1", client.capturedRequest.IPAddress)
+		assert.Equal(t, "http://example.com/route?path=../test.txt", client.capturedRequest.URL)
+		assert.Equal(t, "test", client.capturedRequest.Source)
+		assert.Equal(t, "/route", client.capturedRequest.Route)
+
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.False(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
+		assert.Equal(t, "path/filepath", client.capturedAttack.Module)
+		assert.Equal(t, ".path", client.capturedAttack.Path)
+		assert.Equal(t, map[string]string{"filename": "/tmp/../test.txt"}, client.capturedAttack.Metadata)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, int64(1), atomic.LoadInt64(&attackCount), "attack should only be reported once")
+}
+
 func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
