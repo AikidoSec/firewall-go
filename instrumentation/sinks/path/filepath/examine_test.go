@@ -12,6 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestExamineDeferred_ReturnsEarlyWhenDisabled(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	zen.SetDisabled(true)
+	require.True(t, zen.IsDisabled())
+
+	err := filepath.ExamineDeferred("filepath.Join", []string{"..", "etc", "passwd"})
+	require.NoError(t, err)
+}
+
 func TestExamine_ReturnsEarlyWhenDisabled(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
@@ -19,8 +30,31 @@ func TestExamine_ReturnsEarlyWhenDisabled(t *testing.T) {
 	zen.SetDisabled(true)
 	require.True(t, zen.IsDisabled())
 
-	err := filepath.Examine([]string{"..", "etc", "passwd"})
+	err := filepath.Examine("filepath.Walk", "/tmp/safe")
 	require.NoError(t, err)
+}
+
+func TestExamineDeferred_TracksJoinOperationStats(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	agent.Stats().GetAndClear()
+
+	_ = filepath.ExamineDeferred("filepath.Join", []string{"tmp", "file1.txt"})
+	_ = filepath.ExamineDeferred("filepath.Join", []string{"var", "log", "test.log"})
+	_ = filepath.ExamineDeferred("filepath.Join", []string{"home", "user", "data"})
+
+	stats := agent.Stats().GetAndClear()
+	require.Contains(t, stats.Operations, "filepath.Join")
+	require.Equal(t, 3, stats.Operations["filepath.Join"].Total, "should track 3 filepath.Join operations")
 }
 
 func TestExamine_TracksOperationStats(t *testing.T) {
@@ -35,16 +69,17 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	mockClient := testutil.NewMockCloudClient()
 	agent.SetCloudClient(mockClient)
 
-	// Clear stats before test
 	agent.Stats().GetAndClear()
 
-	// Join multiple paths
-	_ = filepath.Examine([]string{"tmp", "file1.txt"})
-	_ = filepath.Examine([]string{"var", "log", "test.log"})
-	_ = filepath.Examine([]string{"home", "user", "data"})
+	_ = filepath.Examine("filepath.Walk", "/tmp/a")
+	_ = filepath.Examine("filepath.WalkDir", "/tmp/b")
+	_ = filepath.Examine("filepath.Glob", "/tmp/*.txt")
 
-	// Get stats and verify operations were tracked
 	stats := agent.Stats().GetAndClear()
-	require.Contains(t, stats.Operations, "path/filepath.Join")
-	require.Equal(t, 3, stats.Operations["path/filepath.Join"].Total, "should track 3 filepath.Join operations")
+	require.Contains(t, stats.Operations, "filepath.Walk")
+	require.Equal(t, 1, stats.Operations["filepath.Walk"].Total)
+	require.Contains(t, stats.Operations, "filepath.WalkDir")
+	require.Equal(t, 1, stats.Operations["filepath.WalkDir"].Total)
+	require.Contains(t, stats.Operations, "filepath.Glob")
+	require.Equal(t, 1, stats.Operations["filepath.Glob"].Total)
 }

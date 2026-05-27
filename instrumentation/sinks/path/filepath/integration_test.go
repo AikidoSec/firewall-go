@@ -334,6 +334,251 @@ func TestChainedJoinsAttackReportedOnceWhenOpenFileCalled(t *testing.T) {
 	assert.Equal(t, int64(1), atomic.LoadInt64(&attackCount), "attack should only be reported once")
 }
 
+func TestGlobPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	require.NoError(t, os.Mkdir(sub, 0o755))
+
+	request.WrapWithGLS(ctx, func() {
+		target := filepath.Join(sub, "../sub")
+		_, _ = filepath.Glob(target + "/*")
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.False(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../sub", client.capturedAttack.Payload)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
+		assert.Equal(t, "path/filepath", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
+func TestWalkPathInjectionBlockIsDeferred(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	require.NoError(t, os.Mkdir(sub, 0o755))
+
+	request.WrapWithGLS(ctx, func() {
+		target := filepath.Join(sub, "../sub")
+
+		err := filepath.Walk(target, func(path string, info fs.FileInfo, err error) error {
+			return err
+		})
+
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.True(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../sub", client.capturedAttack.Payload)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
+		assert.Equal(t, "path/filepath", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
+func TestWalkPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	require.NoError(t, os.Mkdir(sub, 0o755))
+
+	request.WrapWithGLS(ctx, func() {
+		target := filepath.Join(sub, "../sub")
+
+		err := filepath.Walk(target, func(path string, info fs.FileInfo, err error) error {
+			return err
+		})
+		require.NoError(t, err)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.False(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../sub", client.capturedAttack.Payload)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
+		assert.Equal(t, "path/filepath", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
+func TestWalkDirPathInjectionBlockIsDeferred(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	require.NoError(t, os.Mkdir(sub, 0o755))
+
+	request.WrapWithGLS(ctx, func() {
+		target := filepath.Join(sub, "../sub")
+
+		err := filepath.WalkDir(target, func(path string, d fs.DirEntry, err error) error {
+			return err
+		})
+
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.True(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../sub", client.capturedAttack.Payload)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
+		assert.Equal(t, "path/filepath", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
+func TestWalkDirPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	require.NoError(t, os.Mkdir(sub, 0o755))
+
+	request.WrapWithGLS(ctx, func() {
+		target := filepath.Join(sub, "../sub")
+
+		err := filepath.WalkDir(target, func(path string, d fs.DirEntry, err error) error {
+			return err
+		})
+		require.NoError(t, err)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.False(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../sub", client.capturedAttack.Payload)
+		assert.Equal(t, "filepath.Join", client.capturedAttack.Operation)
+		assert.Equal(t, "path/filepath", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
 func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
