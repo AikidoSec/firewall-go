@@ -4,8 +4,21 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
 	"golang.org/x/mod/modfile"
 )
+
+func loadProjectGoMod() (map[string]struct{}, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	gomodPath := rules.FindGoMod(cwd)
+	if gomodPath == "" {
+		return nil, fmt.Errorf("go.mod not found in %s or any parent directory", cwd)
+	}
+	return parseGoModRequires(gomodPath)
+}
 
 // parseGoModRequires reads a go.mod file and returns the set of required
 // module paths (both direct and indirect). Returns an error if the file
