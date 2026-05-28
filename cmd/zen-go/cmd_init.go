@@ -154,7 +154,7 @@ func initCommand(stdout io.Writer, force, auto bool, sourcesFlag string, sources
 	// Detect installed instrumentation targets from go.mod.
 	// Under --auto, any go.mod failure is fatal — the user explicitly delegated
 	// selection to go.mod. Otherwise we log and fall back to empty detection.
-	requires, modErr := parseGoModRequires("go.mod")
+	requires, modErr := loadProjectGoMod()
 	if modErr != nil {
 		if auto {
 			return fmt.Errorf("--auto requires a readable go.mod: %w", modErr)
