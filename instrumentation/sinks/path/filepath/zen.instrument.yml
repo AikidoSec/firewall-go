@@ -3,7 +3,6 @@ meta:
   description: Protection from Local File Inclusion (LFI) Attacks.
 
 rules:
-  # Inject go:linkname declaration for Examine
   - id: filepath.Examine.linkname
     type: inject-decl
     package: path/filepath
@@ -12,11 +11,43 @@ rules:
       - github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath
     template: |
       //go:linkname __aikido_filepath_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath.Examine
-      func __aikido_filepath_Examine([]string) error
+      func __aikido_filepath_Examine(string, string) error
+      //go:linkname __aikido_filepath_ExamineDeferred github.com/AikidoSec/firewall-go/instrumentation/sinks/path/filepath.ExamineDeferred
+      func __aikido_filepath_ExamineDeferred(string, []string) error
 
   - id: filepath.Join
     type: prepend
     package: path/filepath
     function: Join
     template: |
-      __aikido_filepath_Examine({{ .Function.Argument 0 }})
+      __aikido_filepath_ExamineDeferred("filepath.Join", {{ .Function.Argument 0 }})
+
+  - id: filepath.Walk
+    type: prepend
+    package: path/filepath
+    function: Walk
+    template: |
+      _aikido_block := __aikido_filepath_Examine("filepath.Walk", {{ .Function.Argument 0 }})
+      if _aikido_block != nil {
+        return _aikido_block
+      }
+
+  - id: filepath.WalkDir
+    type: prepend
+    package: path/filepath
+    function: WalkDir
+    template: |
+      _aikido_block := __aikido_filepath_Examine("filepath.WalkDir", {{ .Function.Argument 0 }})
+      if _aikido_block != nil {
+        return _aikido_block
+      }
+
+  - id: filepath.Glob
+    type: prepend
+    package: path/filepath
+    function: Glob
+    template: |
+      _aikido_block := __aikido_filepath_Examine("filepath.Glob", {{ .Function.Argument 0 }})
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
