@@ -125,6 +125,12 @@ func TestIsSQLInjection(t *testing.T) {
 				   first_name,
 				   last_name
 			FROM users WHERE email_lowercase = '' or 1=1 -- a',`, "' OR 1=1 -- a"},
+
+		// it detects injection when user input has trailing whitespace (trimmed by DB driver)
+		{
+			"INSERT INTO pets (name, owner) VALUES ('x', 'dummy'), ('injected', 'hacker'); --', 'owner')",
+			"x', 'dummy'), ('injected', 'hacker'); --    ",
+		},
 	}
 
 	for _, tt := range tests {
