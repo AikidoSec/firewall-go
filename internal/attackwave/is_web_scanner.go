@@ -3,7 +3,7 @@ package attackwave
 import "github.com/AikidoSec/firewall-go/internal/request"
 
 // isWebScanner checks if the request looks like a web scanner or attack tool
-func isWebScanner(ctx *request.Context) bool {
+func isWebScanner(ctx *request.Context, statusCode int) bool {
 	if ctx == nil {
 		return false
 	}
@@ -12,7 +12,7 @@ func isWebScanner(ctx *request.Context) bool {
 		return true
 	}
 
-	if ctx.Path != "" && isSuspiciousPath(ctx.Path) {
+	if ctx.Path != "" && isSuspiciousPath(ctx.Path, statusCode) {
 		return true
 	}
 

@@ -78,7 +78,7 @@ func NewDetector(opts *Options) *Detector {
 
 // CheckRequest checks if the request is part of an attack wave
 // Returns true if an attack wave is detected and should be reported
-func (d *Detector) CheckRequest(ctx *request.Context) bool {
+func (d *Detector) CheckRequest(ctx *request.Context, statusCode int) bool {
 	if ctx == nil || ctx.RemoteAddress == nil || *ctx.RemoteAddress == "" {
 		return false
 	}
@@ -90,7 +90,7 @@ func (d *Detector) CheckRequest(ctx *request.Context) bool {
 		return false
 	}
 
-	if !isWebScanner(ctx) {
+	if !isWebScanner(ctx, statusCode) {
 		return false
 	}
 

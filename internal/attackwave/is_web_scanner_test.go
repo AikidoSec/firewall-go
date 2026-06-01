@@ -9,14 +9,16 @@ import (
 
 func TestIsWebScanner(t *testing.T) {
 	tests := []struct {
-		name     string
-		ctx      *request.Context
-		expected bool
+		name       string
+		ctx        *request.Context
+		statusCode int
+		expected   bool
 	}{
 		{
-			name:     "nil context",
-			ctx:      nil,
-			expected: false,
+			name:       "nil context",
+			ctx:        nil,
+			statusCode: 200,
+			expected:   false,
 		},
 		{
 			name: "normal request",
@@ -24,7 +26,8 @@ func TestIsWebScanner(t *testing.T) {
 				Method: "GET",
 				Path:   "/api/users",
 			},
-			expected: false,
+			statusCode: 200,
+			expected:   false,
 		},
 		{
 			name: "suspicious method",
@@ -32,7 +35,8 @@ func TestIsWebScanner(t *testing.T) {
 				Method: "BADMETHOD",
 				Path:   "/api/users",
 			},
-			expected: true,
+			statusCode: 200,
+			expected:   true,
 		},
 		{
 			name: "suspicious path - .env",
@@ -40,7 +44,8 @@ func TestIsWebScanner(t *testing.T) {
 				Method: "GET",
 				Path:   "/.env",
 			},
-			expected: true,
+			statusCode: 404,
+			expected:   true,
 		},
 		{
 			name: "suspicious path - .git",
@@ -48,7 +53,8 @@ func TestIsWebScanner(t *testing.T) {
 				Method: "GET",
 				Path:   "/.git/config",
 			},
-			expected: true,
+			statusCode: 404,
+			expected:   true,
 		},
 		{
 			name: "suspicious path - wp-config.php",
@@ -56,7 +62,8 @@ func TestIsWebScanner(t *testing.T) {
 				Method: "GET",
 				Path:   "/wp-config.php",
 			},
-			expected: true,
+			statusCode: 404,
+			expected:   true,
 		},
 		{
 			name: "suspicious query - SQL injection",
@@ -67,7 +74,8 @@ func TestIsWebScanner(t *testing.T) {
 					"q": {"SELECT * FROM users"},
 				},
 			},
-			expected: true,
+			statusCode: 200,
+			expected:   true,
 		},
 		{
 			name: "suspicious query - path traversal",
@@ -78,7 +86,8 @@ func TestIsWebScanner(t *testing.T) {
 					"path": {"../../etc/passwd"},
 				},
 			},
-			expected: true,
+			statusCode: 200,
+			expected:   true,
 		},
 		{
 			name: "normal query parameters",
@@ -90,13 +99,14 @@ func TestIsWebScanner(t *testing.T) {
 					"page": {"1"},
 				},
 			},
-			expected: false,
+			statusCode: 200,
+			expected:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := isWebScanner(tt.ctx)
+			result := isWebScanner(tt.ctx, tt.statusCode)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

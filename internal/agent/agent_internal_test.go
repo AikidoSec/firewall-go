@@ -196,7 +196,7 @@ func TestGetRateLimitingStatus(t *testing.T) {
 
 func TestCheckAttackWave(t *testing.T) {
 	t.Run("returns false for nil context", func(t *testing.T) {
-		result := CheckAttackWave(nil)
+		result := CheckAttackWave(nil, 200)
 		assert.False(t, result)
 	})
 
@@ -205,7 +205,7 @@ func TestCheckAttackWave(t *testing.T) {
 			Method: "GET",
 			URL:    "/clean",
 		}
-		result := CheckAttackWave(ctx)
+		result := CheckAttackWave(ctx, 200)
 		assert.False(t, result)
 	})
 }
@@ -252,7 +252,7 @@ func TestOnAttackWaveDetected(t *testing.T) {
 			Path:          "/.env",
 			URL:           "http://example.com/.env",
 		}
-		attackWaveDetector.CheckRequest(scanCtx)
+		attackWaveDetector.CheckRequest(scanCtx, 404)
 
 		ctx := &request.Context{
 			RemoteAddress: &ip,
