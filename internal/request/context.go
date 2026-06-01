@@ -30,6 +30,8 @@ type Context struct {
 
 	deferredAttack *DeferredAttack
 
+	suspiciousPayloadReported atomic.Bool
+
 	// outgoingRedirects tracks redirect chains for SSRF detection.
 	// When an outgoing request results in a redirect, the source hostname
 	// and port are recorded so that the SSRF check on the redirect target
@@ -165,4 +167,9 @@ func (ctx *Context) GetDeferredAttack() *DeferredAttack {
 	defer ctx.mu.RUnlock()
 
 	return ctx.deferredAttack
+}
+
+// MarkSuspiciousPayloadReported returns true the first time it's called, false after.
+func (ctx *Context) MarkSuspiciousPayloadReported() bool {
+	return ctx.suspiciousPayloadReported.CompareAndSwap(false, true)
 }
