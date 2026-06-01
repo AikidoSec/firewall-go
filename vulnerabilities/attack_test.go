@@ -30,6 +30,7 @@ func TestGetDisplayNameForAttackKind(t *testing.T) {
 		{"ShellInjection", KindShellInjection, "a shell injection"},
 		{"SSRF", KindSSRF, "a server-side request forgery"},
 		{"StoredSSRF", KindStoredSSRF, "a stored server-side request forgery"},
+		{"SuspiciousPayload", KindSuspiciousPayload, "a suspicious payload"},
 		{"Unknown", AttackKind("unknown"), "unknown attack type"},
 	}
 
@@ -337,6 +338,81 @@ func TestReportDeferredAttack(t *testing.T) {
 			t.Fatal("attack was reported more than once")
 		case <-time.After(100 * time.Millisecond):
 			// Success! No duplicate
+		}
+	})
+}
+
+func TestReportSuspiciousPayload(t *testing.T) {
+	require.NoError(t, agent.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{}))
+
+	newCtx := func() context.Context {
+		ip := "1.2.3.4"
+		req := httptest.NewRequest("POST", "/api/users", http.NoBody)
+		return request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/api/users",
+			RemoteAddress: &ip,
+		})
+	}
+
+	t.Run("does nothing when context has no request context", func(t *testing.T) {
+		client, cleanup := setupOnStoredSSRF(t)
+		t.Cleanup(cleanup)
+
+		reportSuspiciousPayload(context.Background(), "query", "database/sql", "body")
+
+		select {
+		case <-client.attackDetectedEventSent:
+			t.Fatal("attack should not be reported without request context")
+		case <-time.After(100 * time.Millisecond):
+		}
+	})
+
+	t.Run("reports a non-blocked suspicious payload attack", func(t *testing.T) {
+		client, cleanup := setupOnStoredSSRF(t)
+		t.Cleanup(cleanup)
+
+		// Blocking is enabled, but suspicious payloads are currently not blocked.
+		original := config.IsBlockingEnabled()
+		config.SetBlocking(true)
+		t.Cleanup(func() { config.SetBlocking(original) })
+
+		reportSuspiciousPayload(newCtx(), "query", "database/sql", "body")
+
+		select {
+		case <-client.attackDetectedEventSent:
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for attack event")
+		}
+
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		assert.Equal(t, string(KindSuspiciousPayload), client.capturedAttack.Kind)
+		assert.Equal(t, "body", client.capturedAttack.Source)
+		assert.Equal(t, "query", client.capturedAttack.Operation)
+		assert.Equal(t, "database/sql", client.capturedAttack.Module)
+		assert.False(t, client.capturedAttack.Blocked, "suspicious payload is currently not blocked")
+		assert.Equal(t, "1.2.3.4", client.capturedRequest.IPAddress)
+	})
+
+	t.Run("reports at most once per request", func(t *testing.T) {
+		client, cleanup := setupOnStoredSSRF(t)
+		t.Cleanup(cleanup)
+
+		ctx := newCtx()
+		reportSuspiciousPayload(ctx, "query", "database/sql", "body")
+		reportSuspiciousPayload(ctx, "exec", "os/exec", "body")
+
+		select {
+		case <-client.attackDetectedEventSent:
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for first attack event")
+		}
+
+		select {
+		case <-client.attackDetectedEventSent:
+			t.Fatal("suspicious payload reported more than once for one request")
+		case <-time.After(100 * time.Millisecond):
 		}
 	})
 }

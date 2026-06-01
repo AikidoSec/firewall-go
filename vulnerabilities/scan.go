@@ -107,7 +107,12 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 }
 
 func scanSource[T any](ctx context.Context, source string, sourceData any, operation string, vulnerability Vulnerability[T], args T, opts ScanOptions) error {
-	userInputMap := extractStringsFromUserInput(sourceData, []pathPart{})
+	userInputMap, truncated := extractStringsFromUserInput(sourceData, []pathPart{})
+
+	// Input too deep to fully inspect is itself suspicious.
+	if truncated {
+		reportSuspiciousPayload(ctx, operation, opts.Module, source)
+	}
 
 	for userInput, path := range userInputMap {
 		results, err := vulnerability.ScanFunction(userInput, args)
