@@ -17,7 +17,7 @@ const (
 func detectSQLInjection(query string, userInput string, dialect int) int {
 	// Lowercase versions of query and user input
 	queryLowercase := strings.ToLower(query)
-	userInputLowercase := strings.ToLower(userInput)
+	userInputLowercase := strings.TrimSpace(strings.ToLower(userInput))
 
 	if shouldReturnEarly(queryLowercase, userInputLowercase) {
 		return sqlInjectionSafe
