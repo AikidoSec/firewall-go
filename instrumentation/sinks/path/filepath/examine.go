@@ -28,12 +28,7 @@ func Examine(operationName, path string) error {
 	})
 }
 
-// ExamineDeferredArg is the hook entry point for deferred path-building functions that take a single string path (e.g. Clean).
-func ExamineDeferredArg(operationName, arg string) error {
-	return ExamineDeferred(operationName, []string{arg})
-}
-
-// ExamineDeferred is the hook entry point for path-building functions that cannot return an error (e.g. Join).
+// ExamineDeferred is the hook entry point for path-building functions that cannot return an error (e.g. Join, Clean).
 // Blocking is deferred until the result is used in a filesystem operation.
 func ExamineDeferred(operationName string, elems []string) error {
 	if zen.IsDisabled() {

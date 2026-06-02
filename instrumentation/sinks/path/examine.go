@@ -11,12 +11,7 @@ import (
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
-// ExamineDeferredArg is the hook entry point for functions that take a single string path (e.g. Clean).
-func ExamineDeferredArg(operationName, arg string) error {
-	return Examine(operationName, []string{arg})
-}
-
-func Examine(operationName string, args []string) error {
+func ExamineDeferred(operationName string, args []string) error {
 	if zen.IsDisabled() {
 		return nil
 	}

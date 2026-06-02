@@ -3,7 +3,7 @@ meta:
   description: Protection from Local File Inclusion (LFI) Attacks.
 
 rules:
-  # Inject go:linkname declarations for Examine and ExamineDeferredArg
+  # Inject go:linkname declaration for ExamineDeferred
   - id: path.Examine.linkname
     type: inject-decl
     package: path
@@ -11,21 +11,19 @@ rules:
     links:
       - github.com/AikidoSec/firewall-go/instrumentation/sinks/path
     template: |
-      //go:linkname __aikido_path_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/path.Examine
-      func __aikido_path_Examine(string, []string) error
-      //go:linkname __aikido_path_ExamineDeferredArg github.com/AikidoSec/firewall-go/instrumentation/sinks/path.ExamineDeferredArg
-      func __aikido_path_ExamineDeferredArg(string, string) error
+      //go:linkname __aikido_path_ExamineDeferred github.com/AikidoSec/firewall-go/instrumentation/sinks/path.ExamineDeferred
+      func __aikido_path_ExamineDeferred(string, []string) error
 
   - id: path.Join
     type: prepend
     package: path
     function: Join
     template: |
-      __aikido_path_Examine("path.Join", {{ .Function.Argument 0 }})
+      __aikido_path_ExamineDeferred("path.Join", {{ .Function.Argument 0 }})
 
   - id: path.Clean
     type: prepend
     package: path
     function: Clean
     template: |
-      __aikido_path_ExamineDeferredArg("path.Clean", {{ .Function.Argument 0 }})
+      __aikido_path_ExamineDeferred("path.Clean", []string{ {{ .Function.Argument 0 }} })
