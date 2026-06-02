@@ -19,10 +19,10 @@ func TestExamine_ReturnsEarlyWhenDisabled(t *testing.T) {
 	zen.SetDisabled(true)
 	require.True(t, zen.IsDisabled())
 
-	err := path.Examine("path.Join", []string{"..", "etc", "passwd"})
+	err := path.ExamineDeferred("path.Join", []string{"..", "etc", "passwd"})
 	require.NoError(t, err)
 
-	err = path.ExamineDeferredArg("path.Clean", "../etc/passwd")
+	err = path.ExamineDeferred("path.Clean", []string{"../etc/passwd"})
 	require.NoError(t, err)
 }
 
@@ -40,9 +40,9 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 
 	agent.Stats().GetAndClear()
 
-	_ = path.Examine("path.Join", []string{"tmp", "file1.txt"})
-	_ = path.Examine("path.Join", []string{"var", "log", "test.log"})
-	_ = path.Examine("path.Join", []string{"home", "user", "data"})
+	_ = path.ExamineDeferred("path.Join", []string{"tmp", "file1.txt"})
+	_ = path.ExamineDeferred("path.Join", []string{"var", "log", "test.log"})
+	_ = path.ExamineDeferred("path.Join", []string{"home", "user", "data"})
 
 	stats := agent.Stats().GetAndClear()
 	require.Contains(t, stats.Operations, "path.Join")
@@ -63,8 +63,8 @@ func TestExamine_TracksCleanOperationStats(t *testing.T) {
 
 	agent.Stats().GetAndClear()
 
-	_ = path.Examine("path.Clean", []string{"/tmp/file.txt"})
-	_ = path.Examine("path.Clean", []string{"/var/log/test.log"})
+	_ = path.ExamineDeferred("path.Clean", []string{"/tmp/file.txt"})
+	_ = path.ExamineDeferred("path.Clean", []string{"/var/log/test.log"})
 
 	stats := agent.Stats().GetAndClear()
 	require.Contains(t, stats.Operations, "path.Clean")
