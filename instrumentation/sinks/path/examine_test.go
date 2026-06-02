@@ -22,7 +22,7 @@ func TestExamine_ReturnsEarlyWhenDisabled(t *testing.T) {
 	err := path.Examine("path.Join", []string{"..", "etc", "passwd"})
 	require.NoError(t, err)
 
-	err = path.ExamineArg("path.Clean", "../etc/passwd")
+	err = path.ExamineDeferredArg("path.Clean", "../etc/passwd")
 	require.NoError(t, err)
 }
 

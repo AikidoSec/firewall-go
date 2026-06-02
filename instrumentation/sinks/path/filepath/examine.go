@@ -28,8 +28,8 @@ func Examine(operationName, path string) error {
 	})
 }
 
-// ExamineArg is the hook entry point for deferred path-building functions that take a single string path (e.g. Clean).
-func ExamineArg(operationName, arg string) error {
+// ExamineDeferredArg is the hook entry point for deferred path-building functions that take a single string path (e.g. Clean).
+func ExamineDeferredArg(operationName, arg string) error {
 	return ExamineDeferred(operationName, []string{arg})
 }
 
