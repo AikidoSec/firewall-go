@@ -157,8 +157,8 @@ func OnMiddlewareInstalled() {
 	stateCollector.SetMiddlewareInstalled(true)
 }
 
-func CheckAttackWave(ctx *request.Context) bool {
-	return attackWaveDetector.CheckRequest(ctx)
+func CheckAttackWave(ctx *request.Context, statusCode int) bool {
+	return attackWaveDetector.CheckRequest(ctx, statusCode)
 }
 
 type DetectedAttackWave struct {

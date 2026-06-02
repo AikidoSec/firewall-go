@@ -16,7 +16,7 @@ func TestDetectorCheck(t *testing.T) {
 			AttackWaveTimeFrame: 60 * time.Second,
 		})
 
-		result := detector.CheckRequest(nil)
+		result := detector.CheckRequest(nil, 404)
 		assert.False(t, result)
 	})
 
@@ -27,7 +27,7 @@ func TestDetectorCheck(t *testing.T) {
 		})
 
 		ctx := &request.Context{}
-		result := detector.CheckRequest(ctx)
+		result := detector.CheckRequest(ctx, 404)
 		assert.False(t, result)
 	})
 
@@ -44,7 +44,7 @@ func TestDetectorCheck(t *testing.T) {
 			Path:          "/api/users",
 		}
 
-		result := detector.CheckRequest(ctx)
+		result := detector.CheckRequest(ctx, 404)
 		assert.False(t, result)
 	})
 
@@ -62,14 +62,14 @@ func TestDetectorCheck(t *testing.T) {
 		}
 
 		// First two checks should return false
-		result := detector.CheckRequest(ctx)
+		result := detector.CheckRequest(ctx, 404)
 		assert.False(t, result, "First suspicious request should not trigger")
 
-		result = detector.CheckRequest(ctx)
+		result = detector.CheckRequest(ctx, 404)
 		assert.False(t, result, "Second suspicious request should not trigger")
 
 		// Third check should return true (threshold reached)
-		result = detector.CheckRequest(ctx)
+		result = detector.CheckRequest(ctx, 404)
 		assert.True(t, result, "Third suspicious request should trigger attack wave")
 	})
 
@@ -93,18 +93,18 @@ func TestDetectorCheck(t *testing.T) {
 		}
 
 		// IP1: 2 requests
-		detector.CheckRequest(ctx1)
-		detector.CheckRequest(ctx1)
+		detector.CheckRequest(ctx1, 404)
+		detector.CheckRequest(ctx1, 404)
 
 		// IP2: 2 requests
-		detector.CheckRequest(ctx2)
-		detector.CheckRequest(ctx2)
+		detector.CheckRequest(ctx2, 404)
+		detector.CheckRequest(ctx2, 404)
 
 		// Neither should trigger yet
-		result1 := detector.CheckRequest(ctx1)
+		result1 := detector.CheckRequest(ctx1, 404)
 		assert.True(t, result1, "IP1 should trigger on third request")
 
-		result2 := detector.CheckRequest(ctx2)
+		result2 := detector.CheckRequest(ctx2, 404)
 		assert.True(t, result2, "IP2 should trigger on third request")
 	})
 
@@ -122,13 +122,13 @@ func TestDetectorCheck(t *testing.T) {
 		}
 
 		// Trigger attack wave
-		detector.CheckRequest(ctx)
-		result := detector.CheckRequest(ctx)
+		detector.CheckRequest(ctx, 404)
+		result := detector.CheckRequest(ctx, 404)
 		assert.True(t, result, "Should trigger attack wave")
 
 		// Immediate subsequent check should return false (even with more suspicious requests)
 		for i := 0; i < 3; i++ {
-			result = detector.CheckRequest(ctx)
+			result = detector.CheckRequest(ctx, 404)
 			assert.False(t, result, "Should not trigger again immediately (attempt %d)", i+1)
 		}
 
@@ -137,7 +137,7 @@ func TestDetectorCheck(t *testing.T) {
 
 		// After waiting, the next suspicious request should trigger again
 		// Since the counter is still incrementing during the waiting period
-		result = detector.CheckRequest(ctx)
+		result = detector.CheckRequest(ctx, 404)
 		assert.True(t, result, "Should trigger again after waiting")
 	})
 
@@ -155,9 +155,9 @@ func TestDetectorCheck(t *testing.T) {
 			URL:           "http://example.com/.env",
 		}
 
-		detector.CheckRequest(ctx)
-		detector.CheckRequest(ctx)
-		detector.CheckRequest(ctx)
+		detector.CheckRequest(ctx, 404)
+		detector.CheckRequest(ctx, 404)
+		detector.CheckRequest(ctx, 404)
 
 		samples := detector.GetSamplesForIP(ip)
 		assert.Len(t, samples, 1, "Should have 1 unique sample")
@@ -180,8 +180,8 @@ func TestDetectorCheck(t *testing.T) {
 			Path:          "/.env",
 			URL:           "http://example.com/.env",
 		}
-		detector.CheckRequest(ctx1)
-		detector.CheckRequest(ctx1)
+		detector.CheckRequest(ctx1, 404)
+		detector.CheckRequest(ctx1, 404)
 
 		// Different request
 		ctx2 := &request.Context{
@@ -190,7 +190,7 @@ func TestDetectorCheck(t *testing.T) {
 			Path:          "/.git/config",
 			URL:           "http://example.com/.git/config",
 		}
-		detector.CheckRequest(ctx2)
+		detector.CheckRequest(ctx2, 404)
 
 		samples := detector.GetSamplesForIP(ip)
 		assert.Len(t, samples, 2, "Should have 2 unique samples")
@@ -213,7 +213,7 @@ func TestDetectorCheck(t *testing.T) {
 				Path:          path,
 				URL:           "http://example.com" + path,
 			}
-			detector.CheckRequest(ctx)
+			detector.CheckRequest(ctx, 404)
 		}
 
 		samples := detector.GetSamplesForIP(ip)

@@ -4,8 +4,25 @@ import (
 	"strings"
 )
 
-// isSuspiciousPath checks if the path contains patterns commonly targeted by scanners
-func isSuspiciousPath(path string) bool {
+// foreignExtensions are extensions that a Go app wouldn't natively serve.
+// Requests to these extensions are only counted as scan hits when the response
+// is 404 — a 200 may indicate the app proxies to another backend.
+var foreignExtensions = map[string]bool{
+	"php":   true,
+	"php3":  true,
+	"php4":  true,
+	"php5":  true,
+	"phtml": true,
+	"java":  true,
+	"jsp":   true,
+	"jspx":  true,
+}
+
+// isSuspiciousPath checks if the path contains patterns commonly targeted by scanners.
+// statusCode is required to disambiguate foreign-extension paths: they are only
+// suspicious when the server returns 404 (a 200 might mean the app proxies to a
+// PHP/Java backend).
+func isSuspiciousPath(path string, statusCode int) bool {
 	normalized := strings.ToLower(path)
 	segments := strings.Split(normalized, "/")
 
@@ -26,6 +43,9 @@ func isSuspiciousPath(path string) bool {
 		if len(parts) > 1 {
 			ext := parts[len(parts)-1]
 			if suspiciousExtensions[ext] {
+				return true
+			}
+			if foreignExtensions[ext] && statusCode == 404 {
 				return true
 			}
 		}
