@@ -2,6 +2,7 @@ package ssrf
 
 import (
 	"github.com/AikidoSec/firewall-go/internal/agent/ipaddr"
+	"github.com/AikidoSec/firewall-go/internal/normalize"
 )
 
 var imdsIPList = ipaddr.BuildMatchList("imds", "IMDS IP addresses", []string{
@@ -27,7 +28,7 @@ func isIMDSIPAddress(ip string) bool {
 // isTrustedHostname checks if the hostname is a trusted cloud metadata hostname
 // that should not be flagged as stored SSRF.
 func isTrustedHostname(hostname string) bool {
-	return trustedHostnames[hostname]
+	return trustedHostnames[normalize.Hostname(hostname)]
 }
 
 // resolvesToIMDSIP checks whether any of the resolved IPs are IMDS addresses.

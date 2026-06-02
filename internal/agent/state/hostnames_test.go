@@ -106,3 +106,17 @@ func TestStoreDomain(t *testing.T) {
 		})
 	}
 }
+
+func TestStoreHostnameNormalizesTrailingDot(t *testing.T) {
+	c := NewCollector()
+
+	c.StoreHostname("example.com.", 443)
+	c.StoreHostname("example.com", 443)
+
+	result := c.GetAndClearHostnames()
+
+	require.Len(t, result, 1)
+	assert.Equal(t, "example.com", result[0].URL)
+	assert.Equal(t, uint32(443), result[0].Port)
+	assert.Equal(t, uint64(2), result[0].Hits)
+}

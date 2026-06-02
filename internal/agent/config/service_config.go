@@ -10,6 +10,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/globals"
 	"github.com/AikidoSec/firewall-go/internal/agent/ipaddr"
 	"github.com/AikidoSec/firewall-go/internal/log"
+	"github.com/AikidoSec/firewall-go/internal/normalize"
 )
 
 var (
@@ -351,6 +352,8 @@ func IsIPBypassed(ip string) bool {
 func ShouldBlockHostname(hostname string) bool {
 	serviceConfigMutex.RLock()
 	defer serviceConfigMutex.RUnlock()
+
+	hostname = normalize.Hostname(hostname)
 
 	// Check if it's in the known list
 	for _, domain := range serviceConfig.Domains {

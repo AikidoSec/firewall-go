@@ -1,10 +1,15 @@
 package state
 
-import "github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+import (
+	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/normalize"
+)
 
 func (c *Collector) StoreHostname(domain string, port uint32) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	domain = normalize.Hostname(domain)
 
 	if _, ok := c.hostnames[domain]; !ok {
 		c.hostnames[domain] = make(map[uint32]uint64)

@@ -154,6 +154,20 @@ func TestFindHostnameInUserInput(t *testing.T) {
 	t.Run("returns false for single character user input", func(t *testing.T) {
 		assert.False(t, findHostnameInUserInput("x", "localhost", 0))
 	})
+
+	t.Run("normalizes trailing dot in hostname argument", func(t *testing.T) {
+		assert.True(t, findHostnameInUserInput("http://example.com", "example.com.", 0))
+		assert.True(t, findHostnameInUserInput("example.com", "example.com.", 0))
+	})
+
+	t.Run("normalizes trailing dot in user input", func(t *testing.T) {
+		assert.True(t, findHostnameInUserInput("http://example.com.", "example.com", 0))
+		assert.True(t, findHostnameInUserInput("example.com.", "example.com", 0))
+	})
+
+	t.Run("normalizes trailing dot on both sides", func(t *testing.T) {
+		assert.True(t, findHostnameInUserInput("http://example.com.", "example.com.", 0))
+	})
 }
 
 func TestGetPortFromURL(t *testing.T) {

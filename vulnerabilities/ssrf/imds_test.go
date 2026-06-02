@@ -36,6 +36,11 @@ func TestIsTrustedHostname(t *testing.T) {
 	assert.True(t, isTrustedHostname("metadata.goog"))
 	assert.False(t, isTrustedHostname("example.com"))
 	assert.False(t, isTrustedHostname(""))
+
+	// Normalizes trailing dot and case before matching
+	assert.True(t, isTrustedHostname("metadata.google.internal."))
+	assert.True(t, isTrustedHostname("METADATA.GOOGLE.INTERNAL"))
+	assert.False(t, isTrustedHostname("another.hostname"))
 }
 
 func TestResolvesToIMDSIP(t *testing.T) {
