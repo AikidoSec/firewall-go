@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/text/unicode/norm"
+	"github.com/AikidoSec/firewall-go/internal/normalize"
 )
 
 func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
@@ -37,12 +37,9 @@ func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 		// http://127.0.0.1:4000:/ where a trailing colon causes
 		// Hostname() to misparse (it splits on the last colon).
 		parsed.Host = strings.TrimRight(parsed.Host, ":")
-		parsedHostname := strings.ToLower(parsed.Hostname())
-		// NFKC-normalize to handle Unicode confusables (e.g. ⓛ → l).
-		// Go's HTTP transport applies IDNA processing (which includes NFKC)
-		// before dialing, so the hostname we receive at DialContext level is
-		// already normalized. We must normalize the user input side to match.
-		parsedHostname = norm.NFKC.String(parsedHostname)
+		// Canonicalize to match the dialed hostname, which Go's HTTP transport
+		// has already IDNA-processed before reaching DialContext.
+		parsedHostname := normalize.Hostname(parsed.Hostname())
 		parsedPort := getPortFromURL(parsed)
 
 		// Skip if both ports are set, in valid range, and don't match
@@ -64,14 +61,14 @@ func getHostnameOptions(hostname string) []string {
 
 	// Try parsing as-is (wrapped in a URL)
 	if parsed, err := url.Parse("http://" + hostname); err == nil && parsed.Hostname() != "" {
-		options = append(options, strings.ToLower(parsed.Hostname()))
+		options = append(options, normalize.Hostname(parsed.Hostname()))
 	}
 
 	// Try wrapping in brackets for IPv6 addresses like ::1
 	if parsed, err := url.Parse("http://[" + hostname + "]"); err == nil && parsed.Hostname() != "" {
-		lower := strings.ToLower(parsed.Hostname())
-		if len(options) == 0 || options[0] != lower {
-			options = append(options, lower)
+		normalized := normalize.Hostname(parsed.Hostname())
+		if len(options) == 0 || options[0] != normalized {
+			options = append(options, normalized)
 		}
 	}
 

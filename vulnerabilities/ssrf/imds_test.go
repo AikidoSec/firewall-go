@@ -3,6 +3,7 @@ package ssrf
 import (
 	"testing"
 
+	"github.com/AikidoSec/firewall-go/internal/normalize"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,6 +37,19 @@ func TestIsTrustedHostname(t *testing.T) {
 	assert.True(t, isTrustedHostname("metadata.goog"))
 	assert.False(t, isTrustedHostname("example.com"))
 	assert.False(t, isTrustedHostname(""))
+
+	// Normalizes trailing dot and case before matching
+	assert.True(t, isTrustedHostname("metadata.google.internal."))
+	assert.True(t, isTrustedHostname("METADATA.GOOGLE.INTERNAL"))
+	assert.False(t, isTrustedHostname("another.hostname"))
+}
+
+// isTrustedHostname normalizes its input before looking it up, so the map keys
+// must already be in normalized form or they would never match.
+func TestTrustedHostnamesAreNormalized(t *testing.T) {
+	for h := range trustedHostnames {
+		assert.Equal(t, normalize.Hostname(h), h, "trusted hostname must be stored normalized")
+	}
 }
 
 func TestResolvesToIMDSIP(t *testing.T) {

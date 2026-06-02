@@ -903,6 +903,25 @@ func TestShouldBlockHostname(t *testing.T) {
 		assert.False(t, ShouldBlockHostname("allowed.com"))
 	})
 
+	t.Run("normalizes trailing dot before matching", func(t *testing.T) {
+		resetServiceConfig()
+
+		cloudConfig := &aikido_types.CloudConfigData{
+			ConfigUpdatedAt:          time.Now().UnixMilli(),
+			BlockNewOutgoingRequests: true,
+			Domains: []aikido_types.OutboundDomain{
+				{Hostname: "malicious.com", Mode: "block"},
+				{Hostname: "allowed.com", Mode: "allow"},
+			},
+		}
+
+		UpdateServiceConfig(cloudConfig, nil)
+
+		assert.True(t, ShouldBlockHostname("malicious.com."))
+		assert.False(t, ShouldBlockHostname("allowed.com."))
+		assert.True(t, ShouldBlockHostname("unknown.com."))
+	})
+
 	t.Run("blocks hostname when BlockNewOutgoingRequests is true and hostname not in domains", func(t *testing.T) {
 		resetServiceConfig()
 

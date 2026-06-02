@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/AikidoSec/firewall-go/internal/normalize"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 )
@@ -62,9 +63,9 @@ func recordRedirect(source *url.URL, location string, reqCtx *request.Context) {
 	dest = source.ResolveReference(dest)
 
 	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
-		SourceHostname: source.Hostname(),
+		SourceHostname: normalize.Hostname(source.Hostname()),
 		SourcePort:     portFromURL(source),
-		DestHostname:   dest.Hostname(),
+		DestHostname:   normalize.Hostname(dest.Hostname()),
 		DestPort:       portFromURL(dest),
 	})
 }

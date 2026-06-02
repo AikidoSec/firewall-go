@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/AikidoSec/firewall-go/internal/normalize"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/ssrf"
@@ -30,6 +31,7 @@ func ssrfDialContext(originalDialContext func(ctx context.Context, network, addr
 		if err != nil {
 			return conn, nil
 		}
+		host = normalize.Hostname(host)
 
 		remoteIP, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 		if err != nil {

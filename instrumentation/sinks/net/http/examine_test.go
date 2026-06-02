@@ -83,6 +83,29 @@ func TestExamine_IDNANormalisationForBlocking(t *testing.T) {
 	require.ErrorAs(t, Examine(mixedCaseReq), &blockedErr, "mixed case should be blocked")
 }
 
+func TestExamine_TrailingDotDoesNotBypassBlocking(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		Domains: []aikido_types.OutboundDomain{
+			{Hostname: "blocked.com", Mode: "block"},
+		},
+	}, nil)
+
+	var blockedErr *zen.OutboundConnectionBlocked
+
+	req, _ := http.NewRequest("GET", "http://blocked.com./", http.NoBody)
+	require.ErrorAs(t, Examine(req), &blockedErr, "trailing dot should not bypass block list")
+}
+
 func TestExamine_TracksOperationStats(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
