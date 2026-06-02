@@ -706,6 +706,55 @@ func TestCleanPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 	}
 }
 
+// Absolute payload with no "../" forces detection through startsWithUnsafePath,
+// which itself calls the instrumented filepath.Clean.
+func TestCleanAbsolutePathStartIsDeferred(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=/etc/passwd", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	request.WrapWithGLS(ctx, func() {
+		path := filepath.Clean("/etc/passwd")
+		_, err := os.OpenFile(path, os.O_RDONLY, 0o600)
+
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.True(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "/etc/passwd", client.capturedAttack.Payload)
+		assert.Equal(t, "filepath.Clean", client.capturedAttack.Operation)
+		assert.Equal(t, "path/filepath", client.capturedAttack.Module)
+		assert.Equal(t, map[string]string{
+			"filename": "/etc/passwd",
+		}, client.capturedAttack.Metadata)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
 func TestAbsRelativePathInjectionBlockIsDeferred(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
