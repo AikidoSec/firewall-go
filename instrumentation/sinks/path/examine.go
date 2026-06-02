@@ -11,8 +11,8 @@ import (
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
-// ExamineArg is the hook entry point for functions that take a single string path (e.g. Clean).
-func ExamineArg(operationName, arg string) error {
+// ExamineDeferredArg is the hook entry point for functions that take a single string path (e.g. Clean).
+func ExamineDeferredArg(operationName, arg string) error {
 	return Examine(operationName, []string{arg})
 }
 

@@ -33,7 +33,7 @@ func TestExamine_ReturnsEarlyWhenDisabled(t *testing.T) {
 	err := filepath.Examine("filepath.Walk", "/tmp/safe")
 	require.NoError(t, err)
 
-	err = filepath.ExamineArg("filepath.Clean", "../etc/passwd")
+	err = filepath.ExamineDeferredArg("filepath.Clean", "../etc/passwd")
 	require.NoError(t, err)
 }
 
@@ -87,7 +87,7 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	require.Equal(t, 1, stats.Operations["filepath.Glob"].Total)
 }
 
-func TestExamineArg_TracksCleanOperationStats(t *testing.T) {
+func TestExamineDeferredArg_TracksCleanOperationStats(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
 
@@ -101,8 +101,8 @@ func TestExamineArg_TracksCleanOperationStats(t *testing.T) {
 
 	agent.Stats().GetAndClear()
 
-	_ = filepath.ExamineArg("filepath.Clean", "/tmp/file.txt")
-	_ = filepath.ExamineArg("filepath.Clean", "/var/log/test.log")
+	_ = filepath.ExamineDeferredArg("filepath.Clean", "/tmp/file.txt")
+	_ = filepath.ExamineDeferredArg("filepath.Clean", "/var/log/test.log")
 
 	stats := agent.Stats().GetAndClear()
 	require.Contains(t, stats.Operations, "filepath.Clean")
