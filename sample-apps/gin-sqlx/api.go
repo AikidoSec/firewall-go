@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 )
@@ -81,6 +82,16 @@ func defineAPIRoutes(r *gin.Engine, db *DatabaseHelper) {
 
 	r.GET("/api/read", func(c *gin.Context) {
 		filePath := c.Query("path")
+		content, err := readFile(filePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.String(http.StatusOK, content)
+	})
+
+	r.GET("/api/read_double", func(c *gin.Context) {
+		filePath, _ := url.QueryUnescape(c.Query("path"))
 		content, err := readFile(filePath)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

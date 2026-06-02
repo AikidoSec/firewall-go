@@ -230,6 +230,25 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		expected := map[string]string{
 			"header":                    ".",
 			"/;ping%20localhost;.e30=.": ".header",
+			"/;ping localhost;.e30=.":   ".header",
+		}
+
+		actual := extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
+	t.Run("it adds URL-decoded variants", func(t *testing.T) {
+		obj := map[string]interface{}{
+			"path": "%252e%252e%252fetc%252fpasswd",
+		}
+
+		expected := map[string]string{
+			"path":                          ".",
+			"%252e%252e%252fetc%252fpasswd": ".path",
+			"%2e%2e%2fetc%2fpasswd":         ".path",
+			"../etc/passwd":                 ".path",
 		}
 
 		actual := extractStringsFromUserInput(obj, []pathPart{})
