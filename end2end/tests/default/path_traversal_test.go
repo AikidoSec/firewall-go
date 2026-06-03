@@ -52,4 +52,34 @@ func TestPathTraversal(t *testing.T) {
 		defer resp.Body.Close()
 		assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
 	})
+
+	t.Run("blocks double-encoded path traversal attack", func(t *testing.T) {
+		// /api/read_double URL-decodes the query value again before opening the
+		// file, so the firewall only sees %2e%2e%2f... and must decode further.
+		resp, err := client.Get(appURL() + "/api/read_double?path=%252e%252e%252f%252e%252e%252f%252e%252e%252fetc%252fpasswd")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+		event := waitForEvent(t, 5*time.Second, func(ev map[string]any) bool {
+			if ev["type"] != "detected_attack" {
+				return false
+			}
+			attack, ok := ev["attack"].(map[string]any)
+			return ok && attack["kind"] == "path_traversal"
+		})
+
+		attack, ok := event["attack"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "path_traversal", attack["kind"])
+		assert.Equal(t, true, attack["blocked"])
+		assert.Equal(t, "os", attack["module"])
+	})
+
+	t.Run("allows normal requests on double-decode endpoint", func(t *testing.T) {
+		resp, err := client.Get(appURL() + "/api/read_double?path=home.txt")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
+	})
 }

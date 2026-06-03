@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -88,6 +89,16 @@ func defineAPIRoutes(r *chi.Mux, db *DatabaseHelper) {
 
 	r.Get("/api/read", func(w http.ResponseWriter, r *http.Request) {
 		filePath := r.URL.Query().Get("path")
+		content, err := readFile(filePath)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		_, _ = w.Write([]byte(content)) // #nosec G705 - intentional vulnerability, sample app only
+	})
+
+	r.Get("/api/read_double", func(w http.ResponseWriter, r *http.Request) {
+		filePath, _ := url.QueryUnescape(r.URL.Query().Get("path"))
 		content, err := readFile(filePath)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

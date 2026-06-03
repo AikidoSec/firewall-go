@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 type CreateRequest struct {
@@ -96,6 +97,16 @@ func readFileHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(content)) // #nosec G705 - intentional vulnerability, sample app only
 }
 
+func readFileDoubleHandler(w http.ResponseWriter, r *http.Request) {
+	filePath, _ := url.QueryUnescape(r.URL.Query().Get("path"))
+	content, err := readFile(filePath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write([]byte(content)) // #nosec G705 - intentional vulnerability, sample app only
+}
+
 func defineAPIRoutes(mux *http.ServeMux, db *DatabaseHelper) {
 	mux.HandleFunc("/api/pets/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/api/pets", http.StatusMovedPermanently)
@@ -146,6 +157,15 @@ func defineAPIRoutes(mux *http.ServeMux, db *DatabaseHelper) {
 		switch r.Method {
 		case "GET":
 			readFileHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/read_double", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			readFileDoubleHandler(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}

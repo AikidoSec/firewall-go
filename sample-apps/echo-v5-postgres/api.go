@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/labstack/echo/v5"
 )
@@ -84,6 +85,15 @@ func defineAPIRoutes(e *echo.Echo, db *DatabaseHelper) {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 		fmt.Println("File content: ", content)
+		return c.String(http.StatusOK, content)
+	})
+
+	e.GET("/api/read_double", func(c *echo.Context) error {
+		filePath, _ := url.QueryUnescape(c.QueryParam("path"))
+		content, err := readFile(filePath)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
 		return c.String(http.StatusOK, content)
 	})
 }
