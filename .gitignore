@@ -34,3 +34,7 @@ internal/vulnerabilities/zen_internals/lib/*
 
 sample-apps/*/bin
 tools/bin
+
+# Benchmark artefacts from scripts/bench-toolexec.sh
+/bench-results/
+*.prof

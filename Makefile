@@ -34,6 +34,11 @@ benchmark:
 	@echo "Running benchmarks..."
 	@GIN_MODE=release ./scripts/benchmark.sh
 
+# Compare a toolexec-instrumented package vanilla vs. zen-go (benchstat).
+.PHONY: bench-os
+bench-os:
+	@TAGS=sink_bench ./scripts/bench-toolexec.sh ./benchmarks/sinks/os $(COUNT)
+
 .PHONY: test-main
 test-main:
 	@echo "Running main module tests with gotestsum"
