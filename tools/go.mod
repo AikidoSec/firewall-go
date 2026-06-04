@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/tools
 
-go 1.25
+go 1.25.0
 
 require gotest.tools/gotestsum v1.13.0
 
@@ -15,7 +15,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
