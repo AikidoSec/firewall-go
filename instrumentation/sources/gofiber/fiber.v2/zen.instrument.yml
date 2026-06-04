@@ -1,0 +1,12 @@
+meta:
+  name: gofiber/fiber
+  description: Fiber is an Express-inspired web framework written in Go.
+
+rules:
+  - id: fiber.New
+    type: wrap
+    match: github.com/gofiber/fiber/v2.New
+    imports:
+      zenfiber: github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2
+    template: |
+      func() *fiber.App { a := {{.}}; a.Use(zenfiber.GetMiddleware()); return a }()

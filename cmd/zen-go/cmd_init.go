@@ -25,6 +25,7 @@ var (
 		{name: "chi", description: "Chi router", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5", goModulePath: "github.com/go-chi/chi/v5"},
 		{name: "echo/v4", description: "Echo v4 web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4", goModulePath: "github.com/labstack/echo/v4"},
 		{name: "echo/v5", description: "Echo v5 web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v5", goModulePath: "github.com/labstack/echo/v5"},
+		{name: "fiber/v2", description: "Fiber web framework", importPath: "github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2", goModulePath: "github.com/gofiber/fiber/v2"},
 		{name: "net/http", description: "Standard library (always included)", locked: true},
 	}
 
