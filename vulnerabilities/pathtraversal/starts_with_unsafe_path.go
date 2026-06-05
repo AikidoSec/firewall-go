@@ -47,8 +47,8 @@ func startsWithUnsafePath(filePath, userInput string) bool {
 		return false
 	}
 
-	normalizedPath := strings.ToLower(filepath.Clean(filePath))
-	normalizedUserInput := strings.ToLower(filepath.Clean(userInput))
+	normalizedPath := filepath.Clean(filePath)
+	normalizedUserInput := filepath.Clean(userInput)
 
 	for _, dangerousStart := range dangerousPathStarts {
 		if strings.HasPrefix(normalizedPath, dangerousStart) &&
@@ -56,8 +56,7 @@ func startsWithUnsafePath(filePath, userInput string) bool {
 			// If the user input is the same as the dangerous start, we don't want to flag it to prevent false positives
 			// e.g. if user input is /etc/ and the path is /etc/passwd, we don't want to flag it, as long as the
 			// user input does not contain a subdirectory or filename
-			lowerUserInput := strings.ToLower(userInput)
-			if lowerUserInput == dangerousStart || lowerUserInput == dangerousStart[:len(dangerousStart)-1] {
+			if userInput == dangerousStart || userInput == dangerousStart[:len(dangerousStart)-1] {
 				return false
 			}
 			return true

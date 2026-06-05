@@ -34,7 +34,7 @@ func detectPathTraversal(filePath, userInput string, checkPathStart bool) bool {
 
 	if checkPathStart {
 		// Check for absolute path traversal
-		return startsWithUnsafePath(filePath, userInput)
+		return startsWithUnsafePath(normalisedFilePath, normalisedUserInput)
 	}
 
 	return false
