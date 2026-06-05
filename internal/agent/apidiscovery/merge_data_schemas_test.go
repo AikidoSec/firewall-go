@@ -220,7 +220,7 @@ func TestMergeTypes(t *testing.T) {
 }
 
 func TestObjectPropertiesJSONRoundtrip(t *testing.T) {
-	t.Run("empty object preserves non-nil properties after JSON round-trip", func(t *testing.T) {
+	t.Run("it preserves empty properties after JSON round-trip", func(t *testing.T) {
 		schema := GetDataSchema(map[string]any{}, 0)
 		assert.NotNil(t, schema.Properties)
 
@@ -233,17 +233,16 @@ func TestObjectPropertiesJSONRoundtrip(t *testing.T) {
 		assert.NotNil(t, restored.Properties, "properties must survive JSON round-trip as non-nil")
 	})
 
-	t.Run("merging after round-trip does not drop existing properties", func(t *testing.T) {
-		withProps := GetDataSchema(map[string]any{"key": "value"}, 0)
-		empty := GetDataSchema(map[string]any{}, 0)
+	t.Run("it preserves nil properties after JSON round-trip", func(t *testing.T) {
+		schema := GetDataSchema([]any{}, 0)
+		assert.Nil(t, schema.Items)
 
-		data, err := json.Marshal(empty)
+		data, err := json.Marshal(schema)
 		require.NoError(t, err)
-		var restoredEmpty aikido_types.DataSchema
-		require.NoError(t, json.Unmarshal(data, &restoredEmpty))
 
-		result := MergeDataSchemas(withProps, &restoredEmpty)
-		assert.NotNil(t, result.Properties)
-		assert.Contains(t, result.Properties, "key")
+		var restored aikido_types.DataSchema
+		require.NoError(t, json.Unmarshal(data, &restored))
+
+		assert.Nil(t, restored.Properties)
 	})
 }
