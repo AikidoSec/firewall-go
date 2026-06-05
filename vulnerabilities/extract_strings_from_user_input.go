@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -19,19 +20,21 @@ func buildPathToPayload(pathToPayload []pathPart) string {
 	if len(pathToPayload) == 0 {
 		return "."
 	}
-
-	path := ""
+	var b strings.Builder
 	for _, part := range pathToPayload {
 		switch part.Type {
 		case "jwt":
-			path += "<jwt>"
+			b.WriteString("<jwt>")
 		case "object":
-			path += "." + part.Key
+			b.WriteByte('.')
+			b.WriteString(part.Key)
 		case "array":
-			path += fmt.Sprintf(".[%d]", part.Index)
+			b.WriteString(".[")
+			b.WriteString(strconv.Itoa(part.Index))
+			b.WriteByte(']')
 		}
 	}
-	return path
+	return b.String()
 }
 
 // addURLDecodedVariants adds further URL-decoded forms of str, so apps that

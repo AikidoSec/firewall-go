@@ -5,6 +5,89 @@ import (
 	"testing"
 )
 
+func TestBuildPathToPayload(t *testing.T) {
+	tests := []struct {
+		name     string
+		parts    []pathPart
+		expected string
+	}{
+		{
+			name:     "empty path returns dot",
+			parts:    []pathPart{},
+			expected: ".",
+		},
+		{
+			name:     "single object part",
+			parts:    []pathPart{{Type: "object", Key: "username"}},
+			expected: ".username",
+		},
+		{
+			name:     "single array part index zero",
+			parts:    []pathPart{{Type: "array", Index: 0}},
+			expected: ".[0]",
+		},
+		{
+			name:     "single array part large index",
+			parts:    []pathPart{{Type: "array", Index: 99}},
+			expected: ".[99]",
+		},
+		{
+			name:     "single jwt part",
+			parts:    []pathPart{{Type: "jwt"}},
+			expected: "<jwt>",
+		},
+		{
+			name: "nested object path",
+			parts: []pathPart{
+				{Type: "object", Key: "a"},
+				{Type: "object", Key: "b"},
+				{Type: "object", Key: "c"},
+			},
+			expected: ".a.b.c",
+		},
+		{
+			name: "object then array",
+			parts: []pathPart{
+				{Type: "object", Key: "arr"},
+				{Type: "array", Index: 2},
+			},
+			expected: ".arr.[2]",
+		},
+		{
+			name: "jwt then object",
+			parts: []pathPart{
+				{Type: "jwt"},
+				{Type: "object", Key: "sub"},
+			},
+			expected: "<jwt>.sub",
+		},
+		{
+			name: "complex mixed path",
+			parts: []pathPart{
+				{Type: "object", Key: "token"},
+				{Type: "jwt"},
+				{Type: "object", Key: "username"},
+				{Type: "object", Key: "$ne"},
+			},
+			expected: ".token<jwt>.username.$ne",
+		},
+		{
+			name:     "unknown type is skipped",
+			parts:    []pathPart{{Type: "unknown", Key: "x"}},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := buildPathToPayload(tt.parts)
+			if actual != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, actual)
+			}
+		})
+	}
+}
+
 func TestExtractStringsFromUserInput(t *testing.T) {
 	t.Run("empty object returns empty array", func(t *testing.T) {
 		obj := map[string]interface{}{}
