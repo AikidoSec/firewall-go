@@ -365,7 +365,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"arr":  ".",
 			"1":    ".arr.[0]",
 			"test": ".arr.[5].test",
-			"1,<int Value>,<bool Value>,<invalid Value>,<invalid Value>,<map[string]interface {} Value>": ".arr",
+			"1,2,true,<nil>,<nil>,map[test:test]": ".arr",
 		}
 		actual = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
@@ -383,7 +383,56 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"test123":         ".arr.[5].test.[0]",
 			"test345":         ".arr.[5].test.[1]",
 			"test123,test345": ".arr.[5].test",
-			"1,<int Value>,<bool Value>,<invalid Value>,<invalid Value>,<map[string]interface {} Value>": ".arr",
+			"1,2,true,<nil>,<nil>,map[test:[test123 test345]]": ".arr",
+		}
+		actual = extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
+	t.Run("it handles unusual types via reflect fallback", func(t *testing.T) {
+		// Named map type (e.g. http.Header) not matched by the typed cases.
+		type customHeader map[string][]string
+		obj := map[string]interface{}{
+			"headers": customHeader{"X-Custom": {"attack"}},
+		}
+		expected := map[string]string{
+			"headers":  ".",
+			"X-Custom": ".headers",
+			"attack":   ".headers.X-Custom",
+		}
+		actual := extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+
+		// Named string type and a map with a non-string value type.
+		type customString string
+		obj = map[string]interface{}{
+			"name": customString("attack"),
+			"meta": map[string]int{"count": 5},
+		}
+		expected = map[string]string{
+			"name":   ".",
+			"attack": ".name",
+			"meta":   ".",
+			"count":  ".meta",
+		}
+		actual = extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+
+		// Fixed-size array of strings.
+		obj = map[string]interface{}{
+			"arr": [2]string{"a", "b"},
+		}
+		expected = map[string]string{
+			"arr": ".",
+			"a":   ".arr.[0]",
+			"b":   ".arr.[1]",
+			"a,b": ".arr",
 		}
 		actual = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
