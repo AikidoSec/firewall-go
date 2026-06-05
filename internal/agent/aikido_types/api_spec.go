@@ -10,9 +10,9 @@ type APIAuthType struct {
 
 type DataSchema struct {
 	Type       []string               `json:"type"`
-	Properties map[string]*DataSchema `json:"properties,omitempty"`
-	Items      *DataSchema            `json:"items,omitempty"`
-	Optional   bool                   `json:"optional,omitempty"`
+	Properties map[string]*DataSchema `json:"properties"`
+	Items      *DataSchema            `json:"items"`
+	Optional   bool                   `json:"optional"`
 }
 
 type APIBodyInfo struct {
