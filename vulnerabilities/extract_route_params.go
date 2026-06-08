@@ -28,10 +28,9 @@ func extractRouteParams(urlPath string) []string {
 		return nil
 	}
 
-	segments := strings.Split(urlPath, "/")
 	var results []string
 
-	for _, segment := range segments {
+	for segment := range strings.SplitSeq(urlPath, "/") {
 		if segment == "" {
 			continue
 		}
