@@ -56,7 +56,7 @@ func addURLDecodedVariants(results map[string]string, str string, pathToPayload 
 }
 
 // extractStringsFromUserInput recursively extracts strings from user input
-func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[string]string {
+func extractStringsFromUserInput(obj any, pathToPayload []pathPart) map[string]string {
 	results := make(map[string]string)
 	// Pre-allocate path with extra capacity so recursive appends reuse the
 	// backing array (stack-like) instead of allocating on every level.
@@ -66,9 +66,9 @@ func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[
 	return results
 }
 
-func extractStringsInto(obj interface{}, path []pathPart, results map[string]string) {
+func extractStringsInto(obj any, path []pathPart, results map[string]string) {
 	switch v := obj.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		currentPath := buildPathToPayload(path)
 		for key, val := range v {
 			results[key] = currentPath
@@ -92,7 +92,7 @@ func extractStringsInto(obj interface{}, path []pathPart, results map[string]str
 			results[key] = currentPath
 			extractStringsInto(val, append(path, pathPart{Type: "object", Key: key}), results)
 		}
-	case []interface{}:
+	case []any:
 		var values []string
 		for i, item := range v {
 			extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results)
@@ -136,7 +136,7 @@ func extractStringsInto(obj interface{}, path []pathPart, results map[string]str
 // extractStringsReflect is the fallback for types not covered by the typed
 // cases above (named map/slice types, maps with other key/value types, arrays,
 // named string types), e.g. a custom Body passed via the public SetContext API.
-func extractStringsReflect(obj interface{}, path []pathPart, results map[string]string) {
+func extractStringsReflect(obj any, path []pathPart, results map[string]string) {
 	val := reflect.ValueOf(obj)
 	switch val.Kind() {
 	case reflect.Map:
