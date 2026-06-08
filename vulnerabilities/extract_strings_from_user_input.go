@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -116,7 +117,7 @@ func extractStringsInto(obj interface{}, path []pathPart, results map[string]str
 		addURLDecodedVariants(results, v, path)
 		jwt := tryDecodeAsJWT(v)
 		if jwt.JWT {
-			jwtPath := append(path, pathPart{Type: "jwt"})
+			jwtPath := append(slices.Clone(path), pathPart{Type: "jwt"})
 			// JWT needs a temporary map for iss filtering before merging.
 			jwtResults := make(map[string]string)
 			extractStringsInto(jwt.Object, jwtPath, jwtResults)

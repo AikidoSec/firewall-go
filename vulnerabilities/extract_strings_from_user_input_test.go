@@ -362,9 +362,9 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		}
 
 		expected = map[string]string{
-			"arr":  ".",
-			"1":    ".arr.[0]",
-			"test": ".arr.[5].test",
+			"arr":                                 ".",
+			"1":                                   ".arr.[0]",
+			"test":                                ".arr.[5].test",
 			"1,2,true,<nil>,<nil>,map[test:test]": ".arr",
 		}
 		actual = extractStringsFromUserInput(obj, []pathPart{})
