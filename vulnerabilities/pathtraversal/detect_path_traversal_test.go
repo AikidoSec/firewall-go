@@ -165,4 +165,33 @@ func TestDetectPathTraversal(t *testing.T) {
 		assert.True(t, detectPathTraversal("/Users/admin/secret", "/users/admin/secret", true))
 		assert.True(t, detectPathTraversal("/users/admin/secret", "/Users/admin/secret", true))
 	})
+
+	t.Run("current directory references (/./) are normalized", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("/./etc/passwd", "/./etc", true))
+		assert.True(t, detectPathTraversal("/etc/./passwd", "/etc/./", true))
+		assert.True(t, detectPathTraversal("/etc/./passwd", "/etc/./passwd", true))
+		assert.True(t, detectPathTraversal("/./etc/./passwd", "/./etc/./passwd", true))
+		assert.True(t, detectPathTraversal("/././etc/passwd", "/././etc", true))
+		assert.True(t, detectPathTraversal("/etc/././passwd", "/etc/././passwd", true))
+	})
+
+	t.Run("paths with multiple slashes are normalized", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("///.///etc/passwd", "///.///etc", true))
+		assert.True(t, detectPathTraversal("///.///etc/passwd", "///.///etc/passwd", true))
+	})
+
+	t.Run("normalized paths still trigger false positive prevention for bare root dirs", func(t *testing.T) {
+		assert.False(t, detectPathTraversal("/etc/./passwd", "/etc", true))
+		assert.False(t, detectPathTraversal("//etc//passwd", "/etc", true))
+	})
+
+	t.Run("absolute macOS paths", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("/Applications/Zen.app", "/Applications/Zen.app", true))
+		assert.True(t, detectPathTraversal("/Users/user/test.txt", "/Users/user/", true))
+		assert.True(t, detectPathTraversal("/Volumes/ExternalDrive/test.txt", "/Volumes/ExternalDrive/", true))
+	})
+
+	t.Run("AWS credentials protection", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("/home/user/.aws/credentials", "/home/user/.aws/credentials", true))
+	})
 }
