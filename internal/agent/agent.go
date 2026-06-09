@@ -192,6 +192,8 @@ func OnAttackWaveDetected(ctx *request.Context) {
 		}
 	}
 
+	Stats().OnAttackWaveDetected()
+
 	if client := GetCloudClient(); client != nil {
 		client.SendAttackWaveDetectedEvent(getAgentInfo(), requestInfo, cloud.AttackWaveDetails{
 			Metadata: metadata,

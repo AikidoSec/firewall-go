@@ -21,6 +21,7 @@ type Stats struct {
 	requestsRateLimited int
 	attacks             int
 	attacksBlocked      int
+	attackWaves         int
 	operations          map[string]operationData
 	ipAddressBreakdown  map[string]int
 	userAgentBreakdown  map[string]int
@@ -50,6 +51,9 @@ func (s *Stats) GetAndClear() Snapshot {
 				Total:   s.attacks,
 				Blocked: s.attacksBlocked,
 			},
+			AttackWaves: AttackWaves{
+				Total: s.attackWaves,
+			},
 			RateLimited: s.requestsRateLimited,
 		},
 		Operations:  s.getAndClearOperations(),
@@ -63,6 +67,7 @@ func (s *Stats) GetAndClear() Snapshot {
 	s.requestsRateLimited = 0
 	s.attacks = 0
 	s.attacksBlocked = 0
+	s.attackWaves = 0
 	s.ipAddressBreakdown = make(map[string]int)
 	s.userAgentBreakdown = make(map[string]int)
 
@@ -91,6 +96,13 @@ func (s *Stats) OnAttackDetected(blocked bool) {
 	if blocked {
 		s.attacksBlocked++
 	}
+}
+
+func (s *Stats) OnAttackWaveDetected() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.attackWaves++
 }
 
 func (s *Stats) OnRateLimit() {
