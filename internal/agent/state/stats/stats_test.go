@@ -96,6 +96,41 @@ func TestOnAttackDetected(t *testing.T) {
 	}
 }
 
+func TestOnAttackWaveDetected(t *testing.T) {
+	t.Run("increments attack waves count", func(t *testing.T) {
+		stats := New()
+
+		stats.OnAttackWaveDetected()
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 1, data.Requests.AttackWaves.Total, "attack waves should be incremented to 1")
+	})
+
+	t.Run("increments attack waves count multiple times", func(t *testing.T) {
+		stats := New()
+
+		stats.OnAttackWaveDetected()
+		stats.OnAttackWaveDetected()
+		stats.OnAttackWaveDetected()
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 3, data.Requests.AttackWaves.Total, "attack waves should be incremented to 3")
+	})
+
+	t.Run("clears after GetAndClear", func(t *testing.T) {
+		stats := New()
+
+		stats.OnAttackWaveDetected()
+		stats.GetAndClear()
+
+		data := stats.GetAndClear()
+
+		assert.Equal(t, 0, data.Requests.AttackWaves.Total, "attack waves should be reset to 0 after GetAndClear")
+	})
+}
+
 func TestOnRateLimited(t *testing.T) {
 	t.Run("increments rate limited count", func(t *testing.T) {
 		stats := New()

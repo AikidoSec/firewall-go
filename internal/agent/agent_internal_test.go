@@ -236,6 +236,22 @@ func TestOnAttackWaveDetected(t *testing.T) {
 		assert.True(t, mock.sendAttackWaveDetectedCalled)
 	})
 
+	t.Run("increments attack waves stat", func(t *testing.T) {
+		initAgentForTest(t)
+		Stats().GetAndClear()
+
+		ip := "1.2.3.4"
+		ctx := &request.Context{
+			RemoteAddress: &ip,
+			Source:        "test",
+		}
+
+		OnAttackWaveDetected(ctx)
+
+		snap := Stats().GetAndClear()
+		assert.Equal(t, 1, snap.Requests.AttackWaves.Total)
+	})
+
 	t.Run("includes samples in metadata when available", func(t *testing.T) {
 		// Use a detector with a low threshold so we can trigger sample collection
 		originalDetector := attackWaveDetector
