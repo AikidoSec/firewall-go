@@ -1,6 +1,7 @@
 meta:
   name: runtime
   description: Automatic propagation of Aikido request context across goroutines.
+  min-zen-go-version: "1.0.3"
 
 rules:
   # Add a field to runtime.g that stores the per-goroutine request state.
