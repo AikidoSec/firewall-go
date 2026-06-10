@@ -230,6 +230,7 @@ func checkZenToolFileIncluded(pkgPath string, toolArgs []string, stderr io.Write
 
 	var sourceDir string
 	hasZenToolFile := false
+	isTestMain := false
 	for _, arg := range toolArgs {
 		if !strings.HasSuffix(arg, ".go") {
 			continue
@@ -239,13 +240,21 @@ func checkZenToolFileIncluded(pkgPath string, toolArgs []string, stderr io.Write
 			// .go files in toolArgs share the same directory.
 			sourceDir = filepath.Dir(arg)
 		}
-		if filepath.Base(arg) == "zen.tool.go" {
+		base := filepath.Base(arg)
+		if base == "zen.tool.go" {
 			hasZenToolFile = true
 			break
 		}
+		// `go test` synthesises a `_testmain.go` for the test binary's main
+		// package in a temp dir. There is nowhere for a user-authored
+		// zen.tool.go to live there, so the warning would always fire under
+		// `go test -toolexec=...` even when instrumentation is working.
+		if base == "_testmain.go" {
+			isTestMain = true
+		}
 	}
 
-	if hasZenToolFile || sourceDir == "" {
+	if hasZenToolFile || isTestMain || sourceDir == "" {
 		return nil
 	}
 
