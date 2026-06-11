@@ -39,8 +39,11 @@ func goid() int64 {
 	s := strings.TrimPrefix(string(buf[:n]), "goroutine ")
 	idx := strings.IndexByte(s, ' ')
 	if idx < 0 {
-		return 0
+		panic("testutil: unexpected runtime.Stack format: " + s)
 	}
-	id, _ := strconv.ParseInt(s[:idx], 10, 64)
+	id, err := strconv.ParseInt(s[:idx], 10, 64)
+	if err != nil {
+		panic("testutil: failed to parse goid from runtime.Stack: " + s)
+	}
 	return id
 }
