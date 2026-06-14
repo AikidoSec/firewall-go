@@ -17,35 +17,40 @@ func TestTryExtractJSONBypassResistance(t *testing.T) {
 		body := `{"name":"Doggo"}{"invalid"}`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := tryExtractJSON(r)
+		got, dup := tryExtractJSON(r)
 
 		m, ok := got.(map[string]interface{})
 		require.True(t, ok, "got %T: %v", got, got)
 		assert.Equal(t, "Doggo", m["name"])
+		assert.False(t, dup)
 	})
 
 	t.Run("valid object followed by unclosed object", func(t *testing.T) {
 		body := `{"valid":true}{"invalid":{"this is valid":true}`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := tryExtractJSON(r)
+		got, dup := tryExtractJSON(r)
 
 		m, ok := got.(map[string]interface{})
 		require.True(t, ok, "got %T: %v", got, got)
 		assert.Equal(t, true, m["valid"])
+		assert.False(t, dup)
 	})
 
 	t.Run("no valid JSON prefix", func(t *testing.T) {
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(`garbage{"a":1}`))
 
-		assert.Nil(t, tryExtractJSON(r))
+		got, dup := tryExtractJSON(r)
+
+		assert.Nil(t, got)
+		assert.False(t, dup)
 	})
 
 	t.Run("body is restored after partial extraction", func(t *testing.T) {
 		body := `{"name":"Doggo"}{"invalid"}`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		_ = tryExtractJSON(r)
+		_, _ = tryExtractJSON(r)
 
 		restored, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
@@ -58,13 +63,14 @@ func TestTryExtractJSONStreamingBehavior(t *testing.T) {
 		body := `{"first":true}` + "\n" + `{"second":true}`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := tryExtractJSON(r)
+		got, dup := tryExtractJSON(r)
 
 		gotSlice, ok := got.([]interface{})
 		require.True(t, ok, "expected []interface{}, got %T: %v", got, got)
 		require.Len(t, gotSlice, 2)
 		assert.Equal(t, true, gotSlice[0].(map[string]interface{})["first"])
 		assert.Equal(t, true, gotSlice[1].(map[string]interface{})["second"])
+		assert.False(t, dup)
 
 		restoredBody, _ := io.ReadAll(r.Body)
 		assert.Equal(t, body, string(restoredBody))
@@ -75,9 +81,10 @@ func TestTryExtractJSONStreamingBehavior(t *testing.T) {
 		body := "{}" + multipartTrailer
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := tryExtractJSON(r)
+		got, dup := tryExtractJSON(r)
 
 		assert.Equal(t, map[string]interface{}{}, got)
+		assert.False(t, dup)
 	})
 
 	t.Run("returns parsed prefix when valid JSON array is followed by non-JSON content", func(t *testing.T) {
@@ -85,9 +92,10 @@ func TestTryExtractJSONStreamingBehavior(t *testing.T) {
 		body := "[]" + multipartTrailer
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := tryExtractJSON(r)
+		got, dup := tryExtractJSON(r)
 
 		assert.Equal(t, []interface{}{}, got)
+		assert.False(t, dup)
 	})
 }
 
@@ -96,11 +104,12 @@ func TestTryExtractJSON(t *testing.T) {
 		body := `{"key": "value"}`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := tryExtractJSON(r)
+		got, dup := tryExtractJSON(r)
 
 		if got == nil {
 			t.Error("expected valid JSON to be parsed, got nil")
 		}
+		assert.False(t, dup)
 
 		// Verify body is restored
 		restoredBody, _ := io.ReadAll(r.Body)
@@ -113,17 +122,54 @@ func TestTryExtractJSON(t *testing.T) {
 		body := `not json`
 		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
 
-		got := tryExtractJSON(r)
+		got, dup := tryExtractJSON(r)
 
 		if got != nil {
 			t.Errorf("expected invalid JSON to return nil, got %v", got)
 		}
+		assert.False(t, dup)
 
 		// Verify body is still restored even on failure
 		restoredBody, _ := io.ReadAll(r.Body)
 		if string(restoredBody) != body {
 			t.Errorf("body not restored: got %q, want %q", string(restoredBody), body)
 		}
+	})
+
+	// Regression test for AIKIDO-UQJ4BZHJ: duplicate key null bypass.
+	// Standard map decode keeps the last value (null), hiding a malicious first
+	// value. encoding/json/jsontext rejects duplicate keys entirely.
+	t.Run("duplicate key null bypass is flagged as attack", func(t *testing.T) {
+		body := `{"field": "malicious", "field": null}`
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got, dup := tryExtractJSON(r)
+
+		assert.Nil(t, got, "data should be nil when duplicate keys detected")
+		assert.True(t, dup, "should flag duplicate key as attack")
+
+		restoredBody, _ := io.ReadAll(r.Body)
+		assert.Equal(t, body, string(restoredBody))
+	})
+
+	t.Run("duplicate non-null keys are also flagged", func(t *testing.T) {
+		body := `{"field": "first", "field": "second"}`
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got, dup := tryExtractJSON(r)
+
+		assert.Nil(t, got)
+		assert.True(t, dup)
+	})
+
+	t.Run("nested duplicate keys are flagged", func(t *testing.T) {
+		body := `{"outer": {"inner": "malicious", "inner": null}}`
+		r := httptest.NewRequest("POST", "/test", strings.NewReader(body))
+
+		got, dup := tryExtractJSON(r)
+
+		assert.Nil(t, got)
+		assert.True(t, dup)
 	})
 }
 

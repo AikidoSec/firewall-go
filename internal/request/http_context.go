@@ -22,6 +22,7 @@ type ContextData struct {
 	RouteParams   map[string]string
 	RemoteAddress *string
 	Body          any
+	MalformedBody bool
 }
 
 func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
@@ -53,6 +54,7 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 		RouteParams:        routeParams,
 		RemoteAddress:      data.RemoteAddress,
 		Body:               data.Body,
+		MalformedBody:      data.MalformedBody,
 		Cookies:            cookiesToMap(r.Cookies()),
 		Source:             data.Source,
 		Route:              route,

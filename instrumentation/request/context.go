@@ -13,6 +13,7 @@ type ContextData struct {
 	RouteParams   map[string]string
 	RemoteAddress *string
 	Body          any
+	MalformedBody bool
 }
 
 // SetContext sets the context for the given request.
@@ -23,6 +24,7 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 		RouteParams:   data.RouteParams,
 		RemoteAddress: data.RemoteAddress,
 		Body:          data.Body,
+		MalformedBody: data.MalformedBody,
 	})
 }
 
