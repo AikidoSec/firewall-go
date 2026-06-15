@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html"
 	"maps"
-	"strconv"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -177,8 +176,8 @@ func storeDeferredAttack(ctx context.Context, res *interceptorResult) error {
 	return nil
 }
 
-// reportSuspiciousPayload reports input nested beyond maxDepth, at most once per request. Currently not blocked.
-func reportSuspiciousPayload(ctx context.Context, operation, module, source string) {
+// reportSuspiciousPayload reports a suspicious payload, at most once per request. Currently not blocked.
+func reportSuspiciousPayload(ctx context.Context, operation, module, source string, metadata map[string]string) {
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return
@@ -203,10 +202,8 @@ func reportSuspiciousPayload(ctx context.Context, operation, module, source stri
 			Module:    module,
 			Blocked:   false,
 			Source:    source,
-			Metadata: map[string]string{
-				"maxDepth": strconv.Itoa(maxDepth),
-			},
-			User: reqCtx.GetUser(),
+			Metadata:  metadata,
+			User:      reqCtx.GetUser(),
 		},
 	}
 

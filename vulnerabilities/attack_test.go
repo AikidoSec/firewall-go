@@ -359,7 +359,7 @@ func TestReportSuspiciousPayload(t *testing.T) {
 		client, cleanup := setupOnStoredSSRF(t)
 		t.Cleanup(cleanup)
 
-		reportSuspiciousPayload(context.Background(), "query", "database/sql", "body")
+		reportSuspiciousPayload(context.Background(), "query", "database/sql", "body", nil)
 
 		select {
 		case <-client.attackDetectedEventSent:
@@ -377,7 +377,7 @@ func TestReportSuspiciousPayload(t *testing.T) {
 		config.SetBlocking(true)
 		t.Cleanup(func() { config.SetBlocking(original) })
 
-		reportSuspiciousPayload(newCtx(), "query", "database/sql", "body")
+		reportSuspiciousPayload(newCtx(), "query", "database/sql", "body", map[string]string{"type": "maxDepth"})
 
 		select {
 		case <-client.attackDetectedEventSent:
@@ -391,6 +391,7 @@ func TestReportSuspiciousPayload(t *testing.T) {
 		assert.Equal(t, "body", client.capturedAttack.Source)
 		assert.Equal(t, "query", client.capturedAttack.Operation)
 		assert.Equal(t, "database/sql", client.capturedAttack.Module)
+		assert.Equal(t, "maxDepth", client.capturedAttack.Metadata["type"])
 		assert.False(t, client.capturedAttack.Blocked, "suspicious payload is currently not blocked")
 		assert.Equal(t, "1.2.3.4", client.capturedRequest.IPAddress)
 	})
@@ -400,8 +401,8 @@ func TestReportSuspiciousPayload(t *testing.T) {
 		t.Cleanup(cleanup)
 
 		ctx := newCtx()
-		reportSuspiciousPayload(ctx, "query", "database/sql", "body")
-		reportSuspiciousPayload(ctx, "exec", "os/exec", "body")
+		reportSuspiciousPayload(ctx, "query", "database/sql", "body", nil)
+		reportSuspiciousPayload(ctx, "exec", "os/exec", "body", nil)
 
 		select {
 		case <-client.attackDetectedEventSent:
