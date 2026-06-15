@@ -377,7 +377,7 @@ func TestReportSuspiciousPayload(t *testing.T) {
 		config.SetBlocking(true)
 		t.Cleanup(func() { config.SetBlocking(original) })
 
-		reportSuspiciousPayload(newCtx(), "query", "database/sql", "body", map[string]string{"type": "maxDepth"})
+		reportSuspiciousPayload(newCtx(), "query", "database/sql", "body", map[string]string{"type": "max_depth"})
 
 		select {
 		case <-client.attackDetectedEventSent:
@@ -391,7 +391,7 @@ func TestReportSuspiciousPayload(t *testing.T) {
 		assert.Equal(t, "body", client.capturedAttack.Source)
 		assert.Equal(t, "query", client.capturedAttack.Operation)
 		assert.Equal(t, "database/sql", client.capturedAttack.Module)
-		assert.Equal(t, "maxDepth", client.capturedAttack.Metadata["type"])
+		assert.Equal(t, "max_depth", client.capturedAttack.Metadata["type"])
 		assert.False(t, client.capturedAttack.Blocked, "suspicious payload is currently not blocked")
 		assert.Equal(t, "1.2.3.4", client.capturedRequest.IPAddress)
 	})

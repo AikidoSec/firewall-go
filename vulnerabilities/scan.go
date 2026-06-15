@@ -112,7 +112,7 @@ func scanSource[T any](ctx context.Context, source string, sourceData any, opera
 	// Input too deep to fully inspect is itself suspicious.
 	if truncated {
 		reportSuspiciousPayload(ctx, operation, opts.Module, source, map[string]string{
-			"type": "maxDepth",
+			"type": "max_depth",
 		})
 	}
 
