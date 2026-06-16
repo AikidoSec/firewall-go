@@ -15,6 +15,9 @@ import _ "unsafe"
 //go:linkname aikidoRegisterGLS github.com/AikidoSec/firewall-go/internal/request.RegisterGLS
 func aikidoRegisterGLS(get func() interface{}, set func(interface{}))
 
+// getg() returns the current g (goroutine struct). m is the OS thread it's
+// running on; curg is the user goroutine scheduled on that thread. We use curg
+// because getg() can return a system goroutine when called from runtime internals.
 func aikidoGLSGet() interface{} {
 	return getg().m.curg.aikido_request_context
 }
