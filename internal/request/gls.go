@@ -47,6 +47,16 @@ func isLocalBypassed() bool {
 	return false
 }
 
+func glsStateFor(ctx context.Context) *glsState {
+	if reqCtx := GetContext(ctx); reqCtx != nil {
+		return &glsState{ctx: reqCtx}
+	}
+	if IsBypassed(ctx) {
+		return &glsState{bypassed: true}
+	}
+	return nil
+}
+
 // WrapWithGLS keeps the context alive in the GLS until the given function has finished executing.
 func WrapWithGLS(ctx context.Context, fn func()) {
 	if glsSet == nil {
@@ -54,13 +64,7 @@ func WrapWithGLS(ctx context.Context, fn func()) {
 		return
 	}
 
-	var state *glsState
-	if reqCtx := GetContext(ctx); reqCtx != nil {
-		state = &glsState{ctx: reqCtx}
-	} else if IsBypassed(ctx) {
-		state = &glsState{bypassed: true}
-	}
-
+	state := glsStateFor(ctx)
 	if state == nil {
 		fn()
 		return
