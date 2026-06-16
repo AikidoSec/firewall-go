@@ -5,6 +5,7 @@ meta:
 
 rules:
   # Add a field to runtime.g that stores the per-goroutine request state.
+  # https://github.com/golang/go/blob/master/src/runtime/HACKING.md#getg-and-getgmcurg
   - id: runtime.g.aikido-field
     type: add-field
     package: runtime
