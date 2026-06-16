@@ -25,12 +25,12 @@ func getGLS() *glsState {
 	if glsGet == nil {
 		return nil
 	}
-	v := glsGet()
-	if v == nil {
+	raw := glsGet()
+	if raw == nil {
 		return nil
 	}
-	s, _ := v.(*glsState)
-	return s
+	state, _ := raw.(*glsState)
+	return state
 }
 
 func getLocalContext() *Context {
