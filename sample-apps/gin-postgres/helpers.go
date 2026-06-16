@@ -39,12 +39,23 @@ func makeHTTPRequest(url string) string {
 	return string(body)
 }
 
-// readFile reads the content of a file and returns it as a string.
+// readFile reads the content of a file and returns it as a string. The read
+// runs in a child goroutine to exercise automatic request-context propagation:
+// the path traversal must still be detected on the spawned goroutine.
 func readFile(filePath string) (string, error) {
-	// #nosec G304 G703 - intentional path traversal vulnerability
-	content, err := os.ReadFile("content/blogs/" + filePath)
-	if err != nil {
-		return "", err
+	type result struct {
+		content []byte
+		err     error
 	}
-	return string(content), nil
+	ch := make(chan result, 1)
+	go func() {
+		// #nosec G304 G703 - intentional path traversal vulnerability
+		content, err := os.ReadFile("content/blogs/" + filePath)
+		ch <- result{content: content, err: err}
+	}()
+	r := <-ch
+	if r.err != nil {
+		return "", r.err
+	}
+	return string(r.content), nil
 }

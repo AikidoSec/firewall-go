@@ -103,5 +103,8 @@ cat <<EOF
 Artefacts:    $OUT_DIR
 CPU diff:     go tool pprof -diff_base $OUT_DIR/vanilla.cpu.prof $OUT_DIR/zen.cpu.prof
 Mem diff:     go tool pprof -diff_base $OUT_DIR/vanilla.mem.prof $OUT_DIR/zen.mem.prof
+Alloc diff:   go tool pprof -alloc_objects -diff_base $OUT_DIR/vanilla.mem.prof $OUT_DIR/zen.mem.prof
+Zen CPU web:  go tool pprof -http=:8080 $OUT_DIR/zen.cpu.prof
+Zen mem web:  go tool pprof -http=:8080 $OUT_DIR/zen.mem.prof
 
 EOF

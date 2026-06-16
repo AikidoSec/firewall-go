@@ -1,6 +1,7 @@
 package instrumentation
 
 import (
+	_ "github.com/AikidoSec/firewall-go/instrumentation/runtime"
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql"
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http"
 	_ "github.com/AikidoSec/firewall-go/instrumentation/sinks/os"

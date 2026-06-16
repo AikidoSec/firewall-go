@@ -20,6 +20,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,7 @@ import (
 
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.ReleaseMode)
+	testutil.RegisterGLSFallback()
 
 	original := config.IsZenLoaded()
 	config.SetZenLoaded(true)

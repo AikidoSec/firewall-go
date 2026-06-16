@@ -297,6 +297,36 @@ func TestReadDirIsAutomaticallyInstrumented(t *testing.T) {
 	assertAttackDetected(t, client, "os.ReadDir")
 }
 
+// TestPathTraversalBlockedInChildGoroutine verifies that the request context
+// stored on the calling goroutine is automatically propagated to a goroutine
+// spawned from inside WrapWithGLS, so a path traversal triggered by the child
+// is still blocked.
+func TestPathTraversalBlockedInChildGoroutine(t *testing.T) {
+	client, ctx := setupBlockingTest(t)
+
+	type result struct {
+		err error
+	}
+	results := make(chan result, 1)
+
+	request.WrapWithGLS(ctx, func() {
+		go func() {
+			_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)
+			results <- result{err: err}
+		}()
+
+		select {
+		case r := <-results:
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, r.err, &detectedErr)
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout waiting for goroutine result")
+		}
+	})
+
+	assertAttackDetected(t, client, "os.OpenFile")
+}
+
 func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 	panic("not implemented")
 }
