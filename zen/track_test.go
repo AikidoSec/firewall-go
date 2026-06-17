@@ -26,14 +26,15 @@ func newTrackRequestContext(remoteAddr string) context.Context {
 	})
 }
 
-func setupTrackServer(t *testing.T, captured *cloud.CustomEvent) *httptest.Server {
+func setupTrackServer(t *testing.T) <-chan cloud.CustomEvent {
 	t.Helper()
-	eventReceived := make(chan struct{}, 1)
+	events := make(chan cloud.CustomEvent, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(body, captured)
+		var event cloud.CustomEvent
+		_ = json.Unmarshal(body, &event)
 		w.WriteHeader(http.StatusOK)
-		eventReceived <- struct{}{}
+		events <- event
 	}))
 	t.Cleanup(server.Close)
 
@@ -45,26 +46,28 @@ func setupTrackServer(t *testing.T, captured *cloud.CustomEvent) *httptest.Serve
 	agent.SetCloudClient(client)
 	t.Cleanup(func() { agent.SetCloudClient(original) })
 
-	return server
+	return events
 }
 
 func TestTrack(t *testing.T) {
 	t.Run("sends event with name and ip when no user set", func(t *testing.T) {
-		var captured cloud.CustomEvent
-		setupTrackServer(t, &captured)
+		events := setupTrackServer(t)
 
 		ctx := newTrackRequestContext("1.2.3.4")
 		zen.Track(ctx, "user.login", nil)
 
-		assert.Eventually(t, func() bool { return captured.Name != "" }, time.Second, 10*time.Millisecond)
-		assert.Equal(t, "user.login", captured.Name)
-		assert.Equal(t, "1.2.3.4", captured.IPAddress)
-		assert.Empty(t, captured.UserID)
+		select {
+		case event := <-events:
+			assert.Equal(t, "user.login", event.Name)
+			assert.Equal(t, "1.2.3.4", event.IPAddress)
+			assert.Empty(t, event.UserID)
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for event")
+		}
 	})
 
 	t.Run("includes user id when user is set on context", func(t *testing.T) {
-		var captured cloud.CustomEvent
-		setupTrackServer(t, &captured)
+		events := setupTrackServer(t)
 
 		ctx := newTrackRequestContext("1.2.3.4")
 		ctx, err := zen.SetUser(ctx, "user-abc", "Alice")
@@ -72,10 +75,14 @@ func TestTrack(t *testing.T) {
 
 		zen.Track(ctx, "user.login", nil)
 
-		assert.Eventually(t, func() bool { return captured.Name != "" }, time.Second, 10*time.Millisecond)
-		assert.Equal(t, "user.login", captured.Name)
-		assert.Equal(t, "user-abc", captured.UserID)
-		assert.Equal(t, "1.2.3.4", captured.IPAddress)
+		select {
+		case event := <-events:
+			assert.Equal(t, "user.login", event.Name)
+			assert.Equal(t, "user-abc", event.UserID)
+			assert.Equal(t, "1.2.3.4", event.IPAddress)
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for event")
+		}
 	})
 
 	t.Run("no-ops when event name is empty", func(t *testing.T) {
@@ -124,11 +131,13 @@ func TestTrack(t *testing.T) {
 	})
 
 	t.Run("sends metadata when provided", func(t *testing.T) {
-		var rawCapture map[string]any
+		rawCaptures := make(chan map[string]any, 1)
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
+			var rawCapture map[string]any
 			_ = json.Unmarshal(body, &rawCapture)
 			w.WriteHeader(http.StatusOK)
+			rawCaptures <- rawCapture
 		}))
 		t.Cleanup(server.Close)
 
@@ -143,9 +152,13 @@ func TestTrack(t *testing.T) {
 		ctx := newTrackRequestContext("1.2.3.4")
 		zen.Track(ctx, "user.login", map[string]string{"reason": "otp_failed"})
 
-		assert.Eventually(t, func() bool { return rawCapture["name"] != nil }, time.Second, 10*time.Millisecond)
-		meta, ok := rawCapture["metadata"].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, "otp_failed", meta["reason"])
+		select {
+		case rawCapture := <-rawCaptures:
+			meta, ok := rawCapture["metadata"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "otp_failed", meta["reason"])
+		case <-time.After(time.Second):
+			t.Fatal("timed out waiting for event")
+		}
 	})
 }
