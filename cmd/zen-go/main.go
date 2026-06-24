@@ -57,6 +57,14 @@ func newCommand() *cli.Command {
 				},
 			},
 			{
+				Name:            "go",
+				Usage:           "Run a go command with Zen instrumentation enabled (e.g. zen-go go build ./...)",
+				SkipFlagParsing: true,
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return goCommand(os.Stdout, os.Stderr, cmd.Args().Slice())
+				},
+			},
+			{
 				Name:            "toolexec",
 				SkipFlagParsing: true,
 				Action: func(ctx context.Context, cmd *cli.Command) error {

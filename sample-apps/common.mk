@@ -10,13 +10,13 @@ export AIKIDO_DEBUG ?= true
 
 build: check-zen-go
 	@mkdir -p bin
-	@go build -toolexec="$(ZENGO) toolexec" -o $(BINARY) .
+	@$(ZENGO) go build -o $(BINARY) .
 
 run: build
 	@PORT=$(PORT) ./$(BINARY)
 
 dev: check-zen-go
-	@PORT=$(PORT) go run -toolexec="$(ZENGO) toolexec" .
+	@PORT=$(PORT) $(ZENGO) go run .
 
 start-database:
 	@cd ../databases/ && docker compose up $(DB_SERVICE) -d --wait
