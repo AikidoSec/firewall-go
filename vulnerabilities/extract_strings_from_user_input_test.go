@@ -1,6 +1,7 @@
 package vulnerabilities
 
 import (
+	"net/url"
 	"reflect"
 	"testing"
 )
@@ -340,6 +341,24 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		}
 	})
 
+	t.Run("it adds URL-decoded variants for strings inside arrays", func(t *testing.T) {
+		// The raw encoded form is recorded at the array path (from the join),
+		// while the decoded variants point to the individual element path.
+		obj := map[string]interface{}{
+			"paths": []string{"%252e%252e%252fetc%252fpasswd"},
+		}
+		expected := map[string]string{
+			"paths":                         ".",
+			"%252e%252e%252fetc%252fpasswd": ".paths",
+			"%2e%2e%2fetc%2fpasswd":         ".paths.[0]",
+			"../etc/passwd":                 ".paths.[0]",
+		}
+		actual := extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
 	t.Run("it concatenates array values", func(t *testing.T) {
 		obj := map[string]interface{}{
 			"arr": []interface{}{"1", "2", "3"},
@@ -435,6 +454,78 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"a,b": ".arr",
 		}
 		actual = extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
+	t.Run("it handles map[string]string directly", func(t *testing.T) {
+		obj := map[string]string{"session": "ABC", "session2": "DEF"}
+		expected := map[string]string{
+			"session":  ".",
+			"session2": ".",
+			"ABC":      ".session",
+			"DEF":      ".session2",
+		}
+		actual := extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
+	t.Run("it handles map[string][]string directly", func(t *testing.T) {
+		obj := map[string][]string{"users": {"alice", "bob"}}
+		expected := map[string]string{
+			"users":     ".",
+			"alice":     ".users.[0]",
+			"bob":       ".users.[1]",
+			"alice,bob": ".users",
+		}
+		actual := extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
+	t.Run("it handles url.Values directly", func(t *testing.T) {
+		obj := url.Values{"q": {"foo", "bar"}}
+		expected := map[string]string{
+			"q":       ".",
+			"foo":     ".q.[0]",
+			"bar":     ".q.[1]",
+			"foo,bar": ".q",
+		}
+		actual := extractStringsFromUserInput(obj, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
+	t.Run("it handles nil input", func(t *testing.T) {
+		expected := map[string]string{}
+		actual := extractStringsFromUserInput(nil, []pathPart{})
+		if !reflect.DeepEqual(expected, actual) {
+			t.Errorf("Expected %v, got %v", expected, actual)
+		}
+	})
+
+	t.Run("it does not corrupt sibling paths when processing a JWT", func(t *testing.T) {
+		obj := map[string]interface{}{
+			"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJodHRwczovL2V4YW1wbGUuY29tIn0.QLC0vl-A11a1WcUPD6vQR2PlUvRMsqpegddfQzPajQM",
+			"role":  "admin",
+		}
+		expected := map[string]string{
+			"token": ".",
+			"role":  ".",
+			"admin": ".role",
+			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJodHRwczovL2V4YW1wbGUuY29tIn0.QLC0vl-A11a1WcUPD6vQR2PlUvRMsqpegddfQzPajQM": ".token",
+			"sub":        ".token<jwt>",
+			"1234567890": ".token<jwt>.sub",
+			"name":       ".token<jwt>",
+			"John Doe":   ".token<jwt>.name",
+			"iat":        ".token<jwt>",
+		}
+		actual := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
