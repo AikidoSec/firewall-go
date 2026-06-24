@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/machine"
 	"github.com/AikidoSec/firewall-go/internal/attackwave"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -102,6 +105,34 @@ func (m *internalMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, 
 }
 
 func (m *internalMockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
+
+type trackingMockCloudClient struct {
+	customEventCount int
+}
+
+func (m *trackingMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
+	return nil, nil
+}
+func (m *trackingMockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+	return nil, nil
+}
+func (m *trackingMockCloudClient) FetchConfigUpdatedAt() time.Time { return time.Time{} }
+func (m *trackingMockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
+	return nil, nil
+}
+func (m *trackingMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
+	return nil, nil
+}
+func (m *trackingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+}
+func (m *trackingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+func (m *trackingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	return nil
+}
+func (m *trackingMockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+	m.customEventCount++
 }
 
 func TestState(t *testing.T) {
@@ -301,5 +332,68 @@ func TestOnAttackWaveDetected(t *testing.T) {
 		assert.NotPanics(t, func() {
 			OnAttackWaveDetected(ctx)
 		})
+	})
+}
+
+func captureLogOutput(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	var buf bytes.Buffer
+	original := log.Logger()
+	log.SetLogger(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { log.SetLogger(original) })
+	return &buf
+}
+
+func TestOnTrackEvent_CustomEventsDisabled(t *testing.T) {
+	t.Cleanup(func() {
+		customEventsDisabled.Store(false)
+		customEventsWarnedOnce.Store(false)
+	})
+
+	t.Run("does not send event and logs warning when zen is unavailable", func(t *testing.T) {
+		customEventsDisabled.Store(true)
+		customEventsWarnedOnce.Store(false)
+
+		buf := captureLogOutput(t)
+
+		mock := &trackingMockCloudClient{}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		OnTrackEvent("user.login", "user-1", "1.2.3.4", nil)
+		time.Sleep(20 * time.Millisecond)
+
+		assert.Equal(t, 0, mock.customEventCount)
+		assert.Contains(t, buf.String(), "zen.aikido.dev")
+	})
+
+	t.Run("only logs warning once across multiple calls", func(t *testing.T) {
+		customEventsDisabled.Store(true)
+		customEventsWarnedOnce.Store(false)
+
+		buf := captureLogOutput(t)
+
+		OnTrackEvent("user.login", "", "", nil)
+		OnTrackEvent("user.login", "", "", nil)
+		OnTrackEvent("user.login", "", "", nil)
+
+		warnCount := bytes.Count(buf.Bytes(), []byte("zen.aikido.dev"))
+		assert.Equal(t, 1, warnCount)
+	})
+
+	t.Run("sends event normally when zen is available", func(t *testing.T) {
+		customEventsDisabled.Store(false)
+		customEventsWarnedOnce.Store(false)
+
+		mock := &trackingMockCloudClient{}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		OnTrackEvent("user.login", "user-1", "1.2.3.4", nil)
+		time.Sleep(50 * time.Millisecond)
+
+		assert.Equal(t, 1, mock.customEventCount)
 	})
 }
