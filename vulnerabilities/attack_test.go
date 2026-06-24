@@ -392,6 +392,7 @@ func TestReportSuspiciousPayload(t *testing.T) {
 		assert.Equal(t, "query", client.capturedAttack.Operation)
 		assert.Equal(t, "database/sql", client.capturedAttack.Module)
 		assert.Equal(t, "max_depth", client.capturedAttack.Metadata["type"])
+		assert.Equal(t, "true", client.capturedAttack.Metadata["isBeta"], "all suspicious payloads should be marked as beta")
 		assert.False(t, client.capturedAttack.Blocked, "suspicious payload is currently not blocked")
 		assert.Equal(t, "1.2.3.4", client.capturedRequest.IPAddress)
 	})

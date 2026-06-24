@@ -187,6 +187,8 @@ func reportSuspiciousPayload(ctx context.Context, operation, module, source stri
 		return
 	}
 
+	metadata["isBeta"] = "true"
+
 	attack := &agent.DetectedAttack{
 		Request: aikido_types.RequestInfo{
 			Method:    reqCtx.Method,
