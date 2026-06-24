@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -100,6 +101,7 @@ func (m *internalMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentI
 func (m *internalMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 	m.sendAttackWaveDetectedCalled = true
 }
+
 func (m *internalMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	return nil
 }
@@ -108,12 +110,13 @@ func (m *internalMockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
 }
 
 type trackingMockCloudClient struct {
-	customEventCount int
+	customEventCount atomic.Uint64
 }
 
 func (m *trackingMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
+
 func (m *trackingMockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
@@ -121,18 +124,23 @@ func (m *trackingMockCloudClient) FetchConfigUpdatedAt() time.Time { return time
 func (m *trackingMockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
+
 func (m *trackingMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
 	return nil, nil
 }
+
 func (m *trackingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 }
+
 func (m *trackingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
+
 func (m *trackingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	return nil
 }
+
 func (m *trackingMockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
-	m.customEventCount++
+	m.customEventCount.Add(1)
 }
 
 func TestState(t *testing.T) {
@@ -364,7 +372,10 @@ func TestOnTrackEvent_CustomEventsDisabled(t *testing.T) {
 		OnTrackEvent("user.login", "user-1", "1.2.3.4", nil)
 		time.Sleep(20 * time.Millisecond)
 
-		assert.Equal(t, 0, mock.customEventCount)
+		assert.Eventually(t, func() bool {
+			return mock.customEventCount.Load() == 0
+		}, 1*time.Second, 20*time.Millisecond)
+
 		assert.Contains(t, buf.String(), "zen.aikido.dev")
 	})
 
@@ -394,6 +405,8 @@ func TestOnTrackEvent_CustomEventsDisabled(t *testing.T) {
 		OnTrackEvent("user.login", "user-1", "1.2.3.4", nil)
 		time.Sleep(50 * time.Millisecond)
 
-		assert.Equal(t, 1, mock.customEventCount)
+		assert.Eventually(t, func() bool {
+			return mock.customEventCount.Load() == 1
+		}, 1*time.Second, 20*time.Millisecond)
 	})
 }
