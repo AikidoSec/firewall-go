@@ -77,7 +77,11 @@ func CheckModuleVersionSync(gomodPath string) error {
 	type mismatch struct{ path, version string }
 	var mismatches []mismatch
 
+	const zenGoModule = aikidoMainModule + "/cmd/zen-go"
 	for _, req := range f.Require {
+		if req.Mod.Path == zenGoModule {
+			continue
+		}
 		if strings.HasPrefix(req.Mod.Path, aikidoMainModule+"/") && !replaced[req.Mod.Path] && req.Mod.Version != mainVersion {
 			mismatches = append(mismatches, mismatch{req.Mod.Path, req.Mod.Version})
 		}

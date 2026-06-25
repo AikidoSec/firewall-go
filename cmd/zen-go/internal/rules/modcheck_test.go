@@ -147,6 +147,27 @@ require (
 	require.NoError(t, CheckModuleVersionSync(path))
 }
 
+func TestCheckModuleVersionSync_ZenGoToolIgnored(t *testing.T) {
+	dir := t.TempDir()
+	path := writeGoMod(t, dir, `module example.com/app
+
+go 1.25.0
+
+require (
+	github.com/AikidoSec/firewall-go v1.2.5
+	github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin v1.2.5
+	github.com/gin-gonic/gin v1.12.0
+)
+
+require (
+	github.com/AikidoSec/firewall-go/cmd/zen-go v1.0.4 // indirect
+)
+
+tool github.com/AikidoSec/firewall-go/cmd/zen-go
+`)
+	require.NoError(t, CheckModuleVersionSync(path))
+}
+
 func TestFindGoMod_Found(t *testing.T) {
 	root := t.TempDir()
 	gomodPath := filepath.Join(root, "go.mod")
