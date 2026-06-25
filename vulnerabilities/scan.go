@@ -26,19 +26,6 @@ type ScanOptions struct {
 	Module         string
 }
 
-func isForceProtectionOff(method, route string) bool {
-	matches := endpoints.FindMatches(config.GetEndpoints(), endpoints.RouteMetadata{
-		Method: method,
-		Route:  route,
-	})
-	for _, match := range matches {
-		if match.ForceProtectionOff {
-			return true
-		}
-	}
-	return false
-}
-
 func Scan[T any](ctx context.Context, operation string, vulnerability Vulnerability[T], args T) error {
 	return ScanWithOptions(ctx, operation, vulnerability, args, ScanOptions{})
 }
@@ -54,7 +41,7 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 	}
 
 	// Check if route has force protection off, if so, we don't run any scans
-	if isForceProtectionOff(reqCtx.Method, reqCtx.Route) {
+	if endpoints.IsForceProtectionOff(reqCtx.Method, reqCtx.Route) {
 		return nil
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/ipaddr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // sampleRouteMetadata creates a new RouteMetadata for testing.
@@ -282,4 +283,23 @@ func TestFindMatches(t *testing.T) {
 		result := FindMatches(endpoints, routeMetadata)
 		assert.Equal(t, expected, result)
 	})
+}
+
+func TestIsForceProtectionOff(t *testing.T) {
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		Block: &block,
+		Endpoints: []aikido_types.Endpoint{
+			{Method: "POST", Route: "/api/danger", ForceProtectionOff: true},
+			{Method: "*", Route: "/api/wildcard", ForceProtectionOff: true},
+			{Method: "GET", Route: "/api/safe", ForceProtectionOff: false},
+		},
+	}, nil)
+
+	require.True(t, IsForceProtectionOff("POST", "/api/danger"), "exact match with force protection off")
+	require.True(t, IsForceProtectionOff("GET", "/api/wildcard"), "wildcard method with force protection off")
+	require.False(t, IsForceProtectionOff("GET", "/api/safe"), "force protection off is false")
+	require.False(t, IsForceProtectionOff("GET", "/api/danger"), "wrong method should not match")
+	require.False(t, IsForceProtectionOff("POST", "/api/unknown"), "unmatched route returns false")
+	require.False(t, IsForceProtectionOff("", "/api/danger"), "empty method returns false")
 }

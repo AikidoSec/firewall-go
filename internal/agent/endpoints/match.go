@@ -69,3 +69,12 @@ func FindMatches(endpoints []config.Endpoint, context RouteMetadata) []config.En
 
 	return matches
 }
+
+func IsForceProtectionOff(method, route string) bool {
+	for _, match := range FindMatches(config.GetEndpoints(), RouteMetadata{Method: method, Route: route}) {
+		if match.ForceProtectionOff {
+			return true
+		}
+	}
+	return false
+}
