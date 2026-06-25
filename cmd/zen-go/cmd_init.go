@@ -226,6 +226,12 @@ func initCommand(stdout io.Writer, force, auto bool, sourcesFlag string, sources
 	fmt.Fprintf(stdout, "✓ Created %s\n", filename)
 	fmt.Fprintf(stdout, "  %s\n\n", absPath)
 
+	if gomodPath, toolErr := addZenGoTool(); toolErr != nil {
+		fmt.Fprintf(stdout, "⚠️  Could not add tool directive to go.mod: %v\n\n", toolErr)
+	} else {
+		fmt.Fprintf(stdout, "✓ Added zen-go tool directive to %s\n\n", gomodPath)
+	}
+
 	if len(selectedSources) > 0 {
 		fmt.Fprintf(stdout, "  Sources: %s\n", strings.Join(selectedSources, ", "))
 	}
@@ -239,9 +245,8 @@ func initCommand(stdout io.Writer, force, auto bool, sourcesFlag string, sources
 
 	fmt.Fprintln(stdout)
 	fmt.Fprintln(stdout, "Next steps:")
-	fmt.Fprintln(stdout, "  1. Run 'go mod tidy' to update your dependencies")
-	fmt.Fprintln(stdout, "  2. Install `zen-go` CLI with 'go install github.com/AikidoSec/firewall-go/cmd/zen-go@latest'")
-	fmt.Fprintln(stdout, "  3. Build with 'go build -toolexec=\"zen-go toolexec\"' to enable instrumentation")
+	fmt.Fprintln(stdout, "  1. Run 'go mod tidy' to download dependencies including zen-go")
+	fmt.Fprintln(stdout, "  2. Build with 'go tool zen-go go build ./...' to enable instrumentation")
 
 	return nil
 }
