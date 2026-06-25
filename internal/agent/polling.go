@@ -87,7 +87,7 @@ func runSSESubscription(ctx context.Context) {
 		}
 
 		if err != nil {
-			log.Warn("SSE config stream disconnected", slog.Any("error", err))
+			log.Debug("SSE config stream disconnected, reconnecting", slog.Any("error", err))
 		}
 
 		if time.Since(connectedAt) >= sseStableThreshold {
