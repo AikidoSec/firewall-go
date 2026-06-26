@@ -61,6 +61,19 @@ func TestDisabledAPI(t *testing.T) {
 		require.Empty(t, group, "Rate limit group should not be set when zen is disabled")
 	})
 
+	t.Run("Track no-ops when disabled", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+		remoteAddr := "127.0.0.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/test",
+			RemoteAddress: &remoteAddr,
+		})
+
+		// Should not panic or send any event
+		Track(ctx, "user.login", nil)
+	})
+
 	t.Run("ShouldBlockRequest returns nil when disabled", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"

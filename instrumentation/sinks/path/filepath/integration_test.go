@@ -64,6 +64,9 @@ func (m *mockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate
 	return nil
 }
 
+func (m *mockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
+
 func newMockClient() *mockCloudClient {
 	client := &mockCloudClient{
 		attackDetectedEventSent: make(chan struct{}, 10),

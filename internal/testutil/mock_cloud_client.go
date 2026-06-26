@@ -61,3 +61,6 @@ func (m *MockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo,
 func (m *MockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	return nil
 }
+
+func (m *MockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
@@ -29,6 +30,9 @@ var (
 
 	stateCollector     = state.NewCollector()
 	attackWaveDetector = attackwave.NewDetector(nil)
+
+	customEventsDisabled   atomic.Bool
+	customEventsWarnedOnce atomic.Bool
 )
 
 type CloudClient interface {
@@ -40,6 +44,7 @@ type CloudClient interface {
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 	SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails)
 	SubscribeToConfigUpdates(ctx context.Context, onUpdate func(configUpdatedAt int64)) error
+	SendCustomEvent(event cloud.CustomEvent)
 }
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
@@ -94,6 +99,7 @@ func probeAndStartPolling(token, apiEndpoint, realtimeEndpoint string) {
 			RealtimeEndpoint: resolved,
 		})
 		SetCloudClient(fallbackClient)
+		customEventsDisabled.Store(true)
 	}
 
 	startPolling(sseEnabled)
@@ -103,6 +109,8 @@ func AgentUninit() error {
 	ratelimiting.Uninit()
 	stopPolling()
 	config.Uninit()
+	customEventsDisabled.Store(false)
+	customEventsWarnedOnce.Store(false)
 
 	return nil
 }
@@ -128,6 +136,26 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 
 	stateCollector.Stats().OnRequest()
 	go stateCollector.StoreRoute(method, route, apiSpec)
+}
+
+func OnTrackEvent(name, userID, ip string, metadata any) {
+	log.Debug("Received track event", slog.String("name", name))
+
+	if customEventsDisabled.Load() {
+		if customEventsWarnedOnce.CompareAndSwap(false, true) {
+			log.Warn("zen.Track() was called but zen.aikido.dev is unreachable. Custom events will not be reported.")
+		}
+		return
+	}
+
+	if client := GetCloudClient(); client != nil {
+		go client.SendCustomEvent(cloud.CustomEvent{
+			Name:      name,
+			UserID:    userID,
+			IPAddress: ip,
+			Metadata:  metadata,
+		})
+	}
 }
 
 // OnUser records or updates user activity in the global user registry.

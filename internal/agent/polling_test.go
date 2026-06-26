@@ -58,6 +58,9 @@ func (m *pollingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, o
 	return nil
 }
 
+func (m *pollingMockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
+
 func TestCalculateHeartbeatInterval(t *testing.T) {
 	t.Run("returns 1 minute when no stats received yet", func(t *testing.T) {
 		result := calculateHeartbeatInterval(300000, false)

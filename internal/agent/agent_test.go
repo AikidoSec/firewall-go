@@ -40,6 +40,9 @@ func (m *mockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate
 	panic("not implemented")
 }
 
+func (m *mockCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
+
 func TestCloudClient(t *testing.T) {
 	original := agent.GetCloudClient()
 	t.Cleanup(func() {

@@ -41,6 +41,9 @@ func (m *configTestCloudClient) SubscribeToConfigUpdates(ctx context.Context, on
 	return nil
 }
 
+func (m *configTestCloudClient) SendCustomEvent(event cloud.CustomEvent) {
+}
+
 func TestApplyCloudConfig(t *testing.T) {
 	err := config.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{LogLevel: "ERROR"})
 	require.NoError(t, err)
