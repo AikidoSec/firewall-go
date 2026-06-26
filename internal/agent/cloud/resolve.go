@@ -23,6 +23,10 @@ func ResolveRealtimeURL(endpoint, token string) (string, bool) {
 		return endpoint, true
 	}
 
+	if os.Getenv("AIKIDO_REALTIME_ENABLED") != "true" {
+		return config.FallbackRealtimeEndpoint, false
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), resolveTimeout)
 	defer cancel()
 
