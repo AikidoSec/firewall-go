@@ -114,7 +114,13 @@ func findRedirectOrigin(redirects []request.RedirectEntry, hostname string, port
 		next := redirects[idx]
 		step := request.RedirectEntry{DestHostname: next.SourceHostname, DestPort: next.SourcePort}
 		if visited[step] {
-			break
+			// Cycle detected: step is already in the chain. The true origin is
+			// step itself (the node that creates the cycle), not the current node.
+			// If step is the starting point, return false (no external origin found).
+			if step.DestHostname == hostname && (step.DestPort == port || step.DestPort == 0 || port == 0) {
+				return "", 0, false
+			}
+			return step.DestHostname, step.DestPort, true
 		}
 		visited[step] = true
 		current = step
