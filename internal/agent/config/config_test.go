@@ -190,9 +190,9 @@ func TestInitWithEmptyEndpoints(t *testing.T) {
 				t.Errorf("Expected Endpoint to be %q, but got %q", tt.expectedEndpoint, globals.EnvironmentConfig.Endpoint)
 			}
 
-			// RealtimeEndpoint should always be the default
-			if globals.EnvironmentConfig.RealtimeEndpoint != "https://zen.aikido.dev/" {
-				t.Errorf("Expected RealtimeEndpoint to be https://zen.aikido.dev/, but got %q", globals.EnvironmentConfig.RealtimeEndpoint)
+			// RealtimeEndpoint should match the guard endpoint derived from the token region
+			if globals.EnvironmentConfig.RealtimeEndpoint != tt.expectedEndpoint {
+				t.Errorf("Expected RealtimeEndpoint to be %q, but got %q", tt.expectedEndpoint, globals.EnvironmentConfig.RealtimeEndpoint)
 			}
 		})
 	}
