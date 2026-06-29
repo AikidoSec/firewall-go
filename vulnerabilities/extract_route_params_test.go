@@ -17,22 +17,25 @@ func TestExtractRouteParams(t *testing.T) {
 		{name: "empty string", path: "", want: nil},
 		{name: "root slash", path: "/", want: nil},
 
-		// Normal alphanumeric paths — no results
-		{name: "two-segment path", path: "/api/users", want: nil},
-		{name: "multi-segment path", path: "/posts/comments", want: nil},
-		{name: "versioned API path", path: "/v1/api/health", want: nil},
-		{name: "no suspicious segments", path: "/api/v1/healthcheck", want: nil},
-		{name: "alphanumeric mixed segment", path: "/a/b/abc2393027def/def", want: nil},
-		{name: "trailing slash", path: "/app/shell/", want: nil},
-		{name: "short trailing slash", path: "/app/", want: nil},
+		// Normal alphanumeric paths — now included to detect potential SSRF
+		{name: "two-segment path", path: "/api/users", want: []string{"api", "users", "api/users"}},
+		{name: "multi-segment path", path: "/posts/comments", want: []string{"posts", "comments", "posts/comments"}},
+		{name: "versioned API path", path: "/v1/api/health", want: []string{"v1", "api", "health", "v1/api/health"}},
+		{name: "no suspicious segments", path: "/api/v1/healthcheck", want: []string{"api", "v1", "healthcheck", "api/v1/healthcheck"}},
+		{name: "alphanumeric mixed segment", path: "/a/b/abc2393027def/def", want: []string{"a", "b", "abc2393027def", "def", "a/b/abc2393027def/def"}},
+		{name: "trailing slash", path: "/app/shell/", want: []string{"app", "shell", "app/shell/"}},
+		{name: "short trailing slash", path: "/app/", want: []string{"app", "app/"}},
+		// SSRF-related test cases
+		{name: "localhost hostname", path: "/proxy/localhost", want: []string{"proxy", "localhost", "proxy/localhost"}},
+		{name: "hostname with port", path: "/proxy/localhost:8080", want: []string{"proxy", "localhost:8080", "proxy/localhost:8080"}},
 
-		// Segments that look like IDs but are pure alphanumeric — ignored
-		{name: "numeric ID", path: "/api/users/123", want: nil},
-		{name: "pure numbers", path: "/app/shell/12345", want: nil},
-		{name: "pure numbers with alphanum suffix", path: "/app/shell/67890/abc", want: nil},
-		{name: "MD5 hex hash", path: "/api/files/d41d8cd98f00b204e9800998ecf8427e", want: nil},
-		{name: "BSON ObjectID", path: "/api/items/507f1f77bcf86cd799439011", want: nil},
-		{name: "ULID", path: "/api/items/01ARZ3NDEKTSV4RRFFQ69G5FAV", want: nil},
+		// Segments that look like IDs but are pure alphanumeric — now included
+		{name: "numeric ID", path: "/api/users/123", want: []string{"api", "users", "123", "api/users/123"}},
+		{name: "pure numbers", path: "/app/shell/12345", want: []string{"app", "shell", "12345", "app/shell/12345"}},
+		{name: "pure numbers with alphanum suffix", path: "/app/shell/67890/abc", want: []string{"app", "shell", "67890", "abc", "app/shell/67890/abc"}},
+		{name: "MD5 hex hash", path: "/api/files/d41d8cd98f00b204e9800998ecf8427e", want: []string{"api", "files", "d41d8cd98f00b204e9800998ecf8427e", "api/files/d41d8cd98f00b204e9800998ecf8427e"}},
+		{name: "BSON ObjectID", path: "/api/items/507f1f77bcf86cd799439011", want: []string{"api", "items", "507f1f77bcf86cd799439011", "api/items/507f1f77bcf86cd799439011"}},
+		{name: "ULID", path: "/api/items/01ARZ3NDEKTSV4RRFFQ69G5FAV", want: []string{"api", "items", "01ARZ3NDEKTSV4RRFFQ69G5FAV", "api/items/01ARZ3NDEKTSV4RRFFQ69G5FAV"}},
 
 		// Invalid percent-encoding - url.PathUnescape returns an error, so the raw
 		// segment is used as-is (decoded = segment). Both the segment-level and the
@@ -40,141 +43,138 @@ func TestExtractRouteParams(t *testing.T) {
 		{
 			name: "invalid percent-encoded segment",
 			path: "/api/users/%GGtest",
-			want: []string{"%GGtest", "api/users/%GGtest"},
+			want: []string{"api", "users", "%GGtest", "api/users/%GGtest"},
 		},
 		{
 			// Segment is purely invalid encoding with no other characters.
 			name: "invalid percent-encoding only",
 			path: "/api/users/%ZZ",
-			want: []string{"%ZZ", "api/users/%ZZ"},
+			want: []string{"api", "users", "%ZZ", "api/users/%ZZ"},
 		},
 
 		// URL-encoded characters: decoded segment + full path
 		{
 			name: "shell injection encoded",
 			path: "/api/execute/ls%3Bcat%20%2Fetc%2Fpasswd",
-			want: []string{"ls;cat /etc/passwd", "api/execute/ls%3Bcat%20%2Fetc%2Fpasswd"},
+			want: []string{"api", "execute", "ls;cat /etc/passwd", "api/execute/ls%3Bcat%20%2Fetc%2Fpasswd"},
 		},
 		{
 			name: "SQL injection encoded",
 			path: "/api/users/1%27%20OR%201%3D1%20--",
-			want: []string{"1' OR 1=1 --", "api/users/1%27%20OR%201%3D1%20--"},
+			want: []string{"api", "users", "1' OR 1=1 --", "api/users/1%27%20OR%201%3D1%20--"},
 		},
 		{
 			name: "encoded space detected via looksLikeASecret",
 			path: "/api/search/hello%20world",
-			want: []string{"hello world", "api/search/hello%20world"},
+			want: []string{"api", "search", "hello world", "api/search/hello%20world"},
 		},
 		// Literal (unencoded) spaces in the path — r.URL.Path in Go is already decoded,
 		// so these represent the realistic in-process form of URL-encoded requests.
 		{
 			name: "literal space in segment",
 			path: "/app/shell/ls -la",
-			want: []string{"ls -la", "app/shell/ls -la"},
+			want: []string{"app", "shell", "ls -la", "app/shell/ls -la"},
 		},
 		{
 			name: "literal space in segment simple",
 			path: "/app/shell/space test",
-			want: []string{"space test", "app/shell/space test"},
+			want: []string{"app", "shell", "space test", "app/shell/space test"},
 		},
 
 		// Path traversal — dots trigger full-path inclusion
 		{
 			name: "dotdot traversal across segments",
 			path: "/api/files/../../etc/passwd",
-			want: []string{"api/files/../../etc/passwd"},
+			want: []string{"api", "files", "etc", "passwd", "api/files/../../etc/passwd"},
 		},
 		{
 			name: "dotdot traversal encoded as single segment",
 			path: "/api/files/..%2F..%2Fetc%2Fpasswd",
-			want: []string{"api/files/..%2F..%2Fetc%2Fpasswd"},
+			want: []string{"api", "files", "api/files/..%2F..%2Fetc%2Fpasswd"},
 		},
 		{
 			// The ".." segment itself isn't flagged as a route param, but the dot
 			// in the decoded path triggers the full-path inclusion.
 			name: "single dotdot segment",
 			path: "/app/shell/..",
-			want: []string{"app/shell/.."},
+			want: []string{"app", "shell", "app/shell/.."},
 		},
 		{
 			// A single "." segment similarly causes the full path to be included.
 			name: "single dot segment with trailing slash",
 			path: "/app/shell/./",
-			want: []string{"app/shell/./"},
+			want: []string{"app", "shell", "app/shell/./"},
 		},
 
 		// Recognised route-parameter patterns (non-alphanumeric, dynamic values)
 		{
 			name: "UUID",
 			path: "/api/users/550e8400-e29b-41d4-a716-446655440000",
-			want: []string{"550e8400-e29b-41d4-a716-446655440000", "api/users/550e8400-e29b-41d4-a716-446655440000"},
+			want: []string{"api", "users", "550e8400-e29b-41d4-a716-446655440000", "api/users/550e8400-e29b-41d4-a716-446655440000"},
 		},
 		{
 			name: "date YYYY-MM-DD",
 			path: "/api/events/2024-01-15",
-			want: []string{"2024-01-15", "api/events/2024-01-15"},
+			want: []string{"api", "events", "2024-01-15", "api/events/2024-01-15"},
 		},
 		{
 			name: "email address",
 			path: "/api/users/user@example.com",
-			want: []string{"user@example.com", "api/users/user@example.com"},
+			want: []string{"api", "users", "user@example.com", "api/users/user@example.com"},
 		},
 		{
 			name: "IPv4 address",
 			path: "/api/hosts/192.168.1.1",
-			want: []string{"192.168.1.1", "api/hosts/192.168.1.1"},
+			want: []string{"api", "hosts", "192.168.1.1", "api/hosts/192.168.1.1"},
 		},
 		{
 			name: "comma-separated numbers",
 			path: "/api/items/1,2,3,4",
-			want: []string{"1,2,3,4", "api/items/1,2,3,4"},
+			want: []string{"api", "items", "1,2,3,4", "api/items/1,2,3,4"},
 		},
 
 		// Dot in path (filename extensions) triggers full-path inclusion
 		{
 			name: "filename with extension",
 			path: "/api/files/config.json",
-			want: []string{"api/files/config.json"},
+			want: []string{"api", "files", "api/files/config.json"},
 		},
 		{
-			// "app." contains a dot so the full path is included, even though
-			// the long alphanumeric suffix segment is ignored.
-			// Note: Go does not add "app." as a separate result (unlike Python) because
-			// url.PathEscape("app.") == "app." so the encoding check does not trigger,
-			// and "app." does not match any route-parameter pattern.
+			// "app." contains a dot so the full path is included.
+			// Now alphanumeric segments are also included.
 			name: "dot-containing prefix segment with long alphanum suffix",
 			path: "/app./shell/" + strings.Repeat("a", 1000),
-			want: []string{"app./shell/" + strings.Repeat("a", 1000)},
+			want: []string{"shell", strings.Repeat("a", 1000), "app./shell/" + strings.Repeat("a", 1000)},
 		},
 		{
 			name: "dot-containing prefix segment with two long alphanum suffixes",
 			path: "/app./shell/" + strings.Repeat("b", 1000) + strings.Repeat("/c", 1000),
-			want: []string{"app./shell/" + strings.Repeat("b", 1000) + strings.Repeat("/c", 1000)},
+			want: []string{"shell", strings.Repeat("b", 1000), strings.Repeat("c", 1000), "app./shell/" + strings.Repeat("b", 1000) + strings.Repeat("/c", 1000)},
 		},
 
 		// Multiple suspicious segments in one path
 		{
-			// "017shell" is alphanumeric and must be ignored between the two params.
-			name: "email and IP with ignored alphanum segment between them",
+			// Now alphanumeric segments are included too
+			name: "email and IP with alphanum segment between them",
 			path: "/app/shell/test@example.org/017shell/127.0.0.1/",
-			want: []string{"test@example.org", "127.0.0.1", "app/shell/test@example.org/017shell/127.0.0.1/"},
+			want: []string{"app", "shell", "test@example.org", "017shell", "127.0.0.1", "app/shell/test@example.org/017shell/127.0.0.1/"},
 		},
 		{
 			name: "email followed by normal segment",
 			path: "/api/users/user@example.com/posts",
-			want: []string{"user@example.com", "api/users/user@example.com/posts"},
+			want: []string{"api", "users", "user@example.com", "posts", "api/users/user@example.com/posts"},
 		},
 
 		// Special characters that Go's PathEscape encodes (e.g. "!")
 		{
 			name: "special chars after alphanumeric segment",
 			path: "/app/shell/abc123/!@",
-			want: []string{"!@", "app/shell/abc123/!@"},
+			want: []string{"app", "shell", "abc123", "!@", "app/shell/abc123/!@"},
 		},
 		{
-			name: "special chars after multiple ignored segments",
+			name: "special chars after multiple segments",
 			path: "/app/shell/abc/123/!@",
-			want: []string{"!@", "app/shell/abc/123/!@"},
+			want: []string{"app", "shell", "abc", "123", "!@", "app/shell/abc/123/!@"},
 		},
 	}
 
