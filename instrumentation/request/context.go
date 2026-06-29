@@ -8,21 +8,23 @@ import (
 )
 
 type ContextData struct {
-	Source        string
-	Route         string
-	RouteParams   map[string]string
-	RemoteAddress *string
-	Body          any
+	Source              string
+	Route               string
+	RouteParams         map[string]string
+	RemoteAddress       *string
+	AuthorizationIP     *string
+	Body                any
 }
 
 // SetContext sets the context for the given request.
 func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
 	return request.SetContext(ctx, r, request.ContextData{
-		Source:        data.Source,
-		Route:         data.Route,
-		RouteParams:   data.RouteParams,
-		RemoteAddress: data.RemoteAddress,
-		Body:          data.Body,
+		Source:          data.Source,
+		Route:           data.Route,
+		RouteParams:     data.RouteParams,
+		RemoteAddress:   data.RemoteAddress,
+		AuthorizationIP: data.AuthorizationIP,
+		Body:            data.Body,
 	})
 }
 

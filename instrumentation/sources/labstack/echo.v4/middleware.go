@@ -25,6 +25,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			}
 
 			ip := c.RealIP()
+			authIP := http.GetClientIPForAuthorization(httpRequest)
 
 			var routeParams map[string]string
 			if len(c.ParamNames()) > 0 {
@@ -36,11 +37,12 @@ func GetMiddleware() echo.MiddlewareFunc {
 			}
 
 			reqCtx := request.SetContext(httpRequest.Context(), httpRequest, request.ContextData{
-				Source:        "echo",
-				Route:         c.Path(),
-				RouteParams:   routeParams,
-				RemoteAddress: &ip,
-				Body:          http.TryExtractBody(httpRequest, c),
+				Source:          "echo",
+				Route:           c.Path(),
+				RouteParams:     routeParams,
+				RemoteAddress:   &ip,
+				AuthorizationIP: &authIP,
+				Body:            http.TryExtractBody(httpRequest, c),
 			})
 			c.SetRequest(httpRequest.WithContext(reqCtx))
 
