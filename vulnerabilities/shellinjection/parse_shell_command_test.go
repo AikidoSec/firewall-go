@@ -220,6 +220,68 @@ func TestExtractShellCommandString(t *testing.T) {
 			args:     []string{"bash", "-c", "cat $(whoami).txt"},
 			expected: []string{"cat $(whoami).txt"},
 		},
+		// Combined short options (security fix for bypass)
+		{
+			name:     "bash -ec with command",
+			args:     []string{"bash", "-ec", "cat /etc/passwd"},
+			expected: []string{"cat /etc/passwd"},
+		},
+		{
+			name:     "sh -ec with command",
+			args:     []string{"sh", "-ec", "ls -la"},
+			expected: []string{"ls -la"},
+		},
+		{
+			name:     "bash -xc with command",
+			args:     []string{"bash", "-xc", "echo test"},
+			expected: []string{"echo test"},
+		},
+		{
+			name:     "sh -euc with command",
+			args:     []string{"sh", "-euc", "whoami"},
+			expected: []string{"whoami"},
+		},
+		{
+			name:     "bash -euxc with command",
+			args:     []string{"bash", "-euxc", "cat /etc/passwd"},
+			expected: []string{"cat /etc/passwd"},
+		},
+		{
+			name:     "combined options with injection",
+			args:     []string{"sh", "-ec", "ping 8.8.8.8;cat /etc/passwd"},
+			expected: []string{"ping 8.8.8.8;cat /etc/passwd"},
+		},
+		{
+			name:     "combined options with multiple args",
+			args:     []string{"bash", "-ec", "echo", "hello"},
+			expected: []string{"echo", "hello"},
+		},
+		// Edge cases for combined options
+		{
+			name:     "single char option not c",
+			args:     []string{"sh", "-e", "script.sh"},
+			expected: nil,
+		},
+		{
+			name:     "combined options not ending with c",
+			args:     []string{"bash", "-ex", "script.sh"},
+			expected: nil,
+		},
+		{
+			name:     "long option with c",
+			args:     []string{"bash", "--command", "ls"},
+			expected: nil,
+		},
+		{
+			name:     "option with equals",
+			args:     []string{"bash", "-c=ls", "test"},
+			expected: nil,
+		},
+		{
+			name:     "combined option at end with no command",
+			args:     []string{"sh", "-ec"},
+			expected: nil,
+		},
 	}
 
 	for _, tt := range tests {
