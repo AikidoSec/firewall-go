@@ -209,5 +209,63 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 				require.ErrorAs(t, err, &detectedErr, "Should detect malicious content even if not referenced")
 			})
 		})
+
+	t.Run("ash shell injection detection", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/route?cmd=ls%20.", http.NoBody)
+		ip := "127.0.0.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		request.WrapWithGLS(ctx, func() {
+			// Test that ash shell is recognized and injection is detected
+			cmd := exec.Command("ash", "-c", "ls .")
+			err := cmd.Run()
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr, "Should detect shell injection in ash")
+		})
+	})
+
+	t.Run("busybox sh injection detection", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/route?cmd=cat%20/etc/passwd", http.NoBody)
+		ip := "127.0.0.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		request.WrapWithGLS(ctx, func() {
+			// Test that busybox sh is recognized and injection is detected
+			cmd := exec.Command("busybox", "sh", "-c", "cat /etc/passwd")
+			err := cmd.Run()
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr, "Should detect shell injection in busybox sh")
+		})
+	})
+
+	t.Run("busybox ash injection detection", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/route?cmd=whoami", http.NoBody)
+		ip := "127.0.0.1"
+		ctx := request.SetContext(context.Background(), req, request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+		})
+
+		request.WrapWithGLS(ctx, func() {
+			// Test that busybox ash is recognized and injection is detected
+			cmd := exec.Command("busybox", "ash", "-c", "whoami")
+			err := cmd.Run()
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr, "Should detect shell injection in busybox ash")
+		})
+	})
+
 	})
 }
