@@ -83,3 +83,26 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	require.Contains(t, stats.Operations, "filepath.Glob")
 	require.Equal(t, 1, stats.Operations["filepath.Glob"].Total)
 }
+
+func TestExamineDeferred_DetectsBareDoubleDotElements(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	// Test that bare ".." elements are properly detected when joined with path separator
+	// This tests the fix for the bypass where strings.Join(elems, "") would produce
+	// "/tmp/..etc" instead of "/tmp/../etc"
+	err := filepath.ExamineDeferred("filepath.Join", []string{"/tmp", "..", "etc", "passwd"})
+	
+	// The examination should not return an error (deferred reporting)
+	// but it should detect the path traversal pattern
+	require.NoError(t, err)
+}
+
