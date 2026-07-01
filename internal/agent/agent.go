@@ -1,8 +1,10 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -38,6 +40,7 @@ type CloudClient interface {
 	FetchListsConfig() (*aikido_types.ListsConfigData, error)
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 	SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails)
+	SubscribeToConfigUpdates(ctx context.Context, onUpdate func(configUpdatedAt int64)) error
 }
 
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
@@ -71,11 +74,15 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		applyCloudConfig(client, cloudConfig)
 	}()
 
-	startPolling()
+	go startPolling(isRealtimeEnabled())
 
 	ratelimiting.Init()
 
 	return nil
+}
+
+func isRealtimeEnabled() bool {
+	return os.Getenv("AIKIDO_REALTIME_ENABLED") == "true" || os.Getenv("AIKIDO_REALTIME_ENDPOINT") != ""
 }
 
 func AgentUninit() error {

@@ -3,6 +3,7 @@ package cloud
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -24,7 +25,7 @@ var ErrParsingConfig = errors.New("failed to parse cloud config")
 func (c *Client) FetchConfigUpdatedAt() time.Time {
 	response, err := c.sendCloudRequest(c.realtimeEndpoint, configUpdatedAtAPIRoute, configUpdatedAtMethod, nil)
 	if err != nil {
-		logCloudRequestError("Error in sending polling config request: ", err)
+		log.Debug("Polling config request failed", slog.Any("error", err))
 		return time.Time{}
 	}
 

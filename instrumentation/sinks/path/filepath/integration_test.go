@@ -60,6 +60,10 @@ func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo,
 	panic("not implemented")
 }
 
+func (m *mockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+	return nil
+}
+
 func newMockClient() *mockCloudClient {
 	client := &mockCloudClient{
 		attackDetectedEventSent: make(chan struct{}, 10),
