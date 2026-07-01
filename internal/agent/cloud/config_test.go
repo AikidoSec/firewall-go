@@ -32,8 +32,8 @@ func TestFetchConfigUpdatedAt(t *testing.T) {
 		defer server.Close()
 
 		client := NewClient(&ClientConfig{
-			RealtimeEndpoint: server.URL,
-			Token:            "test-token",
+			APIEndpoint: server.URL,
+			Token:       "test-token",
 		})
 
 		result := client.FetchConfigUpdatedAt()
@@ -44,8 +44,8 @@ func TestFetchConfigUpdatedAt(t *testing.T) {
 
 	t.Run("network error returns zero time", func(t *testing.T) {
 		client := NewClient(&ClientConfig{
-			RealtimeEndpoint: "http://localhost:1", // Invalid endpoint
-			Token:            "test-token",
+			APIEndpoint: "http://localhost:1", // Invalid endpoint
+			Token:       "test-token",
 		})
 
 		result := client.FetchConfigUpdatedAt()
@@ -61,8 +61,8 @@ func TestFetchConfigUpdatedAt(t *testing.T) {
 		defer server.Close()
 
 		client := NewClient(&ClientConfig{
-			RealtimeEndpoint: server.URL,
-			Token:            "test-token",
+			APIEndpoint: server.URL,
+			Token:       "test-token",
 		})
 
 		result := client.FetchConfigUpdatedAt()
@@ -77,8 +77,8 @@ func TestFetchConfigUpdatedAt(t *testing.T) {
 		defer server.Close()
 
 		client := NewClient(&ClientConfig{
-			RealtimeEndpoint: server.URL,
-			Token:            "test-token",
+			APIEndpoint: server.URL,
+			Token:       "test-token",
 		})
 
 		result := client.FetchConfigUpdatedAt()
@@ -93,8 +93,8 @@ func TestFetchConfigUpdatedAt(t *testing.T) {
 		defer server.Close()
 
 		client := NewClient(&ClientConfig{
-			RealtimeEndpoint: server.URL,
-			Token:            "",
+			APIEndpoint: server.URL,
+			Token:       "",
 		})
 
 		result := client.FetchConfigUpdatedAt()

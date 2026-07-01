@@ -14,12 +14,11 @@ import (
 // setupTestGlobals initialises globals for testing
 func setupTestGlobals() {
 	globals.EnvironmentConfig = &aikido_types.EnvironmentConfigData{
-		PlatformName:     "go",
-		PlatformVersion:  "1.21.0",
-		Endpoint:         "https://test.aikido.dev",
-		RealtimeEndpoint: "https://test-runtime.aikido.dev",
-		Library:          "firewall-go",
-		Version:          "1.0.0",
+		PlatformName:    "test-platform",
+		PlatformVersion: "1.21.0",
+		Endpoint:        "https://test.aikido.dev",
+		Library:         "firewall-go",
+		Version:         "1.0.0",
 	}
 
 	globals.AikidoConfig = &aikido_types.AikidoConfigData{

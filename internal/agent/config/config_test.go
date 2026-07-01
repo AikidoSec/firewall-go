@@ -168,12 +168,11 @@ func TestInitWithEmptyEndpoints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			environmentConfig := &aikido_types.EnvironmentConfigData{
-				PlatformName:     "test-platform",
-				PlatformVersion:  "1.0.0",
-				Library:          "test-lib",
-				Endpoint:         "", // Empty endpoint
-				RealtimeEndpoint: "", // Empty config endpoint
-				Version:          "1.0.0",
+				PlatformName:    "test-platform",
+				PlatformVersion: "1.0.0",
+				Library:         "test-lib",
+				Endpoint:        "", // Empty endpoint
+				Version:         "1.0.0",
 			}
 
 			aikidoConfig := &aikido_types.AikidoConfigData{
@@ -189,11 +188,6 @@ func TestInitWithEmptyEndpoints(t *testing.T) {
 			if globals.EnvironmentConfig.Endpoint != tt.expectedEndpoint {
 				t.Errorf("Expected Endpoint to be %q, but got %q", tt.expectedEndpoint, globals.EnvironmentConfig.Endpoint)
 			}
-
-			// RealtimeEndpoint should always be the default
-			if globals.EnvironmentConfig.RealtimeEndpoint != "https://runtime.aikido.dev/" {
-				t.Errorf("Expected RealtimeEndpoint to be https://runtime.aikido.dev/, but got %q", globals.EnvironmentConfig.RealtimeEndpoint)
-			}
 		})
 	}
 }
@@ -202,15 +196,13 @@ func TestInitWithEmptyEndpoints(t *testing.T) {
 // Explicitly provided endpoints should override region-based endpoint selection.
 func TestInitWithProvidedEndpoints(t *testing.T) {
 	customEndpoint := "https://custom.example.com/"
-	customRealtimeEndpoint := "https://custom-config.example.com/"
 
 	environmentConfig := &aikido_types.EnvironmentConfigData{
-		PlatformName:     "test-platform",
-		PlatformVersion:  "1.0.0",
-		Library:          "test-lib",
-		Endpoint:         customEndpoint,
-		RealtimeEndpoint: customRealtimeEndpoint,
-		Version:          "1.0.0",
+		PlatformName:    "test-platform",
+		PlatformVersion: "1.0.0",
+		Library:         "test-lib",
+		Endpoint:        customEndpoint,
+		Version:         "1.0.0",
 	}
 
 	// Use a US token, but the custom endpoint should still be used
@@ -223,13 +215,9 @@ func TestInitWithProvidedEndpoints(t *testing.T) {
 	err := Init(environmentConfig, aikidoConfig)
 	require.NoError(t, err)
 
-	// Verify custom values were preserved (not the US endpoint)
+	// Verify custom value was preserved (not the US endpoint)
 	if globals.EnvironmentConfig.Endpoint != customEndpoint {
 		t.Errorf("Expected Endpoint to be %q, but got %q", customEndpoint, globals.EnvironmentConfig.Endpoint)
-	}
-
-	if globals.EnvironmentConfig.RealtimeEndpoint != customRealtimeEndpoint {
-		t.Errorf("Expected RealtimeEndpoint to be %q, but got %q", customRealtimeEndpoint, globals.EnvironmentConfig.RealtimeEndpoint)
 	}
 }
 

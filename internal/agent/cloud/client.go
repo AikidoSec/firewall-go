@@ -6,16 +6,14 @@ import (
 )
 
 type ClientConfig struct {
-	APIEndpoint      string
-	RealtimeEndpoint string
-	Token            string
+	APIEndpoint string
+	Token       string
 }
 
 type Client struct {
-	httpClient       *http.Client
-	apiEndpoint      string
-	realtimeEndpoint string
-	token            string
+	httpClient  *http.Client
+	apiEndpoint string
+	token       string
 }
 
 func NewClient(cfg *ClientConfig) *Client {
@@ -23,8 +21,7 @@ func NewClient(cfg *ClientConfig) *Client {
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		apiEndpoint:      cfg.APIEndpoint,
-		realtimeEndpoint: cfg.RealtimeEndpoint,
-		token:            cfg.Token,
+		apiEndpoint: cfg.APIEndpoint,
+		token:       cfg.Token,
 	}
 }
