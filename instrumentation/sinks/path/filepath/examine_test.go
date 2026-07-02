@@ -32,6 +32,9 @@ func TestExamine_ReturnsEarlyWhenDisabled(t *testing.T) {
 
 	err := filepath.Examine("filepath.Walk", "/tmp/safe")
 	require.NoError(t, err)
+
+	err = filepath.ExamineDeferred("filepath.Clean", []string{"../etc/passwd"})
+	require.NoError(t, err)
 }
 
 func TestExamineDeferred_TracksJoinOperationStats(t *testing.T) {
@@ -82,4 +85,26 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	require.Equal(t, 1, stats.Operations["filepath.WalkDir"].Total)
 	require.Contains(t, stats.Operations, "filepath.Glob")
 	require.Equal(t, 1, stats.Operations["filepath.Glob"].Total)
+}
+
+func TestExamineDeferred_TracksCleanOperationStats(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	agent.Stats().GetAndClear()
+
+	_ = filepath.ExamineDeferred("filepath.Clean", []string{"/tmp/file.txt"})
+	_ = filepath.ExamineDeferred("filepath.Clean", []string{"/var/log/test.log"})
+
+	stats := agent.Stats().GetAndClear()
+	require.Contains(t, stats.Operations, "filepath.Clean")
+	require.Equal(t, 2, stats.Operations["filepath.Clean"].Total, "should track 2 filepath.Clean operations")
 }
