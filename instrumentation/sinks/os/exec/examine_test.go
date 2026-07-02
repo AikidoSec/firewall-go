@@ -87,3 +87,70 @@ func TestExamine_ReportsModuleName(t *testing.T) {
 		t.Fatal("timeout waiting for attack event")
 	}
 }
+
+func TestExamine_CombinedShortOptions(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+
+	originalBlocking := config.IsBlockingEnabled()
+	defer config.SetBlocking(originalBlocking)
+	config.SetBlocking(true)
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	testCases := []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "bash -ec with injection",
+			args: []string{"bash", "-ec", "ls ."},
+		},
+		{
+			name: "sh -xc with injection",
+			args: []string{"sh", "-xc", "cat /etc/passwd"},
+		},
+		{
+			name: "bash -euc with injection",
+			args: []string{"bash", "-euc", "whoami"},
+		},
+		{
+			name: "sh -euxc with injection",
+			args: []string{"sh", "-euxc", "ls -la"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/test?cmd="+tc.args[2], nil)
+			ip := "127.0.0.1"
+			ctx := request.SetContext(context.Background(), req, request.ContextData{
+				Source:        "test",
+				Route:         "/test",
+				RemoteAddress: &ip,
+			})
+
+			// Clear any previous events
+			select {
+			case <-mockClient.AttackDetectedEventSent:
+			default:
+			}
+
+			_ = exec.Examine(ctx, "os/exec.Cmd.Run", tc.args)
+
+			// Verify that the attack is detected (not bypassed)
+			select {
+			case <-mockClient.AttackDetectedEventSent:
+				assert.Equal(t, "os/exec", mockClient.CapturedAttack.Module)
+			case <-time.After(1 * time.Second):
+				t.Fatalf("timeout waiting for attack event - combined options bypass not fixed for %s", tc.name)
+			}
+		})
+	}
+}
