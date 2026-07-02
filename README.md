@@ -82,16 +82,12 @@ func main() {
 
 Zen needs to instrument your code at build time to intercept and monitor operations like database queries and system calls.
 
-Install the Zen build tool:
+The `zen-go` go tool should have been installed automatically as part of `zen-go init`.
+
+Update your build process to use `zen-go` with:
 
 ```bash
-go install github.com/AikidoSec/firewall-go/cmd/zen-go@latest
-```
-
-Then update your build process to use `zen-go` via `toolexec`:
-
-```bash
-go build -toolexec="zen-go toolexec" -o bin/app
+go tool zen-go go build -o bin/app
 ```
 
 > `zen-go` instruments your application at build time.

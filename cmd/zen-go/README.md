@@ -7,19 +7,19 @@ CLI build tool for [Aikido Zen for Go](../../README.md). It instruments your Go 
 Install:
 
 ```bash
-go install github.com/AikidoSec/firewall-go/cmd/zen-go@latest
+go get -tool github.com/AikidoSec/firewall-go/cmd/zen-go
 ```
 
 Create initial zen-go configuration for your project (creates `zen.tool.go`):
 
 ```bash
-zen-go init
+go tool zen-go init
 ```
 
 Build with instrumentation:
 
 ```bash
-go build -toolexec="zen-go toolexec" -o bin/app .
+go tool zen-go go build -o bin/app .
 ```
 
 ## How it works
