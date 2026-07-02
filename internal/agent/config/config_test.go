@@ -46,6 +46,11 @@ func TestExtractRegionFromToken(t *testing.T) {
 			expected: "ME",
 		},
 		{
+			name:     "should return AU for new format token with AU region",
+			token:    "AIK_RUNTIME_123_456_AU_randomstring",
+			expected: "AU",
+		},
+		{
 			name:     "should return EU for new format token with EU region",
 			token:    "AIK_RUNTIME_123_456_EU_randomstring",
 			expected: "EU",
@@ -105,6 +110,11 @@ func TestGetEndpointURL(t *testing.T) {
 			expected: "https://guard.me.aikido.dev/",
 		},
 		{
+			name:     "AU region token returns AU endpoint",
+			token:    "AIK_RUNTIME_123_456_AU_789",
+			expected: "https://guard.au.aikido.dev/",
+		},
+		{
 			name:     "EU region token returns default endpoint",
 			token:    "AIK_RUNTIME_123_456_EU_789",
 			expected: "https://guard.aikido.dev/",
@@ -152,6 +162,11 @@ func TestInitWithEmptyEndpoints(t *testing.T) {
 			name:             "ME region token uses ME endpoint",
 			token:            "AIK_RUNTIME_123_456_ME_789",
 			expectedEndpoint: "https://guard.me.aikido.dev/",
+		},
+		{
+			name:             "AU region token uses AU endpoint",
+			token:            "AIK_RUNTIME_123_456_AU_789",
+			expectedEndpoint: "https://guard.au.aikido.dev/",
 		},
 		{
 			name:             "EU region token uses default endpoint",
