@@ -10,6 +10,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -180,7 +181,7 @@ func OnStoredSSRF(ctx context.Context, module string, operation string, hostname
 	}
 
 	reqCtx := request.GetContext(ctx)
-	if reqCtx != nil && isForceProtectionOff(reqCtx.Method, reqCtx.Route) {
+	if reqCtx != nil && endpoints.IsForceProtectionOff(reqCtx.Method, reqCtx.Route) {
 		return nil
 	}
 

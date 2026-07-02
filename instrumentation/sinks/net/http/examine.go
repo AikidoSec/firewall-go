@@ -6,6 +6,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
+	"github.com/AikidoSec/firewall-go/internal/agent/endpoints"
 	"github.com/AikidoSec/firewall-go/internal/normalize"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -31,6 +32,12 @@ func Examine(r *http.Request) error {
 	// If bypassed IP, report hostname, but don't attempt to block it
 	if request.IsBypassed(r.Context()) {
 		return nil
+	}
+
+	if reqCtx := request.GetContext(r.Context()); reqCtx != nil {
+		if endpoints.IsForceProtectionOff(reqCtx.Method, reqCtx.Route) {
+			return nil
+		}
 	}
 
 	if hooks.ShouldBlockHostname(hostname) {
