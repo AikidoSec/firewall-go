@@ -13,6 +13,7 @@ const (
 	GuardEndpointEU = "https://guard.aikido.dev/"
 	GuardEndpointUS = "https://guard.us.aikido.dev/"
 	GuardEndpointME = "https://guard.me.aikido.dev/"
+	GuardEndpointAU = "https://guard.au.aikido.dev/"
 	RuntimeEndpoint = "https://runtime.aikido.dev/"
 )
 
@@ -45,6 +46,8 @@ func getEndpointURL(token string) string {
 		return GuardEndpointUS
 	case "ME":
 		return GuardEndpointME
+	case "AU":
+		return GuardEndpointAU
 	default:
 		return GuardEndpointEU
 	}
