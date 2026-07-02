@@ -2,6 +2,7 @@ package filepath
 
 import (
 	"context"
+	pathfilepath "path/filepath"
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
@@ -37,7 +38,13 @@ func ExamineDeferred(operationName string, elems []string) error {
 
 	hooks.OnOperationCall(operationName, operation.KindFileSystem)
 
-	path := strings.Join(elems, "")
+	// Reconstruct the path by joining elements with the OS path separator.
+	// We cannot use strings.Join(elems, "") because that would concatenate without separators,
+	// causing bare ".." elements to not be detected (e.g., []string{"/tmp/", "..", "etc"} 
+	// would become "/tmp/..etc" instead of "/tmp/../etc").
+	// We also cannot use filepath.Join(elems...) because it normalizes the path, removing
+	// the traversal markers we need to detect (e.g., "/tmp/../etc" becomes "/etc").
+	path := strings.Join(elems, string(pathfilepath.Separator))
 
 	return vulnerabilities.ScanWithOptions(context.Background(), operationName, pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
 		FilePath:       path,

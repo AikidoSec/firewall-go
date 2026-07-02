@@ -194,4 +194,18 @@ func TestDetectPathTraversal(t *testing.T) {
 	t.Run("AWS credentials protection", func(t *testing.T) {
 		assert.True(t, detectPathTraversal("/home/user/.aws/credentials", "/home/user/.aws/credentials", true))
 	})
+
+	t.Run("detects bare .. path segments", func(t *testing.T) {
+		// These test cases cover the bypass where bare ".." elements are used in filepath.Join flows
+		assert.True(t, detectPathTraversal("/tmp/../etc/passwd", "..", true))
+		assert.True(t, detectPathTraversal("/base/../etc/passwd", "..", true))
+		assert.True(t, detectPathTraversal("/tmp/../../etc/passwd", "..", true))
+	})
+
+	t.Run("does not flag .. in filenames", func(t *testing.T) {
+		// Ensure we don't have false positives for filenames containing ".."
+		assert.False(t, detectPathTraversal("/tmp/test..txt", "test..txt", true))
+		assert.False(t, detectPathTraversal("/tmp/..test.txt", "..test.txt", true))
+		assert.False(t, detectPathTraversal("/tmp/test...txt", "test...txt", true))
+	})
 }
