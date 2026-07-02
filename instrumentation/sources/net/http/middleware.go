@@ -23,6 +23,7 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 		}
 
 		ip := zenhttp.GetClientIP(r)
+		authIP := zenhttp.GetClientIPForAuthorization(r)
 
 		pattern := r.Pattern
 		// ServeMux patterns can start with the method and/or host
@@ -37,11 +38,12 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 		}
 
 		ctx := request.SetContext(r.Context(), r, request.ContextData{
-			Source:        "http.ServeMux",
-			Route:         pattern,
-			RouteParams:   extractRouteParams(r, pattern),
-			RemoteAddress: &ip,
-			Body:          zenhttp.TryExtractBody(r, &requestParser{req: r}),
+			Source:          "http.ServeMux",
+			Route:           pattern,
+			RouteParams:     extractRouteParams(r, pattern),
+			RemoteAddress:   &ip,
+			AuthorizationIP: &authIP,
+			Body:            zenhttp.TryExtractBody(r, &requestParser{req: r}),
 		})
 
 		wrappedR := r.WithContext(ctx)

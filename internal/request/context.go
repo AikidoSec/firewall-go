@@ -19,6 +19,10 @@ type Context struct {
 	Headers            map[string][]string
 	RouteParams        map[string]string
 	RemoteAddress      *string
+	// AuthorizationIP is the IP address to use for authorization decisions
+	// (IP allow/block lists). This uses the socket IP by default for security,
+	// unless AIKIDO_TRUST_PROXY_FOR_IP_RESTRICTIONS is explicitly enabled.
+	AuthorizationIP    *string
 	Body               any
 	Cookies            map[string][]string
 	Source             string
@@ -126,6 +130,21 @@ func (ctx *Context) HasMiddlewareExecuted() bool {
 }
 
 func (ctx *Context) GetIP() string {
+	if ctx.RemoteAddress != nil {
+		return *ctx.RemoteAddress
+	}
+	return ""
+}
+
+// GetIPForAuthorization returns the IP address to use for authorization
+// decisions (IP allow/block lists). This uses the socket IP by default
+// for security, unless AIKIDO_TRUST_PROXY_FOR_IP_RESTRICTIONS is enabled.
+func (ctx *Context) GetIPForAuthorization() string {
+	if ctx.AuthorizationIP != nil {
+		return *ctx.AuthorizationIP
+	}
+	// Fall back to RemoteAddress if AuthorizationIP is not set
+	// (for backward compatibility with older middleware)
 	if ctx.RemoteAddress != nil {
 		return *ctx.RemoteAddress
 	}

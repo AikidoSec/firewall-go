@@ -21,32 +21,35 @@ func OnInitRequest(ctx context.Context) *Response {
 		return nil
 	}
 
-	if config.IsIPBypassed(reqCtx.GetIP()) {
+	// Use the authorization IP for bypass check to prevent header spoofing
+	if config.IsIPBypassed(reqCtx.GetIPForAuthorization()) {
 		return nil
 	}
 
-	ip := reqCtx.GetIP()
+	// Use the authorization IP for all IP-based security checks
+	// This uses the socket IP by default to prevent header spoofing attacks
+	authIP := reqCtx.GetIPForAuthorization()
 
 	// Record monitored IP matches for stats
-	if monitoredKeys := config.GetMatchingMonitoredIPKeys(ip); len(monitoredKeys) > 0 {
+	if monitoredKeys := config.GetMatchingMonitoredIPKeys(authIP); len(monitoredKeys) > 0 {
 		agent.Stats().OnIPAddressMatches(monitoredKeys)
 	}
 
 	// Allowed IP list, global list for allowing traffic by country
-	if ipAllowed := config.IsIPAllowed(ip); !ipAllowed {
-		msg := fmt.Sprintf("Your IP address is not allowed. (Your IP: %s)", ip)
+	if ipAllowed := config.IsIPAllowed(authIP); !ipAllowed {
+		msg := fmt.Sprintf("Your IP address is not allowed. (Your IP: %s)", authIP)
 
 		return &Response{403, msg}
 	}
 
 	// Blocked IP lists (e.g. known threat actors, geo blocking, ...)
-	if ipBlocked, reason := config.IsIPBlocked(ip); ipBlocked {
+	if ipBlocked, reason := config.IsIPBlocked(authIP); ipBlocked {
 		// Record blocked IP matches for stats
-		if blockedKeys := config.GetMatchingBlockedIPKeys(ip); len(blockedKeys) > 0 {
+		if blockedKeys := config.GetMatchingBlockedIPKeys(authIP); len(blockedKeys) > 0 {
 			agent.Stats().OnIPAddressMatches(blockedKeys)
 		}
 
-		msg := fmt.Sprintf("Your IP address is blocked due to %s. (Your IP: %s)", reason, ip)
+		msg := fmt.Sprintf("Your IP address is blocked due to %s. (Your IP: %s)", reason, authIP)
 
 		return &Response{403, msg}
 	}
@@ -72,9 +75,9 @@ func OnInitRequest(ctx context.Context) *Response {
 		endpoints.RouteMetadata{Method: reqCtx.Method, Route: reqCtx.Route},
 	)
 	// IP Allowlists per route
-	if !ipAllowedToAccessRoute(ip, matches) {
+	if !ipAllowedToAccessRoute(authIP, matches) {
 		msg := "Your IP address is not allowed to access this resource."
-		msg += " (Your IP: " + ip + ")"
+		msg += " (Your IP: " + authIP + ")"
 		return &Response{403, msg}
 	}
 
