@@ -40,15 +40,15 @@ func extractRouteParams(urlPath string) []string {
 			decoded = segment
 		}
 
-		if isAlphanumeric(decoded) {
-			continue
-		}
-
 		// Check if the segment contains URL-encoded characters (non-standard URL piece)
 		if segment != url.PathEscape(decoded) {
 			results = append(results, decoded)
 		} else if isRouteParameter(segment) {
 			// Looks like a dynamic value (number, UUID, hash, secret, etc.)
+			results = append(results, decoded)
+		} else if isAlphanumeric(decoded) {
+			// Alphanumeric segments could be hostnames or other user-controlled values
+			// that may be used in SSRF attacks. Include them for scanning.
 			results = append(results, decoded)
 		}
 	}
