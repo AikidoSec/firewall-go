@@ -54,24 +54,34 @@ func addURLDecodedVariants(results map[string]string, str string, pathToPayload 
 	}
 }
 
-// extractStringsFromUserInput recursively extracts strings from user input
-func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[string]string {
+const maxDepth = 1024
+
+// extractStringsFromUserInput recursively extracts strings from user input.
+// The second return value is true when recursion was stopped at maxDepth.
+func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) (map[string]string, bool) {
 	results := make(map[string]string)
 
+	if len(pathToPayload) >= maxDepth {
+		return results, true
+	}
+
+	truncated := false
 	val := reflect.ValueOf(obj)
 	switch val.Kind() {
 	case reflect.Map:
 		for _, key := range val.MapKeys() {
 			keyStr := fmt.Sprintf("%v", key.Interface())
 			results[keyStr] = buildPathToPayload(pathToPayload)
-			nestedResults := extractStringsFromUserInput(val.MapIndex(key).Interface(), append(pathToPayload, pathPart{Type: "object", Key: keyStr}))
+			nestedResults, nestedTruncated := extractStringsFromUserInput(val.MapIndex(key).Interface(), append(pathToPayload, pathPart{Type: "object", Key: keyStr}))
+			truncated = truncated || nestedTruncated
 			for k, v := range nestedResults {
 				results[k] = v
 			}
 		}
 	case reflect.Slice, reflect.Array:
 		for i := 0; i < val.Len(); i++ {
-			nestedResults := extractStringsFromUserInput(val.Index(i).Interface(), append(pathToPayload, pathPart{Type: "array", Index: i}))
+			nestedResults, nestedTruncated := extractStringsFromUserInput(val.Index(i).Interface(), append(pathToPayload, pathPart{Type: "array", Index: i}))
+			truncated = truncated || nestedTruncated
 			for k, v := range nestedResults {
 				results[k] = v
 			}
@@ -95,7 +105,9 @@ func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[
 		addURLDecodedVariants(results, str, pathToPayload)
 		jwt := tryDecodeAsJWT(str)
 		if jwt.JWT {
-			for k, v := range extractStringsFromUserInput(jwt.Object, append(pathToPayload, pathPart{Type: "jwt"})) {
+			nestedResults, nestedTruncated := extractStringsFromUserInput(jwt.Object, append(pathToPayload, pathPart{Type: "jwt"}))
+			truncated = truncated || nestedTruncated
+			for k, v := range nestedResults {
 				if k == "iss" || strings.HasSuffix(v, "<jwt>.iss") {
 					continue
 				}
@@ -105,5 +117,5 @@ func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[
 
 	}
 
-	return results
+	return results, truncated
 }
