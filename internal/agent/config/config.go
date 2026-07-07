@@ -14,6 +14,7 @@ const (
 	GuardEndpointUS = "https://guard.us.aikido.dev/"
 	GuardEndpointME = "https://guard.me.aikido.dev/"
 	GuardEndpointAU = "https://guard.au.aikido.dev/"
+	RuntimeEndpoint = "https://runtime.aikido.dev/"
 )
 
 // extractRegionFromToken extracts the region from an Aikido token.
@@ -69,7 +70,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	}
 
 	if globals.EnvironmentConfig.RealtimeEndpoint == "" {
-		globals.EnvironmentConfig.RealtimeEndpoint = globals.EnvironmentConfig.Endpoint
+		globals.EnvironmentConfig.RealtimeEndpoint = RuntimeEndpoint
 	}
 
 	if globals.AikidoConfig.Token == "" {

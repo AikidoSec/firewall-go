@@ -50,9 +50,7 @@ func stopPolling() {
 	}
 }
 
-// runSSESubscription connects to the realtime SSE endpoint and calls
-// refreshCloudConfigIfNewer on each config-updated event. Reconnects with
-// exponential backoff and jitter on failure. The 1-minute poll remains as a fallback.
+// runSSESubscription reconnects with exponential backoff and jitter until ctx is cancelled.
 func runSSESubscription(ctx context.Context) {
 	backoff := sseInitialBackoff
 	for {
