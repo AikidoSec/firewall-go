@@ -82,7 +82,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 }
 
 func isRealtimeEnabled() bool {
-	return os.Getenv("AIKIDO_REALTIME_ENABLED") == "true" || os.Getenv("AIKIDO_REALTIME_ENDPOINT") != ""
+	return os.Getenv("AIKIDO_FEATURE_SSE") == "true" || os.Getenv("AIKIDO_FEATURE_SSE") != ""
 }
 
 func AgentUninit() error {
