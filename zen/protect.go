@@ -87,7 +87,7 @@ type Config struct {
 	Token string
 	// Endpoint is the Aikido API endpoint
 	Endpoint string
-	// RealtimeEndpoint is the Aikido real-time config endpoint (default: https://zen.aikido.dev/)
+	// RealtimeEndpoint is the Aikido real-time config endpoint (default: https://runtime.aikido.dev/)
 	RealtimeEndpoint string
 	// Block will block any requests with suspected attacks
 	// Once cloud config is retrieved, Zen will use the configured mode from the dashboard.

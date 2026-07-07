@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -73,30 +74,15 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		applyCloudConfig(client, cloudConfig)
 	}()
 
-	go probeAndStartPolling(
-		aikidoConfig.Token,
-		globals.EnvironmentConfig.Endpoint,
-		globals.EnvironmentConfig.RealtimeEndpoint,
-	)
+	startPolling(isRealtimeEnabled())
 
 	ratelimiting.Init()
 
 	return nil
 }
 
-func probeAndStartPolling(token, apiEndpoint, realtimeEndpoint string) {
-	resolved, sseEnabled := cloud.ResolveRealtimeURL(realtimeEndpoint, token)
-
-	if resolved != realtimeEndpoint {
-		fallbackClient := cloud.NewClient(&cloud.ClientConfig{
-			Token:            token,
-			APIEndpoint:      apiEndpoint,
-			RealtimeEndpoint: resolved,
-		})
-		SetCloudClient(fallbackClient)
-	}
-
-	startPolling(sseEnabled)
+func isRealtimeEnabled() bool {
+	return os.Getenv("AIKIDO_REALTIME_ENABLED") == "true" || os.Getenv("AIKIDO_REALTIME_ENDPOINT") != ""
 }
 
 func AgentUninit() error {
