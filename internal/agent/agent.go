@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -82,7 +83,8 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 }
 
 func isRealtimeEnabled() bool {
-	return os.Getenv("AIKIDO_FEATURE_SSE") == "true" || os.Getenv("AIKIDO_FEATURE_SSE") != ""
+	v := strings.ToLower(os.Getenv("AIKIDO_FEATURE_SSE"))
+	return v == "true" || v == "1"
 }
 
 func AgentUninit() error {
