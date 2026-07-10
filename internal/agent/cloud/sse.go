@@ -85,7 +85,7 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 	}()
 
 	scanner := bufio.NewScanner(resp.Body)
-	var eventName, dataLine string
+	parser := &sseParser{}
 
 	for scanner.Scan() {
 		select {
@@ -93,24 +93,17 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 		default:
 		}
 
-		line := scanner.Text()
-		switch {
-		case strings.HasPrefix(line, "event:"):
-			eventName = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
-		case strings.HasPrefix(line, "data:"):
-			dataLine = strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		case line == "":
-			if eventName == "config-updated" {
-				var data configUpdatedData
-				if err := json.Unmarshal([]byte(dataLine), &data); err != nil {
-					log.Debug("SSE: failed to parse config-updated payload", slog.Any("error", err))
-				} else {
-					onUpdate(data.ConfigUpdatedAt)
-				}
-			}
-			eventName = ""
-			dataLine = ""
+		event, ok := parser.feedLine(scanner.Text())
+		if !ok || event.name != "config-updated" {
+			continue
 		}
+
+		var data configUpdatedData
+		if err := json.Unmarshal([]byte(event.data), &data); err != nil {
+			log.Debug("SSE: failed to parse config-updated payload", slog.Any("error", err))
+			continue
+		}
+		onUpdate(data.ConfigUpdatedAt)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -118,4 +111,29 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 	}
 
 	return nil
+}
+
+type sseEvent struct {
+	name string
+	data string
+}
+
+type sseParser struct {
+	eventName string
+	dataLine  string
+}
+
+func (p *sseParser) feedLine(line string) (sseEvent, bool) {
+	switch {
+	case strings.HasPrefix(line, "event:"):
+		p.eventName = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+	case strings.HasPrefix(line, "data:"):
+		p.dataLine = strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+	case line == "":
+		event := sseEvent{name: p.eventName, data: p.dataLine}
+		p.eventName = ""
+		p.dataLine = ""
+		return event, true
+	}
+	return sseEvent{}, false
 }
