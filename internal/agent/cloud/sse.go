@@ -120,7 +120,7 @@ type sseEvent struct {
 
 type sseParser struct {
 	eventName string
-	dataLine  string
+	dataLines []string
 }
 
 func (p *sseParser) feedLine(line string) (sseEvent, bool) {
@@ -128,11 +128,11 @@ func (p *sseParser) feedLine(line string) (sseEvent, bool) {
 	case strings.HasPrefix(line, "event:"):
 		p.eventName = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
 	case strings.HasPrefix(line, "data:"):
-		p.dataLine = strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		p.dataLines = append(p.dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
 	case line == "":
-		event := sseEvent{name: p.eventName, data: p.dataLine}
+		event := sseEvent{name: p.eventName, data: strings.Join(p.dataLines, "\n")}
 		p.eventName = ""
-		p.dataLine = ""
+		p.dataLines = nil
 		return event, true
 	}
 	return sseEvent{}, false
