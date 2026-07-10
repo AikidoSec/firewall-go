@@ -14,10 +14,9 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
-const (
-	configStreamRoute = "/api/runtime/stream"
-	sseReadTimeout    = 70 * time.Second
-)
+const configStreamRoute = "/api/runtime/stream"
+
+var sseReadTimeout = 70 * time.Second
 
 // ErrNotRetryable is returned when the server responds with a status code that
 // indicates retrying will not help (e.g. 401, 403).
@@ -61,9 +60,10 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
 	}
 
+	readTimeout := sseReadTimeout
 	resetCh := make(chan struct{}, 1)
 	go func() {
-		idleTimer := time.NewTimer(sseReadTimeout)
+		idleTimer := time.NewTimer(readTimeout)
 		defer idleTimer.Stop()
 		for {
 			select {
@@ -74,7 +74,7 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 					default:
 					}
 				}
-				idleTimer.Reset(sseReadTimeout)
+				idleTimer.Reset(readTimeout)
 			case <-idleTimer.C:
 				cancelRead()
 				return
