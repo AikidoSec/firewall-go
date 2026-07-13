@@ -26,6 +26,8 @@ const (
 	KindSSRF AttackKind = "ssrf"
 	// KindStoredSSRF indicates a stored server-side request forgery attack was detected.
 	KindStoredSSRF AttackKind = "stored_ssrf"
+	// KindSuspiciousPayload indicates input too deeply nested to fully inspect. Reported but currently not blocked.
+	KindSuspiciousPayload AttackKind = "suspicious_payload"
 )
 
 func getDisplayNameForAttackKind(kind AttackKind) string {
@@ -40,6 +42,8 @@ func getDisplayNameForAttackKind(kind AttackKind) string {
 		return "a server-side request forgery"
 	case KindStoredSSRF:
 		return "a stored server-side request forgery"
+	case KindSuspiciousPayload:
+		return "a suspicious payload"
 	default:
 		return "unknown attack type"
 	}
@@ -170,6 +174,42 @@ func storeDeferredAttack(ctx context.Context, res *interceptorResult) error {
 	reqCtx.SetDeferredAttack(deferredAttack)
 
 	return nil
+}
+
+// reportSuspiciousPayload reports a suspicious payload, at most once per request. Currently not blocked.
+func reportSuspiciousPayload(ctx context.Context, operation, module, source string, metadata map[string]string) {
+	reqCtx := request.GetContext(ctx)
+	if reqCtx == nil {
+		return
+	}
+
+	if !reqCtx.MarkSuspiciousPayloadReported() {
+		return
+	}
+
+	metadata["isBeta"] = "true"
+
+	attack := &agent.DetectedAttack{
+		Request: aikido_types.RequestInfo{
+			Method:    reqCtx.Method,
+			IPAddress: *reqCtx.RemoteAddress,
+			UserAgent: reqCtx.GetUserAgent(),
+			URL:       reqCtx.URL,
+			Source:    reqCtx.Source,
+			Route:     reqCtx.Route,
+		},
+		Attack: aikido_types.AttackDetails{
+			Kind:      string(KindSuspiciousPayload),
+			Operation: operation,
+			Module:    module,
+			Blocked:   false,
+			Source:    source,
+			Metadata:  metadata,
+			User:      reqCtx.GetUser(),
+		},
+	}
+
+	go agent.OnAttackDetected(attack)
 }
 
 // OnStoredSSRF reports a stored SSRF attack and returns an error if blocking is enabled.
