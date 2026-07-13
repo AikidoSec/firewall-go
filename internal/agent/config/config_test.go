@@ -249,7 +249,7 @@ func TestInitWithProvidedEndpoints(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
-	require.Equal(t, "1.2.6", Version)
+	require.Equal(t, "1.2.7", Version)
 }
 
 func TestInitReturnsErrorForInvalidConfig(t *testing.T) {
