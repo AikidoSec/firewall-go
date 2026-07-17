@@ -87,11 +87,11 @@ func TestSSEParserFeedLine(t *testing.T) {
 
 func TestSubscribeToConfigUpdates(t *testing.T) {
 	t.Run("connects with auth header and receives events, ignoring pings", func(t *testing.T) {
-		var receivedAuth string
+		var receivedHeaders http.Header
 		release := make(chan struct{})
 
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			receivedAuth = r.Header.Get("Authorization")
+			receivedHeaders = r.Header
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.WriteHeader(http.StatusOK)
 			flusher := w.(http.Flusher)
@@ -106,7 +106,7 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := &Client{realtimeEndpoint: server.URL, token: "my-secret-token"}
+		client := &Client{realtimeEndpoint: server.URL, token: "my-secret-token", platform: "golang", version: "1.2.7"}
 
 		updates := make(chan int64, 1)
 		done := make(chan error, 1)
@@ -123,7 +123,11 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 			t.Fatal("timed out waiting for config update")
 		}
 
-		assert.Equal(t, "my-secret-token", receivedAuth)
+		assert.Equal(t, "my-secret-token", receivedHeaders.Get("Authorization"))
+		assert.Equal(t, "text/event-stream", receivedHeaders.Get("Accept"))
+		assert.Equal(t, "no-cache", receivedHeaders.Get("Cache-Control"))
+		assert.Equal(t, "golang", receivedHeaders.Get("X-Agent-Platform"))
+		assert.Equal(t, "1.2.7", receivedHeaders.Get("X-Agent-Version"))
 
 		close(release)
 

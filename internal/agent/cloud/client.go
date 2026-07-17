@@ -9,6 +9,8 @@ type ClientConfig struct {
 	APIEndpoint      string
 	RealtimeEndpoint string
 	Token            string
+	Platform         string
+	Version          string
 }
 
 type Client struct {
@@ -16,6 +18,8 @@ type Client struct {
 	apiEndpoint      string
 	realtimeEndpoint string
 	token            string
+	platform         string
+	version          string
 }
 
 func NewClient(cfg *ClientConfig) *Client {
@@ -26,5 +30,7 @@ func NewClient(cfg *ClientConfig) *Client {
 		apiEndpoint:      cfg.APIEndpoint,
 		realtimeEndpoint: cfg.RealtimeEndpoint,
 		token:            cfg.Token,
+		platform:         cfg.Platform,
+		version:          cfg.Version,
 	}
 }

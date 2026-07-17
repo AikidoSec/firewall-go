@@ -42,6 +42,8 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 	req.Header.Set("Authorization", c.token)
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("X-Agent-Platform", c.platform)
+	req.Header.Set("X-Agent-Version", c.version)
 
 	resp, err := (&http.Client{}).Do(req)
 	if err != nil {
