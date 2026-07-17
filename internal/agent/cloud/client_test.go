@@ -20,11 +20,15 @@ func TestNewClient(t *testing.T) {
 				APIEndpoint:      "https://localhost:8080",
 				RealtimeEndpoint: "https://localhost:8081",
 				Token:            "test-token-123",
+				Platform:         "golang",
+				Version:          "1.2.7",
 			},
 			want: &Client{
 				apiEndpoint:      "https://localhost:8080",
 				realtimeEndpoint: "https://localhost:8081",
 				token:            "test-token-123",
+				platform:         "golang",
+				version:          "1.2.7",
 			},
 		},
 		{
@@ -50,6 +54,8 @@ func TestNewClient(t *testing.T) {
 			assert.Equal(t, tt.want.apiEndpoint, got.apiEndpoint, "apiEndpoint mismatch")
 			assert.Equal(t, tt.want.realtimeEndpoint, got.realtimeEndpoint, "realtimeEndpoint mismatch")
 			assert.Equal(t, tt.want.token, got.token, "token mismatch")
+			assert.Equal(t, tt.want.platform, got.platform, "platform mismatch")
+			assert.Equal(t, tt.want.version, got.version, "version mismatch")
 			assert.NotNil(t, got.httpClient, "httpClient should not be nil")
 		})
 	}
