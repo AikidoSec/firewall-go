@@ -11,7 +11,7 @@ func IsShellCommand(program string) bool {
 	shell := strings.ToLower(filepath.Base(program))
 
 	switch shell {
-	case "sh", "bash", "zsh", "dash", "ksh", "fish", "tcsh", "csh":
+	case "sh", "bash", "zsh", "dash", "ksh", "fish", "tcsh", "csh", "ash", "busybox":
 		return true
 	default:
 		return false
@@ -22,7 +22,21 @@ func IsShellCommand(program string) bool {
 // It looks for the -c flag and returns everything after it as the command string
 // to be interpreted by the shell.
 func ExtractShellCommandString(args []string) []string {
-	for i := 1; i < len(args); i++ {
+	startIndex := 1
+	
+	// Handle BusyBox multi-call binary pattern: busybox sh -c "command"
+	// In this case, we need to skip the shell name argument after busybox
+	if len(args) > 0 && strings.ToLower(filepath.Base(args[0])) == "busybox" {
+		if len(args) > 1 {
+			// Check if the next argument is a shell name
+			potentialShell := strings.ToLower(filepath.Base(args[1]))
+			if potentialShell == "sh" || potentialShell == "ash" || potentialShell == "bash" {
+				startIndex = 2 // Skip both "busybox" and the shell name
+			}
+		}
+	}
+	
+	for i := startIndex; i < len(args); i++ {
 		flag := args[i]
 		if flag == "-c" {
 			// Return everything after the flag

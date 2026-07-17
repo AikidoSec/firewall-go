@@ -55,6 +55,16 @@ func TestIsShellCommand(t *testing.T) {
 			program:  "csh",
 			expected: true,
 		},
+		{
+			name:     "ash",
+			program:  "ash",
+			expected: true,
+		},
+		{
+			name:     "busybox",
+			program:  "busybox",
+			expected: true,
+		},
 		// Unix shells with full paths
 		{
 			name:     "sh with full path",
@@ -71,6 +81,16 @@ func TestIsShellCommand(t *testing.T) {
 			program:  "/usr/local/bin/zsh",
 			expected: true,
 		},
+		{
+			name:     "ash with full path",
+			program:  "/bin/ash",
+			expected: true,
+		},
+		{
+			name:     "busybox with full path",
+			program:  "/bin/busybox",
+			expected: true,
+		},
 		// Case insensitivity
 		{
 			name:     "SH uppercase",
@@ -80,6 +100,16 @@ func TestIsShellCommand(t *testing.T) {
 		{
 			name:     "BaSh mixed case",
 			program:  "BaSh",
+			expected: true,
+		},
+		{
+			name:     "ASH uppercase",
+			program:  "ASH",
+			expected: true,
+		},
+		{
+			name:     "BusyBox mixed case",
+			program:  "BusyBox",
 			expected: true,
 		},
 		// Non-shell programs
@@ -158,6 +188,26 @@ func TestExtractShellCommandString(t *testing.T) {
 			expected: []string{"cat /etc/passwd"},
 		},
 		{
+			name:     "ash -c with single command",
+			args:     []string{"ash", "-c", "ls ."},
+			expected: []string{"ls ."},
+		},
+		{
+			name:     "busybox sh -c with command",
+			args:     []string{"busybox", "sh", "-c", "cat /etc/passwd"},
+			expected: []string{"cat /etc/passwd"},
+		},
+		{
+			name:     "busybox ash -c with command",
+			args:     []string{"busybox", "ash", "-c", "echo hello"},
+			expected: []string{"echo hello"},
+		},
+		{
+			name:     "busybox bash -c with command",
+			args:     []string{"busybox", "bash", "-c", "ls -la"},
+			expected: []string{"ls -la"},
+		},
+		{
 			name:     "sh -c with multiple arguments",
 			args:     []string{"sh", "-c", "echo", "hello"},
 			expected: []string{"echo", "hello"},
@@ -219,6 +269,28 @@ func TestExtractShellCommandString(t *testing.T) {
 			name:     "command substitution",
 			args:     []string{"bash", "-c", "cat $(whoami).txt"},
 			expected: []string{"cat $(whoami).txt"},
+		},
+		// BusyBox edge cases
+		{
+			name:     "busybox without shell subcommand",
+			args:     []string{"busybox", "-c", "echo test"},
+			expected: []string{"echo test"},
+		},
+		{
+			name:     "busybox with non-shell subcommand",
+			args:     []string{"busybox", "ls", "-la"},
+			expected: nil,
+		},
+		{
+			name:     "busybox sh with flags before -c",
+			args:     []string{"busybox", "sh", "-x", "-c", "echo test"},
+			expected: []string{"echo test"},
+		},
+		// Ash edge cases
+		{
+			name:     "ash with command injection attempt",
+			args:     []string{"ash", "-c", "ping 8.8.8.8;cat /etc/passwd"},
+			expected: []string{"ping 8.8.8.8;cat /etc/passwd"},
 		},
 	}
 
