@@ -122,6 +122,19 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 				command:     []string{"echo", "hello"},
 				shouldBlock: false,
 			},
+			// Combined short options: shells honor -c regardless of its position
+			{
+				name:        "combined short options -ec (c last)",
+				queryParam:  "cmd=cat%20/etc/passwd",
+				command:     []string{"bash", "-ec", "cat /etc/passwd"},
+				shouldBlock: true,
+			},
+			{
+				name:        "combined short options -cx (c not last)",
+				queryParam:  "cmd=cat%20/etc/passwd",
+				command:     []string{"bash", "-cx", "cat /etc/passwd"},
+				shouldBlock: true,
+			},
 		}
 
 		for _, tc := range testCases {
