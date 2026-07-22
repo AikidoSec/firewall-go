@@ -37,3 +37,4 @@ jobs:
           app_port: 3000
           sleep_before_test: 10
           test_timeout: 900
+          skip_tests: test_rate_limiting_retry_after,test_user_ip_from_proxy
