@@ -136,6 +136,53 @@ func TestExamine_TracksOperationStats(t *testing.T) {
 	require.Equal(t, 3, stats.Operations["net/http.Client.Do"].Total, "should track 3 HTTP calls")
 }
 
+func TestExamine_ForceProtectionOffSkipsOutboundBlocking(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	originalClient := agent.GetCloudClient()
+	defer func() {
+		zen.SetDisabled(originalDisabled)
+		agent.SetCloudClient(originalClient)
+	}()
+
+	require.NoError(t, zen.Protect())
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		ConfigUpdatedAt: time.Now().UnixMilli(),
+		Block:           &block,
+		Domains: []aikido_types.OutboundDomain{
+			{Hostname: "blocked.com", Mode: "block"},
+		},
+		Endpoints: []aikido_types.Endpoint{
+			{
+				Method:             "GET",
+				Route:              "/api/no-protection",
+				ForceProtectionOff: true,
+			},
+		},
+	}, nil)
+
+	incomingReq := httptest.NewRequest("GET", "/api/no-protection", nil)
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source: "test",
+		Route:  "/api/no-protection",
+	})
+
+	outboundReq, _ := http.NewRequestWithContext(ctx, "GET", "http://blocked.com", http.NoBody)
+	assert.NoError(t, Examine(outboundReq), "force protection off route should not block outbound connections")
+
+	// A route without force protection off should still be blocked
+	incomingReqNormal := httptest.NewRequest("GET", "/api/normal", nil)
+	ctxNormal := request.SetContext(context.Background(), incomingReqNormal, request.ContextData{
+		Source: "test",
+		Route:  "/api/normal",
+	})
+	outboundReqNormal, _ := http.NewRequestWithContext(ctxNormal, "GET", "http://blocked.com", http.NoBody)
+	var blockedErr *zen.OutboundConnectionBlocked
+	require.ErrorAs(t, Examine(outboundReqNormal), &blockedErr, "normal route should still block outbound connections")
+}
+
 func TestExamine_BypassedIPSkipsOutboundBlocking(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	originalClient := agent.GetCloudClient()
