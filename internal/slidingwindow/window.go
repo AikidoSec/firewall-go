@@ -44,6 +44,25 @@ func (w *Window) Count(currentTimestamp int64) int {
 	return len(w.timestamps)
 }
 
+// RetryAfter returns how long until the oldest event in the window expires, freeing a slot.
+func (w *Window) RetryAfter(timestamp int64) int64 {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.cleanOld(timestamp)
+
+	if len(w.timestamps) == 0 {
+		return 0
+	}
+
+	retryAfter := w.timestamps[0] + w.windowSize - timestamp
+	if retryAfter < 0 {
+		return 0
+	}
+
+	return retryAfter
+}
+
 // cleanOld removes timestamps outside the window (must be called with a lock)
 func (w *Window) cleanOld(currentTime int64) {
 	windowStart := currentTime - w.windowSize

@@ -42,6 +42,7 @@ func AikidoMiddleware() echo.MiddlewareFunc {
 					if blockResult.Trigger == "ip" {
 						message += " (Your IP: " + *blockResult.IP + ")"
 					}
+					c.Response().Header().Set("Retry-After", strconv.Itoa(blockResult.RetryAfterSeconds))
 					return c.String(http.StatusTooManyRequests, message)
 				} else if blockResult.Type == "blocked" {
 					return c.String(http.StatusForbidden, "You are blocked by Zen.")
@@ -73,6 +74,7 @@ func AikidoMiddleware() echo.MiddlewareFunc {
 					if blockResult.Trigger == "ip" {
 						message += " (Your IP: " + *blockResult.IP + ")"
 					}
+					c.Response().Header().Set("Retry-After", strconv.Itoa(blockResult.RetryAfterSeconds))
 					return c.String(http.StatusTooManyRequests, message)
 				} else if blockResult.Type == "blocked" {
 					return c.String(http.StatusForbidden, "You are blocked by Zen.")
@@ -84,6 +86,8 @@ func AikidoMiddleware() echo.MiddlewareFunc {
 	}
 }
 ```
+
+When `blockResult.Type` is `"rate-limited"`, `blockResult.RetryAfterSeconds` tells you how long to wait until the rate limit window frees up again. Sending it back as the standard `Retry-After` header (as shown above) lets well-behaved clients back off instead of retrying immediately.
 
 ## Proxy settings
 

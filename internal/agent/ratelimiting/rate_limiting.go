@@ -63,8 +63,9 @@ type endpointData struct {
 
 // Status represents the result of a rate limiting check
 type Status struct {
-	Block   bool
-	Trigger string
+	Block             bool
+	Trigger           string
+	RetryAfterSeconds int
 }
 
 type RateLimiter struct {
@@ -144,6 +145,8 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 
 	if !counts.TryRecord(now) {
 		trigger := kind.String()
+		retryAfterMs := counts.RetryAfter(now)
+		retryAfterSeconds := int((retryAfterMs + 999) / 1000)
 
 		log.Info("Rate limited request",
 			slog.String(trigger, entityValue),
@@ -151,7 +154,7 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 			slog.String("route", route),
 			slog.Int("count", counts.Count(now)))
 
-		return &Status{Block: true, Trigger: trigger}
+		return &Status{Block: true, Trigger: trigger, RetryAfterSeconds: retryAfterSeconds}
 	}
 
 	return &Status{Block: false}

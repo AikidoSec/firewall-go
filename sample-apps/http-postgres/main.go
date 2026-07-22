@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/zen"
@@ -73,6 +74,7 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 				if blockResult.Trigger == "ip" {
 					message += " (Your IP: " + *blockResult.IP + ")"
 				}
+				w.Header().Set("Retry-After", strconv.Itoa(blockResult.RetryAfterSeconds))
 				http.Error(w, message, http.StatusTooManyRequests)
 				return
 			case "blocked":

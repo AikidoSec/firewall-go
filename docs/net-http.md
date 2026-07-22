@@ -36,6 +36,7 @@ func AikidoMiddleware(next http.Handler) http.Handler {
 				if blockResult.Trigger == "ip" {
 					message += " (Your IP: " + *blockResult.IP + ")"
 				}
+				w.Header().Set("Retry-After", strconv.Itoa(blockResult.RetryAfterSeconds))
 				http.Error(w, message, http.StatusTooManyRequests)
 				return
 			case "blocked":
@@ -49,6 +50,8 @@ func AikidoMiddleware(next http.Handler) http.Handler {
 }
 ```
 The important part here is the call to `zen.ShouldBlockRequest()` which returns whether to block the request and the reason why.
+
+When `blockResult.Type` is `"rate-limited"`, `blockResult.RetryAfterSeconds` tells you how long to wait until the rate limit window frees up again. Sending it back as the standard `Retry-After` header (as shown above) lets well-behaved clients back off instead of retrying immediately.
 
 ## Proxy settings
 
