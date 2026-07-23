@@ -14,6 +14,7 @@ import (
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/importcfg"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/rules"
+	zenversion "github.com/AikidoSec/firewall-go/cmd/zen-go/internal/version"
 )
 
 func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
@@ -43,7 +44,7 @@ func toolexecCompileCommand(stdout io.Writer, stderr io.Writer, tool string, too
 		return err
 	}
 
-	instr, err := instrumentor.NewInstrumentor(version)
+	instr, err := instrumentor.NewInstrumentor(zenversion.Resolve(version))
 	if err != nil {
 		return err
 	}

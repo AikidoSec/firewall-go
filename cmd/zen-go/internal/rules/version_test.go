@@ -82,6 +82,10 @@ func TestParseSemver(t *testing.T) {
 		{input: "x.0.0", wantErr: "invalid major version"},
 		{input: "0.x.0", wantErr: "invalid minor version"},
 		{input: "0.0.x", wantErr: "invalid patch version"},
+		{input: "1.2.7-beta.1", want: semver{1, 2, 7}},
+		{input: "v1.2.7-beta.1", want: semver{1, 2, 7}},
+		{input: "v0.0.0-20240101000000-abcdef123456", want: semver{0, 0, 0}},
+		{input: "1.2.7+buildmeta", want: semver{1, 2, 7}},
 	}
 
 	for _, tt := range tests {
@@ -95,6 +99,20 @@ func TestParseSemver(t *testing.T) {
 			assert.Equal(t, tt.want, v)
 		})
 	}
+}
+
+func TestCheckMinVersions_BetaCurrentVersion(t *testing.T) {
+	entries := []MinVersionEntry{
+		{File: "sinks/sql/zen.instrument.yml", Version: "1.2.6"},
+	}
+	require.NoError(t, CheckMinVersions(entries, "v1.2.7-beta.1"))
+
+	entries = []MinVersionEntry{
+		{File: "sinks/sql/zen.instrument.yml", Version: "1.2.8"},
+	}
+	err := CheckMinVersions(entries, "v1.2.7-beta.1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "requires zen-go >= v1.2.8")
 }
 
 func TestShortPath(t *testing.T) {
