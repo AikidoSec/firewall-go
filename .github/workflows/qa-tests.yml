@@ -24,6 +24,8 @@ jobs:
           go-version: 1.25
 
       - name: Use local firewall-go
+        env:
+          GOPRIVATE: github.com/AikidoSec/*
         run: |
           cd zen-demo-go
           go get github.com/AikidoSec/firewall-go@$GITHUB_SHA
