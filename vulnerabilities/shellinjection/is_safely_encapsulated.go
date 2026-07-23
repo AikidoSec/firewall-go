@@ -1,73 +1,108 @@
 package shellinjection
 
 import (
-	"slices"
 	"strings"
 )
 
-var (
-	escapeChars                      = []string{`"`, `'`}
-	dangerousCharsInsideDoubleQuotes = []string{"$", "`", "\\", "!"}
+// quoteContext represents the quoting state at a position in the command.
+type quoteContext int
+
+const (
+	noQuote quoteContext = iota
+	singleQuote
+	doubleQuote
 )
 
-func isSafelyEncapsulated(command, userInput string) bool {
-	segments := getCurrentAndNextSegments(strings.Split(command, userInput))
+// quoteStatesAt returns the quote context active just before each byte of
+// command, plus one trailing entry for the context once the string ends.
+func quoteStatesAt(command string) []quoteContext {
+	states := make([]quoteContext, len(command)+1)
+	context := noQuote
+	escaped := false
 
-	for _, segment := range segments {
-		currentSegment := segment["currentSegment"]
-		nextSegment := segment["nextSegment"]
+	for i := 0; i < len(command); i++ {
+		states[i] = context
+		ch := command[i]
 
-		// Get the character before and after the user input
-		charBeforeUserInput := ""
-		if currentSegment != "" {
-			charBeforeUserInput = currentSegment[len(currentSegment)-1:]
+		if escaped {
+			escaped = false
+			continue
 		}
 
-		charAfterUserInput := ""
-		if nextSegment != "" {
-			charAfterUserInput = nextSegment[:1]
-		}
-
-		// Check if the character before the user input is an escape character
-		isEscapeChar := slices.Contains(escapeChars, charBeforeUserInput)
-
-		if !isEscapeChar {
-			return false
-		}
-
-		// Check if the character before and after the user input are the same
-		if charBeforeUserInput != charAfterUserInput {
-			return false
-		}
-
-		// Check if the user input contains the escape character itself
-		if strings.Contains(userInput, charBeforeUserInput) {
-			return false
-		}
-
-		// Check for dangerous characters inside double quotes
-		// https://www.gnu.org/software/bash/manual/html_node/Single-Quotes.html
-		// https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html
-		if charBeforeUserInput == `"` {
-			for _, dangerousChar := range dangerousCharsInsideDoubleQuotes {
-				if strings.Contains(userInput, dangerousChar) {
-					return false
-				}
+		if ch == '\\' {
+			if context != singleQuote {
+				escaped = true
 			}
+			continue
+		}
+
+		switch ch {
+		case '\'':
+			switch context {
+			case noQuote:
+				context = singleQuote
+			case singleQuote:
+				context = noQuote
+			}
+			// Inside double quotes, single quote is literal
+		case '"':
+			switch context {
+			case noQuote:
+				context = doubleQuote
+			case doubleQuote:
+				context = noQuote
+			}
+			// Inside single quotes, double quote is literal
 		}
 	}
 
-	return true
+	states[len(command)] = context
+	return states
 }
 
-func getCurrentAndNextSegments[T any](array []T) []map[string]T {
-	var segments []map[string]T
-	for i := 0; i < len(array)-1; i++ {
-		segment := map[string]T{
-			"currentSegment": array[i],
-			"nextSegment":    array[i+1],
+// quoteClosesAfter reports whether context is exited again at or after
+// position start. An unterminated quote must not be treated as safe.
+func quoteClosesAfter(states []quoteContext, start int, context quoteContext) bool {
+	for _, state := range states[start:] {
+		if state != context {
+			return true
 		}
-		segments = append(segments, segment)
 	}
-	return segments
+	return false
+}
+
+func isSafelyEncapsulated(command, userInput string) bool {
+	if userInput == "" {
+		return true
+	}
+	states := quoteStatesAt(command)
+
+	for start := 0; ; {
+		idx := strings.Index(command[start:], userInput)
+		if idx == -1 {
+			return true
+		}
+		occStart := start + idx
+		occEnd := occStart + len(userInput)
+		start = occEnd
+
+		context := states[occStart]
+		// Characters in userInput that would break out of the surrounding quote.
+		var breakoutChars string
+		switch context {
+		case noQuote:
+			return false
+		case singleQuote:
+			breakoutChars = "'"
+		case doubleQuote:
+			// https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html
+			breakoutChars = "$`\\!\""
+		}
+		if strings.ContainsAny(userInput, breakoutChars) {
+			return false
+		}
+		if !quoteClosesAfter(states, occEnd, context) {
+			return false
+		}
+	}
 }
