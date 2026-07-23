@@ -146,6 +146,7 @@ func TestShouldBlockRequest_RateLimitedByUser(t *testing.T) {
 	assert.Equal(t, "rate-limited", response.Type)
 	assert.Equal(t, "user", response.Trigger)
 	assert.Nil(t, response.IP)
+	assert.InDelta(t, 100, response.RetryAfterSeconds, 1)
 }
 
 func TestShouldBlockRequest_RateLimitedByIP(t *testing.T) {
@@ -167,6 +168,7 @@ func TestShouldBlockRequest_RateLimitedByIP(t *testing.T) {
 	assert.Equal(t, "ip", response.Trigger)
 	assert.NotNil(t, response.IP)
 	assert.Equal(t, "10.0.0.1", *response.IP)
+	assert.InDelta(t, 100, response.RetryAfterSeconds, 1)
 }
 
 func TestShouldBlockRequest_NotRateLimited(t *testing.T) {
@@ -197,6 +199,7 @@ func TestShouldBlockRequest_RateLimitedByGroup(t *testing.T) {
 	assert.Equal(t, "rate-limited", response.Type)
 	assert.Equal(t, "group", response.Trigger)
 	assert.Nil(t, response.IP)
+	assert.InDelta(t, 100, response.RetryAfterSeconds, 1)
 }
 
 // ExampleShouldBlockRequest demonstrates the complete middleware pattern with auth and Zen middleware.

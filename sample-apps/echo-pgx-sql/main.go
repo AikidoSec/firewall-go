@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/labstack/echo/v4"
@@ -58,6 +59,7 @@ func AikidoMiddleware() echo.MiddlewareFunc {
 					if blockResult.Trigger == "ip" {
 						message += " (Your IP: " + *blockResult.IP + ")"
 					}
+					c.Response().Header().Set("Retry-After", strconv.Itoa(blockResult.RetryAfterSeconds))
 					return c.String(http.StatusTooManyRequests, message)
 				case "blocked":
 					return c.String(http.StatusForbidden, "You are blocked by Zen.")

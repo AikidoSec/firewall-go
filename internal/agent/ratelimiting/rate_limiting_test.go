@@ -84,6 +84,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "user", status.Trigger)
+		assert.InDelta(t, 300, status.RetryAfterSeconds, 1)
 	})
 
 	t.Run("IP blocked when no user provided", func(t *testing.T) {
@@ -102,6 +103,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "ip", status.Trigger)
+		assert.InDelta(t, 300, status.RetryAfterSeconds, 1)
 	})
 
 	t.Run("IP below threshold not blocked", func(t *testing.T) {
@@ -135,6 +137,7 @@ func TestShouldRateLimitRequest(t *testing.T) {
 
 		assert.True(t, status.Block)
 		assert.Equal(t, "group", status.Trigger)
+		assert.InDelta(t, 300, status.RetryAfterSeconds, 1)
 	})
 
 	t.Run("group below threshold not blocked", func(t *testing.T) {

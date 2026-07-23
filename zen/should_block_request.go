@@ -25,7 +25,7 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 	userID := reqCtx.GetUserID()
 	if config.IsUserBlocked(userID) {
 		log.Info("User is blocked!", slog.String("user", userID))
-		return &BlockResponse{"blocked", "user", nil}
+		return &BlockResponse{Type: "blocked", Trigger: "user", IP: nil, RetryAfterSeconds: 0}
 	}
 
 	rateLimitingStatus := agent.GetRateLimitingStatus(
@@ -39,11 +39,11 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 
 		if rateLimitingStatus.Trigger == "ip" {
 			return &BlockResponse{
-				"rate-limited", rateLimitingStatus.Trigger, reqCtx.RemoteAddress,
+				Type: "rate-limited", Trigger: rateLimitingStatus.Trigger, IP: reqCtx.RemoteAddress, RetryAfterSeconds: rateLimitingStatus.RetryAfterSeconds,
 			}
 		}
 		return &BlockResponse{
-			"rate-limited", rateLimitingStatus.Trigger, nil,
+			Type: "rate-limited", Trigger: rateLimitingStatus.Trigger, IP: nil, RetryAfterSeconds: rateLimitingStatus.RetryAfterSeconds,
 		}
 	}
 
@@ -51,7 +51,8 @@ func ShouldBlockRequest(ctx context.Context) *BlockResponse {
 }
 
 type BlockResponse struct {
-	Type    string  // e.g. rate-limited
-	Trigger string  // e.g. user, ip, ...
-	IP      *string // (Optional) IP Address in case of IP rate-limiting
+	Type              string  // e.g. rate-limited
+	Trigger           string  // e.g. user, ip, ...
+	IP                *string // (Optional) IP Address in case of IP rate-limiting
+	RetryAfterSeconds int     // (Only for rate-limited) seconds until the client may retry
 }

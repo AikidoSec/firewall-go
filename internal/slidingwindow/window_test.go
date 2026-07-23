@@ -101,6 +101,29 @@ func TestWindow_CountIsIdempotent(t *testing.T) {
 	assert.Equal(t, 5, window.Count(now))
 }
 
+func TestWindow_RetryAfter(t *testing.T) {
+	window := slidingwindow.New(10, 3)
+	baseTime := time.Now().Unix()
+
+	require.True(t, window.TryRecord(baseTime))
+	require.True(t, window.TryRecord(baseTime+2))
+	require.True(t, window.TryRecord(baseTime+4))
+
+	// At capacity: retry after is when the oldest timestamp leaves the window.
+	assert.False(t, window.TryRecord(baseTime+5))
+	assert.Equal(t, int64(5), window.RetryAfter(baseTime+5))
+
+	// Past the window: nothing to wait for.
+	assert.Equal(t, int64(0), window.RetryAfter(baseTime+20))
+}
+
+func TestWindow_RetryAfter_EmptyWindow(t *testing.T) {
+	window := slidingwindow.New(10, 3)
+	now := time.Now().Unix()
+
+	assert.Equal(t, int64(0), window.RetryAfter(now))
+}
+
 func TestWindow_ConcurrentAccess(t *testing.T) {
 	window := slidingwindow.New(60, 100)
 	now := time.Now().Unix()

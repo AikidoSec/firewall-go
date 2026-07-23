@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"
@@ -57,6 +58,7 @@ func RateLimitMiddleware() gin.HandlerFunc {
 				if blockResult.Trigger == "ip" {
 					message += " (Your IP: " + *blockResult.IP + ")"
 				}
+				c.Header("Retry-After", strconv.Itoa(blockResult.RetryAfterSeconds))
 				c.String(http.StatusTooManyRequests, message)
 				c.Abort() // Stop further processing
 				return
