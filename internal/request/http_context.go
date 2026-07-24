@@ -17,15 +17,23 @@ var reqCtxKey contextKey
 var bypassedCtxKey bypassedContextKey
 
 type ContextData struct {
-	Source        string
-	Route         string
-	RouteParams   map[string]string
-	RemoteAddress *string
-	Body          any
+	Source              string
+	Route               string
+	RouteParams         map[string]string
+	RemoteAddress       *string
+	AuthorizationIP     *string
+	Body                any
 }
 
 func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
-	if data.RemoteAddress != nil && config.IsIPBypassed(*data.RemoteAddress) {
+	// Use AuthorizationIP for bypass check to prevent header spoofing
+	// Fall back to RemoteAddress if AuthorizationIP is not set (backward compatibility)
+	ipForBypassCheck := data.AuthorizationIP
+	if ipForBypassCheck == nil {
+		ipForBypassCheck = data.RemoteAddress
+	}
+	
+	if ipForBypassCheck != nil && config.IsIPBypassed(*ipForBypassCheck) {
 		return context.WithValue(ctx, bypassedCtxKey, true)
 	}
 
@@ -52,6 +60,7 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 		Headers:            headersToMap(r.Header),
 		RouteParams:        routeParams,
 		RemoteAddress:      data.RemoteAddress,
+		AuthorizationIP:    data.AuthorizationIP,
 		Body:               data.Body,
 		Cookies:            cookiesToMap(r.Cookies()),
 		Source:             data.Source,

@@ -33,6 +33,7 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 			}
 
 			ip := zenhttp.GetClientIP(r)
+			authIP := zenhttp.GetClientIPForAuthorization(r)
 
 			routeCtx := chi.RouteContext(r.Context())
 			var route string
@@ -52,11 +53,12 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 			}
 
 			reqCtx := request.SetContext(r.Context(), r, request.ContextData{
-				Source:        "chi",
-				Route:         route,
-				RouteParams:   routeParams,
-				RemoteAddress: &ip,
-				Body:          zenhttp.TryExtractBody(r, &requestParser{req: r}),
+				Source:          "chi",
+				Route:           route,
+				RouteParams:     routeParams,
+				RemoteAddress:   &ip,
+				AuthorizationIP: &authIP,
+				Body:            zenhttp.TryExtractBody(r, &requestParser{req: r}),
 			})
 
 			wrappedR := r.WithContext(reqCtx)
