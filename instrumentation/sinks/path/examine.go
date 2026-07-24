@@ -2,7 +2,6 @@ package path
 
 import (
 	"context"
-	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
@@ -18,7 +17,7 @@ func Examine(args []string) error {
 
 	hooks.OnOperationCall("path.Join", operation.KindFileSystem)
 
-	path := strings.Join(args, "")
+	path := pathtraversal.JoinElementsForDetection(args, "/")
 
 	// The error that the vulnerability scan returns is deferred with path.Join
 	// We delay blocking and reporting until the result is used in os.OpenFile

@@ -194,4 +194,16 @@ func TestDetectPathTraversal(t *testing.T) {
 	t.Run("AWS credentials protection", func(t *testing.T) {
 		assert.True(t, detectPathTraversal("/home/user/.aws/credentials", "/home/user/.aws/credentials", true))
 	})
+
+	t.Run("detects a bare .. as the whole user input", func(t *testing.T) {
+		assert.True(t, detectPathTraversal("/tmp/../etc/passwd", "..", true))
+		assert.True(t, detectPathTraversal("/base/../etc/passwd", "..", true))
+		assert.True(t, detectPathTraversal("/tmp/../../etc/passwd", "..", true))
+	})
+
+	t.Run("does not flag .. inside a filename", func(t *testing.T) {
+		assert.False(t, detectPathTraversal("/tmp/test..txt", "test..txt", true))
+		assert.False(t, detectPathTraversal("/tmp/..test.txt", "..test.txt", true))
+		assert.False(t, detectPathTraversal("/tmp/test...txt", "test...txt", true))
+	})
 }
