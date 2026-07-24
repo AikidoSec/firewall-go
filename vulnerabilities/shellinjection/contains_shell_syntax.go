@@ -154,8 +154,9 @@ func buildCommandsRegex() *regexp.Regexp {
 var commandsRegex = buildCommandsRegex()
 
 type match struct {
-	value string
-	start int
+	value    string
+	basename string
+	start    int
 }
 
 func matchAll(str string, regex *regexp.Regexp) []match {
@@ -163,7 +164,12 @@ func matchAll(str string, regex *regexp.Regexp) []match {
 	matches_index := regex.FindAllStringSubmatchIndex(str, -1)
 	result := make([]match, len(matches))
 	for i, m := range matches {
-		result[i] = match{value: m[0], start: matches_index[i][0]}
+		basename := m[0]
+		// m[3] is the command basename capture group, e.g. "rm" in "/bin/rm"
+		if len(m) > 3 && m[3] != "" {
+			basename = m[3]
+		}
+		result[i] = match{value: m[0], basename: basename, start: matches_index[i][0]}
 	}
 	return result
 }
@@ -201,8 +207,9 @@ func containsShellSyntax(command, userInput string) bool {
 		// We found a command like `rm` or `/sbin/shutdown` in the command
 		// Check if the command is the same as the user input
 		// If it's not the same, continue searching
+		// Also check the basename to catch cases where userInput is "rm" but the command is "/bin/rm"
 
-		if userInput != match.value {
+		if userInput != match.value && userInput != match.basename {
 			continue
 		}
 

