@@ -21,6 +21,12 @@ type User struct {
 	LastSeenAt    int64  `json:"lastSeenAt"`
 }
 
+type PackageInfo struct {
+	Name       string `json:"name"`
+	Version    string `json:"version"`
+	RequiredAt int64  `json:"requiredAt"`
+}
+
 type RequestInfo struct {
 	Method    string `json:"method"`
 	IPAddress string `json:"ipAddress"`
