@@ -77,6 +77,7 @@ func TestSendStartEvent(t *testing.T) {
 			assert.Equal(t, "staging", receivedEvent.Agent.NodeEnv)
 			assert.Equal(t, "firewall-go", receivedEvent.Agent.Library)
 			assert.Greater(t, receivedEvent.Time, int64(0))
+			assert.NotNil(t, receivedEvent.Packages)
 
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(expectedConfig)
