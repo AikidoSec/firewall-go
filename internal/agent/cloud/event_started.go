@@ -1,12 +1,9 @@
 package cloud
 
 import (
-	"log/slog"
-
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/packages"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
-	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 type StartEvent struct {
@@ -23,8 +20,6 @@ func (c *Client) SendStartEvent(agentInfo AgentInfo) (*aikido_types.CloudConfigD
 		Time:     utils.GetTime(),
 		Packages: packages.Get(),
 	}
-
-	log.Debug("Sending started event", slog.Any("payload", startedEvent))
 
 	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, startedEvent)
 	if err != nil {

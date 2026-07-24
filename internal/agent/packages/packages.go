@@ -1,12 +1,10 @@
 package packages
 
 import (
-	"log/slog"
 	"runtime/debug"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
-	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 func Get() []aikido_types.PackageInfo {
@@ -16,7 +14,6 @@ func Get() []aikido_types.PackageInfo {
 	}
 
 	packages := fromBuildInfo(info)
-	log.Debug("Packages data", slog.Any("packages", packages))
 
 	return packages
 }
