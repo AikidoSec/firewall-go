@@ -40,3 +40,19 @@ rules:
     function: HandleFunc
     template: |
       {{ .Function.Argument 1 }} = __aikido_http_middleware({{ .Function.Argument 1 }})
+
+  # Prepend to package-level Handle (registers on DefaultServeMux directly, not via (*ServeMux).Handle)
+  - id: net/http.Handle
+    type: prepend
+    package: net/http
+    function: Handle
+    template: |
+      {{ .Function.Argument 1 }} = __aikido_http_wrapHandler({{ .Function.Argument 1 }})
+
+  # Prepend to package-level HandleFunc (registers on DefaultServeMux directly, not via (*ServeMux).HandleFunc)
+  - id: net/http.HandleFunc
+    type: prepend
+    package: net/http
+    function: HandleFunc
+    template: |
+      {{ .Function.Argument 1 }} = __aikido_http_middleware({{ .Function.Argument 1 }})
