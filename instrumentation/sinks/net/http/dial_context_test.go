@@ -265,6 +265,82 @@ func TestSsrfDialContext_BlocksDoubleHopRedirectToPrivateIP(t *testing.T) {
 	assert.Nil(t, conn, "should not return a connection when blocked")
 }
 
+func TestFindRedirectOrigin_CycleBackToStartReturnsNotFound(t *testing.T) {
+	redirects := []request.RedirectEntry{
+		{SourceHostname: "b.com", SourcePort: 80, DestHostname: "a.com", DestPort: 80},
+		{SourceHostname: "a.com", SourcePort: 80, DestHostname: "b.com", DestPort: 80},
+	}
+
+	hostname, port, found := findRedirectOrigin(redirects, "a.com", 80)
+
+	assert.False(t, found)
+	assert.Empty(t, hostname)
+	assert.Zero(t, port)
+}
+
+// loopb.com -> gateway.com -> loopa.com -> loopb.com cycles back onto
+// gateway.com rather than victim.com.
+func TestFindRedirectOrigin_ReturnsGatewayNodeNotArbitraryIntermediate(t *testing.T) {
+	redirects := []request.RedirectEntry{
+		{SourceHostname: "gateway.com", SourcePort: 80, DestHostname: "victim.com", DestPort: 80},
+		{SourceHostname: "loopb.com", SourcePort: 80, DestHostname: "gateway.com", DestPort: 80},
+		{SourceHostname: "loopa.com", SourcePort: 80, DestHostname: "loopb.com", DestPort: 80},
+		{SourceHostname: "gateway.com", SourcePort: 80, DestHostname: "loopa.com", DestPort: 80},
+	}
+
+	hostname, port, found := findRedirectOrigin(redirects, "victim.com", 80)
+
+	require.True(t, found)
+	assert.Equal(t, "gateway.com", hostname)
+	assert.EqualValues(t, 80, port)
+}
+
+func TestSsrfDialContext_BlocksRedirectWithCyclicChain(t *testing.T) {
+	setupProtection(t)
+
+	incomingReq := httptest.NewRequest("GET",
+		"/api/request?url=http%3A%2F%2Fgateway.com%2Fredirect", nil)
+	ip := "1.2.3.4"
+	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
+		Source:        "test",
+		Route:         "/api/request",
+		RemoteAddress: &ip,
+	})
+
+	reqCtx := request.GetContext(ctx)
+	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
+		SourceHostname: "gateway.com",
+		SourcePort:     80,
+		DestHostname:   "127.0.0.1",
+		DestPort:       4000,
+	})
+	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
+		SourceHostname: "loopb.com",
+		SourcePort:     80,
+		DestHostname:   "gateway.com",
+		DestPort:       80,
+	})
+	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
+		SourceHostname: "loopa.com",
+		SourcePort:     80,
+		DestHostname:   "loopb.com",
+		DestPort:       80,
+	})
+	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
+		SourceHostname: "gateway.com",
+		SourcePort:     80,
+		DestHostname:   "loopa.com",
+		DestPort:       80,
+	})
+
+	original := dialerReturning("127.0.0.1:4000")
+	wrapped := ssrfDialContext(original)
+	conn, err := wrapped(ctx, "tcp", "127.0.0.1:4000")
+
+	assert.Error(t, err, "should block redirect to private IP even with a fabricated cycle in the chain")
+	assert.Nil(t, conn)
+}
+
 func TestSsrfDialContext_PropagatesDialError(t *testing.T) {
 	setupProtection(t)
 
