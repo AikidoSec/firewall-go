@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -55,55 +56,107 @@ func addURLDecodedVariants(results map[string]string, str string, pathToPayload 
 }
 
 // extractStringsFromUserInput recursively extracts strings from user input
-func extractStringsFromUserInput(obj interface{}, pathToPayload []pathPart) map[string]string {
+func extractStringsFromUserInput(obj any, pathToPayload []pathPart) map[string]string {
 	results := make(map[string]string)
+	// Pre-allocate path with extra capacity so recursive appends reuse the
+	// backing array (stack-like) instead of allocating on every level.
+	path := make([]pathPart, len(pathToPayload), len(pathToPayload)+8)
+	copy(path, pathToPayload)
+	extractStringsInto(obj, path, results)
+	return results
+}
 
-	val := reflect.ValueOf(obj)
-	switch val.Kind() {
-	case reflect.Map:
-		for _, key := range val.MapKeys() {
-			keyStr := fmt.Sprintf("%v", key.Interface())
-			results[keyStr] = buildPathToPayload(pathToPayload)
-			nestedResults := extractStringsFromUserInput(val.MapIndex(key).Interface(), append(pathToPayload, pathPart{Type: "object", Key: keyStr}))
-			for k, v := range nestedResults {
-				results[k] = v
-			}
+func extractStringsInto(obj any, path []pathPart, results map[string]string) {
+	switch v := obj.(type) {
+	case map[string]any:
+		currentPath := buildPathToPayload(path)
+		for key, val := range v {
+			results[key] = currentPath
+			extractStringsInto(val, append(path, pathPart{Type: "object", Key: key}), results)
 		}
-	case reflect.Slice, reflect.Array:
-		for i := 0; i < val.Len(); i++ {
-			nestedResults := extractStringsFromUserInput(val.Index(i).Interface(), append(pathToPayload, pathPart{Type: "array", Index: i}))
-			for k, v := range nestedResults {
-				results[k] = v
-			}
+	case map[string][]string:
+		currentPath := buildPathToPayload(path)
+		for key, vals := range v {
+			results[key] = currentPath
+			extractStringsInto(vals, append(path, pathPart{Type: "object", Key: key}), results)
 		}
-
+	case url.Values:
+		currentPath := buildPathToPayload(path)
+		for key, vals := range v {
+			results[key] = currentPath
+			extractStringsInto(vals, append(path, pathPart{Type: "object", Key: key}), results)
+		}
+	case map[string]string:
+		currentPath := buildPathToPayload(path)
+		for key, val := range v {
+			results[key] = currentPath
+			extractStringsInto(val, append(path, pathPart{Type: "object", Key: key}), results)
+		}
+	case []any:
+		var values []string
+		for i, item := range v {
+			extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results)
+			values = append(values, fmt.Sprintf("%v", item))
+		}
 		// Add array as string to results
 		// This prevents bypassing the firewall by HTTP Parameter Pollution
 		// Example: ?param=value1&param=value2 could be treated as an array
 		// If its used inside a string, it will be converted to a comma separated string
-		if val.Len() > 0 {
-			var values []string
-			for i := 0; i < val.Len(); i++ {
-				values = append(values, reflect.ValueOf(val.Index(i).Interface()).String())
-			}
-			results[strings.Join(values, ",")] = buildPathToPayload(pathToPayload)
+		if len(values) > 0 {
+			results[strings.Join(values, ",")] = buildPathToPayload(path)
 		}
-
-	case reflect.String:
-		str := val.String()
-		results[str] = buildPathToPayload(pathToPayload)
-		addURLDecodedVariants(results, str, pathToPayload)
-		jwt := tryDecodeAsJWT(str)
+	case []string:
+		for i, item := range v {
+			extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results)
+		}
+		if len(v) > 0 {
+			results[strings.Join(v, ",")] = buildPathToPayload(path)
+		}
+	case string:
+		results[v] = buildPathToPayload(path)
+		addURLDecodedVariants(results, v, path)
+		jwt := tryDecodeAsJWT(v)
 		if jwt.JWT {
-			for k, v := range extractStringsFromUserInput(jwt.Object, append(pathToPayload, pathPart{Type: "jwt"})) {
-				if k == "iss" || strings.HasSuffix(v, "<jwt>.iss") {
+			jwtPath := append(slices.Clone(path), pathPart{Type: "jwt"})
+			// JWT needs a temporary map for iss filtering before merging.
+			jwtResults := make(map[string]string)
+			extractStringsInto(jwt.Object, jwtPath, jwtResults)
+			for k, vv := range jwtResults {
+				if k == "iss" || strings.HasSuffix(vv, "<jwt>.iss") {
 					continue
 				}
-				results[k] = v
+				results[k] = vv
 			}
 		}
-
+	default:
+		extractStringsReflect(obj, path, results)
 	}
+}
 
-	return results
+// extractStringsReflect is the fallback for types not covered by the typed
+// cases above (named map/slice types, maps with other key/value types, arrays,
+// named string types), e.g. a custom Body passed via the public SetContext API.
+func extractStringsReflect(obj any, path []pathPart, results map[string]string) {
+	val := reflect.ValueOf(obj)
+	switch val.Kind() {
+	case reflect.Map:
+		currentPath := buildPathToPayload(path)
+		for _, key := range val.MapKeys() {
+			keyStr := fmt.Sprintf("%v", key.Interface())
+			results[keyStr] = currentPath
+			extractStringsInto(val.MapIndex(key).Interface(), append(path, pathPart{Type: "object", Key: keyStr}), results)
+		}
+	case reflect.Slice, reflect.Array:
+		var values []string
+		for i := 0; i < val.Len(); i++ {
+			item := val.Index(i).Interface()
+			extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results)
+			values = append(values, fmt.Sprintf("%v", item))
+		}
+		if len(values) > 0 {
+			results[strings.Join(values, ",")] = buildPathToPayload(path)
+		}
+	case reflect.String:
+		extractStringsInto(val.String(), path, results)
+	}
 }
