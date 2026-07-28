@@ -240,6 +240,133 @@ func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 	}
 }
 
+func TestCleanPathInjectionBlockIsDeferred(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(true)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	request.WrapWithGLS(ctx, func() {
+		cleaned := path.Clean("/tmp/" + "../test.txt")
+		_, err := os.OpenFile(cleaned, os.O_RDONLY, 0o600)
+
+		var detectedErr *vulnerabilities.AttackDetectedError
+		require.ErrorAs(t, err, &detectedErr)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.True(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
+		assert.Equal(t, "path.Clean", client.capturedAttack.Operation)
+		assert.Equal(t, "path", client.capturedAttack.Module)
+		assert.Equal(t, map[string]string{
+			"filename": "/tmp/../test.txt",
+		}, client.capturedAttack.Metadata)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
+func TestCleanPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	request.WrapWithGLS(ctx, func() {
+		cleaned := path.Clean("/tmp/" + "../test.txt")
+		_, err := os.OpenFile(cleaned, os.O_RDONLY, 0o600)
+
+		var notFound *fs.PathError
+		require.ErrorAs(t, err, &notFound)
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		assert.Equal(t, "path_traversal", client.capturedAttack.Kind)
+		assert.False(t, client.capturedAttack.Blocked)
+		assert.Equal(t, "../test.txt", client.capturedAttack.Payload)
+		assert.Equal(t, "path.Clean", client.capturedAttack.Operation)
+		assert.Equal(t, "path", client.capturedAttack.Module)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
+
+func TestCleanPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+
+	original := config.IsBlockingEnabled()
+	config.SetBlocking(false)
+
+	t.Cleanup(func() {
+		config.SetBlocking(original)
+		agent.SetCloudClient(originalClient)
+	})
+
+	client := newMockClient()
+	agent.SetCloudClient(client)
+
+	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
+	ip := "127.0.0.1"
+	ctx := request.SetContext(context.Background(), req, request.ContextData{
+		Source:        "test",
+		Route:         "/route",
+		RemoteAddress: &ip,
+	})
+
+	request.WrapWithGLS(ctx, func() {
+		_ = path.Clean("/tmp/" + "../test.txt")
+	})
+
+	select {
+	case <-client.attackDetectedEventSent:
+		t.Fatal("attack should not be reported when os.OpenFile is not called")
+	case <-time.After(100 * time.Millisecond):
+		// Success
+	}
+}
+
 func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
