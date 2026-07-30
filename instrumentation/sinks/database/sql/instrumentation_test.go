@@ -12,6 +12,7 @@ import (
 	"time"
 
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -38,10 +39,16 @@ func setupTestWithBlocking(t *testing.T) (*mockCloudClient, context.Context, *sq
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/route",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	db, err := sql.Open("test", "")
@@ -70,10 +77,16 @@ func setupTestWithoutBlocking(t *testing.T) (*mockCloudClient, context.Context, 
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/route",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	db, err := sql.Open("test", "")
@@ -550,10 +563,16 @@ func TestQueryContextIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/route",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	db, err := sql.Open("test", "")
@@ -620,10 +639,16 @@ func TestDialectIsPassedThrough(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/route",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	db, err := sql.Open("fake-mysql", "")

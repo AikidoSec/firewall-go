@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -61,10 +62,16 @@ func BenchmarkOpenFile(b *testing.B) {
 	b.Run("with_context", func(b *testing.B) {
 		req := httptest.NewRequest(http.MethodGet, "/files?name=report&id=42", http.NoBody)
 		ip := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "bench",
 			Route:         "/files",
 			RemoteAddress: &ip,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		b.ResetTimer()

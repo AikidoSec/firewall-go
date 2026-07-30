@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
@@ -13,16 +12,28 @@ type ContextData struct {
 	RouteParams   map[string]string
 	RemoteAddress *string
 	Body          any
+	URL           string
+	Path          string
+	Method        string
+	Query         map[string][]string
+	Headers       map[string][]string
+	Cookies       map[string][]string
 }
 
 // SetContext sets the context for the given request.
-func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
-	return request.SetContext(ctx, r, request.ContextData{
+func SetContext(ctx context.Context, data ContextData) context.Context {
+	return request.SetContext(ctx, request.ContextData{
 		Source:        data.Source,
 		Route:         data.Route,
 		RouteParams:   data.RouteParams,
 		RemoteAddress: data.RemoteAddress,
 		Body:          data.Body,
+		URL:           data.URL,
+		Path:          data.Path,
+		Method:        data.Method,
+		Query:         data.Query,
+		Headers:       data.Headers,
+		Cookies:       data.Cookies,
 	})
 }
 

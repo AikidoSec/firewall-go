@@ -1,7 +1,7 @@
 package gin
 
 import (
-	"github.com/AikidoSec/firewall-go/instrumentation/http"
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/instrumentation/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"
@@ -32,17 +32,23 @@ func GetMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		reqCtx := request.SetContext(c.Request.Context(), c.Request, request.ContextData{
+		reqCtx := request.SetContext(c.Request.Context(), request.ContextData{
 			Source:        "gin",
 			Route:         c.FullPath(),
 			RouteParams:   routeParams,
 			RemoteAddress: &ip,
-			Body:          http.TryExtractBody(c.Request, c),
+			Body:          zenhttp.TryExtractBody(c.Request, c),
+			URL:           zenhttp.FullURL(c.Request),
+			Path:          c.Request.URL.Path,
+			Method:        c.Request.Method,
+			Query:         c.Request.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(c.Request.Header),
+			Cookies:       zenhttp.CookiesToMap(c.Request.Cookies()),
 		})
 		c.Request = c.Request.WithContext(reqCtx)
 
 		// Write a response using Gin :
-		res := http.OnInitRequest(c)
+		res := zenhttp.OnInitRequest(c)
 		if res != nil {
 			c.String(res.StatusCode, res.Message)
 			c.Abort()
@@ -53,7 +59,7 @@ func GetMiddleware() gin.HandlerFunc {
 		// It may not run depending where the recovery middleware sits in the middleware chain
 		defer func() {
 			statusCode := c.Writer.Status()
-			http.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
+			zenhttp.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
 		}()
 
 		request.Wrap(reqCtx, func() {

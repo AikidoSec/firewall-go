@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/stretchr/testify/require"
 )
@@ -22,10 +23,16 @@ func TestDisabledAPI(t *testing.T) {
 	t.Run("SetUser no-ops when disabled", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &remoteAddr,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		resultCtx, err := SetUser(ctx, "user123", "John Doe")
@@ -43,10 +50,16 @@ func TestDisabledAPI(t *testing.T) {
 	t.Run("SetRateLimitGroup no-ops when disabled", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &remoteAddr,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		resultCtx, err := SetRateLimitGroup(ctx, "group123")
@@ -64,10 +77,16 @@ func TestDisabledAPI(t *testing.T) {
 	t.Run("ShouldBlockRequest returns nil when disabled", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &remoteAddr,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		result := ShouldBlockRequest(ctx)

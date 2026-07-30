@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
@@ -68,10 +69,16 @@ func createRequestContext(t *testing.T, method, route, ip string, userID, userNa
 func createRequestContextWithGroup(t *testing.T, method, route, ip string, userID, userName, groupID string) context.Context {
 	t.Helper()
 	req := httptest.NewRequest(method, route, http.NoBody)
-	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
+	reqCtx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         route,
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 	if userID != "" {
 		_, err := zen.SetUser(reqCtx, userID, userName)
@@ -95,10 +102,16 @@ func TestShouldBlockRequest(t *testing.T) {
 func TestShouldBlockRequest_MiddlewareAlreadyExecuted(t *testing.T) {
 	req := httptest.NewRequest("GET", "/route", http.NoBody)
 	ip := "127.0.0.1"
-	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
+	reqCtx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/route",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	// First call: marks middleware as executed and returns nil (no block).
@@ -113,10 +126,16 @@ func TestShouldBlockRequest_MiddlewareAlreadyExecuted(t *testing.T) {
 func TestShouldBlockRequest_BlockedUser(t *testing.T) {
 	req := httptest.NewRequest("GET", "/route", http.NoBody)
 	ip := "127.0.0.1"
-	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
+	reqCtx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/route",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	_, err := zen.SetUser(reqCtx, "banned", "Banned User")
@@ -215,10 +234,16 @@ func ExampleShouldBlockRequest() {
 			// Set up proper request context
 			ctx := context.Background()
 			remoteAddr := "127.0.0.1"
-			ctx = request.SetContext(ctx, r, request.ContextData{
+			ctx = request.SetContext(ctx, request.ContextData{
 				Source:        "test",
 				Route:         "/test",
 				RemoteAddress: &remoteAddr,
+				URL:           zenhttp.FullURL(r),
+				Path:          r.URL.Path,
+				Method:        r.Method,
+				Query:         r.URL.Query(),
+				Headers:       zenhttp.HeadersToMap(r.Header),
+				Cookies:       zenhttp.CookiesToMap(r.Cookies()),
 			})
 
 			// Set user in context

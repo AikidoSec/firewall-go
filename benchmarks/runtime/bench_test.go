@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -20,10 +21,16 @@ import (
 func TestCompiledWithZenGo(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/verify", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "bench-verify",
 		Route:         "/verify",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	type result struct {
@@ -86,10 +93,16 @@ func BenchmarkSpawnFanOut(b *testing.B) {
 func BenchmarkGetContext(b *testing.B) {
 	req := httptest.NewRequest(http.MethodGet, "/bench", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "bench",
 		Route:         "/bench",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	request.WrapWithGLS(ctx, func() {

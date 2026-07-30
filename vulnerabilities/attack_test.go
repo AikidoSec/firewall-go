@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -98,11 +99,17 @@ func TestGetAttackDetected(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/users", http.NoBody)
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/api/users",
 		RemoteAddress: &ip,
 		Body:          map[string]interface{}{"name": "test"},
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	result := interceptorResult{
@@ -165,10 +172,16 @@ func TestStoreDeferredAttack(t *testing.T) {
 	t.Run("stores attack and error in context", func(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &ip,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		result := &interceptorResult{
@@ -204,10 +217,16 @@ func TestStoreDeferredAttack(t *testing.T) {
 	t.Run("does not store error when blocking is disabled", func(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &ip,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		result := &interceptorResult{
@@ -273,10 +292,16 @@ func TestReportDeferredAttack(t *testing.T) {
 
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &ip,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		reportDeferredAttack(ctx)
@@ -304,10 +329,16 @@ func TestReportDeferredAttack(t *testing.T) {
 
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &ip,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		result := &interceptorResult{
@@ -434,10 +465,16 @@ func TestOnStoredSSRF(t *testing.T) {
 
 		ip := "1.2.3.4"
 		req := httptest.NewRequest("POST", "/api/stored_ssrf", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/api/stored_ssrf",
 			RemoteAddress: &ip,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		err := OnStoredSSRF(ctx, "net/http", "net/http.Client.Do", "evil.com", "169.254.169.254")

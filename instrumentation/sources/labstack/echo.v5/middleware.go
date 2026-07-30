@@ -34,12 +34,18 @@ func GetMiddleware() echo.MiddlewareFunc {
 				}
 			}
 
-			reqCtx := request.SetContext(httpRequest.Context(), httpRequest, request.ContextData{
+			reqCtx := request.SetContext(httpRequest.Context(), request.ContextData{
 				Source:        "echo",
 				Route:         c.Path(),
 				RouteParams:   routeParams,
 				RemoteAddress: &ip,
 				Body:          http.TryExtractBody(httpRequest, c),
+				URL:           http.FullURL(httpRequest),
+				Path:          httpRequest.URL.Path,
+				Method:        httpRequest.Method,
+				Query:         httpRequest.URL.Query(),
+				Headers:       http.HeadersToMap(httpRequest.Header),
+				Cookies:       http.CookiesToMap(httpRequest.Cookies()),
 			})
 			c.SetRequest(httpRequest.WithContext(reqCtx))
 

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
@@ -19,10 +20,16 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &remoteAddr,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		// Execute
@@ -44,10 +51,16 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &remoteAddr,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		// Execute
@@ -68,10 +81,16 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &remoteAddr,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		// Execute
@@ -107,10 +126,16 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &remoteAddr,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		// Mark middleware as executed
@@ -134,10 +159,16 @@ func TestSetUser(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("POST", "/api/users", http.NoBody)
 		req.Header.Set("Content-Type", "application/json")
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/test",
 			RemoteAddress: &ip,
+			URL:           zenhttp.FullURL(req),
+			Path:          req.URL.Path,
+			Method:        req.Method,
+			Query:         req.URL.Query(),
+			Headers:       zenhttp.HeadersToMap(req.Header),
+			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 		})
 
 		userID := "user-123"

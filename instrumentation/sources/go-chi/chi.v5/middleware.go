@@ -51,12 +51,18 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 				}
 			}
 
-			reqCtx := request.SetContext(r.Context(), r, request.ContextData{
+			reqCtx := request.SetContext(r.Context(), request.ContextData{
 				Source:        "chi",
 				Route:         route,
 				RouteParams:   routeParams,
 				RemoteAddress: &ip,
 				Body:          zenhttp.TryExtractBody(r, &requestParser{req: r}),
+				URL:           zenhttp.FullURL(r),
+				Path:          r.URL.Path,
+				Method:        r.Method,
+				Query:         r.URL.Query(),
+				Headers:       zenhttp.HeadersToMap(r.Header),
+				Cookies:       zenhttp.CookiesToMap(r.Cookies()),
 			})
 
 			wrappedR := r.WithContext(reqCtx)

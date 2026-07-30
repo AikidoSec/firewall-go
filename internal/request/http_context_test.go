@@ -2,10 +2,6 @@ package request
 
 import (
 	"context"
-	"crypto/tls"
-	"net/http"
-	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -43,7 +39,7 @@ func TestSetContext(t *testing.T) {
 			source:        "echo",
 			remoteAddress: stringPtr("127.0.0.1"),
 			body:          "test body",
-			expectedRoute: "/test/path", // Will be set from request URL
+			expectedRoute: "/test/path", // Will be set from path
 		},
 		{
 			name:          "nil remote address",
@@ -63,7 +59,7 @@ func TestSetContext(t *testing.T) {
 				"user": "1234",
 				"role": "test",
 			},
-			expectedRoute: "/test/path", // Will be set from request URL
+			expectedRoute: "/test/path",
 		},
 		{
 			name:          "trim trailing slash",
@@ -81,89 +77,49 @@ func TestSetContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a mock HTTP request
-			req, err := http.NewRequest("POST", "http://example.com/test/path?param=value", strings.NewReader("test body"))
-			if err != nil {
-				t.Fatalf("Failed to create request: %v", err)
-			}
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("User-Agent", "test-agent")
-			req.AddCookie(&http.Cookie{Name: "session", Value: "abc123"})
-
-			// Set context
 			ctx := context.Background()
-			resultCtx := SetContext(ctx, req, ContextData{
+			resultCtx := SetContext(ctx, ContextData{
 				Source:        tt.source,
 				Route:         tt.route,
 				RouteParams:   tt.routeParams,
 				RemoteAddress: tt.remoteAddress,
 				Body:          tt.body,
+				URL:           "http://example.com/test/path?param=value",
+				Path:          "/test/path",
+				Method:        "POST",
+				Query:         map[string][]string{"param": {"value"}},
+				Headers:       map[string][]string{"content-type": {"application/json"}, "user-agent": {"test-agent"}},
+				Cookies:       map[string][]string{"session": {"abc123"}},
 			})
 
-			// Get context back
 			reqCtx := GetContext(resultCtx)
 			assert.NotNil(t, reqCtx, "GetContext should not return nil")
 
-			// Light assertions - focus on ensuring context is correctly set
 			assert.Equal(t, tt.source, reqCtx.Source)
 
 			if tt.route == "" {
-				// When route is empty, it should use the request URL path
 				assert.Equal(t, "/test/path", reqCtx.Route)
 			} else {
 				assert.Equal(t, tt.expectedRoute, reqCtx.Route)
 			}
 
-			// Path should come from the URL
 			assert.Equal(t, "/test/path", reqCtx.Path)
 
 			assert.Equal(t, tt.routeParams, reqCtx.RouteParams)
 
-			// Verify basic request data is captured
 			assert.NotEmpty(t, reqCtx.URL, "URL should not be empty")
 			assert.NotNil(t, reqCtx.Method, "Method should not be nil")
 			assert.Equal(t, "POST", reqCtx.Method, "Method should be POST")
-			// Note: Body comparison removed as it can contain uncomparable types like maps
 			assert.Equal(t, tt.remoteAddress, reqCtx.RemoteAddress)
 		})
 	}
 }
 
-func TestCookiesToMap(t *testing.T) {
-	t.Run("single value per cookie name", func(t *testing.T) {
-		cookies := []*http.Cookie{
-			{Name: "session", Value: "abc"},
-			{Name: "token", Value: "xyz"},
-		}
-		result := cookiesToMap(cookies)
-		assert.Equal(t, map[string][]string{
-			"session": {"abc"},
-			"token":   {"xyz"},
-		}, result)
-	})
-
-	t.Run("multiple values for same cookie name are all kept", func(t *testing.T) {
-		cookies := []*http.Cookie{
-			{Name: "session", Value: "first"},
-			{Name: "session", Value: "second"},
-		}
-		result := cookiesToMap(cookies)
-		assert.Equal(t, map[string][]string{
-			"session": {"first", "second"},
-		}, result)
-	})
-}
-
 func TestSetContext_DuplicateCookies(t *testing.T) {
-	req, err := http.NewRequest("GET", "http://example.com/", http.NoBody)
-	if err != nil {
-		t.Fatalf("Failed to create request: %v", err)
-	}
-	// Manually set the Cookie header to include two values for the same name,
-	// since http.Request.AddCookie does not support duplicates via the API.
-	req.Header.Set("Cookie", "session=first; session=second")
-
-	resultCtx := SetContext(context.Background(), req, ContextData{Source: "test"})
+	resultCtx := SetContext(context.Background(), ContextData{
+		Source:  "test",
+		Cookies: map[string][]string{"session": {"first", "second"}},
+	})
 	reqCtx := GetContext(resultCtx)
 
 	assert.Equal(t, []string{"first", "second"}, reqCtx.Cookies["session"])
@@ -176,14 +132,9 @@ func TestSetContext_BypassedIP(t *testing.T) {
 		Block:       &block,
 	}, nil)
 
-	req, err := http.NewRequest("POST", "http://example.com/test/path?param=value", strings.NewReader("test body"))
-	if err != nil {
-		t.Fatalf("Failed to create request: %v", err)
-	}
-
 	ctx := context.Background()
 	ip := "10.10.10.10"
-	setCtx := SetContext(ctx, req, ContextData{
+	setCtx := SetContext(ctx, ContextData{
 		RemoteAddress: &ip,
 	})
 
@@ -211,9 +162,8 @@ func TestIsBypassed(t *testing.T) {
 			Block:       &block,
 		}, nil)
 
-		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
 		ip := "10.10.10.10"
-		bypassedCtx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+		bypassedCtx := SetContext(context.Background(), ContextData{RemoteAddress: &ip})
 		require.True(t, IsBypassed(bypassedCtx))
 
 		var result bool
@@ -231,9 +181,8 @@ func TestIsBypassed(t *testing.T) {
 			Block:       &block,
 		}, nil)
 
-		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
 		ip := "10.10.10.10"
-		bypassedCtx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+		bypassedCtx := SetContext(context.Background(), ContextData{RemoteAddress: &ip})
 		require.True(t, IsBypassed(bypassedCtx))
 
 		var result bool
@@ -289,20 +238,17 @@ func TestEnsureContextPropagated(t *testing.T) {
 	})
 
 	t.Run("copies GLS data into context", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
 		ip := "1.2.3.4"
-		glsCtx := SetContext(context.Background(), req, ContextData{
+		glsCtx := SetContext(context.Background(), ContextData{
 			Source:        "test-source",
 			Route:         "/test",
 			RemoteAddress: &ip,
 		})
 
-		// Run inside GLS with the request context, but pass a bare context to EnsureContextPropagated
 		WrapWithGLS(glsCtx, func() {
 			bare := context.Background()
 			result := EnsureContextPropagated(bare)
 
-			// The returned context should contain request data (copied from GLS)
 			reqCtx := GetContext(result)
 			require.NotNil(t, reqCtx)
 			assert.Equal(t, "test-source", reqCtx.Source)
@@ -313,7 +259,6 @@ func TestEnsureContextPropagated(t *testing.T) {
 	t.Run("returns same context when no GLS and no request data", func(t *testing.T) {
 		ctx := context.Background()
 		result := EnsureContextPropagated(ctx)
-		// No GLS data and no request data in context — nothing to propagate
 		assert.Nil(t, GetContext(result), "should have no request context")
 	})
 
@@ -324,9 +269,8 @@ func TestEnsureContextPropagated(t *testing.T) {
 			Block:       &block,
 		}, nil)
 
-		req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
 		ip := "10.10.10.10"
-		bypassedCtx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+		bypassedCtx := SetContext(context.Background(), ContextData{RemoteAddress: &ip})
 		require.True(t, IsBypassed(bypassedCtx))
 
 		WrapWithGLS(bypassedCtx, func() {
@@ -334,56 +278,4 @@ func TestEnsureContextPropagated(t *testing.T) {
 			assert.True(t, IsBypassed(result), "should propagate bypass flag from GLS into bare context")
 		})
 	})
-}
-
-func TestFullURL(t *testing.T) {
-	tests := []struct {
-		name     string
-		url      string
-		host     string
-		hasTLS   bool
-		expected string
-	}{
-		{
-			name:     "HTTP request",
-			url:      "http://example.com/path",
-			host:     "example.com",
-			hasTLS:   false,
-			expected: "http://example.com/path",
-		},
-		{
-			name:     "HTTPS request",
-			url:      "https://example.com/path",
-			host:     "example.com",
-			hasTLS:   true,
-			expected: "https://example.com/path",
-		},
-		{
-			name:     "HTTP with query",
-			url:      "http://example.com/path?param=value",
-			host:     "example.com",
-			hasTLS:   false,
-			expected: "http://example.com/path?param=value",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parsedURL, err := url.Parse(tt.url)
-			assert.NoError(t, err)
-
-			req := &http.Request{
-				Method: "GET",
-				URL:    parsedURL,
-				Host:   tt.host,
-			}
-
-			if tt.hasTLS {
-				req.TLS = &tls.ConnectionState{}
-			}
-
-			result := fullURL(req)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }

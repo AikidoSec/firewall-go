@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
@@ -33,10 +34,16 @@ func TestExamine_Disabled(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/test?cmd=rm%20-rf%20%2F", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
+	ctx := request.SetContext(context.Background(), request.ContextData{
 		Source:        "test",
 		Route:         "/test",
 		RemoteAddress: &ip,
+		URL:           zenhttp.FullURL(req),
+		Path:          req.URL.Path,
+		Method:        req.Method,
+		Query:         req.URL.Query(),
+		Headers:       zenhttp.HeadersToMap(req.Header),
+		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
 	})
 
 	config.SetZenDisabled(true)

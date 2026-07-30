@@ -3,7 +3,6 @@ package request
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -21,15 +20,16 @@ func TestWrapWithGLS(t *testing.T) {
 		{
 			name: "context with request context",
 			setupCtx: func() context.Context {
-				req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
-				req.Header.Set("User-Agent", "test-agent")
-				req.RemoteAddr = "192.168.1.1:8080"
-
+				remoteAddr := "192.168.1.1:8080"
 				ctx := context.Background()
-				return SetContext(ctx, req, ContextData{
+				return SetContext(ctx, ContextData{
 					Source:        "test-source",
 					Route:         "/test",
-					RemoteAddress: &req.RemoteAddr,
+					RemoteAddress: &remoteAddr,
+					URL:           "https://example.com/test",
+					Path:          "/test",
+					Method:        "GET",
+					Headers:       map[string][]string{"user-agent": {"test-agent"}},
 				})
 			},
 			wantNil: false,
@@ -86,9 +86,8 @@ func TestWrapWithGLS_BypassedContext(t *testing.T) {
 		Block:       &block,
 	}, nil)
 
-	req, _ := http.NewRequest("GET", "https://example.com/test", http.NoBody)
 	ip := "10.10.10.10"
-	ctx := SetContext(context.Background(), req, ContextData{RemoteAddress: &ip})
+	ctx := SetContext(context.Background(), ContextData{RemoteAddress: &ip})
 	require.True(t, IsBypassed(ctx))
 
 	var capturedBypassed bool
@@ -116,12 +115,14 @@ func TestWrapWithGLS_ConcurrentAccess(t *testing.T) {
 		blockers[i] = make(chan struct{})
 
 		go func(id int) {
-			req, _ := http.NewRequest("GET", fmt.Sprintf("https://example.com/req%d", id), http.NoBody)
-			req.RemoteAddr = fmt.Sprintf("192.168.1.%d:8080", id)
-			ctx := SetContext(context.Background(), req, ContextData{
+			remoteAddr := fmt.Sprintf("192.168.1.%d:8080", id)
+			ctx := SetContext(context.Background(), ContextData{
 				Source:        fmt.Sprintf("source%d", id),
 				Route:         fmt.Sprintf("/req%d", id),
-				RemoteAddress: &req.RemoteAddr,
+				RemoteAddress: &remoteAddr,
+				URL:           fmt.Sprintf("http://example.com/req%d", id),
+				Path:          fmt.Sprintf("/req%d", id),
+				Method:        "GET",
 			})
 
 			WrapWithGLS(ctx, func() {
