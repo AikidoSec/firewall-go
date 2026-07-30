@@ -78,3 +78,34 @@ rules:
       if _aikido_block != nil {
         return nil, _aikido_block
       }
+
+  # Conn methods
+  - id: database/sql.Conn.QueryContext
+    type: prepend
+    receiver: "*database/sql.Conn"
+    function: QueryContext
+    template: |
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Conn.Query(Row)Context", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.db.Driver()))
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+
+  - id: database/sql.Conn.ExecContext
+    type: prepend
+    receiver: "*database/sql.Conn"
+    function: ExecContext
+    template: |
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Conn.ExecContext", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.db.Driver()))
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
+
+  - id: database/sql.Conn.PrepareContext
+    type: prepend
+    receiver: "*database/sql.Conn"
+    function: PrepareContext
+    template: |
+      _aikido_block := __aikido_sql_ExamineContext({{ .Function.Argument 0 }}, {{ .Function.Argument 1 }}, "database/sql.Conn.PrepareContext", __aikido_sql_GetDialectFromDriver({{ .Function.Receiver }}.db.Driver()))
+      if _aikido_block != nil {
+        return nil, _aikido_block
+      }
