@@ -606,7 +606,10 @@ func TestConnMethodsReportOnlyOnce(t *testing.T) {
 			operation: "conn.QueryContext",
 			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
 				t.Helper()
-				_, _ = conn.QueryContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+				rows, _ := conn.QueryContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+				if rows != nil {
+					rows.Close()
+				}
 			},
 		},
 		{
