@@ -529,6 +529,132 @@ func TestTxMethodsReportOnlyOnce(t *testing.T) {
 	}
 }
 
+type connTestCase struct {
+	name      string
+	operation string
+	testFunc  func(t *testing.T, ctx context.Context, conn *sql.Conn)
+}
+
+func TestConnMethodsReturnErrors(t *testing.T) {
+	testCases := []connTestCase{
+		{
+			name:      "QueryContext",
+			operation: "conn.QueryContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				result, err := conn.QueryContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+				require.Nil(t, result)
+				assertAttackBlocked(t, err)
+			},
+		},
+		{
+			name:      "QueryRowContext",
+			operation: "conn.QueryRowContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				row := conn.QueryRowContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+				require.NotNil(t, row)
+				var id int
+				err := row.Scan(&id)
+				assertAttackBlocked(t, err)
+			},
+		},
+		{
+			name:      "ExecContext",
+			operation: "conn.ExecContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				result, err := conn.ExecContext(ctx, "DELETE FROM users WHERE id = '1' OR 1=1")
+				require.Nil(t, result)
+				assertAttackBlocked(t, err)
+			},
+		},
+		{
+			name:      "PrepareContext",
+			operation: "conn.PrepareContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				stmt, err := conn.PrepareContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+				require.Nil(t, stmt)
+				assertAttackBlocked(t, err)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			client, ctx, db, cleanup := setupTestWithBlocking(t)
+			defer cleanup()
+
+			conn, err := db.Conn(ctx)
+			require.NoError(t, err)
+			defer conn.Close()
+
+			request.WrapWithGLS(ctx, func() {
+				tc.testFunc(t, ctx, conn)
+			})
+
+			waitForAttackEvent(t, client)
+		})
+	}
+}
+
+func TestConnMethodsReportOnlyOnce(t *testing.T) {
+	testCases := []connTestCase{
+		{
+			name:      "QueryContext",
+			operation: "conn.QueryContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				_, _ = conn.QueryContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+			},
+		},
+		{
+			name:      "QueryRowContext",
+			operation: "conn.QueryRowContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				row := conn.QueryRowContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+				var id int
+				_ = row.Scan(&id)
+			},
+		},
+		{
+			name:      "ExecContext",
+			operation: "conn.ExecContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				_, _ = conn.ExecContext(ctx, "DELETE FROM users WHERE id = '1' OR 1=1")
+			},
+		},
+		{
+			name:      "PrepareContext",
+			operation: "conn.PrepareContext",
+			testFunc: func(t *testing.T, ctx context.Context, conn *sql.Conn) {
+				t.Helper()
+				_, _ = conn.PrepareContext(ctx, "SELECT * FROM users WHERE id = '1' OR 1=1")
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			client, ctx, db, cleanup := setupTestWithoutBlocking(t)
+			defer cleanup()
+
+			conn, err := db.Conn(ctx)
+			require.NoError(t, err)
+			defer conn.Close()
+
+			request.WrapWithGLS(ctx, func() {
+				tc.testFunc(t, ctx, conn)
+			})
+
+			waitForAttackEventAndVerifyOnlyOnce(t, client)
+		})
+	}
+}
+
 func TestQueryContextIsAutomaticallyInstrumented(t *testing.T) {
 	require.NoError(t, zen.Protect())
 
