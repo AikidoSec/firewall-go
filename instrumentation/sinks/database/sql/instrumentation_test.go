@@ -784,7 +784,9 @@ func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data clo
 	panic("not implemented")
 }
 
-func (m *mockCloudClient) FetchConfigUpdatedAt() time.Time { panic("not implemented") }
+// Returns the zero time so the background config-polling routine (started once
+// per process by zen.Protect()) never sees a newer config and skips FetchConfig.
+func (m *mockCloudClient) FetchConfigUpdatedAt() time.Time { return time.Time{} }
 func (m *mockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
 	panic("not implemented")
 }
