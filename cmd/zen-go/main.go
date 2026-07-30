@@ -37,7 +37,7 @@ func newCommand() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:  "sources",
-						Usage: "Comma-separated list of sources to instrument (e.g., 'gin,chi,echo/v4'). Skips interactive prompt.",
+						Usage: "Comma-separated list of sources to instrument (e.g., 'gin,chi,echo/v4,echo/v5'). Skips interactive prompt.",
 					},
 					&cli.StringFlag{
 						Name:  "sinks",

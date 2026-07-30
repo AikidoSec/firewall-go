@@ -108,9 +108,9 @@ func TestParseAndValidateList_ValidSources(t *testing.T) {
 }
 
 func TestParseAndValidateList_ValidSourcesWithWhitespace(t *testing.T) {
-	result, err := parseAndValidateList("gin, chi , echo/v4", availableSources, "source")
+	result, err := parseAndValidateList("gin, chi , echo/v4, echo/v5", availableSources, "source")
 	require.NoError(t, err)
-	assert.Equal(t, []string{"gin", "chi", "echo/v4"}, result)
+	assert.Equal(t, []string{"gin", "chi", "echo/v4", "echo/v5"}, result)
 }
 
 func TestParseAndValidateList_InvalidSource(t *testing.T) {
