@@ -96,7 +96,7 @@ func TestHandleStartEventConfig(t *testing.T) {
 			t.Setenv("AIKIDO_FEATURE_SSE", "")
 
 			subscribed := false
-			mock := &pollingMockCloudClient{
+			mock := &updatingMockCloudClient{
 				subscribeFn: func(ctx context.Context, _ func(int64)) error {
 					subscribed = true
 					<-ctx.Done()
@@ -127,7 +127,7 @@ func TestHandleStartEventConfig(t *testing.T) {
 			t.Setenv("AIKIDO_FEATURE_SSE", "")
 
 			subscribed := false
-			mock := &pollingMockCloudClient{
+			mock := &updatingMockCloudClient{
 				subscribeFn: func(ctx context.Context, _ func(int64)) error {
 					subscribed = true
 					<-ctx.Done()
