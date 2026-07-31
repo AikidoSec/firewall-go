@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -16,7 +17,9 @@ import (
 var (
 	heartbeatRoutine     *polling.Routine
 	configPollingRoutine *polling.Routine
-	sseCancel            context.CancelFunc
+
+	sseCancelMutex sync.Mutex
+	sseCancel      context.CancelFunc
 
 	minHeartbeatIntervalInMS = 120000
 )
@@ -27,15 +30,9 @@ const (
 	sseStableThreshold = 30 * time.Second
 )
 
-func startPolling(sseEnabled bool) {
+func startPolling() {
 	heartbeatRoutine = polling.Start(10*time.Minute, sendHeartbeatEvent)
 	configPollingRoutine = polling.Start(1*time.Minute, refreshCloudConfig)
-
-	if sseEnabled {
-		var ctx context.Context
-		ctx, sseCancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is stored in sseCancel and called in stopPolling
-		go runSSESubscription(ctx)
-	}
 }
 
 func stopPolling() {
@@ -45,9 +42,31 @@ func stopPolling() {
 	if configPollingRoutine != nil {
 		configPollingRoutine.Stop()
 	}
+}
+
+func startSSESubscription() {
+	sseCancelMutex.Lock()
+	defer sseCancelMutex.Unlock()
+
 	if sseCancel != nil {
-		sseCancel()
+		return
 	}
+
+	var ctx context.Context
+	ctx, sseCancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is stored in sseCancel and called in stopSSESubscription
+	go runSSESubscription(ctx)
+}
+
+func stopSSESubscription() {
+	sseCancelMutex.Lock()
+	defer sseCancelMutex.Unlock()
+
+	if sseCancel == nil {
+		return
+	}
+
+	sseCancel()
+	sseCancel = nil
 }
 
 // runSSESubscription reconnects with exponential backoff and jitter until ctx is cancelled.

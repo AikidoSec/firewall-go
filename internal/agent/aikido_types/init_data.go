@@ -57,6 +57,7 @@ type CloudConfigData struct {
 	Block                           *bool            `json:"block,omitempty"`
 	BlockNewOutgoingRequests        bool             `json:"blockNewOutgoingRequests"`
 	Domains                         []OutboundDomain `json:"domains"`
+	EnabledFeatures                 []string         `json:"enabledFeatures"`
 }
 
 func (c *CloudConfigData) UpdatedAt() time.Time {

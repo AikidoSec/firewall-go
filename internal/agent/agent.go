@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -74,24 +75,41 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 			return
 		}
 
-		applyCloudConfig(client, cloudConfig)
+		handleStartEventConfig(client, cloudConfig)
 	}()
 
-	startPolling(isRealtimeEnabled())
+	startPolling()
 
 	ratelimiting.Init()
 
 	return nil
 }
 
-func isRealtimeEnabled() bool {
+func handleStartEventConfig(client CloudClient, cloudConfig *aikido_types.CloudConfigData) {
+	applyCloudConfig(client, cloudConfig)
+
+	if isRealtimeEnabled(cloudConfig) {
+		startSSESubscription()
+	}
+}
+
+func isRealtimeEnabled(cloudConfig *aikido_types.CloudConfigData) bool {
 	v := strings.ToLower(os.Getenv("AIKIDO_FEATURE_SSE"))
-	return v == "true" || v == "1"
+	if v == "true" || v == "1" {
+		return true
+	}
+
+	if cloudConfig == nil {
+		return false
+	}
+
+	return slices.Contains(cloudConfig.EnabledFeatures, "realtime_updates")
 }
 
 func AgentUninit() error {
 	ratelimiting.Uninit()
 	stopPolling()
+	stopSSESubscription()
 	config.Uninit()
 
 	return nil

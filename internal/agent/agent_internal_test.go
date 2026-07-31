@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
@@ -42,6 +43,111 @@ func TestAgentRuntime_ShouldBlockHostname(t *testing.T) {
 
 	t.Run("returns false when no block list configured", func(t *testing.T) {
 		assert.False(t, rt.ShouldBlockHostname("example.com"))
+	})
+}
+
+func TestIsRealtimeEnabled(t *testing.T) {
+	t.Run("returns true when AIKIDO_FEATURE_SSE is \"true\"", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "true")
+		assert.True(t, isRealtimeEnabled(&aikido_types.CloudConfigData{}))
+	})
+
+	t.Run("returns true when AIKIDO_FEATURE_SSE is \"1\"", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "1")
+		assert.True(t, isRealtimeEnabled(&aikido_types.CloudConfigData{}))
+	})
+
+	t.Run("returns true when AIKIDO_FEATURE_SSE is uppercase", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "TRUE")
+		assert.True(t, isRealtimeEnabled(&aikido_types.CloudConfigData{}))
+	})
+
+	t.Run("returns false when env var is empty", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "")
+		assert.False(t, isRealtimeEnabled(&aikido_types.CloudConfigData{}))
+	})
+
+	t.Run("returns false when env var is non-matching", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "false")
+		assert.False(t, isRealtimeEnabled(&aikido_types.CloudConfigData{}))
+	})
+
+	t.Run("returns false when cloud config is nil", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "")
+		assert.False(t, isRealtimeEnabled(nil))
+	})
+
+	t.Run("returns true when enabled features contains \"realtime_updates\"", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "")
+		assert.True(t, isRealtimeEnabled(&aikido_types.CloudConfigData{EnabledFeatures: []string{"realtime_updates"}}))
+	})
+
+	t.Run("returns false when enabled features does not contain \"realtime_updates\"", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "")
+		assert.False(t, isRealtimeEnabled(&aikido_types.CloudConfigData{EnabledFeatures: []string{"feature1", "feature2"}}))
+	})
+}
+
+func TestHandleStartEventConfig(t *testing.T) {
+	initAgentForTest(t)
+
+	t.Run("starts the SSE subscription when the initial cloud config enables realtime_updates", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			t.Setenv("AIKIDO_FEATURE_SSE", "")
+
+			subscribed := false
+			mock := &pollingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					subscribed = true
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			cloudConfig := &aikido_types.CloudConfigData{
+				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
+				EnabledFeatures: []string{"realtime_updates"},
+			}
+
+			handleStartEventConfig(mock, cloudConfig)
+			synctest.Wait()
+
+			assert.True(t, subscribed)
+
+			stopSSESubscription()
+			synctest.Wait()
+		})
+	})
+
+	t.Run("does not start the SSE subscription when the initial cloud config does not enable realtime_updates", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			t.Setenv("AIKIDO_FEATURE_SSE", "")
+
+			subscribed := false
+			mock := &pollingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					subscribed = true
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			cloudConfig := &aikido_types.CloudConfigData{
+				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
+			}
+
+			handleStartEventConfig(mock, cloudConfig)
+			synctest.Wait()
+
+			assert.False(t, subscribed)
+			assert.Nil(t, sseCancel)
+		})
 	})
 }
 
