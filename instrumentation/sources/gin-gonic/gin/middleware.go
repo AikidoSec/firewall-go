@@ -32,19 +32,14 @@ func GetMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		reqCtx := request.SetContext(c.Request.Context(), request.ContextData{
-			Source:        "gin",
-			Route:         c.FullPath(),
-			RouteParams:   routeParams,
-			RemoteAddress: &ip,
-			Body:          zenhttp.TryExtractBody(c.Request, c),
-			URL:           zenhttp.FullURL(c.Request),
-			Path:          c.Request.URL.Path,
-			Method:        c.Request.Method,
-			Query:         c.Request.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(c.Request.Header),
-			Cookies:       zenhttp.CookiesToMap(c.Request.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(c.Request)
+		data.Source = "gin"
+		data.Route = c.FullPath()
+		data.RouteParams = routeParams
+		data.RemoteAddress = &ip
+		data.Body = zenhttp.TryExtractBody(c.Request, c)
+
+		reqCtx := request.SetContext(c.Request.Context(), data)
 		c.Request = c.Request.WithContext(reqCtx)
 
 		// Write a response using Gin :

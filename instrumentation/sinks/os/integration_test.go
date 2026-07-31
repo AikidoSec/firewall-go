@@ -75,17 +75,11 @@ func setupBlockingTest(t *testing.T) (*mockCloudClient, context.Context) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	return client, ctx
 }
@@ -125,17 +119,11 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)
@@ -195,17 +183,11 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)

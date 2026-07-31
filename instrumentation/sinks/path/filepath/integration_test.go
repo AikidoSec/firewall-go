@@ -97,17 +97,11 @@ func TestJoinPathInjectionBlockIsDeferred(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		path := filepath.Join("/tmp/", "../test.txt")
@@ -166,17 +160,11 @@ func TestJoinPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		path := filepath.Join("/tmp/", "../test.txt")
@@ -234,17 +222,11 @@ func TestJoinPathInjectionNoAttackWhenOpenFileNotCalled(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		// Call filepath.Join but don't call os.OpenFile
@@ -277,17 +259,11 @@ func TestChainedJoinsNoAttackWhenOpenFileNotCalled(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		// First join stores a deferred attack
@@ -328,17 +304,11 @@ func TestChainedJoinsAttackReportedOnceWhenOpenFileCalled(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		first := filepath.Join("/tmp/", "../test.txt")
@@ -387,17 +357,11 @@ func TestGlobPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
@@ -438,17 +402,11 @@ func TestWalkPathInjectionBlockIsDeferred(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
@@ -495,17 +453,11 @@ func TestWalkPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
@@ -550,17 +502,11 @@ func TestWalkDirPathInjectionBlockIsDeferred(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
@@ -607,17 +553,11 @@ func TestWalkDirPathInjectionNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../sub", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
@@ -666,17 +606,11 @@ func TestJoinPathInjectionReportedOnceForMultipleFileOps(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		path := filepath.Join("/tmp/", "../test.txt")

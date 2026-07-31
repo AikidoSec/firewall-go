@@ -62,17 +62,11 @@ func BenchmarkOpenFile(b *testing.B) {
 	b.Run("with_context", func(b *testing.B) {
 		req := httptest.NewRequest(http.MethodGet, "/files?name=report&id=42", http.NoBody)
 		ip := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "bench",
-			Route:         "/files",
-			RemoteAddress: &ip,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "bench"
+		data.Route = "/files"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
 
 		b.ResetTimer()
 		request.WrapWithGLS(ctx, func() {

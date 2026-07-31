@@ -23,17 +23,11 @@ func TestDisabledAPI(t *testing.T) {
 	t.Run("SetUser no-ops when disabled", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &remoteAddr,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &remoteAddr
+		ctx := request.SetContext(context.Background(), data)
 
 		resultCtx, err := SetUser(ctx, "user123", "John Doe")
 
@@ -50,17 +44,11 @@ func TestDisabledAPI(t *testing.T) {
 	t.Run("SetRateLimitGroup no-ops when disabled", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &remoteAddr,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &remoteAddr
+		ctx := request.SetContext(context.Background(), data)
 
 		resultCtx, err := SetRateLimitGroup(ctx, "group123")
 
@@ -77,17 +65,11 @@ func TestDisabledAPI(t *testing.T) {
 	t.Run("ShouldBlockRequest returns nil when disabled", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "http://example.com/test", nil)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &remoteAddr,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &remoteAddr
+		ctx := request.SetContext(context.Background(), data)
 
 		result := ShouldBlockRequest(ctx)
 

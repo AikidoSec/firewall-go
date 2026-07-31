@@ -37,17 +37,11 @@ func TestExamineContext_Disabled(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/test?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	zen.SetDisabled(true)
 	require.True(t, zen.IsDisabled(), "zen should be disabled")
@@ -91,17 +85,11 @@ func TestExamineContext_NotLoaded(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/test?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	maliciousQuery := "SELECT * FROM users WHERE id = '1' OR 1=1"
 

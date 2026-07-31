@@ -174,19 +174,13 @@ func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := tt.setupReq()
-			ctx := request.SetContext(context.Background(), request.ContextData{
-				Source:        "test",
-				Route:         "/test",
-				RemoteAddress: &ip,
-				RouteParams:   tt.routeParams,
-				Body:          tt.body,
-				URL:           zenhttp.FullURL(req),
-				Path:          req.URL.Path,
-				Method:        req.Method,
-				Query:         req.URL.Query(),
-				Headers:       zenhttp.HeadersToMap(req.Header),
-				Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-			})
+			data := zenhttp.ContextDataFromRequest(req)
+			data.Source = "test"
+			data.Route = "/test"
+			data.RemoteAddress = &ip
+			data.RouteParams = tt.routeParams
+			data.Body = tt.body
+			ctx := request.SetContext(context.Background(), data)
 
 			err := ScanWithOptions(ctx, "testOperation", mockVulnerability, args, ScanOptions{})
 			if tt.expectError {
@@ -219,19 +213,13 @@ func TestScanWithOptions_AllSourcesScannedWhenNoAttack(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test?queryParam=queryValue", http.NoBody)
 	req.Header.Set("X-Header", "headerValue")
 	req.AddCookie(&http.Cookie{Name: "cookie1", Value: "cookieValue"})
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		RouteParams:   map[string]string{"routeParam": "routeValue"},
-		Body:          map[string]any{"bodyField": "bodyValue"},
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	data.RouteParams = map[string]string{"routeParam": "routeValue"}
+	data.Body = map[string]any{"bodyField": "bodyValue"}
+	ctx := request.SetContext(context.Background(), data)
 
 	err := ScanWithOptions(ctx, "testOperation", trackingVuln, args, ScanOptions{})
 	assert.NoError(t, err)
@@ -275,18 +263,12 @@ func TestScanWithOptions_PathFallbackDetectsAttack(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/api/execute/ls%3Bcat%20%2Fetc%2Fpasswd", http.NoBody)
-			ctx := request.SetContext(context.Background(), request.ContextData{
-				Source:        "test",
-				Route:         "/api/execute/:cmd",
-				RemoteAddress: &ip,
-				RouteParams:   tt.routeParams,
-				URL:           zenhttp.FullURL(req),
-				Path:          req.URL.Path,
-				Method:        req.Method,
-				Query:         req.URL.Query(),
-				Headers:       zenhttp.HeadersToMap(req.Header),
-				Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-			})
+			data := zenhttp.ContextDataFromRequest(req)
+			data.Source = "test"
+			data.Route = "/api/execute/:cmd"
+			data.RemoteAddress = &ip
+			data.RouteParams = tt.routeParams
+			ctx := request.SetContext(context.Background(), data)
 
 			err := ScanWithOptions(ctx, "testOperation", pathAttackVuln, args, ScanOptions{})
 			require.Error(t, err, "path fallback should scan extracted segments and detect attack")
@@ -320,18 +302,12 @@ func TestScanWithOptions_PathFallbackAlwaysScanned(t *testing.T) {
 			}
 
 			req := httptest.NewRequest("GET", "/api/users/user@example.com/posts", http.NoBody)
-			ctx := request.SetContext(context.Background(), request.ContextData{
-				Source:        "test",
-				Route:         "/api/users/:user/posts",
-				RemoteAddress: &ip,
-				RouteParams:   tt.routeParams,
-				URL:           zenhttp.FullURL(req),
-				Path:          req.URL.Path,
-				Method:        req.Method,
-				Query:         req.URL.Query(),
-				Headers:       zenhttp.HeadersToMap(req.Header),
-				Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-			})
+			data := zenhttp.ContextDataFromRequest(req)
+			data.Source = "test"
+			data.Route = "/api/users/:user/posts"
+			data.RemoteAddress = &ip
+			data.RouteParams = tt.routeParams
+			ctx := request.SetContext(context.Background(), data)
 
 			err := ScanWithOptions(ctx, "testOperation", trackingVuln, args, ScanOptions{})
 			assert.NoError(t, err)
@@ -449,19 +425,13 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := tt.setupReq()
-			ctx := request.SetContext(context.Background(), request.ContextData{
-				Source: "test",
-				// Route:         tt.route,
-				RemoteAddress: &ip,
-				RouteParams:   tt.routeParams,
-				Body:          tt.body,
-				URL:           zenhttp.FullURL(req),
-				Path:          req.URL.Path,
-				Method:        req.Method,
-				Query:         req.URL.Query(),
-				Headers:       zenhttp.HeadersToMap(req.Header),
-				Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-			})
+			data := zenhttp.ContextDataFromRequest(req)
+			data.Source = "test"
+			// data.Route = tt.route,
+			data.RemoteAddress = &ip
+			data.RouteParams = tt.routeParams
+			data.Body = tt.body
+			ctx := request.SetContext(context.Background(), data)
 
 			err := ScanWithOptions(ctx, "testOperation", mockVulnerability, args, ScanOptions{})
 			if tt.expectError {
@@ -491,17 +461,11 @@ func TestScanWithOptions_ModuleIsPassedThrough(t *testing.T) {
 	agent.SetCloudClient(client)
 
 	req := httptest.NewRequest("GET", "/test?q=attack", http.NoBody)
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	_ = ScanWithOptions(ctx, "testOp", mockVulnerability, args, ScanOptions{Module: "my-module"})
 
@@ -525,17 +489,11 @@ func TestScanWithOptions_DeferReportingReturnsNilWhenDeferredAttackExists(t *tes
 	defer config.SetBlocking(original)
 
 	req := httptest.NewRequest("GET", "/test", http.NoBody)
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	reqCtx := request.GetContext(ctx)
 	reqCtx.SetDeferredAttack(&request.DeferredAttack{
@@ -561,17 +519,11 @@ func TestScanWithOptions_NonDeferredBlocksAndReportsExistingDeferredAttack(t *te
 	t.Cleanup(func() { agent.SetCloudClient(originalClient) })
 
 	req := httptest.NewRequest("GET", "/test", http.NoBody)
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	blockErr := &AttackDetectedError{Kind: KindSQLInjection, Operation: "testOp"}
 	reqCtx := request.GetContext(ctx)
@@ -650,17 +602,11 @@ func TestScan_ShouldProtect(t *testing.T) {
 			config.SetZenLoaded(tt.zenLoaded)
 
 			req := httptest.NewRequest("GET", "/test?param1=attack&param2=safe", http.NoBody)
-			ctx := request.SetContext(context.Background(), request.ContextData{
-				Source:        "test",
-				Route:         "/test",
-				RemoteAddress: &ip,
-				URL:           zenhttp.FullURL(req),
-				Path:          req.URL.Path,
-				Method:        req.Method,
-				Query:         req.URL.Query(),
-				Headers:       zenhttp.HeadersToMap(req.Header),
-				Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-			})
+			data := zenhttp.ContextDataFromRequest(req)
+			data.Source = "test"
+			data.Route = "/test"
+			data.RemoteAddress = &ip
+			ctx := request.SetContext(context.Background(), data)
 
 			err := ScanWithOptions(ctx, "testOperation", mockVulnerability, args, ScanOptions{})
 			if tt.expectError {

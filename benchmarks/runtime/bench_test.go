@@ -21,17 +21,11 @@ import (
 func TestCompiledWithZenGo(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/verify", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "bench-verify",
-		Route:         "/verify",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "bench-verify"
+	data.Route = "/verify"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	type result struct {
 		ctx *request.Context
@@ -93,17 +87,11 @@ func BenchmarkSpawnFanOut(b *testing.B) {
 func BenchmarkGetContext(b *testing.B) {
 	req := httptest.NewRequest(http.MethodGet, "/bench", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "bench",
-		Route:         "/bench",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "bench"
+	data.Route = "/bench"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		b.ResetTimer()

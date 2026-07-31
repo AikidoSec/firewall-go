@@ -34,19 +34,14 @@ func GetMiddleware() echo.MiddlewareFunc {
 				}
 			}
 
-			reqCtx := request.SetContext(httpRequest.Context(), request.ContextData{
-				Source:        "echo",
-				Route:         c.Path(),
-				RouteParams:   routeParams,
-				RemoteAddress: &ip,
-				Body:          http.TryExtractBody(httpRequest, c),
-				URL:           http.FullURL(httpRequest),
-				Path:          httpRequest.URL.Path,
-				Method:        httpRequest.Method,
-				Query:         httpRequest.URL.Query(),
-				Headers:       http.HeadersToMap(httpRequest.Header),
-				Cookies:       http.CookiesToMap(httpRequest.Cookies()),
-			})
+			data := http.ContextDataFromRequest(httpRequest)
+			data.Source = "echo"
+			data.Route = c.Path()
+			data.RouteParams = routeParams
+			data.RemoteAddress = &ip
+			data.Body = http.TryExtractBody(httpRequest, c)
+
+			reqCtx := request.SetContext(httpRequest.Context(), data)
 			c.SetRequest(httpRequest.WithContext(reqCtx))
 
 			// Write a possible response (i.e. geo-blocking bot blocking)

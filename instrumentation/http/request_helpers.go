@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
 func FullURL(r *http.Request) string {
@@ -31,4 +33,18 @@ func CookiesToMap(cookies []*http.Cookie) map[string][]string {
 		result[cookie.Name] = append(result[cookie.Name], cookie.Value)
 	}
 	return result
+}
+
+// ContextDataFromRequest extracts the fields request.ContextData derives from
+// an *http.Request. Callers set the remaining fields (Source, Route,
+// RouteParams, RemoteAddress, Body) before calling request.SetContext.
+func ContextDataFromRequest(r *http.Request) request.ContextData {
+	return request.ContextData{
+		URL:     FullURL(r),
+		Path:    r.URL.Path,
+		Method:  r.Method,
+		Query:   r.URL.Query(),
+		Headers: HeadersToMap(r.Header),
+		Cookies: CookiesToMap(r.Cookies()),
+	}
 }

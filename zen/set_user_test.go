@@ -20,17 +20,11 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &remoteAddr,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &remoteAddr
+		ctx := request.SetContext(context.Background(), data)
 
 		// Execute
 		resultCtx, err := zen.SetUser(ctx, "user123", "John Doe")
@@ -51,17 +45,11 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &remoteAddr,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &remoteAddr
+		ctx := request.SetContext(context.Background(), data)
 
 		// Execute
 		resultCtx, err := zen.SetUser(ctx, "", "John Doe")
@@ -81,17 +69,11 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &remoteAddr,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &remoteAddr
+		ctx := request.SetContext(context.Background(), data)
 
 		// Execute
 		resultCtx, err := zen.SetUser(ctx, "user123", "")
@@ -126,17 +108,11 @@ func TestSetUser(t *testing.T) {
 		// Setup
 		req, _ := http.NewRequest("GET", "http://example.com/test", http.NoBody)
 		remoteAddr := "127.0.0.1"
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &remoteAddr,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &remoteAddr
+		ctx := request.SetContext(context.Background(), data)
 
 		// Mark middleware as executed
 		reqCtx := request.GetContext(ctx)
@@ -159,17 +135,11 @@ func TestSetUser(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("POST", "/api/users", http.NoBody)
 		req.Header.Set("Content-Type", "application/json")
-		ctx := request.SetContext(context.Background(), request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &ip,
-			URL:           zenhttp.FullURL(req),
-			Path:          req.URL.Path,
-			Method:        req.Method,
-			Query:         req.URL.Query(),
-			Headers:       zenhttp.HeadersToMap(req.Header),
-			Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
 
 		userID := "user-123"
 		userName := "John Doe"

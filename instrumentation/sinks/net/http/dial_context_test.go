@@ -67,17 +67,11 @@ func TestSsrfDialContext_BlocksLiteralPrivateIPFromUserInput(t *testing.T) {
 
 	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2F10.0.0.1%2Finternal", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	original := dialerReturning("10.0.0.1:80")
 	wrapped := ssrfDialContext(original)
@@ -93,17 +87,11 @@ func TestSsrfDialContext_BlocksDNSResolvedPrivateIP(t *testing.T) {
 	// "localhost" resolves to 127.0.0.1
 	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2Flocalhost%2Finternal", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Simulate the real dialer resolving localhost to 127.0.0.1
 	original := dialerReturning("127.0.0.1:80")
@@ -119,17 +107,11 @@ func TestSsrfDialContext_ClosesConnectionOnBlock(t *testing.T) {
 
 	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2F10.0.0.1%2Finternal", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	mc := &mockConn{remoteAddr: mockTCPAddr("10.0.0.1:80")}
 	original := func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -151,17 +133,11 @@ func TestSsrfDialContext_BlocksUnicodeConfusableLocalhost(t *testing.T) {
 	// User sends URL with Unicode confusable hostname in query
 	incomingReq := httptest.NewRequest("GET", "/api/request?url=http%3A%2F%2F%E2%93%9Bocalhost%3A4000%2F", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/api/request",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/api/request"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Go's HTTP transport IDNA-normalizes ⓛocalhost → localhost before dialing.
 	// DialContext receives "localhost:4000", which resolves to 127.0.0.1.
@@ -178,17 +154,11 @@ func TestSsrfDialContext_AllowsPublicIP(t *testing.T) {
 
 	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2Fexample.com", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	original := dialerReturning("93.184.216.34:80")
 	wrapped := ssrfDialContext(original)
@@ -210,17 +180,11 @@ func TestSsrfDialContext_AllowsDifferentPortThanUserInput(t *testing.T) {
 		strings.NewReader("url=http%3A%2F%2F127.0.0.1%3A4001&port=4000"))
 	incomingReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/api/request_different_port",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/api/request_different_port"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Server rewrites URL to use port 4000, connects to 127.0.0.1:4000
 	original := dialerReturning("127.0.0.1:4000")
@@ -241,17 +205,11 @@ func TestSsrfDialContext_BlocksRedirectToPrivateIP(t *testing.T) {
 	incomingReq := httptest.NewRequest("GET",
 		"/api/request?url=http%3A%2F%2Fssrf-redirects.testssandbox.com%2Fssrf-test-4", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/api/request",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/api/request"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Simulate the redirect chain: RoundTrip recorded that
 	// ssrf-redirects.testssandbox.com:80 redirected to 127.0.0.1:4000
@@ -280,17 +238,11 @@ func TestSsrfDialContext_BlocksDoubleHopRedirectToPrivateIP(t *testing.T) {
 	incomingReq := httptest.NewRequest("GET",
 		"/api/request?url=http%3A%2F%2Fhop1.example.com", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/api/request",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/api/request"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	reqCtx := request.GetContext(ctx)
 	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
@@ -351,17 +303,11 @@ func TestSsrfDialContext_BlocksRedirectWithCyclicChain(t *testing.T) {
 	incomingReq := httptest.NewRequest("GET",
 		"/api/request?url=http%3A%2F%2Fgateway.com%2Fredirect", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/api/request",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/api/request"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	reqCtx := request.GetContext(ctx)
 	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
@@ -421,17 +367,11 @@ func TestSsrfDialContext_BlocksRedirectWhenStaleEntryFromEarlierRequestCreatesCy
 	incomingReq := httptest.NewRequest("GET",
 		"/api/request?url=http%3A%2F%2Floopa.com%2Fredirect", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/api/request",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/api/request"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	reqCtx := request.GetContext(ctx)
 	reqCtx.AddOutgoingRedirect(request.RedirectEntry{
@@ -553,17 +493,11 @@ func TestStoredSsrf(t *testing.T) {
 			if tt.useReqCtx {
 				incomingReq := httptest.NewRequest("GET", "/test", nil)
 				ip := "1.2.3.4"
-				ctx = request.SetContext(context.Background(), request.ContextData{
-					Source:        "test",
-					Route:         "/test",
-					RemoteAddress: &ip,
-					URL:           zenhttp.FullURL(incomingReq),
-					Path:          incomingReq.URL.Path,
-					Method:        incomingReq.Method,
-					Query:         incomingReq.URL.Query(),
-					Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-					Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-				})
+				data := zenhttp.ContextDataFromRequest(incomingReq)
+				data.Source = "test"
+				data.Route = "/test"
+				data.RemoteAddress = &ip
+				ctx = request.SetContext(context.Background(), data)
 			} else {
 				ctx = context.Background()
 			}
@@ -621,15 +555,9 @@ func bypassedContext(t *testing.T) context.Context {
 		Block:       &block,
 	}, nil)
 	incomingReq := httptest.NewRequest("GET", "/test", nil)
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 	require.True(t, request.IsBypassed(ctx))
 	return ctx
 }
@@ -673,17 +601,11 @@ func TestSsrfDialContext_AllowsPrivateIPNotInUserInput(t *testing.T) {
 	// User input contains a different hostname
 	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2Fexample.com", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	original := dialerReturning("10.0.0.1:80")
 	wrapped := ssrfDialContext(original)
@@ -701,17 +623,11 @@ func TestSsrfDialContext_ReportsModuleName(t *testing.T) {
 
 	incomingReq := httptest.NewRequest("GET", "/test?url=http%3A%2F%2F10.0.0.1%2Finternal", nil)
 	ip := "1.2.3.4"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(incomingReq),
-		Path:          incomingReq.URL.Path,
-		Method:        incomingReq.Method,
-		Query:         incomingReq.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies:       zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	original := dialerReturning("10.0.0.1:80")
 	wrapped := ssrfDialContext(original)

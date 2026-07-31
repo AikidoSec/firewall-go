@@ -41,17 +41,11 @@ func setupTestWithBlocking(t *testing.T) (*mockCloudClient, context.Context, *pg
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Create a pool config with test database connection string
 	// The database is automatically started by 'make test-instrumentation-integration'
@@ -91,17 +85,11 @@ func setupTestWithoutBlocking(t *testing.T) (*mockCloudClient, context.Context, 
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Create a pool config with test database connection string
 	// The database is automatically started by 'make test-instrumentation-integration'
@@ -434,17 +422,11 @@ func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Create a pool config with test database connection string
 	// The database is automatically started by 'make test-instrumentation-integration'

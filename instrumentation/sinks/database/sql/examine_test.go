@@ -30,17 +30,11 @@ func TestExamineContext_TracksOperationStats(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Clear stats before test
 	agent.Stats().GetAndClear()

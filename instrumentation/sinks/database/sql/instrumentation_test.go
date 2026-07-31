@@ -39,17 +39,11 @@ func setupTestWithBlocking(t *testing.T) (*mockCloudClient, context.Context, *sq
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	db, err := sql.Open("test", "")
 	require.NoError(t, err)
@@ -77,17 +71,11 @@ func setupTestWithoutBlocking(t *testing.T) (*mockCloudClient, context.Context, 
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	db, err := sql.Open("test", "")
 	require.NoError(t, err)
@@ -563,17 +551,11 @@ func TestQueryContextIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	db, err := sql.Open("test", "")
 	require.NoError(t, err)
@@ -639,17 +621,11 @@ func TestDialectIsPassedThrough(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-		URL:           zenhttp.FullURL(req),
-		Path:          req.URL.Path,
-		Method:        req.Method,
-		Query:         req.URL.Query(),
-		Headers:       zenhttp.HeadersToMap(req.Header),
-		Cookies:       zenhttp.CookiesToMap(req.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	db, err := sql.Open("fake-mysql", "")
 	require.NoError(t, err)

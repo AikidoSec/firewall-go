@@ -245,16 +245,10 @@ func TestRoundTrip_RecordsRedirect(t *testing.T) {
 	defer ts.Close()
 
 	incomingReq := httptest.NewRequest("GET", "/test", nil)
-	ctx := request.SetContext(context.TODO(), request.ContextData{
-		Source:  "test",
-		Route:   "/test",
-		URL:     zenhttp.FullURL(incomingReq),
-		Path:    incomingReq.URL.Path,
-		Method:  incomingReq.Method,
-		Query:   incomingReq.URL.Query(),
-		Headers: zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies: zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	ctx := request.SetContext(context.TODO(), data)
 
 	transport := &ssrfTransport{inner: &http.Transport{}}
 	req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL+"/api", nil)
@@ -277,16 +271,10 @@ func TestRoundTrip_NonRedirectDoesNotRecord(t *testing.T) {
 	defer ts.Close()
 
 	incomingReq := httptest.NewRequest("GET", "/test", nil)
-	ctx := request.SetContext(context.TODO(), request.ContextData{
-		Source:  "test",
-		Route:   "/test",
-		URL:     zenhttp.FullURL(incomingReq),
-		Path:    incomingReq.URL.Path,
-		Method:  incomingReq.Method,
-		Query:   incomingReq.URL.Query(),
-		Headers: zenhttp.HeadersToMap(incomingReq.Header),
-		Cookies: zenhttp.CookiesToMap(incomingReq.Cookies()),
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	ctx := request.SetContext(context.TODO(), data)
 
 	transport := &ssrfTransport{inner: &http.Transport{}}
 	req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL+"/api", nil)

@@ -6,35 +6,11 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
-type ContextData struct {
-	Source        string
-	Route         string
-	RouteParams   map[string]string
-	RemoteAddress *string
-	Body          any
-	URL           string
-	Path          string
-	Method        string
-	Query         map[string][]string
-	Headers       map[string][]string
-	Cookies       map[string][]string
-}
+type ContextData = request.ContextData
 
 // SetContext sets the context for the given request.
 func SetContext(ctx context.Context, data ContextData) context.Context {
-	return request.SetContext(ctx, request.ContextData{
-		Source:        data.Source,
-		Route:         data.Route,
-		RouteParams:   data.RouteParams,
-		RemoteAddress: data.RemoteAddress,
-		Body:          data.Body,
-		URL:           data.URL,
-		Path:          data.Path,
-		Method:        data.Method,
-		Query:         data.Query,
-		Headers:       data.Headers,
-		Cookies:       data.Cookies,
-	})
+	return request.SetContext(ctx, data)
 }
 
 // HasContext returns true if the context has a request context set.
