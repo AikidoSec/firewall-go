@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -11,20 +10,21 @@ import (
 )
 
 func TestSetContext(t *testing.T) {
-	req, err := http.NewRequest("POST", "http://example.com/api/users?q=1", http.NoBody)
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
 	ip := "10.0.0.1"
 	routeParams := map[string]string{"id": "42"}
 	body := map[string]string{"name": "test"}
 
-	ctx := SetContext(context.Background(), req, ContextData{
+	ctx := SetContext(context.Background(), ContextData{
 		Source:        "gin",
 		Route:         "/api/users/:id",
 		RouteParams:   routeParams,
 		RemoteAddress: &ip,
 		Body:          body,
+		URL:           "http://example.com/api/users?q=1",
+		Path:          "/api/users",
+		Method:        "POST",
+		Query:         map[string][]string{"q": {"1"}},
+		Headers:       map[string][]string{"content-type": {"application/json"}},
 	})
 
 	reqCtx := request.GetContext(ctx)
@@ -44,11 +44,12 @@ func TestHasContext(t *testing.T) {
 	})
 
 	t.Run("returns true after SetContext", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "http://example.com/path", http.NoBody)
-		require.NoError(t, err)
-		ctx := SetContext(context.Background(), req, ContextData{
+		ctx := SetContext(context.Background(), ContextData{
 			Source: "test",
 			Route:  "/path",
+			Path:   "/path",
+			Method: "GET",
+			URL:    "http://example.com/path",
 		})
 		assert.True(t, HasContext(ctx))
 	})
@@ -61,11 +62,12 @@ func TestHasContext(t *testing.T) {
 
 func TestWrap(t *testing.T) {
 	t.Run("makes context available via GLS", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "http://example.com/wrapped", http.NoBody)
-		require.NoError(t, err)
-		ctx := SetContext(context.Background(), req, ContextData{
+		ctx := SetContext(context.Background(), ContextData{
 			Source: "wrap-test",
 			Route:  "/wrapped",
+			Path:   "/wrapped",
+			Method: "GET",
+			URL:    "http://example.com/wrapped",
 		})
 
 		var glsCtx *request.Context
@@ -79,11 +81,12 @@ func TestWrap(t *testing.T) {
 	})
 
 	t.Run("GLS context not available after Wrap returns", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "http://example.com/done", http.NoBody)
-		require.NoError(t, err)
-		ctx := SetContext(context.Background(), req, ContextData{
+		ctx := SetContext(context.Background(), ContextData{
 			Source: "test",
 			Route:  "/done",
+			Path:   "/done",
+			Method: "GET",
+			URL:    "http://example.com/done",
 		})
 
 		Wrap(ctx, func() {})

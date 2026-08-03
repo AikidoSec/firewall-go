@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/agent/ratelimiting"
@@ -68,11 +69,11 @@ func createRequestContext(t *testing.T, method, route, ip string, userID, userNa
 func createRequestContextWithGroup(t *testing.T, method, route, ip string, userID, userName, groupID string) context.Context {
 	t.Helper()
 	req := httptest.NewRequest(method, route, http.NoBody)
-	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         route,
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = route
+	data.RemoteAddress = &ip
+	reqCtx := request.SetContext(context.Background(), data)
 	if userID != "" {
 		_, err := zen.SetUser(reqCtx, userID, userName)
 		require.NoError(t, err)
@@ -95,11 +96,11 @@ func TestShouldBlockRequest(t *testing.T) {
 func TestShouldBlockRequest_MiddlewareAlreadyExecuted(t *testing.T) {
 	req := httptest.NewRequest("GET", "/route", http.NoBody)
 	ip := "127.0.0.1"
-	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	reqCtx := request.SetContext(context.Background(), data)
 
 	// First call: marks middleware as executed and returns nil (no block).
 	result1 := zen.ShouldBlockRequest(reqCtx)
@@ -113,11 +114,11 @@ func TestShouldBlockRequest_MiddlewareAlreadyExecuted(t *testing.T) {
 func TestShouldBlockRequest_BlockedUser(t *testing.T) {
 	req := httptest.NewRequest("GET", "/route", http.NoBody)
 	ip := "127.0.0.1"
-	reqCtx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	reqCtx := request.SetContext(context.Background(), data)
 
 	_, err := zen.SetUser(reqCtx, "banned", "Banned User")
 	require.NoError(t, err)
@@ -215,11 +216,11 @@ func ExampleShouldBlockRequest() {
 			// Set up proper request context
 			ctx := context.Background()
 			remoteAddr := "127.0.0.1"
-			ctx = request.SetContext(ctx, r, request.ContextData{
-				Source:        "test",
-				Route:         "/test",
-				RemoteAddress: &remoteAddr,
-			})
+			data := zenhttp.ContextDataFromRequest(r)
+			data.Source = "test"
+			data.Route = "/test"
+			data.RemoteAddress = &remoteAddr
+			ctx = request.SetContext(ctx, data)
 
 			// Set user in context
 			ctx, err = zen.SetUser(ctx, "user123", "John Doe")

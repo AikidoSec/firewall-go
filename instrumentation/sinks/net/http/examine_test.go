@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
@@ -164,20 +165,20 @@ func TestExamine_ForceProtectionOffSkipsOutboundBlocking(t *testing.T) {
 	}, nil)
 
 	incomingReq := httptest.NewRequest("GET", "/api/no-protection", nil)
-	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
-		Source: "test",
-		Route:  "/api/no-protection",
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/api/no-protection"
+	ctx := request.SetContext(context.Background(), data)
 
 	outboundReq, _ := http.NewRequestWithContext(ctx, "GET", "http://blocked.com", http.NoBody)
 	assert.NoError(t, Examine(outboundReq), "force protection off route should not block outbound connections")
 
 	// A route without force protection off should still be blocked
 	incomingReqNormal := httptest.NewRequest("GET", "/api/normal", nil)
-	ctxNormal := request.SetContext(context.Background(), incomingReqNormal, request.ContextData{
-		Source: "test",
-		Route:  "/api/normal",
-	})
+	data = zenhttp.ContextDataFromRequest(incomingReqNormal)
+	data.Source = "test"
+	data.Route = "/api/normal"
+	ctxNormal := request.SetContext(context.Background(), data)
 	outboundReqNormal, _ := http.NewRequestWithContext(ctxNormal, "GET", "http://blocked.com", http.NoBody)
 	var blockedErr *zen.OutboundConnectionBlocked
 	require.ErrorAs(t, Examine(outboundReqNormal), &blockedErr, "normal route should still block outbound connections")
@@ -206,9 +207,9 @@ func TestExamine_BypassedIPSkipsOutboundBlocking(t *testing.T) {
 
 	incomingReq := httptest.NewRequest("GET", "/api/fetch?url=http://malicious.com", nil)
 	ip := "10.10.10.10"
-	ctx := request.SetContext(context.Background(), incomingReq, request.ContextData{
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 	require.True(t, request.IsBypassed(ctx), "context should be marked as bypassed")
 
 	agent.State().GetAndClearHostnames()

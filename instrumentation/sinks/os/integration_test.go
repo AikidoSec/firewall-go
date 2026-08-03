@@ -12,6 +12,7 @@ import (
 	"time"
 
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -74,11 +75,11 @@ func setupBlockingTest(t *testing.T) (*mockCloudClient, context.Context) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	return client, ctx
 }
@@ -118,11 +119,11 @@ func TestOpenFileIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)
@@ -182,11 +183,11 @@ func TestOpenFileIsNotBlockedWhenInMonitoringMode(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?path=../test.txt", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		_, err := os.OpenFile("/tmp/"+"../test.txt", os.O_RDONLY, 0o600)

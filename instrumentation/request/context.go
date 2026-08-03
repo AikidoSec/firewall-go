@@ -2,28 +2,15 @@ package request
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
-type ContextData struct {
-	Source        string
-	Route         string
-	RouteParams   map[string]string
-	RemoteAddress *string
-	Body          any
-}
+type ContextData = request.ContextData
 
 // SetContext sets the context for the given request.
-func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
-	return request.SetContext(ctx, r, request.ContextData{
-		Source:        data.Source,
-		Route:         data.Route,
-		RouteParams:   data.RouteParams,
-		RemoteAddress: data.RemoteAddress,
-		Body:          data.Body,
-	})
+func SetContext(ctx context.Context, data ContextData) context.Context {
+	return request.SetContext(ctx, data)
 }
 
 // HasContext returns true if the context has a request context set.

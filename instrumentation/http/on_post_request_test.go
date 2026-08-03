@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"net/http"
 	"testing"
 	"time"
 
@@ -36,15 +35,15 @@ func TestOnPostRequest_AttackWave(t *testing.T) {
 	agent.SetCloudClient(client)
 
 	for range 100 {
-		req, _ := http.NewRequest("BADMETHOD", "/route", nil)
-		req.RemoteAddr = "10.0.0.1:1234"
-		req.Header.Set("user-agent", "user-agent")
-
 		ip := "10.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
+			Method:        "BADMETHOD",
+			URL:           "http://example.com/route",
+			Path:          "/route",
+			Headers:       map[string][]string{"user-agent": {"user-agent"}},
 		})
 
 		OnPostRequest(ctx, 200)

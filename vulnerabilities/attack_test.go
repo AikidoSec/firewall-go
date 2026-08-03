@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -98,12 +99,12 @@ func TestGetAttackDetected(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/users", http.NoBody)
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/api/users",
-		RemoteAddress: &ip,
-		Body:          map[string]interface{}{"name": "test"},
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/api/users"
+	data.RemoteAddress = &ip
+	data.Body = map[string]interface{}{"name": "test"}
+	ctx := request.SetContext(context.Background(), data)
 
 	result := interceptorResult{
 		Kind:          KindSQLInjection,
@@ -165,11 +166,11 @@ func TestStoreDeferredAttack(t *testing.T) {
 	t.Run("stores attack and error in context", func(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &ip,
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
 
 		result := &interceptorResult{
 			Kind:          KindPathTraversal,
@@ -204,11 +205,11 @@ func TestStoreDeferredAttack(t *testing.T) {
 	t.Run("does not store error when blocking is disabled", func(t *testing.T) {
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &ip,
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
 
 		result := &interceptorResult{
 			Kind:          KindPathTraversal,
@@ -273,11 +274,11 @@ func TestReportDeferredAttack(t *testing.T) {
 
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &ip,
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
 
 		reportDeferredAttack(ctx)
 
@@ -304,11 +305,11 @@ func TestReportDeferredAttack(t *testing.T) {
 
 		ip := "127.0.0.1"
 		req := httptest.NewRequest("GET", "/test", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
-			Source:        "test",
-			Route:         "/test",
-			RemoteAddress: &ip,
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/test"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
 
 		result := &interceptorResult{
 			Kind:          KindPathTraversal,
@@ -434,11 +435,11 @@ func TestOnStoredSSRF(t *testing.T) {
 
 		ip := "1.2.3.4"
 		req := httptest.NewRequest("POST", "/api/stored_ssrf", http.NoBody)
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
-			Source:        "test",
-			Route:         "/api/stored_ssrf",
-			RemoteAddress: &ip,
-		})
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/api/stored_ssrf"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
 
 		err := OnStoredSSRF(ctx, "net/http", "net/http.Client.Do", "evil.com", "169.254.169.254")
 		assert.NoError(t, err)

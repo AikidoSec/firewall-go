@@ -11,6 +11,7 @@ import (
 	"time"
 
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -40,11 +41,11 @@ func setupTestWithBlocking(t *testing.T) (*mockCloudClient, context.Context, *pg
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Create a pool config with test database connection string
 	// The database is automatically started by 'make test-instrumentation-integration'
@@ -84,11 +85,11 @@ func setupTestWithoutBlocking(t *testing.T) (*mockCloudClient, context.Context, 
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Create a pool config with test database connection string
 	// The database is automatically started by 'make test-instrumentation-integration'
@@ -421,11 +422,11 @@ func TestQueryIsAutomaticallyInstrumented(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/route?query=1%27%20OR%201%3D1", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/route",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/route"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	// Create a pool config with test database connection string
 	// The database is automatically started by 'make test-instrumentation-integration'

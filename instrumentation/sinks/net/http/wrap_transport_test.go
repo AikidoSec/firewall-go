@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"testing"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
@@ -243,10 +244,11 @@ func TestRoundTrip_RecordsRedirect(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	ctx := request.SetContext(context.TODO(), httptest.NewRequest("GET", "/test", nil), request.ContextData{
-		Source: "test",
-		Route:  "/test",
-	})
+	incomingReq := httptest.NewRequest("GET", "/test", nil)
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	ctx := request.SetContext(context.TODO(), data)
 
 	transport := &ssrfTransport{inner: &http.Transport{}}
 	req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL+"/api", nil)
@@ -268,10 +270,11 @@ func TestRoundTrip_NonRedirectDoesNotRecord(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	ctx := request.SetContext(context.TODO(), httptest.NewRequest("GET", "/test", nil), request.ContextData{
-		Source: "test",
-		Route:  "/test",
-	})
+	incomingReq := httptest.NewRequest("GET", "/test", nil)
+	data := zenhttp.ContextDataFromRequest(incomingReq)
+	data.Source = "test"
+	data.Route = "/test"
+	ctx := request.SetContext(context.TODO(), data)
 
 	transport := &ssrfTransport{inner: &http.Transport{}}
 	req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL+"/api", nil)

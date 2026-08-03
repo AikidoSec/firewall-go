@@ -2,9 +2,7 @@ package request
 
 import (
 	"context"
-	"fmt"
 	"maps"
-	"net/http"
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
@@ -22,16 +20,22 @@ type ContextData struct {
 	RouteParams   map[string]string
 	RemoteAddress *string
 	Body          any
+	URL           string
+	Path          string
+	Method        string
+	Query         map[string][]string
+	Headers       map[string][]string
+	Cookies       map[string][]string
 }
 
-func SetContext(ctx context.Context, r *http.Request, data ContextData) context.Context {
+func SetContext(ctx context.Context, data ContextData) context.Context {
 	if data.RemoteAddress != nil && config.IsIPBypassed(*data.RemoteAddress) {
 		return context.WithValue(ctx, bypassedCtxKey, true)
 	}
 
 	route := data.Route
 	if route == "" {
-		route = r.URL.Path // Use path from URL as default.
+		route = data.Path // Use path as default.
 	}
 
 	// Trim the trailing slashes from route to normalise for matching with API
@@ -45,15 +49,15 @@ func SetContext(ctx context.Context, r *http.Request, data ContextData) context.
 	}
 
 	c := &Context{
-		URL:                fullURL(r),
-		Path:               r.URL.Path, // Path without the query params
-		Method:             r.Method,
-		Query:              r.URL.Query(),
-		Headers:            headersToMap(r.Header),
+		URL:                data.URL,
+		Path:               data.Path,
+		Method:             data.Method,
+		Query:              data.Query,
+		Headers:            data.Headers,
 		RouteParams:        routeParams,
 		RemoteAddress:      data.RemoteAddress,
 		Body:               data.Body,
-		Cookies:            cookiesToMap(r.Cookies()),
+		Cookies:            data.Cookies,
 		Source:             data.Source,
 		Route:              route,
 		executedMiddleware: false, // We start with no middleware executed.
@@ -99,31 +103,4 @@ func EnsureContextPropagated(ctx context.Context) context.Context {
 		return context.WithValue(ctx, bypassedCtxKey, true)
 	}
 	return ctx
-}
-
-func headersToMap(headers http.Header) map[string][]string {
-	headerInfo := make(map[string][]string)
-	for key, values := range headers {
-		if strings.ToLower(key) == "cookie" {
-			continue // Ignore cookie header, because we already extract below.
-		}
-		headerInfo[strings.ToLower(key)] = values
-	}
-	return headerInfo
-}
-
-func cookiesToMap(cookies []*http.Cookie) map[string][]string {
-	cookieInfo := make(map[string][]string)
-	for _, cookie := range cookies {
-		cookieInfo[cookie.Name] = append(cookieInfo[cookie.Name], cookie.Value)
-	}
-	return cookieInfo
-}
-
-func fullURL(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	}
-	return fmt.Sprintf("%s://%s%s", scheme, r.Host, r.URL.RequestURI())
 }

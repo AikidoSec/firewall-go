@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/request"
 )
 
@@ -20,11 +21,11 @@ import (
 func TestCompiledWithZenGo(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/verify", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "bench-verify",
-		Route:         "/verify",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "bench-verify"
+	data.Route = "/verify"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	type result struct {
 		ctx *request.Context
@@ -86,11 +87,11 @@ func BenchmarkSpawnFanOut(b *testing.B) {
 func BenchmarkGetContext(b *testing.B) {
 	req := httptest.NewRequest(http.MethodGet, "/bench", http.NoBody)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "bench",
-		Route:         "/bench",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "bench"
+	data.Route = "/bench"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	request.WrapWithGLS(ctx, func() {
 		b.ResetTimer()

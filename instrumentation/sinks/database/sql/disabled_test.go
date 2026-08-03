@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/instrumentation/sinks/database/sql"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
@@ -36,11 +37,11 @@ func TestExamineContext_Disabled(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/test?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	zen.SetDisabled(true)
 	require.True(t, zen.IsDisabled(), "zen should be disabled")
@@ -84,11 +85,11 @@ func TestExamineContext_NotLoaded(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/test?query=1%27%20OR%201%3D1", nil)
 	ip := "127.0.0.1"
-	ctx := request.SetContext(context.Background(), req, request.ContextData{
-		Source:        "test",
-		Route:         "/test",
-		RemoteAddress: &ip,
-	})
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
 
 	maliciousQuery := "SELECT * FROM users WHERE id = '1' OR 1=1"
 

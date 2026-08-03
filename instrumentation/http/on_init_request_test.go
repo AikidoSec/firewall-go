@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
@@ -44,10 +43,8 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("blocked ip", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.RemoteAddr = "10.0.0.1:1234"
 		ip := "10.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -62,14 +59,12 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("blocked user agent", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.Header.Set("User-Agent", "bot-test")
-		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
+			Headers:       map[string][]string{"user-agent": {"bot-test"}},
 		})
 
 		resp := OnInitRequest(ctx)
@@ -80,13 +75,12 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("block route with unapproved ip", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/admin", http.NoBody)
-		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/admin",
 			RemoteAddress: &ip,
+			Method:        "GET",
 		})
 
 		resp := OnInitRequest(ctx)
@@ -97,13 +91,12 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("allow route with approved ip", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/admin", http.NoBody)
-		req.RemoteAddr = "192.168.0.1:4321"
 		ip := "192.168.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/admin",
 			RemoteAddress: &ip,
+			Method:        "GET",
 		})
 
 		resp := OnInitRequest(ctx)
@@ -118,10 +111,8 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("allowed request", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -133,10 +124,8 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("blocked by global allow list", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/route", nil)
-		req.RemoteAddr = "203.0.114.1:1234"
 		ip := "203.0.114.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -153,10 +142,8 @@ func TestOnInitRequest(t *testing.T) {
 	t.Run("private IPs always allowed even when allowlist is set", func(t *testing.T) {
 		// Private IPs should always be allowed
 		for _, testIP := range []string{"127.0.0.1", "192.168.1.1", "172.16.0.1"} {
-			req, _ := http.NewRequest("GET", "/route", nil)
-			req.RemoteAddr = testIP + ":1234"
 			ip := testIP
-			ctx := request.SetContext(context.Background(), req, request.ContextData{
+			ctx := request.SetContext(context.Background(), request.ContextData{
 				Source:        "test",
 				Route:         "/route",
 				RemoteAddress: &ip,
@@ -170,10 +157,8 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("allowed by global allow list", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/route", nil)
-		req.RemoteAddr = "8.8.8.100:1234"
 		ip := "8.8.8.100"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -190,10 +175,8 @@ func TestOnInitRequest(t *testing.T) {
 	t.Run("global allow list checked before block list", func(t *testing.T) {
 		// Public IP is in both allow and block lists
 		// Allow list is checked first, so if IP is not in allow list, it's blocked before block list check
-		req, _ := http.NewRequest("GET", "/route", nil)
-		req.RemoteAddr = "8.8.4.4:1234"
 		ip := "8.8.4.4"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -208,10 +191,8 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("public IPv6 address in global allow list", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/route", nil)
-		req.RemoteAddr = "[2001:4860:4860::8888]:1234"
 		ip := "2001:4860:4860::8888"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -226,10 +207,8 @@ func TestOnInitRequest(t *testing.T) {
 	t.Run("private IPv6 addresses always allowed", func(t *testing.T) {
 		// Private IPv6 addresses should always be allowed
 		for _, testIP := range []string{"::1", "fc00::1", "fe80::1"} {
-			req, _ := http.NewRequest("GET", "/route", nil)
-			req.RemoteAddr = "[" + testIP + "]:1234"
 			ip := testIP
-			ctx := request.SetContext(context.Background(), req, request.ContextData{
+			ctx := request.SetContext(context.Background(), request.ContextData{
 				Source:        "test",
 				Route:         "/route",
 				RemoteAddress: &ip,
@@ -242,10 +221,8 @@ func TestOnInitRequest(t *testing.T) {
 	})
 
 	t.Run("IPv6 address not in global allow list", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "/route", nil)
-		req.RemoteAddr = "[2001:db9::1]:1234"
 		ip := "2001:db9::1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -281,10 +258,8 @@ func TestOnInitRequestStats(t *testing.T) {
 			},
 		})
 
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -314,10 +289,8 @@ func TestOnInitRequestStats(t *testing.T) {
 			},
 		})
 
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.RemoteAddr = "10.0.0.1:1234"
 		ip := "10.0.0.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
@@ -344,14 +317,12 @@ func TestOnInitRequestStats(t *testing.T) {
 			},
 		})
 
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.Header.Set("User-Agent", "Googlebot/2.1")
-		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
+			Headers:       map[string][]string{"user-agent": {"Googlebot/2.1"}},
 		})
 
 		resp := OnInitRequest(ctx)
@@ -375,14 +346,12 @@ func TestOnInitRequestStats(t *testing.T) {
 			},
 		})
 
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.Header.Set("User-Agent", "Googlebot/2.1")
-		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
+			Headers:       map[string][]string{"user-agent": {"Googlebot/2.1"}},
 		})
 
 		resp := OnInitRequest(ctx)
@@ -406,14 +375,12 @@ func TestOnInitRequestStats(t *testing.T) {
 			},
 		})
 
-		req, _ := http.NewRequest("GET", "/route", http.NoBody)
-		req.Header.Set("User-Agent", "Mozilla/5.0 Chrome/91.0")
-		req.RemoteAddr = "192.168.1.1:1234"
 		ip := "192.168.1.1"
-		ctx := request.SetContext(context.Background(), req, request.ContextData{
+		ctx := request.SetContext(context.Background(), request.ContextData{
 			Source:        "test",
 			Route:         "/route",
 			RemoteAddress: &ip,
+			Headers:       map[string][]string{"user-agent": {"Mozilla/5.0 Chrome/91.0"}},
 		})
 
 		resp := OnInitRequest(ctx)
