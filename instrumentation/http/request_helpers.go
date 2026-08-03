@@ -19,9 +19,6 @@ func FullURL(r *http.Request) string {
 func HeadersToMap(headers http.Header) map[string][]string {
 	result := make(map[string][]string, len(headers))
 	for key, values := range headers {
-		if strings.ToLower(key) == "cookie" {
-			continue
-		}
 		result[strings.ToLower(key)] = values
 	}
 	return result

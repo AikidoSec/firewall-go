@@ -74,13 +74,14 @@ func TestHeadersToMap(t *testing.T) {
 		}, result)
 	})
 
-	t.Run("excludes the cookie header", func(t *testing.T) {
+	t.Run("keeps the raw cookie header", func(t *testing.T) {
 		headers := http.Header{
 			"Cookie":       {"session=abc"},
 			"Content-Type": {"application/json"},
 		}
 		result := HeadersToMap(headers)
 		assert.Equal(t, map[string][]string{
+			"cookie":       {"session=abc"},
 			"content-type": {"application/json"},
 		}, result)
 	})
