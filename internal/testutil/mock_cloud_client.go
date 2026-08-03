@@ -55,6 +55,13 @@ func (m *MockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, req
 	m.AttackDetectedEventSent <- struct{}{}
 }
 
+// GetCapturedAttack is safe for concurrent use, unlike reading CapturedAttack directly.
+func (m *MockCloudClient) GetCapturedAttack() aikido_types.AttackDetails {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.CapturedAttack
+}
+
 func (m *MockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
 

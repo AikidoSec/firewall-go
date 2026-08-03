@@ -635,7 +635,7 @@ func TestSsrfDialContext_ReportsModuleName(t *testing.T) {
 
 	select {
 	case <-mockClient.AttackDetectedEventSent:
-		assert.Equal(t, "net/http", mockClient.CapturedAttack.Module)
+		assert.Equal(t, "net/http", mockClient.GetCapturedAttack().Module)
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for attack event")
 	}
