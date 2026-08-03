@@ -101,10 +101,10 @@ func extractBody(c *fiber.Ctx) any {
 
 func extractQuery(c *fiber.Ctx) map[string][]string {
 	result := make(map[string][]string)
-	c.Context().QueryArgs().VisitAll(func(k, v []byte) {
+	for k, v := range c.Context().QueryArgs().All() {
 		key := string(k)
 		result[key] = append(result[key], string(v))
-	})
+	}
 	if len(result) == 0 {
 		return nil
 	}
@@ -113,17 +113,17 @@ func extractQuery(c *fiber.Ctx) map[string][]string {
 
 func extractHeaders(c *fiber.Ctx) map[string][]string {
 	headers := make(map[string][]string)
-	c.Context().Request.Header.VisitAll(func(k, v []byte) {
+	for k, v := range c.Context().Request.Header.All() {
 		key := strings.ToLower(string(k))
 		headers[key] = append(headers[key], string(v))
-	})
+	}
 	return headers
 }
 
 func extractCookies(c *fiber.Ctx) map[string][]string {
 	cookies := make(map[string][]string)
-	c.Context().Request.Header.VisitAllCookie(func(k, v []byte) {
+	for k, v := range c.Context().Request.Header.Cookies() {
 		cookies[string(k)] = append(cookies[string(k)], string(v))
-	})
+	}
 	return cookies
 }
