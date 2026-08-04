@@ -88,7 +88,7 @@ func TestApplyCloudConfig(t *testing.T) {
 }
 
 func TestUpdateRateLimitingConfig(t *testing.T) {
-	ratelimiting.Init()
+	ratelimiting.Init(context.Background())
 	t.Cleanup(func() { ratelimiting.Uninit() })
 
 	t.Run("converts endpoints to rate limiting config", func(t *testing.T) {

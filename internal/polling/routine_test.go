@@ -1,6 +1,7 @@
 package polling
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -12,7 +13,7 @@ import (
 func TestStart(t *testing.T) {
 	var callCount int64
 
-	r := Start(10*time.Millisecond, func() {
+	r := Start(context.Background(), 10*time.Millisecond, func() {
 		atomic.AddInt64(&callCount, 1)
 	})
 
@@ -25,7 +26,7 @@ func TestStart(t *testing.T) {
 func TestStop(t *testing.T) {
 	var callCount int64
 
-	r := Start(10*time.Millisecond, func() {
+	r := Start(context.Background(), 10*time.Millisecond, func() {
 		atomic.AddInt64(&callCount, 1)
 	})
 
@@ -41,7 +42,7 @@ func TestStop(t *testing.T) {
 func TestReset(t *testing.T) {
 	var callCount int64
 
-	r := Start(50*time.Millisecond, func() {
+	r := Start(context.Background(), 50*time.Millisecond, func() {
 		atomic.AddInt64(&callCount, 1)
 	})
 
@@ -60,7 +61,7 @@ func TestReset(t *testing.T) {
 }
 
 func TestStopCalledTwice(t *testing.T) {
-	r := Start(5*time.Millisecond, func() {})
+	r := Start(context.Background(), 5*time.Millisecond, func() {})
 	time.Sleep(10 * time.Millisecond)
 
 	assert.NotPanics(t, func() {
@@ -71,16 +72,16 @@ func TestStopCalledTwice(t *testing.T) {
 
 func TestStartWithNonPositiveInterval(t *testing.T) {
 	assert.NotPanics(t, func() {
-		Start(0, func() {}).Stop()
+		Start(context.Background(), 0, func() {}).Stop()
 	})
 
 	assert.NotPanics(t, func() {
-		Start(-1*time.Millisecond, func() {}).Stop()
+		Start(context.Background(), -1*time.Millisecond, func() {}).Stop()
 	})
 }
 
 func TestResetWithNonPositiveInterval(t *testing.T) {
-	r := Start(10*time.Millisecond, func() {})
+	r := Start(context.Background(), 10*time.Millisecond, func() {})
 	defer r.Stop()
 
 	assert.NotPanics(t, func() {
@@ -93,7 +94,7 @@ func TestResetWithNonPositiveInterval(t *testing.T) {
 }
 
 func TestStopCalledConcurrently(t *testing.T) {
-	r := Start(5*time.Millisecond, func() {})
+	r := Start(context.Background(), 5*time.Millisecond, func() {})
 	time.Sleep(10 * time.Millisecond)
 
 	assert.NotPanics(t, func() {
@@ -107,4 +108,22 @@ func TestStopCalledConcurrently(t *testing.T) {
 		}
 		wg.Wait()
 	})
+}
+
+func TestParentContextCancellationStopsRoutine(t *testing.T) {
+	var callCount int64
+
+	ctx, cancel := context.WithCancel(context.Background())
+	r := Start(ctx, 5*time.Millisecond, func() {
+		atomic.AddInt64(&callCount, 1)
+	})
+
+	time.Sleep(15 * time.Millisecond)
+	cancel()
+	r.Stop() // Cancelling the parent already stopped the routine; Stop must still return.
+
+	countAtCancel := atomic.LoadInt64(&callCount)
+	time.Sleep(20 * time.Millisecond)
+
+	assert.Equal(t, countAtCancel, atomic.LoadInt64(&callCount))
 }

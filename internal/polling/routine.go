@@ -15,12 +15,14 @@ type Routine struct {
 	mu     sync.Mutex
 }
 
-func Start(interval time.Duration, fn func()) *Routine {
+// Start begins a polling routine that calls fn on each tick. It stops when
+// Stop is called or when ctx is cancelled, whichever happens first.
+func Start(ctx context.Context, interval time.Duration, fn func()) *Routine {
 	if interval <= 0 {
 		interval = minInterval
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 
 	r := &Routine{
 		ticker: time.NewTicker(interval),

@@ -1,6 +1,7 @@
 package ratelimiting
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -84,9 +85,10 @@ func New() *RateLimiter {
 	}
 }
 
-// Init initializes the rate limiting subsystem with periodic cleanup
-func (rl *RateLimiter) Init() {
-	rl.cleanupRoutine = polling.Start(inactiveCleanupInterval, rl.cleanupInactive)
+// Init initializes the rate limiting subsystem with periodic cleanup.
+// The cleanup routine stops when ctx is cancelled or Uninit is called.
+func (rl *RateLimiter) Init(ctx context.Context) {
+	rl.cleanupRoutine = polling.Start(ctx, inactiveCleanupInterval, rl.cleanupInactive)
 }
 
 // Uninit shuts down the rate limiting subsystem
@@ -308,8 +310,8 @@ func (rl *RateLimiter) UpdateConfig(endpoints []EndpointConfig) {
 // global instance
 var globalRateLimiter = New()
 
-func Init() {
-	globalRateLimiter.Init()
+func Init(ctx context.Context) {
+	globalRateLimiter.Init(ctx)
 }
 
 func Uninit() {
