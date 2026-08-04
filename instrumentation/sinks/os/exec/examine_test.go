@@ -83,7 +83,7 @@ func TestExamine_ReportsModuleName(t *testing.T) {
 
 	select {
 	case <-mockClient.AttackDetectedEventSent:
-		assert.Equal(t, "os/exec", mockClient.CapturedAttack.Module)
+		assert.Equal(t, "os/exec", mockClient.GetCapturedAttack().Module)
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for attack event")
 	}
