@@ -69,6 +69,29 @@ func TestStopCalledTwice(t *testing.T) {
 	})
 }
 
+func TestStartWithNonPositiveInterval(t *testing.T) {
+	assert.NotPanics(t, func() {
+		Start(0, func() {}).Stop()
+	})
+
+	assert.NotPanics(t, func() {
+		Start(-1*time.Millisecond, func() {}).Stop()
+	})
+}
+
+func TestResetWithNonPositiveInterval(t *testing.T) {
+	r := Start(10*time.Millisecond, func() {})
+	defer r.Stop()
+
+	assert.NotPanics(t, func() {
+		r.Reset(0)
+	})
+
+	assert.NotPanics(t, func() {
+		r.Reset(-1 * time.Millisecond)
+	})
+}
+
 func TestStopCalledConcurrently(t *testing.T) {
 	r := Start(5*time.Millisecond, func() {})
 	time.Sleep(10 * time.Millisecond)

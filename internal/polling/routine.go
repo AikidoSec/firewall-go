@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const minInterval = time.Millisecond
+
 type Routine struct {
 	ticker   *time.Ticker
 	stopChan chan struct{}
@@ -14,6 +16,10 @@ type Routine struct {
 }
 
 func Start(interval time.Duration, fn func()) *Routine {
+	if interval <= 0 {
+		interval = minInterval
+	}
+
 	r := &Routine{
 		ticker:   time.NewTicker(interval),
 		stopChan: make(chan struct{}),
@@ -46,6 +52,10 @@ func (r *Routine) Stop() {
 
 // Reset resets the interval of the polling routine
 func (r *Routine) Reset(interval time.Duration) {
+	if interval <= 0 {
+		interval = minInterval
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.ticker.Reset(interval)
