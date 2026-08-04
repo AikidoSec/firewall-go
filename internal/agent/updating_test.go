@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -14,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type pollingMockCloudClient struct {
+type updatingMockCloudClient struct {
 	fetchConfigUpdatedAt time.Time
 	fetchConfigResult    *aikido_types.CloudConfigData
 	fetchConfigErr       error
@@ -27,31 +28,31 @@ type pollingMockCloudClient struct {
 	subscribeFn          func(ctx context.Context, onUpdate func(int64)) error
 }
 
-func (m *pollingMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
+func (m *updatingMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
-func (m *pollingMockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+func (m *updatingMockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	m.heartbeatCalled = true
 	return m.heartbeatResult, m.heartbeatErr
 }
-func (m *pollingMockCloudClient) FetchConfigUpdatedAt() time.Time {
+func (m *updatingMockCloudClient) FetchConfigUpdatedAt() time.Time {
 	return m.fetchConfigUpdatedAt
 }
-func (m *pollingMockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
+func (m *updatingMockCloudClient) FetchConfig() (*aikido_types.CloudConfigData, error) {
 	m.fetchConfigCallCount++
 	return m.fetchConfigResult, m.fetchConfigErr
 }
-func (m *pollingMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
+func (m *updatingMockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, error) {
 	if m.fetchListsResult != nil {
 		return m.fetchListsResult, m.fetchListsErr
 	}
 	return &aikido_types.ListsConfigData{Success: true}, nil
 }
-func (m *pollingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+func (m *updatingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
 }
-func (m *pollingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+func (m *updatingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
-func (m *pollingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
+func (m *updatingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	if m.subscribeFn != nil {
 		return m.subscribeFn(ctx, onUpdate)
 	}
@@ -139,7 +140,7 @@ func TestRefreshCloudConfig(t *testing.T) {
 	})
 
 	t.Run("does nothing when config has not been updated", func(t *testing.T) {
-		mock := &pollingMockCloudClient{
+		mock := &updatingMockCloudClient{
 			fetchConfigUpdatedAt: time.Time{}, // zero time, not newer
 		}
 		original := GetCloudClient()
@@ -152,7 +153,7 @@ func TestRefreshCloudConfig(t *testing.T) {
 	})
 
 	t.Run("fetches config when updated", func(t *testing.T) {
-		mock := &pollingMockCloudClient{
+		mock := &updatingMockCloudClient{
 			fetchConfigUpdatedAt: time.Now().Add(time.Hour),
 			fetchConfigResult: &aikido_types.CloudConfigData{
 				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
@@ -183,7 +184,7 @@ func TestSendHeartbeatEvent(t *testing.T) {
 	})
 
 	t.Run("sends heartbeat event", func(t *testing.T) {
-		mock := &pollingMockCloudClient{
+		mock := &updatingMockCloudClient{
 			heartbeatResult: &aikido_types.CloudConfigData{
 				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
 			},
@@ -224,7 +225,7 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 		)
 		t.Cleanup(func() { resetConfigUpdatedAt(t) })
 
-		mock := &pollingMockCloudClient{}
+		mock := &updatingMockCloudClient{}
 		original := GetCloudClient()
 		SetCloudClient(mock)
 		t.Cleanup(func() { SetCloudClient(original) })
@@ -236,7 +237,7 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 	t.Run("fetches and applies config when timestamp is newer", func(t *testing.T) {
 		resetConfigUpdatedAt(t)
 
-		mock := &pollingMockCloudClient{
+		mock := &updatingMockCloudClient{
 			fetchConfigResult: &aikido_types.CloudConfigData{
 				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
 			},
@@ -252,7 +253,7 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 	t.Run("does not panic on fetch error", func(t *testing.T) {
 		resetConfigUpdatedAt(t)
 
-		mock := &pollingMockCloudClient{
+		mock := &updatingMockCloudClient{
 			fetchConfigErr: errors.New("network error"),
 		}
 		original := GetCloudClient()
@@ -266,10 +267,173 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 	})
 }
 
+func TestStartStopSSESubscription(t *testing.T) {
+	t.Run("start launches the subscription", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			callCount := 0
+			mock := &updatingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					callCount++
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			startSSESubscription()
+			synctest.Wait()
+			assert.Equal(t, 1, callCount)
+
+			stopSSESubscription()
+			synctest.Wait()
+		})
+	})
+
+	t.Run("start is a no-op when a subscription is already running", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			callCount := 0
+			mock := &updatingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					callCount++
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			startSSESubscription()
+			synctest.Wait()
+
+			startSSESubscription()
+			synctest.Wait()
+
+			assert.Equal(t, 1, callCount)
+
+			stopSSESubscription()
+			synctest.Wait()
+		})
+	})
+
+	t.Run("start launches a new subscription when called again after stop", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			callCount := 0
+			mock := &updatingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					callCount++
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			startSSESubscription()
+			synctest.Wait()
+			stopSSESubscription()
+			synctest.Wait()
+
+			startSSESubscription()
+			synctest.Wait()
+
+			assert.Equal(t, 2, callCount)
+
+			stopSSESubscription()
+			synctest.Wait()
+		})
+	})
+
+	t.Run("stop cancels the running subscription", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			mock := &updatingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			startSSESubscription()
+			synctest.Wait()
+
+			stopSSESubscription()
+			synctest.Wait()
+
+			assert.Nil(t, sseCancel)
+		})
+	})
+
+	t.Run("stop is a no-op when no subscription is running", func(t *testing.T) {
+		original := sseCancel
+		sseCancel = nil
+		t.Cleanup(func() { sseCancel = original })
+
+		assert.NotPanics(t, func() {
+			stopSSESubscription()
+		})
+	})
+
+	t.Run("stop is safe to call multiple times", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			mock := &updatingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					<-ctx.Done()
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			startSSESubscription()
+			synctest.Wait()
+
+			assert.NotPanics(t, func() {
+				stopSSESubscription()
+				stopSSESubscription()
+			})
+			synctest.Wait()
+		})
+	})
+
+	t.Run("concurrent start and stop calls do not race", func(t *testing.T) {
+		mock := &updatingMockCloudClient{
+			subscribeFn: func(ctx context.Context, _ func(int64)) error {
+				<-ctx.Done()
+				return ctx.Err()
+			},
+		}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+		t.Cleanup(stopSSESubscription)
+
+		var wg sync.WaitGroup
+		for range 20 {
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				startSSESubscription()
+			}()
+			go func() {
+				defer wg.Done()
+				stopSSESubscription()
+			}()
+		}
+		wg.Wait()
+	})
+}
+
 func TestRunSSESubscription(t *testing.T) {
 	t.Run("exits when context is cancelled", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
-			mock := &pollingMockCloudClient{
+			mock := &updatingMockCloudClient{
 				subscribeFn: func(ctx context.Context, _ func(int64)) error {
 					<-ctx.Done()
 					return ctx.Err()
@@ -294,7 +458,7 @@ func TestRunSSESubscription(t *testing.T) {
 
 	t.Run("exits immediately on non-retryable error", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
-			mock := &pollingMockCloudClient{
+			mock := &updatingMockCloudClient{
 				subscribeFn: func(_ context.Context, _ func(int64)) error {
 					return cloud.ErrNotRetryable
 				},
@@ -316,7 +480,7 @@ func TestRunSSESubscription(t *testing.T) {
 	t.Run("reconnects after transient error", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			callCount := 0
-			mock := &pollingMockCloudClient{
+			mock := &updatingMockCloudClient{
 				subscribeFn: func(_ context.Context, _ func(int64)) error {
 					callCount++
 					if callCount == 1 {
@@ -343,7 +507,7 @@ func TestRunSSESubscription(t *testing.T) {
 	t.Run("reconnects on clean close", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			callCount := 0
-			mock := &pollingMockCloudClient{
+			mock := &updatingMockCloudClient{
 				subscribeFn: func(_ context.Context, _ func(int64)) error {
 					callCount++
 					if callCount == 1 {
