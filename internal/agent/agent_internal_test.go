@@ -88,11 +88,23 @@ func TestIsRealtimeEnabled(t *testing.T) {
 	})
 }
 
+// resetAgentCtxForTest makes agentCtx bubble-local so synctest can track work started under it.
+func resetAgentCtxForTest(t *testing.T) {
+	t.Helper()
+	originalCtx, originalCancel := agentCtx, agentCancel
+	agentCtx, agentCancel = context.WithCancel(context.Background())
+	t.Cleanup(func() {
+		agentCancel()
+		agentCtx, agentCancel = originalCtx, originalCancel
+	})
+}
+
 func TestHandleStartEventConfig(t *testing.T) {
 	initAgentForTest(t)
 
 	t.Run("starts the SSE subscription when the initial cloud config enables realtime_updates", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
+			resetAgentCtxForTest(t)
 			t.Setenv("AIKIDO_FEATURE_SSE", "")
 
 			subscribed := false
@@ -116,9 +128,38 @@ func TestHandleStartEventConfig(t *testing.T) {
 			synctest.Wait()
 
 			assert.True(t, subscribed)
+		})
+	})
 
-			stopSSESubscription()
+	t.Run("cancelling agentCtx stops the SSE subscription", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			resetAgentCtxForTest(t)
+			t.Setenv("AIKIDO_FEATURE_SSE", "")
+
+			stopped := false
+			mock := &updatingMockCloudClient{
+				subscribeFn: func(ctx context.Context, _ func(int64)) error {
+					<-ctx.Done()
+					stopped = true
+					return ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			cloudConfig := &aikido_types.CloudConfigData{
+				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
+				EnabledFeatures: []string{"realtime_updates"},
+			}
+
+			handleStartEventConfig(mock, cloudConfig)
 			synctest.Wait()
+			assert.False(t, stopped)
+
+			agentCancel()
+			synctest.Wait()
+			assert.True(t, stopped)
 		})
 	})
 
@@ -146,7 +187,6 @@ func TestHandleStartEventConfig(t *testing.T) {
 			synctest.Wait()
 
 			assert.False(t, subscribed)
-			assert.Nil(t, sseCancel)
 		})
 	})
 }
