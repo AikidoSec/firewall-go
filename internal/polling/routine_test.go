@@ -1,6 +1,7 @@
 package polling
 
 import (
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -56,4 +57,54 @@ func TestReset(t *testing.T) {
 
 	finalCount := atomic.LoadInt64(&callCount)
 	assert.Greater(t, finalCount, int64(1), "Should have fired multiple times after reset")
+}
+
+func TestStopCalledTwice(t *testing.T) {
+	r := Start(5*time.Millisecond, func() {})
+	time.Sleep(10 * time.Millisecond)
+
+	assert.NotPanics(t, func() {
+		r.Stop()
+		r.Stop()
+	})
+}
+
+func TestStartWithNonPositiveInterval(t *testing.T) {
+	assert.NotPanics(t, func() {
+		Start(0, func() {}).Stop()
+	})
+
+	assert.NotPanics(t, func() {
+		Start(-1*time.Millisecond, func() {}).Stop()
+	})
+}
+
+func TestResetWithNonPositiveInterval(t *testing.T) {
+	r := Start(10*time.Millisecond, func() {})
+	defer r.Stop()
+
+	assert.NotPanics(t, func() {
+		r.Reset(0)
+	})
+
+	assert.NotPanics(t, func() {
+		r.Reset(-1 * time.Millisecond)
+	})
+}
+
+func TestStopCalledConcurrently(t *testing.T) {
+	r := Start(5*time.Millisecond, func() {})
+	time.Sleep(10 * time.Millisecond)
+
+	assert.NotPanics(t, func() {
+		var wg sync.WaitGroup
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				r.Stop()
+			}()
+		}
+		wg.Wait()
+	})
 }
