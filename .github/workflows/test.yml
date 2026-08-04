@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.os.runner }}
-    name: test on ${{ matrix.os.name }} with Go ${{ matrix.go-version }}
+    name: test (${{ matrix.os.name }}, Go ${{ matrix.go-version }})
 
     steps:
       - name: Checkout code
@@ -68,6 +68,7 @@ jobs:
       matrix:
         go-version: ["1.25", "1.26", "1.27.0-rc.2"]
       fail-fast: false
+    name: test-instrumentation-unit (Go ${{ matrix.go-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -101,6 +102,8 @@ jobs:
       matrix:
         go-version: ["1.25", "1.26", "1.27.0-rc.2"]
       fail-fast: false
+
+    name: test-instrumentation-integration (Go ${{ matrix.go-version }})
 
     steps:
       - name: Checkout code
