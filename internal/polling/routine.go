@@ -1,6 +1,7 @@
 package polling
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -8,11 +9,10 @@ import (
 const minInterval = time.Millisecond
 
 type Routine struct {
-	ticker   *time.Ticker
-	stopChan chan struct{}
-	wg       sync.WaitGroup
-	mu       sync.Mutex
-	stopOnce sync.Once
+	ticker *time.Ticker
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+	mu     sync.Mutex
 }
 
 func Start(interval time.Duration, fn func()) *Routine {
@@ -20,9 +20,11 @@ func Start(interval time.Duration, fn func()) *Routine {
 		interval = minInterval
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	r := &Routine{
-		ticker:   time.NewTicker(interval),
-		stopChan: make(chan struct{}),
+		ticker: time.NewTicker(interval),
+		cancel: cancel,
 	}
 
 	r.wg.Add(1)
@@ -33,7 +35,7 @@ func Start(interval time.Duration, fn func()) *Routine {
 			select {
 			case <-r.ticker.C:
 				fn()
-			case <-r.stopChan:
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -42,11 +44,10 @@ func Start(interval time.Duration, fn func()) *Routine {
 	return r
 }
 
-// Stop stops the polling routine and waits for the goroutine to complete
+// Stop stops the polling routine and waits for the goroutine to complete.
+// Safe to call multiple times and from multiple goroutines.
 func (r *Routine) Stop() {
-	r.stopOnce.Do(func() {
-		close(r.stopChan)
-	})
+	r.cancel()
 	r.wg.Wait()
 }
 
