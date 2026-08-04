@@ -27,8 +27,8 @@ const (
 )
 
 func startPolling() {
-	heartbeatRoutine = polling.Start(10*time.Minute, sendHeartbeatEvent)
-	configPollingRoutine = polling.Start(1*time.Minute, refreshCloudConfig)
+	heartbeatRoutine = polling.Start(agentCtx, 10*time.Minute, sendHeartbeatEvent)
+	configPollingRoutine = polling.Start(agentCtx, 1*time.Minute, refreshCloudConfig)
 }
 
 func stopPolling() {

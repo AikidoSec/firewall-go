@@ -85,7 +85,7 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 
 	startPolling()
 
-	ratelimiting.Init()
+	ratelimiting.Init(agentCtx)
 
 	return nil
 }
