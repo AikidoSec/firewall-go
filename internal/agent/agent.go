@@ -185,6 +185,19 @@ func (agentRuntime) ShouldBlockHostname(hostname string) bool {
 	return config.ShouldBlockHostname(hostname)
 }
 
+func (agentRuntime) OnAICall(provider, model string, inputTokens, outputTokens int) {
+	Stats().OnAICall(stats.AICallData{
+		Provider:     provider,
+		Model:        model,
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+	})
+}
+
+func OnAICall(data stats.AICallData) {
+	Stats().OnAICall(data)
+}
+
 func OnOperationAttack(operation string, blocked bool) {
 	Stats().OnOperationAttack(operation, blocked)
 }

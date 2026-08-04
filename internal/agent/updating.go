@@ -188,6 +188,7 @@ func sendHeartbeatEvent(ctx context.Context) {
 			Routes:              stateCollector.GetRoutesAndClear(),
 			Users:               stateCollector.GetUsersAndClear(),
 			Stats:               stateCollector.Stats().GetAndClear(),
+			AI:                  stateCollector.Stats().GetAndClearAI(),
 			MiddlewareInstalled: stateCollector.IsMiddlewareInstalled(),
 		})
 	if err != nil {

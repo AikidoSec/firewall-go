@@ -17,6 +17,7 @@ type HeartbeatEvent struct {
 	Agent               AgentInfo               `json:"agent"`
 	Time                int64                   `json:"time"`
 	MiddlewareInstalled bool                    `json:"middlewareInstalled"`
+	AI                  []stats.AIProviderStats `json:"ai,omitempty"`
 }
 
 type HeartbeatData struct {
@@ -24,6 +25,7 @@ type HeartbeatData struct {
 	Routes              []aikido_types.Route
 	Users               []aikido_types.User
 	Stats               stats.Snapshot
+	AI                  []stats.AIProviderStats
 	MiddlewareInstalled bool
 }
 
@@ -37,6 +39,7 @@ func (c *Client) SendHeartbeatEvent(ctx context.Context, agentInfo AgentInfo, da
 		Hostnames:           data.Hostnames,
 		Routes:              data.Routes,
 		Users:               data.Users,
+		AI:                  data.AI,
 		MiddlewareInstalled: data.MiddlewareInstalled,
 	}
 
