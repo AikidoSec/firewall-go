@@ -32,6 +32,9 @@ var (
 
 	stateCollector     = state.NewCollector()
 	attackWaveDetector = attackwave.NewDetector(nil)
+
+	// agentCtx is cancelled in AgentUninit to stop agent-lifetime background work.
+	agentCtx, agentCancel = context.WithCancel(context.Background())
 )
 
 type CloudClient interface {
@@ -48,6 +51,8 @@ type CloudClient interface {
 func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *aikido_types.AikidoConfigData) error {
 	machine.Init()
 	hooks.Register(agentRuntime{})
+
+	agentCtx, agentCancel = context.WithCancel(context.Background()) //nolint:gosec // cancel is stored in agentCancel and called in AgentUninit
 
 	if err := config.Init(environmentConfig, aikidoConfig); err != nil {
 		return err
@@ -89,7 +94,7 @@ func handleStartEventConfig(client CloudClient, cloudConfig *aikido_types.CloudC
 	applyCloudConfig(client, cloudConfig)
 
 	if isRealtimeEnabled(cloudConfig) {
-		startSSESubscription()
+		go runSSESubscription(agentCtx)
 	}
 }
 
@@ -107,9 +112,9 @@ func isRealtimeEnabled(cloudConfig *aikido_types.CloudConfigData) bool {
 }
 
 func AgentUninit() error {
+	agentCancel()
 	ratelimiting.Uninit()
 	stopPolling()
-	stopSSESubscription()
 	config.Uninit()
 
 	return nil
