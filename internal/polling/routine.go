@@ -10,6 +10,7 @@ type Routine struct {
 	stopChan chan struct{}
 	wg       sync.WaitGroup
 	mu       sync.Mutex
+	stopOnce sync.Once
 }
 
 func Start(interval time.Duration, fn func()) *Routine {
@@ -37,7 +38,9 @@ func Start(interval time.Duration, fn func()) *Routine {
 
 // Stop stops the polling routine and waits for the goroutine to complete
 func (r *Routine) Stop() {
-	close(r.stopChan)
+	r.stopOnce.Do(func() {
+		close(r.stopChan)
+	})
 	r.wg.Wait()
 }
 
