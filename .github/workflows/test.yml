@@ -149,6 +149,7 @@ jobs:
           - gin-pgx-native
           - gin-sqlx
           - chi-postgres
+          - http-postgres
 
     steps:
       - name: Checkout code
