@@ -107,6 +107,7 @@ test-instrumentation-integration: test-db-start
 	@TOOLS_BIN=$(TOOLS_BIN) ./scripts/test-modules.sh \
 		instrumentation/sources/gin-gonic/gin \
 		instrumentation/sources/go-chi/chi.v5 \
+		instrumentation/sources/gofiber/fiber.v2 \
 		instrumentation/sources/labstack/echo.v4 \
 		instrumentation/sources/labstack/echo.v5 \
 		instrumentation/sinks/jackc/pgx.v5 \
