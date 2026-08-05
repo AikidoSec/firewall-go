@@ -12,7 +12,7 @@ import (
 )
 
 func TestVersion(t *testing.T) {
-	assert.Equal(t, "1.2.8", version)
+	assert.Equal(t, "1.2.9", version)
 }
 
 func TestCLI(t *testing.T) {
@@ -27,12 +27,12 @@ func TestCLI(t *testing.T) {
 		{
 			name:           "version short flag -v",
 			args:           []string{"zen-go", "-v"},
-			stdoutContains: []string{"zen-go version 1.2.8"},
+			stdoutContains: []string{"zen-go version 1.2.9"},
 		},
 		{
 			name:           "version long flag --version",
 			args:           []string{"zen-go", "--version"},
-			stdoutContains: []string{"zen-go version 1.2.8"},
+			stdoutContains: []string{"zen-go version 1.2.9"},
 		},
 		{
 			name:           "help command",
