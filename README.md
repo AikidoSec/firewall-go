@@ -85,19 +85,18 @@ When your app shuts down, Zen might not have sent its latest stats to Aikido yet
 ```go
 import (
   "context"
-  "os"
   "os/signal"
   "syscall"
+  "time"
 )
 
-sigCh := make(chan os.Signal, 1)
-signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+defer stop()
+<-ctx.Done()
 
-go func() {
-  <-sigCh
-  zen.Shutdown(context.Background())
-  os.Exit(0)
-}()
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+zen.Shutdown(ctx)
 ```
 
 ### Build your application with `zen-go`
