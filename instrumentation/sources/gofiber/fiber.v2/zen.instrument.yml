@@ -3,6 +3,15 @@ meta:
   description: Fiber is an Express-inspired web framework written in Go.
 
 rules:
+  # Expose the router's own pre-dispatch route match, which app.Use middleware
+  # cannot otherwise reach.
+  - id: fiber.aikido-route-resolver
+    type: add-file
+    package: github.com/gofiber/fiber/v2
+    file: _fiber/aikido_route.go
+    imports:
+      routeresolver: github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2/routeresolver
+
   - id: fiber.New
     type: wrap
     match: github.com/gofiber/fiber/v2.New

@@ -7,6 +7,7 @@ import (
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/instrumentation/request"
+	"github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2/routeresolver"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,20 +21,11 @@ func GetMiddleware() fiber.Handler {
 
 		ip := c.IP()
 
-		params := c.AllParams()
-		var routeParams map[string]string
-		if len(params) > 0 {
-			// Fiber's param values alias fasthttp's pooled request buffer, which gets
-			// reused for later requests, so they must be copied before being retained.
-			routeParams = make(map[string]string, len(params))
-			for k, v := range params {
-				routeParams[k] = strings.Clone(v)
-			}
-		}
+		route, routeParams := resolveRoute(c)
 
 		reqCtx := request.SetContext(c.UserContext(), request.ContextData{
 			Source:        "fiber",
-			Route:         c.Route().Path,
+			Route:         route,
 			RouteParams:   routeParams,
 			RemoteAddress: &ip,
 			Body:          extractBody(c),
@@ -62,6 +54,22 @@ func GetMiddleware() fiber.Handler {
 
 		return handlerErr
 	}
+}
+
+// resolveRoute returns the route pattern and params of the endpoint that will
+// serve this request. c.Route() and c.AllParams() are not usable here: fiber
+// resolves the match as c.Next() cascades, so before dispatch they still hold
+// this middleware's own route. The resolver is registered by the file zen-go
+// injects into fiber; without it an empty route makes SetContext fall back to
+// the request path.
+func resolveRoute(c *fiber.Ctx) (string, map[string]string) {
+	resolve := routeresolver.Get()
+	if resolve == nil {
+		return "", nil
+	}
+
+	route, params, _ := resolve(c)
+	return route, params
 }
 
 func extractBody(c *fiber.Ctx) any {
