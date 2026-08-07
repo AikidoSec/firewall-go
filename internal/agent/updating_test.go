@@ -58,30 +58,75 @@ func (m *updatingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, 
 	return nil
 }
 
-func TestCalculateHeartbeatInterval(t *testing.T) {
-	t.Run("returns 1 minute when no stats received yet", func(t *testing.T) {
-		result := calculateHeartbeatInterval(300000, false)
-		assert.Equal(t, 1*time.Minute, result)
+func resetHeartbeatSchedule(t *testing.T) {
+	t.Helper()
+	origCounter := heartbeatCounter.Load()
+	origInterval := steadyHeartbeatInterval.Load()
+	heartbeatCounter.Store(0)
+	steadyHeartbeatInterval.Store(int64(defaultHeartbeatInterval))
+
+	t.Cleanup(func() {
+		heartbeatCounter.Store(origCounter)
+		steadyHeartbeatInterval.Store(origInterval)
+	})
+}
+
+func TestHeartbeatInterval(t *testing.T) {
+	resetHeartbeatSchedule(t)
+
+	t.Run("returns 30 seconds for the first heartbeat", func(t *testing.T) {
+		heartbeatCounter.Store(0)
+
+		assert.Equal(t, 30*time.Second, heartbeatInterval())
 	})
 
-	t.Run("returns configured interval when stats received and interval >= minimum", func(t *testing.T) {
-		result := calculateHeartbeatInterval(300000, true)
-		assert.Equal(t, 300000*time.Millisecond, result)
+	t.Run("returns 2 minutes for the second heartbeat", func(t *testing.T) {
+		heartbeatCounter.Store(1)
+
+		assert.Equal(t, 2*time.Minute, heartbeatInterval())
 	})
 
-	t.Run("returns configured interval at exact minimum", func(t *testing.T) {
-		result := calculateHeartbeatInterval(120000, true)
-		assert.Equal(t, 120000*time.Millisecond, result)
+	t.Run("returns the steady-state interval from the third heartbeat onward", func(t *testing.T) {
+		heartbeatCounter.Store(2)
+		steadyHeartbeatInterval.Store(int64(5 * time.Minute))
+
+		assert.Equal(t, 5*time.Minute, heartbeatInterval())
+
+		heartbeatCounter.Store(10)
+
+		assert.Equal(t, 5*time.Minute, heartbeatInterval())
+	})
+}
+
+func TestAdvanceHeartbeatSchedule(t *testing.T) {
+	resetHeartbeatSchedule(t)
+
+	t.Run("increments the counter on every call, regardless of send outcome", func(t *testing.T) {
+		heartbeatCounter.Store(0)
+
+		advanceHeartbeatSchedule()
+		assert.Equal(t, int64(1), heartbeatCounter.Load())
+
+		advanceHeartbeatSchedule()
+		assert.Equal(t, int64(2), heartbeatCounter.Load())
+	})
+}
+
+func TestUpdateSteadyHeartbeatInterval(t *testing.T) {
+	resetHeartbeatSchedule(t)
+
+	t.Run("ignores intervals below the minimum", func(t *testing.T) {
+		steadyHeartbeatInterval.Store(int64(10 * time.Minute))
+
+		updateSteadyHeartbeatInterval(60000)
+
+		assert.Equal(t, 10*time.Minute, time.Duration(steadyHeartbeatInterval.Load()))
 	})
 
-	t.Run("returns 0 when stats received but interval below minimum", func(t *testing.T) {
-		result := calculateHeartbeatInterval(60000, true)
-		assert.Equal(t, time.Duration(0), result)
-	})
+	t.Run("applies intervals at or above the minimum", func(t *testing.T) {
+		updateSteadyHeartbeatInterval(300000)
 
-	t.Run("returns 0 when stats received and interval is 0", func(t *testing.T) {
-		result := calculateHeartbeatInterval(0, true)
-		assert.Equal(t, time.Duration(0), result)
+		assert.Equal(t, 300000*time.Millisecond, time.Duration(steadyHeartbeatInterval.Load()))
 	})
 }
 

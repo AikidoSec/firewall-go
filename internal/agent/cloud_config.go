@@ -31,11 +31,7 @@ func applyCloudConfig(client CloudClient, cloudConfig *aikido_types.CloudConfigD
 
 	updateRateLimitingConfig(cloudConfig.Endpoints)
 	config.UpdateServiceConfig(cloudConfig, listsConfig)
-
-	newInterval := calculateHeartbeatInterval(cloudConfig.HeartbeatIntervalInMS, cloudConfig.ReceivedAnyStats)
-	if newInterval > 0 {
-		resetHeartbeatTicker(newInterval)
-	}
+	updateSteadyHeartbeatInterval(cloudConfig.HeartbeatIntervalInMS)
 }
 
 func updateRateLimitingConfig(endpoints []aikido_types.Endpoint) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"math/rand"
+	"sync/atomic"
 	"time"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
@@ -18,16 +19,26 @@ var (
 	configPollingRoutine *polling.Routine
 
 	minHeartbeatIntervalInMS = 120000
+
+	heartbeatCounter        atomic.Int64
+	steadyHeartbeatInterval atomic.Int64 // time.Duration(nanoseconds)
 )
 
 const (
+	defaultHeartbeatInterval = 10 * time.Minute
+	firstHeartbeatDelay      = 30 * time.Second
+	secondHeartbeatDelay     = 2 * time.Minute
+
 	sseInitialBackoff  = 5 * time.Second
 	sseMaxBackoff      = 60 * time.Second
 	sseStableThreshold = 30 * time.Second
 )
 
 func startPolling() {
-	heartbeatRoutine = polling.Start(agentCtx, 10*time.Minute, sendHeartbeatEvent)
+	heartbeatCounter.Store(0)
+	steadyHeartbeatInterval.Store(int64(defaultHeartbeatInterval))
+
+	heartbeatRoutine = polling.Start(agentCtx, heartbeatInterval(), sendHeartbeatEvent)
 	configPollingRoutine = polling.Start(agentCtx, 1*time.Minute, refreshCloudConfig)
 }
 
@@ -144,6 +155,8 @@ func refreshCloudConfig() {
 }
 
 func sendHeartbeatEvent() {
+	defer advanceHeartbeatSchedule()
+
 	client := GetCloudClient()
 	if client == nil {
 		return
@@ -165,17 +178,35 @@ func sendHeartbeatEvent() {
 	applyCloudConfig(client, cloudConfig)
 }
 
-// calculateHeartbeatInterval returns a faster polling interval (1 minute) for new agents
-// until they send their first stats, then switches to the cloud-configured interval
-// (minimum 2 minutes) to reduce unnecessary load.
-func calculateHeartbeatInterval(heartbeatIntervalInMS int, receivedAnyStats bool) time.Duration {
-	if !receivedAnyStats {
-		return 1 * time.Minute
-	} else if heartbeatIntervalInMS >= minHeartbeatIntervalInMS {
-		log.Debug("Calculating heartbeat interval", slog.Int("interval", heartbeatIntervalInMS))
-		return time.Duration(heartbeatIntervalInMS) * time.Millisecond
+// advanceHeartbeatSchedule is deferred in sendHeartbeatEvent, so it runs even after a failed send.
+func advanceHeartbeatSchedule() {
+	counter := heartbeatCounter.Add(1)
+	resetHeartbeatTicker(heartbeatIntervalForCounter(counter))
+}
+
+func heartbeatInterval() time.Duration {
+	return heartbeatIntervalForCounter(heartbeatCounter.Load())
+}
+
+// heartbeatIntervalForCounter ramps 30s, then 2m, then the steady-state interval.
+func heartbeatIntervalForCounter(counter int64) time.Duration {
+	switch counter {
+	case 0:
+		return firstHeartbeatDelay
+	case 1:
+		return secondHeartbeatDelay
+	default:
+		return time.Duration(steadyHeartbeatInterval.Load())
 	}
-	return 0
+}
+
+func updateSteadyHeartbeatInterval(heartbeatIntervalInMS int) {
+	if heartbeatIntervalInMS < minHeartbeatIntervalInMS {
+		return
+	}
+
+	log.Debug("Updating steady-state heartbeat interval", slog.Int("interval", heartbeatIntervalInMS))
+	steadyHeartbeatInterval.Store(int64(time.Duration(heartbeatIntervalInMS) * time.Millisecond))
 }
 
 func resetHeartbeatTicker(newInterval time.Duration) {
