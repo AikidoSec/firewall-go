@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -58,7 +59,7 @@ func TestClient_sendCloudRequest(t *testing.T) {
 					token:      "test-token",
 				}
 
-				result, err := client.sendCloudRequest(server.URL, "/api/test", tt.method, tt.payload)
+				result, err := client.sendCloudRequest(context.Background(), server.URL, "/api/test", tt.method, tt.payload)
 
 				require.NoError(t, err)
 				assert.JSONEq(t, string(responseBody), string(result))
@@ -103,7 +104,7 @@ func TestClient_sendCloudRequest(t *testing.T) {
 					token:      tt.token,
 				}
 
-				result, err := client.sendCloudRequest(tt.endpoint, tt.route, "POST", tt.payload)
+				result, err := client.sendCloudRequest(context.Background(), tt.endpoint, tt.route, "POST", tt.payload)
 
 				assert.Nil(t, result)
 				require.Error(t, err)
@@ -155,7 +156,7 @@ func TestClient_sendCloudRequest(t *testing.T) {
 					token:      "test-token",
 				}
 
-				result, err := client.sendCloudRequest(server.URL, "/api/test", "POST", nil)
+				result, err := client.sendCloudRequest(context.Background(), server.URL, "/api/test", "POST", nil)
 
 				assert.Nil(t, result)
 				require.Error(t, err)
@@ -177,7 +178,7 @@ func TestClient_sendCloudRequest(t *testing.T) {
 				token:      "test-token",
 			}
 
-			result, err := client.sendCloudRequest(serverURL, "/api/test", "POST", nil)
+			result, err := client.sendCloudRequest(context.Background(), serverURL, "/api/test", "POST", nil)
 
 			assert.Nil(t, result)
 			require.Error(t, err)
@@ -219,7 +220,7 @@ func TestClient_sendCloudRequest(t *testing.T) {
 					token:      tt.token,
 				}
 
-				_, err := client.sendCloudRequest(server.URL, "/api/test", "POST", nil)
+				_, err := client.sendCloudRequest(context.Background(), server.URL, "/api/test", "POST", nil)
 
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectedToken, capturedToken)
@@ -242,7 +243,7 @@ func TestClient_sendCloudRequest(t *testing.T) {
 			token:      "test-token",
 		}
 
-		_, err := client.sendCloudRequest(server.URL, "/api/runtime/events", "POST", nil)
+		_, err := client.sendCloudRequest(context.Background(), server.URL, "/api/runtime/events", "POST", nil)
 
 		require.NoError(t, err)
 		assert.Equal(t, "/api/runtime/events", capturedPath)

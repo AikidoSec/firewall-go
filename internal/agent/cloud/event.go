@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,7 +44,7 @@ type PlatformInfo struct {
 	Version string `json:"version"`
 }
 
-func (c *Client) sendCloudRequest(endpoint string, route string, method string, payload any) ([]byte, error) {
+func (c *Client) sendCloudRequest(ctx context.Context, endpoint string, route string, method string, payload any) ([]byte, error) {
 	if c.token == "" {
 		return nil, ErrNoTokenSet
 	}
@@ -66,7 +67,7 @@ func (c *Client) sendCloudRequest(endpoint string, route string, method string, 
 	}
 
 	log.Debug("Sending request", slog.String("method", method), slog.String("endpoint", apiEndpoint))
-	req, err = http.NewRequest(method, apiEndpoint, body)
+	req, err = http.NewRequestWithContext(ctx, method, apiEndpoint, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}

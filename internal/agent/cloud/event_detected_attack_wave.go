@@ -1,6 +1,8 @@
 package cloud
 
 import (
+	"context"
+
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
 )
@@ -33,7 +35,7 @@ func (c *Client) SendAttackWaveDetectedEvent(agentInfo AgentInfo, request Attack
 		Time:    utils.GetTime(),
 	}
 
-	_, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, detectedAttackWaveEvent)
+	_, err := c.sendCloudRequest(context.Background(), c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, detectedAttackWaveEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending detected attack wave event: ", err)
 		return

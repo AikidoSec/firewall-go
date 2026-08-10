@@ -39,7 +39,7 @@ var (
 
 type CloudClient interface {
 	SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error)
-	SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error)
+	SendHeartbeatEvent(ctx context.Context, agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error)
 	FetchConfigUpdatedAt() time.Time
 	FetchConfig() (*aikido_types.CloudConfigData, error)
 	FetchListsConfig() (*aikido_types.ListsConfigData, error)

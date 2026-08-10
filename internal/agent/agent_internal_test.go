@@ -258,7 +258,7 @@ func (m *internalMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*ai
 	return nil, nil
 }
 
-func (m *internalMockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+func (m *internalMockCloudClient) SendHeartbeatEvent(ctx context.Context, agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
 func (m *internalMockCloudClient) FetchConfigUpdatedAt() time.Time { return time.Time{} }

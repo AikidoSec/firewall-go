@@ -162,7 +162,7 @@ func sendHeartbeatEvent() {
 		return
 	}
 
-	cloudConfig, err := client.SendHeartbeatEvent(getAgentInfo(),
+	cloudConfig, err := client.SendHeartbeatEvent(agentCtx, getAgentInfo(),
 		cloud.HeartbeatData{
 			Hostnames:           stateCollector.GetAndClearHostnames(),
 			Routes:              stateCollector.GetRoutesAndClear(),
