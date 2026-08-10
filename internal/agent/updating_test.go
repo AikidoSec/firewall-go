@@ -30,7 +30,7 @@ type updatingMockCloudClient struct {
 func (m *updatingMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
-func (m *updatingMockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+func (m *updatingMockCloudClient) SendHeartbeatEvent(ctx context.Context, agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	m.heartbeatCalled = true
 	return m.heartbeatResult, m.heartbeatErr
 }

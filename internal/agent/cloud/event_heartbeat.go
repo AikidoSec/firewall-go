@@ -1,6 +1,8 @@
 package cloud
 
 import (
+	"context"
+
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/AikidoSec/firewall-go/internal/agent/utils"
@@ -26,7 +28,7 @@ type HeartbeatData struct {
 }
 
 // SendHeartbeatEvent sends a heartbeat to the cloud and returns the latest configuration.
-func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) (*aikido_types.CloudConfigData, error) {
+func (c *Client) SendHeartbeatEvent(ctx context.Context, agentInfo AgentInfo, data HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	heartbeatEvent := HeartbeatEvent{
 		Type:                "heartbeat",
 		Agent:               agentInfo,
@@ -38,7 +40,7 @@ func (c *Client) SendHeartbeatEvent(agentInfo AgentInfo, data HeartbeatData) (*a
 		MiddlewareInstalled: data.MiddlewareInstalled,
 	}
 
-	response, err := c.sendCloudRequest(c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, heartbeatEvent)
+	response, err := c.sendCloudRequest(ctx, c.apiEndpoint, eventsAPIRoute, eventsAPIMethod, heartbeatEvent)
 	if err != nil {
 		logCloudRequestError("Error in sending heartbeat event: ", err)
 		return nil, err

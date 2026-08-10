@@ -80,7 +80,7 @@ func (m *mockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_typ
 	panic("not implemented")
 }
 
-func (m *mockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+func (m *mockCloudClient) SendHeartbeatEvent(ctx context.Context, agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	panic("not implemented")
 }
 

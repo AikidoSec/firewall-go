@@ -20,7 +20,7 @@ type configTestCloudClient struct {
 func (m *configTestCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
-func (m *configTestCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+func (m *configTestCloudClient) SendHeartbeatEvent(ctx context.Context, agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
 func (m *configTestCloudClient) FetchConfigUpdatedAt() time.Time { return time.Time{} }

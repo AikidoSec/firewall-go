@@ -29,7 +29,7 @@ func (m *MockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*aikido_typ
 	return nil, nil
 }
 
-func (m *MockCloudClient) SendHeartbeatEvent(agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
+func (m *MockCloudClient) SendHeartbeatEvent(ctx context.Context, agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	return nil, nil
 }
 
