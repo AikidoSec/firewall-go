@@ -113,8 +113,8 @@ func isRealtimeEnabled(cloudConfig *aikido_types.CloudConfigData) bool {
 
 // AgentUninit flushes any stats collected since the last heartbeat to the
 // Aikido cloud and stops agent-lifetime background work.
-func AgentUninit() error {
-	sendHeartbeatEvent()
+func AgentUninit(ctx context.Context) error {
+	sendHeartbeatEvent(ctx)
 
 	agentCancel()
 	ratelimiting.Uninit()

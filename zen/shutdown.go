@@ -10,5 +10,5 @@ import (
 // Zen's background processes. Call this before your application exits so
 // recent data is not lost.
 func Shutdown(ctx context.Context) error {
-	return agent.AgentUninit()
+	return agent.AgentUninit(ctx)
 }
