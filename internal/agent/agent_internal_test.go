@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -229,11 +230,11 @@ func TestAgentUninit(t *testing.T) {
 			initAgentForTest(t)
 			resetAgentCtxForTest(t)
 
-			flushAborted := false
+			var flushAborted atomic.Bool
 			mock := &updatingMockCloudClient{
 				heartbeatFn: func(ctx context.Context) (*aikido_types.CloudConfigData, error) {
 					<-ctx.Done()
-					flushAborted = true
+					flushAborted.Store(true)
 					return nil, ctx.Err()
 				},
 			}
@@ -248,12 +249,12 @@ func TestAgentUninit(t *testing.T) {
 			go func() { done <- AgentUninit(ctx) }()
 
 			synctest.Wait()
-			assert.False(t, flushAborted, "flush should still be pending before the deadline")
+			assert.False(t, flushAborted.Load(), "flush should still be pending before the deadline")
 
 			time.Sleep(10 * time.Second)
 			synctest.Wait()
 
-			assert.True(t, flushAborted, "flush should abort once ctx's deadline passes")
+			assert.True(t, flushAborted.Load(), "flush should abort once ctx's deadline passes")
 			require.NoError(t, <-done, "shutdown should still complete cleanly after an aborted flush")
 		})
 	})
