@@ -188,6 +188,9 @@ func reportSuspiciousPayload(ctx context.Context, operation, module, source stri
 		return
 	}
 
+	if metadata == nil {
+		metadata = map[string]string{}
+	}
 	metadata["isBeta"] = "true"
 
 	attack := &agent.DetectedAttack{
