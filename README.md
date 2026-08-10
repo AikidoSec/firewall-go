@@ -78,6 +78,27 @@ func main() {
 }
 ```
 
+### Graceful shutdown
+
+When your app shuts down, Zen might not have sent its latest stats to Aikido yet. Call `zen.Shutdown()` before exiting to make sure nothing gets lost:
+
+```go
+import (
+  "context"
+  "os/signal"
+  "syscall"
+  "time"
+)
+
+ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+defer stop()
+<-ctx.Done()
+
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+zen.Shutdown(ctx)
+```
+
 ### Build your application with `zen-go`
 
 Zen needs to instrument your code at build time to intercept and monitor operations like database queries and system calls.

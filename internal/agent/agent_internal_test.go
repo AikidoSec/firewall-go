@@ -191,6 +191,40 @@ func TestHandleStartEventConfig(t *testing.T) {
 	})
 }
 
+func TestAgentUninit(t *testing.T) {
+	t.Run("sends a final heartbeat before tearing down background work", func(t *testing.T) {
+		initAgentForTest(t)
+		resetAgentCtxForTest(t)
+
+		mock := &updatingMockCloudClient{
+			heartbeatResult: &aikido_types.CloudConfigData{
+				ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
+			},
+		}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		err := AgentUninit()
+
+		require.NoError(t, err)
+		assert.True(t, mock.heartbeatCalled)
+	})
+
+	t.Run("does not panic when cloud client is nil", func(t *testing.T) {
+		resetAgentCtxForTest(t)
+
+		original := GetCloudClient()
+		SetCloudClient(nil)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		assert.NotPanics(t, func() {
+			err := AgentUninit()
+			assert.NoError(t, err)
+		})
+	})
+}
+
 func TestOnMiddlewareInstalled(t *testing.T) {
 	t.Run("sets MiddlewareInstalled to 1", func(t *testing.T) {
 		// Reset the value before test
