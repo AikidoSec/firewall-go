@@ -205,7 +205,7 @@ func TestAgentUninit(t *testing.T) {
 		SetCloudClient(mock)
 		t.Cleanup(func() { SetCloudClient(original) })
 
-		err := AgentUninit()
+		err := AgentUninit(context.Background())
 
 		require.NoError(t, err)
 		assert.True(t, mock.heartbeatCalled)
@@ -219,8 +219,42 @@ func TestAgentUninit(t *testing.T) {
 		t.Cleanup(func() { SetCloudClient(original) })
 
 		assert.NotPanics(t, func() {
-			err := AgentUninit()
+			err := AgentUninit(context.Background())
 			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("aborts the heartbeat flush without blocking once ctx expires", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			initAgentForTest(t)
+			resetAgentCtxForTest(t)
+
+			flushAborted := false
+			mock := &updatingMockCloudClient{
+				heartbeatFn: func(ctx context.Context) (*aikido_types.CloudConfigData, error) {
+					<-ctx.Done()
+					flushAborted = true
+					return nil, ctx.Err()
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			done := make(chan error, 1)
+			go func() { done <- AgentUninit(ctx) }()
+
+			synctest.Wait()
+			assert.False(t, flushAborted, "flush should still be pending before the deadline")
+
+			time.Sleep(10 * time.Second)
+			synctest.Wait()
+
+			assert.True(t, flushAborted, "flush should abort once ctx's deadline passes")
+			require.NoError(t, <-done, "shutdown should still complete cleanly after an aborted flush")
 		})
 	})
 }

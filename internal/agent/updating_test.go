@@ -24,6 +24,7 @@ type updatingMockCloudClient struct {
 	heartbeatResult      *aikido_types.CloudConfigData
 	heartbeatErr         error
 	heartbeatCalled      bool
+	heartbeatFn          func(ctx context.Context) (*aikido_types.CloudConfigData, error)
 	subscribeFn          func(ctx context.Context, onUpdate func(int64)) error
 }
 
@@ -32,6 +33,9 @@ func (m *updatingMockCloudClient) SendStartEvent(agentInfo cloud.AgentInfo) (*ai
 }
 func (m *updatingMockCloudClient) SendHeartbeatEvent(ctx context.Context, agentInfo cloud.AgentInfo, data cloud.HeartbeatData) (*aikido_types.CloudConfigData, error) {
 	m.heartbeatCalled = true
+	if m.heartbeatFn != nil {
+		return m.heartbeatFn(ctx)
+	}
 	return m.heartbeatResult, m.heartbeatErr
 }
 func (m *updatingMockCloudClient) FetchConfigUpdatedAt() time.Time {
@@ -223,7 +227,7 @@ func TestSendHeartbeatEvent(t *testing.T) {
 		t.Cleanup(func() { SetCloudClient(original) })
 
 		assert.NotPanics(t, func() {
-			sendHeartbeatEvent()
+			sendHeartbeatEvent(context.Background())
 		})
 	})
 
@@ -237,7 +241,7 @@ func TestSendHeartbeatEvent(t *testing.T) {
 		SetCloudClient(mock)
 		t.Cleanup(func() { SetCloudClient(original) })
 
-		sendHeartbeatEvent()
+		sendHeartbeatEvent(context.Background())
 		assert.True(t, mock.heartbeatCalled)
 	})
 }

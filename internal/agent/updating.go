@@ -38,7 +38,7 @@ func startPolling() {
 	heartbeatCounter.Store(0)
 	steadyHeartbeatInterval.Store(int64(defaultHeartbeatInterval))
 
-	heartbeatRoutine = polling.Start(agentCtx, heartbeatInterval(), sendHeartbeatEvent)
+	heartbeatRoutine = polling.Start(agentCtx, heartbeatInterval(), func() { sendHeartbeatEvent(agentCtx) })
 	configPollingRoutine = polling.Start(agentCtx, 1*time.Minute, refreshCloudConfig)
 }
 
@@ -154,7 +154,7 @@ func refreshCloudConfig() {
 	applyCloudConfig(client, cloudConfig)
 }
 
-func sendHeartbeatEvent() {
+func sendHeartbeatEvent(ctx context.Context) {
 	defer advanceHeartbeatSchedule()
 
 	client := GetCloudClient()
@@ -162,7 +162,7 @@ func sendHeartbeatEvent() {
 		return
 	}
 
-	cloudConfig, err := client.SendHeartbeatEvent(agentCtx, getAgentInfo(),
+	cloudConfig, err := client.SendHeartbeatEvent(ctx, getAgentInfo(),
 		cloud.HeartbeatData{
 			Hostnames:           stateCollector.GetAndClearHostnames(),
 			Routes:              stateCollector.GetRoutesAndClear(),
