@@ -137,7 +137,7 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	case t.DialTLSContext != nil:
 		t.DialTLSContext = ssrfDialContext(t.DialTLSContext)
 	case t.DialTLS != nil: //nolint:staticcheck // intentionally wrapping deprecated field
-		originalDialTLS := t.DialTLS
+		originalDialTLS := t.DialTLS //nolint:staticcheck // intentionally wrapping deprecated field
 		dialTLSWithSSRF := ssrfDialContext(func(_ context.Context, network, addr string) (net.Conn, error) {
 			return originalDialTLS(network, addr)
 		})
