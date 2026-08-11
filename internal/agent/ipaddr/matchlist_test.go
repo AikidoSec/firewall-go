@@ -160,6 +160,20 @@ func TestParse(t *testing.T) {
 		assert.Equal(t, "192.168.1.1", ip.String())
 	})
 
+	t.Run("strips the zone from a zoned link-local IPv6 address", func(t *testing.T) {
+		ip, err := Parse("fe80::1%eth0")
+		require.NoError(t, err)
+		assert.Empty(t, ip.Zone())
+		assert.Equal(t, "fe80::1", ip.String())
+	})
+
+	t.Run("strips the zone from a zoned loopback IPv6 address", func(t *testing.T) {
+		ip, err := Parse("::1%lo")
+		require.NoError(t, err)
+		assert.Empty(t, ip.Zone())
+		assert.Equal(t, "::1", ip.String())
+	})
+
 	t.Run("returns error for invalid IP address", func(t *testing.T) {
 		_, err := Parse("not-an-ip")
 		assert.Error(t, err)
