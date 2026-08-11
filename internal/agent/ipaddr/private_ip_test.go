@@ -41,6 +41,12 @@ func TestIsPrivateIP(t *testing.T) {
 		assert.True(t, IsPrivateIP("2001:db8::1"))
 	})
 
+	t.Run("identifies private IPv6 addresses with a zone", func(t *testing.T) {
+		assert.True(t, IsPrivateIP("fe80::1%eth0"))
+		assert.True(t, IsPrivateIP("fe80::1%dummy0"))
+		assert.True(t, IsPrivateIP("::1%lo"))
+	})
+
 	t.Run("identifies public IPv4 addresses", func(t *testing.T) {
 		assert.False(t, IsPrivateIP("8.8.8.8"))
 		assert.False(t, IsPrivateIP("1.1.1.1"))

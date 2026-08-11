@@ -67,6 +67,10 @@ func Parse(ip string) (netip.Addr, error) {
 		return netip.Addr{}, err
 	}
 
+	if result.Zone() != "" {
+		result = result.WithZone("")
+	}
+
 	if result.Is4In6() {
 		return result.Unmap(), nil
 	}
