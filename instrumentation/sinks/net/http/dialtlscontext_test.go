@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -122,4 +123,29 @@ func TestSSRFDialTLS(t *testing.T) {
 	defer inbound.Close()
 
 	assertSSRFBlocked(t, inbound.URL, "/fetch-tls-custom", targetURL)
+}
+
+func TestSSRFDial(t *testing.T) {
+	require.NoError(t, zen.Protect())
+	require.True(t, zen.ShouldProtect())
+	config.SetBlocking(true)
+
+	internal, pool := newInternalTLSServer(t)
+	targetURL := internal.URL + "/"
+
+	var dialCalled atomic.Bool
+	trCustom := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}
+	trCustom.Dial = func(network, addr string) (net.Conn, error) { //nolint:staticcheck // asserting the deprecated field is preserved
+		dialCalled.Store(true)
+		return net.Dial(network, addr)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /fetch-dial", fetchHandler(trCustom))
+
+	inbound := httptest.NewServer(mux)
+	defer inbound.Close()
+
+	assertSSRFBlocked(t, inbound.URL, "/fetch-dial", targetURL)
+	assert.True(t, dialCalled.Load(), "custom Dial should still be used for the connection")
 }

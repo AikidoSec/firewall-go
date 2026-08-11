@@ -124,8 +124,15 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	originalDialContext := t.DialContext
 	hadCustomDialContext := originalDialContext != nil
 	if originalDialContext == nil {
-		var d net.Dialer
-		originalDialContext = d.DialContext
+		// Injecting DialContext makes Transport.dial stop consulting Dial, so keep using it here.
+		if userDial := t.Dial; userDial != nil { //nolint:staticcheck // intentionally preserving deprecated field
+			originalDialContext = func(_ context.Context, network, addr string) (net.Conn, error) {
+				return userDial(network, addr)
+			}
+		} else {
+			var d net.Dialer
+			originalDialContext = d.DialContext
+		}
 	}
 	t.DialContext = ssrfDialContext(originalDialContext)
 
