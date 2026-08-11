@@ -128,6 +128,13 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	}
 	t.DialContext = ssrfDialContext(originalDialContext)
 
+	// DialTLSContext bypasses DialContext entirely for non-proxied HTTPS
+	// requests (see Transport.dialConn/hasCustomTLSDialer in net/http), so it
+	// needs the same SSRF wrapper.
+	if t.DialTLSContext != nil {
+		t.DialTLSContext = ssrfDialContext(t.DialTLSContext)
+	}
+
 	// Go disables h2 auto-upgrade when any of Dial, DialTLS, DialContext, or
 	// TLSClientConfig is set and ForceAttemptHTTP2 is false. We've just injected
 	// a DialContext, so if none of those other fields were set beforehand, we're
