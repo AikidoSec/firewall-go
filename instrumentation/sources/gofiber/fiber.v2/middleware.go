@@ -19,6 +19,11 @@ func GetMiddleware() fiber.Handler {
 			return c.Next()
 		}
 
+		// A mounted app's middleware runs alongside its parent's; only the first should report.
+		if request.HasContext(c.UserContext()) {
+			return c.Next()
+		}
+
 		ip := c.IP()
 
 		route, routeParams := resolveRoute(c)

@@ -344,3 +344,33 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
+
+// Mounting merges the sub-app's routes into the parent, so both apps' middleware runs.
+func TestMiddlewareRunsOnceForMountedApp(t *testing.T) {
+	agent.Stats().GetAndClear()
+
+	sub := newTestApp()
+	sub.Use(zenfiber.GetMiddleware())
+
+	contexts := 0
+	sub.Get("/thing", func(c *fiber.Ctx) error {
+		ctx := request.GetContext(c.UserContext())
+		require.NotNil(t, ctx, "request context should be set")
+		contexts++
+
+		return c.SendString("ok")
+	})
+
+	app := newTestApp()
+	app.Use(zenfiber.GetMiddleware())
+	app.Mount("/api", sub)
+
+	r := httptest.NewRequest("GET", "/api/thing", http.NoBody)
+	resp, err := app.Test(r)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 1, contexts)
+	assert.Equal(t, 1, agent.Stats().GetAndClear().Requests.Total)
+}

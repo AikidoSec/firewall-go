@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
 	"github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2/routeresolver"
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
@@ -112,6 +113,33 @@ func TestResolvedRouteMatchesFiber(t *testing.T) {
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 	}
+}
+
+// Both fiber.New calls are instrumented, so a mounted app must still report once.
+func TestMountedAppReportsRequestOnce(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	agent.Stats().GetAndClear()
+
+	sub := fiber.New()
+	sub.Get("/thing", func(c *fiber.Ctx) error {
+		ctx := request.GetContext(c.UserContext())
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "/api/thing", ctx.Route)
+		return c.SendString("ok")
+	})
+
+	app := fiber.New()
+	app.Mount("/api", sub)
+
+	r := httptest.NewRequest("GET", "/api/thing", http.NoBody)
+	resp, err := app.Test(r)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 1, agent.Stats().GetAndClear().Requests.Total)
 }
 
 func TestMiddlewareNestedRouters(t *testing.T) {
