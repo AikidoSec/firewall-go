@@ -38,19 +38,48 @@ func fetchHandler(tr *http.Transport) http.HandlerFunc {
 	}
 }
 
+func newInternalTLSServer(t *testing.T) (*httptest.Server, *x509.CertPool) {
+	t.Helper()
+	internal := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("internal-https-ok"))
+	}))
+	internal.StartTLS()
+	t.Cleanup(internal.Close)
+
+	pool := x509.NewCertPool()
+	pool.AddCert(internal.Certificate())
+	return internal, pool
+}
+
+func assertSSRFBlocked(t *testing.T, inboundURL, path, targetURL string) {
+	t.Helper()
+	mockClient := testutil.NewMockCloudClient()
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+	agent.SetCloudClient(mockClient)
+
+	resp, err := http.Get(inboundURL + path + "?url=" + url.QueryEscape(targetURL))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	assert.NotEqual(t, http.StatusOK, resp.StatusCode, "got body %q", body)
+
+	select {
+	case <-mockClient.AttackDetectedEventSent:
+		assert.Equal(t, "ssrf", mockClient.GetCapturedAttack().Kind)
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected an SSRF attack event")
+	}
+}
+
 func TestSSRFDialTLSContext(t *testing.T) {
 	require.NoError(t, zen.Protect())
 	require.True(t, zen.ShouldProtect())
 	config.SetBlocking(true)
 
-	internal := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("internal-https-ok"))
-	}))
-	internal.StartTLS()
-	defer internal.Close()
-
-	pool := x509.NewCertPool()
-	pool.AddCert(internal.Certificate())
+	internal, pool := newInternalTLSServer(t)
+	targetURL := internal.URL + "/"
 
 	trDefault := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}
 
@@ -67,29 +96,30 @@ func TestSSRFDialTLSContext(t *testing.T) {
 	inbound := httptest.NewServer(mux)
 	defer inbound.Close()
 
+	t.Run("default dialer", func(t *testing.T) { assertSSRFBlocked(t, inbound.URL, "/fetch-tls-default", targetURL) })
+	t.Run("custom dialer", func(t *testing.T) { assertSSRFBlocked(t, inbound.URL, "/fetch-tls-custom", targetURL) })
+}
+
+// DialTLS is deprecated but, like DialTLSContext, bypasses DialContext for non-proxied HTTPS requests.
+func TestSSRFDialTLS(t *testing.T) {
+	require.NoError(t, zen.Protect())
+	require.True(t, zen.ShouldProtect())
+	config.SetBlocking(true)
+
+	internal, pool := newInternalTLSServer(t)
 	targetURL := internal.URL + "/"
 
-	assertBlocked := func(t *testing.T, path string) {
-		mockClient := testutil.NewMockCloudClient()
-		originalClient := agent.GetCloudClient()
-		defer agent.SetCloudClient(originalClient)
-		agent.SetCloudClient(mockClient)
-
-		resp, err := http.Get(inbound.URL + path + "?url=" + url.QueryEscape(targetURL))
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
-
-		assert.NotEqual(t, http.StatusOK, resp.StatusCode, "got body %q", body)
-
-		select {
-		case <-mockClient.AttackDetectedEventSent:
-			assert.Equal(t, "ssrf", mockClient.GetCapturedAttack().Kind)
-		case <-time.After(2 * time.Second):
-			t.Fatal("expected an SSRF attack event")
-		}
+	trCustom := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}}
+	trCustom.DialTLS = func(network, addr string) (net.Conn, error) { //nolint:staticcheck // reproducing the deprecated-field bypass
+		d := &tls.Dialer{Config: &tls.Config{RootCAs: pool}}
+		return d.DialContext(context.Background(), network, addr)
 	}
 
-	t.Run("default dialer", func(t *testing.T) { assertBlocked(t, "/fetch-tls-default") })
-	t.Run("custom dialer", func(t *testing.T) { assertBlocked(t, "/fetch-tls-custom") })
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /fetch-tls-custom", fetchHandler(trCustom))
+
+	inbound := httptest.NewServer(mux)
+	defer inbound.Close()
+
+	assertSSRFBlocked(t, inbound.URL, "/fetch-tls-custom", targetURL)
 }
