@@ -12,7 +12,18 @@ func tryExtractJSON(r *http.Request) any {
 	var buf bytes.Buffer
 	tee := io.TeeReader(r.Body, &buf)
 
-	decoder := json.NewDecoder(tee)
+	result := ExtractJSONFromReader(tee)
+
+	// Drain any remaining bytes to ensure full body is available in request
+	// Ignore error - we still need to restore the request body
+	_, _ = io.Copy(io.Discard, tee)
+	r.Body = io.NopCloser(&buf)
+
+	return result
+}
+
+func ExtractJSONFromReader(r io.Reader) any {
+	decoder := json.NewDecoder(r)
 	var results []any
 	for {
 		var data any
@@ -25,11 +36,6 @@ func tryExtractJSON(r *http.Request) any {
 		}
 		results = append(results, data)
 	}
-
-	// Drain any remaining bytes to ensure full body is available in request
-	// Ignore error - we still need to restore the request body
-	_, _ = io.Copy(io.Discard, tee)
-	r.Body = io.NopCloser(&buf)
 
 	switch len(results) {
 	case 0:
