@@ -1,7 +1,7 @@
 package fiber
 
 import (
-	"encoding/json"
+	"bytes"
 	"errors"
 	"net/url"
 	"strings"
@@ -91,10 +91,7 @@ func extractBody(c *fiber.Ctx) any {
 		return nil
 	}
 
-	var jsonResult any
-	if err := json.Unmarshal(raw, &jsonResult); err != nil {
-		jsonResult = nil
-	}
+	jsonResult := zenhttp.ExtractJSONFromReader(bytes.NewReader(raw))
 
 	var formResult url.Values
 	contentType := string(c.Context().Request.Header.ContentType())
