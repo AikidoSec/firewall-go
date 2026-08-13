@@ -1,9 +1,7 @@
 package fiber
 
 import (
-	"bytes"
 	"errors"
-	"net/url"
 	"strings"
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
@@ -83,38 +81,6 @@ func resolveRoute(c *fiber.Ctx) (string, map[string]string) {
 
 	route, params, _ := resolve(c)
 	return route, params
-}
-
-func extractBody(c *fiber.Ctx) any {
-	raw := c.Body()
-	if len(raw) == 0 {
-		return nil
-	}
-
-	jsonResult := zenhttp.ExtractJSONFromReader(bytes.NewReader(raw))
-
-	var formResult url.Values
-	contentType := string(c.Context().Request.Header.ContentType())
-	if strings.Contains(contentType, "multipart/form-data") {
-		if form, err := c.MultipartForm(); err == nil && form != nil && len(form.Value) > 0 {
-			formResult = url.Values(form.Value)
-		}
-	} else if strings.Contains(contentType, "application/x-www-form-urlencoded") {
-		if vals, err := url.ParseQuery(string(raw)); err == nil && len(vals) > 0 {
-			formResult = vals
-		}
-	}
-
-	if jsonResult != nil && len(formResult) > 0 {
-		return []any{jsonResult, formResult}
-	}
-	if jsonResult != nil {
-		return jsonResult
-	}
-	if len(formResult) > 0 {
-		return formResult
-	}
-	return nil
 }
 
 func extractQuery(c *fiber.Ctx) map[string][]string {
