@@ -345,6 +345,51 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
+func TestMiddlewareDiscoversSuccessfulRoute(t *testing.T) {
+	agent.State().GetRoutesAndClear()
+
+	app := newTestApp()
+	app.Use(zenfiber.GetMiddleware())
+
+	app.Get("/route", func(c *fiber.Ctx) error {
+		return c.SendStatus(http.StatusOK)
+	})
+
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
+	resp, err := app.Test(r)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		routes := agent.State().GetRoutesAndClear()
+		require.Len(c, routes, 1)
+		assert.Equal(c, "/route", routes[0].Path)
+		assert.Equal(c, "GET", routes[0].Method)
+	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestMiddlewareReportsHandlerErrorStatusCode(t *testing.T) {
+	agent.State().GetRoutesAndClear()
+
+	app := newTestApp()
+	app.Use(zenfiber.GetMiddleware())
+
+	app.Get("/admin", func(c *fiber.Ctx) error {
+		return fiber.NewError(http.StatusForbidden)
+	})
+
+	r := httptest.NewRequest("GET", "/admin", http.NoBody)
+	resp, err := app.Test(r)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+	assert.Never(t, func() bool {
+		return len(agent.State().GetRoutesAndClear()) > 0
+	}, 100*time.Millisecond, 10*time.Millisecond, "a 403 route should not be discovered")
+}
+
 // Mounting merges the sub-app's routes into the parent, so both apps' middleware runs.
 func TestMiddlewareRunsOnceForMountedApp(t *testing.T) {
 	agent.Stats().GetAndClear()

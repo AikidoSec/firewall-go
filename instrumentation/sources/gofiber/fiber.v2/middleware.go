@@ -2,6 +2,7 @@ package fiber
 
 import (
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strings"
 
@@ -55,7 +56,13 @@ func GetMiddleware() fiber.Handler {
 			handlerErr = c.Next()
 		})
 
-		zenhttp.OnPostRequest(reqCtx, c.Response().StatusCode())
+		// fiber's ErrorHandler runs after c.Next() returns, so on error the response status isn't set yet.
+		status := c.Response().StatusCode()
+		var ferr *fiber.Error
+		if errors.As(handlerErr, &ferr) {
+			status = ferr.Code
+		}
+		zenhttp.OnPostRequest(reqCtx, status)
 
 		return handlerErr
 	}
