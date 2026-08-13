@@ -25,7 +25,8 @@ func GetMiddleware() fiber.Handler {
 			return c.Next()
 		}
 
-		ip := c.IP()
+		// Aliases fasthttp's pooled buffer too; clone for the same reason as Path/Method.
+		ip := strings.Clone(c.IP())
 
 		route, routeParams := resolveRoute(c)
 
