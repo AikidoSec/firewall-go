@@ -56,10 +56,14 @@ func GetMiddleware() fiber.Handler {
 		})
 
 		// fiber's ErrorHandler runs after c.Next() returns, so on error the response status isn't set yet.
+		// Mirror fiber's DefaultErrorHandler: default to 500, unless the error carries its own code.
 		status := c.Response().StatusCode()
-		var ferr *fiber.Error
-		if errors.As(handlerErr, &ferr) {
-			status = ferr.Code
+		if handlerErr != nil {
+			status = fiber.StatusInternalServerError
+			var ferr *fiber.Error
+			if errors.As(handlerErr, &ferr) {
+				status = ferr.Code
+			}
 		}
 		zenhttp.OnPostRequest(reqCtx, status)
 
