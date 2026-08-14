@@ -150,6 +150,7 @@ jobs:
           - gin-sqlx
           - chi-postgres
           - http-postgres
+          - fiber-v2-postgres
 
     steps:
       - name: Checkout code
