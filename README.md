@@ -40,6 +40,7 @@ Zen operates autonomously on the same server as your Go app to:
 - ✅ [`Chi`](docs/net-http.md) v5
 - ✅ [`Gin`](docs/gin.md)
 - ✅ [`Echo`](docs/echo.md) v4 and v5
+- ✅ [`Fiber`](docs/fiber.md) v2
 
 ### Database drivers
 
@@ -129,6 +130,7 @@ Add middleware to enable user tracking and rate limiting for your framework:
 - [net/http / Chi](./docs/net-http.md)
 - [Gin](./docs/gin.md)
 - [Echo](./docs/echo.md)
+- [Fiber](./docs/fiber.md)
 
 ## Reporting to your Aikido Security dashboard
 
