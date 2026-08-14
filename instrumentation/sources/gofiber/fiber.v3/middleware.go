@@ -1,12 +1,12 @@
 package fiber
 
 import (
-	"encoding/json"
-	"net/url"
+	"errors"
 	"strings"
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/instrumentation/request"
+	"github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v3/routeresolver"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gofiber/fiber/v3"
 )
@@ -18,22 +18,19 @@ func GetMiddleware() fiber.Handler {
 			return c.Next()
 		}
 
-		ip := c.IP()
-
-		routeParamNames := c.Route().Params
-		var routeParams map[string]string
-		if len(routeParamNames) > 0 {
-			// Fiber's param values alias fasthttp's pooled request buffer, which gets
-			// reused for later requests, so they must be copied before being retained.
-			routeParams = make(map[string]string, len(routeParamNames))
-			for _, name := range routeParamNames {
-				routeParams[name] = strings.Clone(c.Params(name))
-			}
+		// A mounted app's middleware runs alongside its parent's; only the first should report.
+		if request.HasContext(c.Context()) {
+			return c.Next()
 		}
+
+		// Aliases fasthttp's pooled buffer too; clone for the same reason as Path/Method.
+		ip := strings.Clone(c.IP())
+
+		route, routeParams := resolveRoute(c)
 
 		reqCtx := request.SetContext(c.Context(), request.ContextData{
 			Source:        "fiber",
-			Route:         c.Route().Path,
+			Route:         route,
 			RouteParams:   routeParams,
 			RemoteAddress: &ip,
 			Body:          extractBody(c),
@@ -58,45 +55,36 @@ func GetMiddleware() fiber.Handler {
 			handlerErr = c.Next()
 		})
 
-		zenhttp.OnPostRequest(reqCtx, c.Response().StatusCode())
+		// fiber's ErrorHandler runs after c.Next() returns, so on error the response status isn't set yet.
+		// Mirror fiber's DefaultErrorHandler: default to 500, unless the error carries its own code.
+		status := c.Response().StatusCode()
+		if handlerErr != nil {
+			status = fiber.StatusInternalServerError
+			var ferr *fiber.Error
+			if errors.As(handlerErr, &ferr) {
+				status = ferr.Code
+			}
+		}
+		zenhttp.OnPostRequest(reqCtx, status)
 
 		return handlerErr
 	}
 }
 
-func extractBody(c fiber.Ctx) any {
-	raw := c.Body()
-	if len(raw) == 0 {
-		return nil
+// resolveRoute returns the route pattern and params of the endpoint that will
+// serve this request. c.Route() is not usable here: fiber resolves the match
+// as c.Next() cascades, so before dispatch it still holds this middleware's
+// own route. The resolver is registered by the file zen-go injects into
+// fiber; without it an empty route makes SetContext fall back to the request
+// path.
+func resolveRoute(c fiber.Ctx) (string, map[string]string) {
+	resolve := routeresolver.Get()
+	if resolve == nil {
+		return "", nil
 	}
 
-	var jsonResult any
-	if err := json.Unmarshal(raw, &jsonResult); err != nil {
-		jsonResult = nil
-	}
-
-	var formResult url.Values
-	contentType := string(c.RequestCtx().Request.Header.ContentType())
-	if strings.Contains(contentType, "multipart/form-data") {
-		if form, err := c.MultipartForm(); err == nil && form != nil && len(form.Value) > 0 {
-			formResult = url.Values(form.Value)
-		}
-	} else if strings.Contains(contentType, "application/x-www-form-urlencoded") {
-		if vals, err := url.ParseQuery(string(raw)); err == nil && len(vals) > 0 {
-			formResult = vals
-		}
-	}
-
-	if jsonResult != nil && len(formResult) > 0 {
-		return []any{jsonResult, formResult}
-	}
-	if jsonResult != nil {
-		return jsonResult
-	}
-	if len(formResult) > 0 {
-		return formResult
-	}
-	return nil
+	route, params, _ := resolve(c)
+	return route, params
 }
 
 func extractQuery(c fiber.Ctx) map[string][]string {
