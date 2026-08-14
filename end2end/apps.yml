@@ -24,3 +24,6 @@ http-postgres:
 
 fiber-v2-postgres:
   sql_dialect: postgres
+
+fiber-v3-postgres:
+  sql_dialect: postgres
