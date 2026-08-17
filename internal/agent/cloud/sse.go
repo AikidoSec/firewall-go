@@ -26,7 +26,7 @@ type configUpdatedData struct {
 	ConfigUpdatedAt int64 `json:"configUpdatedAt"`
 }
 
-// SubscribeToConfigUpdates opens an SSE connection to the realtime endpoint and
+// SubscribeToConfigUpdates opens an SSE connection to the cloud endpoint and
 // calls onUpdate with the configUpdatedAt timestamp whenever a config-updated
 // event is received. Blocks until the connection is closed or ctx is cancelled.
 // The caller is responsible for reconnecting on error.
@@ -35,7 +35,7 @@ func (c *Client) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(con
 	defer cancelRead()
 
 	req, err := http.NewRequestWithContext(readCtx, http.MethodGet,
-		c.realtimeEndpoint+configStreamRoute, nil)
+		c.apiEndpoint+configStreamRoute, nil)
 	if err != nil {
 		return err
 	}

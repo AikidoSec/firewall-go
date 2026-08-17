@@ -17,31 +17,27 @@ func TestNewClient(t *testing.T) {
 		{
 			name: "creates client with all fields",
 			config: &ClientConfig{
-				APIEndpoint:      "https://localhost:8080",
-				RealtimeEndpoint: "https://localhost:8081",
-				Token:            "test-token-123",
-				Platform:         "golang",
-				Version:          "1.2.7",
+				APIEndpoint: "https://localhost:8080",
+				Token:       "test-token-123",
+				Platform:    "golang",
+				Version:     "1.2.7",
 			},
 			want: &Client{
-				apiEndpoint:      "https://localhost:8080",
-				realtimeEndpoint: "https://localhost:8081",
-				token:            "test-token-123",
-				platform:         "golang",
-				version:          "1.2.7",
+				apiEndpoint: "https://localhost:8080",
+				token:       "test-token-123",
+				platform:    "golang",
+				version:     "1.2.7",
 			},
 		},
 		{
 			name: "creates client with empty strings",
 			config: &ClientConfig{
-				APIEndpoint:      "",
-				RealtimeEndpoint: "",
-				Token:            "",
+				APIEndpoint: "",
+				Token:       "",
 			},
 			want: &Client{
-				apiEndpoint:      "",
-				realtimeEndpoint: "",
-				token:            "",
+				apiEndpoint: "",
+				token:       "",
 			},
 		},
 	}
@@ -52,7 +48,6 @@ func TestNewClient(t *testing.T) {
 
 			require.NotNil(t, got, "NewClient() should not return nil")
 			assert.Equal(t, tt.want.apiEndpoint, got.apiEndpoint, "apiEndpoint mismatch")
-			assert.Equal(t, tt.want.realtimeEndpoint, got.realtimeEndpoint, "realtimeEndpoint mismatch")
 			assert.Equal(t, tt.want.token, got.token, "token mismatch")
 			assert.Equal(t, tt.want.platform, got.platform, "platform mismatch")
 			assert.Equal(t, tt.want.version, got.version, "version mismatch")
@@ -63,9 +58,8 @@ func TestNewClient(t *testing.T) {
 
 func TestNewClient_HTTPClient(t *testing.T) {
 	config := &ClientConfig{
-		APIEndpoint:      "https://localhost:8080",
-		RealtimeEndpoint: "https://localhost:8081",
-		Token:            "test-token",
+		APIEndpoint: "https://localhost:8080",
+		Token:       "test-token",
 	}
 
 	client := NewClient(config)

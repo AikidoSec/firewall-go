@@ -93,7 +93,6 @@ done
 # Point the agent at the mock server
 export AIKIDO_TOKEN=mock-token
 export AIKIDO_ENDPOINT="http://localhost:$MOCK_PORT"
-export AIKIDO_REALTIME_ENDPOINT="http://localhost:$MOCK_PORT"
 export MOCK_SERVER_URL="http://localhost:$MOCK_PORT"
 
 echo "=================================================="

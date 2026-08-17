@@ -65,11 +65,10 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 	Stats().SetStartedAt(utils.GetTime())
 
 	client := cloud.NewClient(&cloud.ClientConfig{
-		Token:            aikidoConfig.Token,
-		APIEndpoint:      globals.EnvironmentConfig.Endpoint,
-		RealtimeEndpoint: globals.EnvironmentConfig.RealtimeEndpoint,
-		Platform:         globals.EnvironmentConfig.PlatformName,
-		Version:          globals.EnvironmentConfig.Version,
+		Token:       aikidoConfig.Token,
+		APIEndpoint: globals.EnvironmentConfig.Endpoint,
+		Platform:    globals.EnvironmentConfig.PlatformName,
+		Version:     globals.EnvironmentConfig.Version,
 	})
 	SetCloudClient(client)
 
