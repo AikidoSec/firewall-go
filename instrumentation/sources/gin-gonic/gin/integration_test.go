@@ -37,3 +37,13 @@ func TestGinIsAutomaticallyInstrumented(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 }
+
+func TestGinDefaultIsInstrumentedExactlyOnce(t *testing.T) {
+	// gin.Default() calls New() internally, so this guards against the
+	// zen middleware being registered twice.
+	require.NoError(t, zen.Protect())
+
+	router := gin.Default()
+
+	require.Len(t, router.Handlers, 3, "gin.Default() should register Logger, Recovery, and the zen middleware - no more")
+}
