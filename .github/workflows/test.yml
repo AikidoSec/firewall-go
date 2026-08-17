@@ -38,7 +38,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Install tools
-        run: make install-tools
+        run: make install-tools-test
 
       - name: Run tests
         run: make test
@@ -81,7 +81,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Install tools
-        run: make install-tools
+        run: make install-tools-test
 
       - name: Run unit tests
         run: make test-instrumentation-unit
@@ -117,7 +117,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: Install tools
-        run: make install-tools
+        run: make install-tools-test
 
       - name: Build Zen Go
         run: make build-zen-go
