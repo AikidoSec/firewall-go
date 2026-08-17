@@ -7,13 +7,22 @@ CURRENT_GO_MINOR := $(shell go env GOVERSION | sed 's/^go1\.//' | cut -d. -f1)
 # Returns the go minor version required by the module at path $(1)
 go_mod_minor = $(shell sed -n 's/^go 1\.//p' $(1)/go.mod | cut -d. -f1)
 
+define retry
+	for i in 1 2 3; do \
+		$(1) && break; \
+		if [ $$i -eq 3 ]; then exit 1; fi; \
+		echo "Retrying ($$i/3)..."; \
+		sleep 5; \
+	done
+endef
+
 .PHONY: install-tools
 install-tools:
 	@echo "Installing gotestsum"
-	@cd tools && GOBIN=$(TOOLS_BIN) go install gotest.tools/gotestsum
+	@$(call retry,cd tools && GOBIN=$(TOOLS_BIN) go install gotest.tools/gotestsum)
 	@echo "✅ gotestsum installed successfully"
 	@echo "Installing golangci-lint"
-	@GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@$(call retry,GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
 	@echo "✅ golangci-lint installed successfully"
 
 .PHONY: build-zen-go
