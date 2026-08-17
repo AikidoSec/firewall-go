@@ -17,10 +17,16 @@ define retry
 endef
 
 .PHONY: install-tools
-install-tools:
+install-tools: install-tools-test install-tools-lint
+
+.PHONY: install-tools-test
+install-tools-test:
 	@echo "Installing gotestsum"
 	@$(call retry,cd tools && GOBIN=$(TOOLS_BIN) go install gotest.tools/gotestsum)
 	@echo "✅ gotestsum installed successfully"
+
+.PHONY: install-tools-lint
+install-tools-lint:
 	@echo "Installing golangci-lint"
 	@$(call retry,GOBIN=$(TOOLS_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
 	@echo "✅ golangci-lint installed successfully"
