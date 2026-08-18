@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"net/url"
@@ -128,11 +129,16 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	}
 	t.DialContext = ssrfDialContext(originalDialContext)
 
-	// DialTLSContext bypasses DialContext entirely for non-proxied HTTPS
-	// requests (see Transport.dialConn/hasCustomTLSDialer in net/http), so it
-	// needs the same SSRF wrapper.
-	if t.DialTLSContext != nil {
+	// DialTLSContext and the deprecated DialTLS bypass DialContext for non-proxied HTTPS, so they need the same wrapper.
+	switch {
+	case t.DialTLSContext != nil:
 		t.DialTLSContext = ssrfDialContext(t.DialTLSContext)
+	case t.DialTLS != nil: //nolint:staticcheck // intentionally preserving deprecated field
+		// Go prefers DialTLSContext, so installing there hands us the request context.
+		userDialTLS := t.DialTLS //nolint:staticcheck // intentionally preserving deprecated field
+		t.DialTLSContext = ssrfDialContext(func(_ context.Context, network, addr string) (net.Conn, error) {
+			return userDialTLS(network, addr)
+		})
 	}
 
 	// Go disables h2 auto-upgrade when any of Dial, DialTLS, DialContext, or
