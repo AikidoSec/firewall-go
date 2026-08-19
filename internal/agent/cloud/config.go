@@ -23,7 +23,7 @@ var ErrParsingConfig = errors.New("failed to parse cloud config")
 
 // FetchConfigUpdatedAt returns the time at which the cloud config was last updated
 func (c *Client) FetchConfigUpdatedAt() time.Time {
-	response, err := c.sendCloudRequest(context.Background(), c.realtimeEndpoint, configUpdatedAtAPIRoute, configUpdatedAtMethod, nil)
+	response, err := c.sendCloudRequest(context.Background(), c.apiEndpoint, configUpdatedAtAPIRoute, configUpdatedAtMethod, nil)
 	if err != nil {
 		logCloudRequestError("Error in sending polling config request: ", err)
 		return time.Time{}

@@ -6,13 +6,12 @@ import (
 )
 
 type EnvironmentConfigData struct {
-	PlatformName     string // Platform name (fpm-fcgi, cli-server, ...)
-	PlatformVersion  string // Language version
-	Endpoint         string // default: 'https://guard.aikido.dev/'
-	RealtimeEndpoint string // default: 'https://runtime.aikido.dev/'
-	Library          string // default: 'firewall-php'
-	Version          string // Version of the agent
-	ZenDisabled      bool
+	PlatformName    string // Platform name (fpm-fcgi, cli-server, ...)
+	PlatformVersion string // Language version
+	Endpoint        string // default: 'https://guard.aikido.dev/'
+	Library         string // default: 'firewall-php'
+	Version         string // Version of the agent
+	ZenDisabled     bool
 }
 
 type AikidoConfigData struct {

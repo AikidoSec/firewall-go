@@ -106,7 +106,7 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := &Client{realtimeEndpoint: server.URL, token: "my-secret-token", platform: "golang", version: "1.2.7"}
+		client := &Client{apiEndpoint: server.URL, token: "my-secret-token", platform: "golang", version: "1.2.7"}
 
 		updates := make(chan int64, 1)
 		done := make(chan error, 1)
@@ -147,7 +147,7 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := &Client{realtimeEndpoint: server.URL, token: "test-token"}
+		client := &Client{apiEndpoint: server.URL, token: "test-token"}
 
 		err := client.SubscribeToConfigUpdates(context.Background(), func(int64) {})
 		assert.NoError(t, err)
@@ -159,7 +159,7 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := &Client{realtimeEndpoint: server.URL, token: "test-token"}
+		client := &Client{apiEndpoint: server.URL, token: "test-token"}
 
 		err := client.SubscribeToConfigUpdates(context.Background(), func(int64) {})
 		require.Error(t, err)
@@ -172,7 +172,7 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := &Client{realtimeEndpoint: server.URL, token: "test-token"}
+		client := &Client{apiEndpoint: server.URL, token: "test-token"}
 
 		err := client.SubscribeToConfigUpdates(context.Background(), func(int64) {})
 		require.Error(t, err)
@@ -195,7 +195,7 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		defer server.Close()
 		defer close(release)
 
-		client := &Client{realtimeEndpoint: server.URL, token: "test-token"}
+		client := &Client{apiEndpoint: server.URL, token: "test-token"}
 
 		done := make(chan error, 1)
 		go func() {
