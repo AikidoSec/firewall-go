@@ -22,6 +22,8 @@ var (
 
 	heartbeatCounter        atomic.Int64
 	steadyHeartbeatInterval atomic.Int64 // time.Duration(nanoseconds)
+
+	lastConfigRefreshAttemptAt atomic.Int64 // unix nanoseconds
 )
 
 const (
@@ -32,6 +34,8 @@ const (
 	sseInitialBackoff  = 5 * time.Second
 	sseMaxBackoff      = 60 * time.Second
 	sseStableThreshold = 30 * time.Second
+
+	configRefreshThrottle = 9 * time.Second
 )
 
 func startPolling() {
@@ -109,6 +113,17 @@ func runSSESubscription(ctx context.Context) {
 	}
 }
 
+// configUpdateArrivedTooFast reports whether a refresh happened within configRefreshThrottle.
+func configUpdateArrivedTooFast() bool {
+	now := time.Now()
+	if now.Sub(time.Unix(0, lastConfigRefreshAttemptAt.Load())) < configRefreshThrottle {
+		return true
+	}
+
+	lastConfigRefreshAttemptAt.Store(now.UnixNano())
+	return false
+}
+
 // refreshCloudConfigIfNewer fetches and applies the full cloud config only if
 // the provided configUpdatedAt is newer than the locally stored value.
 func refreshCloudConfigIfNewer(configUpdatedAtMs int64) {
@@ -118,6 +133,11 @@ func refreshCloudConfigIfNewer(configUpdatedAtMs int64) {
 
 	client := GetCloudClient()
 	if client == nil {
+		return
+	}
+
+	if configUpdateArrivedTooFast() {
+		log.Debug("SSE config-updated event ignored by refresh throttle")
 		return
 	}
 
