@@ -54,6 +54,16 @@ func stopPolling() {
 // runSSESubscription reconnects with exponential backoff and jitter until ctx is cancelled.
 func runSSESubscription(ctx context.Context) {
 	backoff := sseInitialBackoff
+	lastConfigRefreshStartedAt := time.Time{}
+	configUpdateArrivedTooFast := func() bool {
+		now := time.Now()
+		if now.Sub(lastConfigRefreshStartedAt) < 9*time.Second {
+			return true
+		}
+
+		lastConfigRefreshStartedAt = now
+		return false
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -74,6 +84,15 @@ func runSSESubscription(ctx context.Context) {
 		connectedAt := time.Now()
 		err := client.SubscribeToConfigUpdates(ctx, func(configUpdatedAt int64) {
 			log.Info("Realtime config update received")
+			if !time.UnixMilli(configUpdatedAt).After(config.GetCloudConfigUpdatedAt()) {
+				return
+			}
+
+			if configUpdateArrivedTooFast() {
+				log.Debug("Ignoring realtime config update during refresh throttle")
+				return
+			}
+
 			refreshCloudConfigIfNewer(configUpdatedAt)
 		})
 		if ctx.Err() != nil {

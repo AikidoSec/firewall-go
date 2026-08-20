@@ -316,6 +316,35 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 }
 
 func TestRunSSESubscription(t *testing.T) {
+	err := config.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{LogLevel: "ERROR"})
+	require.NoError(t, err)
+
+	t.Run("ignores config updates that arrive too fast", func(t *testing.T) {
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{ConfigUpdatedAt: 0}, &aikido_types.ListsConfigData{})
+		t.Cleanup(func() {
+			config.UpdateServiceConfig(&aikido_types.CloudConfigData{ConfigUpdatedAt: 0}, &aikido_types.ListsConfigData{})
+		})
+
+		firstUpdate := time.Now().Add(time.Hour)
+		mock := &updatingMockCloudClient{
+			fetchConfigResult: &aikido_types.CloudConfigData{
+				ConfigUpdatedAt: firstUpdate.UnixMilli(),
+			},
+			subscribeFn: func(_ context.Context, onUpdate func(int64)) error {
+				onUpdate(firstUpdate.UnixMilli())
+				onUpdate(firstUpdate.Add(time.Hour).UnixMilli())
+				return cloud.ErrNotRetryable
+			},
+		}
+		original := GetCloudClient()
+		SetCloudClient(mock)
+		t.Cleanup(func() { SetCloudClient(original) })
+
+		runSSESubscription(context.Background())
+
+		assert.Equal(t, 1, mock.fetchConfigCallCount)
+	})
+
 	t.Run("exits when context is cancelled", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			mock := &updatingMockCloudClient{
