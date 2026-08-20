@@ -75,6 +75,14 @@ func resetHeartbeatSchedule(t *testing.T) {
 	})
 }
 
+func resetConfigRefreshThrottle(t *testing.T) {
+	t.Helper()
+	original := lastConfigRefreshAttemptAt.Load()
+	lastConfigRefreshAttemptAt.Store(0)
+
+	t.Cleanup(func() { lastConfigRefreshAttemptAt.Store(original) })
+}
+
 func TestHeartbeatInterval(t *testing.T) {
 	resetHeartbeatSchedule(t)
 
@@ -284,6 +292,7 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 
 	t.Run("fetches and applies config when timestamp is newer", func(t *testing.T) {
 		resetConfigUpdatedAt(t)
+		resetConfigRefreshThrottle(t)
 
 		mock := &updatingMockCloudClient{
 			fetchConfigResult: &aikido_types.CloudConfigData{
@@ -300,6 +309,7 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 
 	t.Run("does not panic on fetch error", func(t *testing.T) {
 		resetConfigUpdatedAt(t)
+		resetConfigRefreshThrottle(t)
 
 		mock := &updatingMockCloudClient{
 			fetchConfigErr: errors.New("network error"),
@@ -312,6 +322,33 @@ func TestRefreshCloudConfigIfNewer(t *testing.T) {
 			refreshCloudConfigIfNewer(time.Now().Add(time.Hour).UnixMilli())
 		})
 		assert.Equal(t, 1, mock.fetchConfigCallCount)
+	})
+
+	t.Run("ignores refresh attempts that arrive within the throttle window", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			resetConfigUpdatedAt(t)
+			resetConfigRefreshThrottle(t)
+
+			mock := &updatingMockCloudClient{
+				fetchConfigResult: &aikido_types.CloudConfigData{
+					ConfigUpdatedAt: time.Now().Add(time.Hour).UnixMilli(),
+				},
+			}
+			original := GetCloudClient()
+			SetCloudClient(mock)
+			t.Cleanup(func() { SetCloudClient(original) })
+
+			refreshCloudConfigIfNewer(time.Now().Add(time.Hour).UnixMilli())
+			assert.Equal(t, 1, mock.fetchConfigCallCount)
+
+			refreshCloudConfigIfNewer(time.Now().Add(2 * time.Hour).UnixMilli())
+			assert.Equal(t, 1, mock.fetchConfigCallCount, "second refresh within throttle window should be skipped")
+
+			time.Sleep(configRefreshThrottle)
+
+			refreshCloudConfigIfNewer(time.Now().Add(2 * time.Hour).UnixMilli())
+			assert.Equal(t, 2, mock.fetchConfigCallCount, "refresh after throttle window should proceed")
+		})
 	})
 }
 
