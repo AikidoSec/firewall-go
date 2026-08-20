@@ -3,7 +3,7 @@ module fiber-v3-postgres
 go 1.25.5
 
 require (
-	github.com/AikidoSec/firewall-go v1.2.8
+	github.com/AikidoSec/firewall-go v1.2.10
 	github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v3 v0.0.0-00010101000000-000000000000
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/lib/pq v1.10.2
