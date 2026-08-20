@@ -166,19 +166,17 @@ lint:
 	@echo "🔍 Linting all Go modules..."
 	@echo "📦 Linting root module"
 	@$(TOOLS_BIN)/golangci-lint run ./... $(FLAGS) || exit 1
-	@for dir in $$(find . -name go.mod -not -path "./go.mod" -not -path "./tools/*" -exec dirname {} \;); do \
-		echo "📦 Linting module in $$dir"; \
-		(cd $$dir && $(TOOLS_BIN)/golangci-lint run $(FLAGS) ./...) || exit 1; \
-	done
+	@TOOLS_BIN=$(TOOLS_BIN) ./scripts/lint-modules.sh \
+		$$(find . -name go.mod -not -path "./go.mod" -not -path "./tools/*" -exec dirname {} \;) \
+		-- $(FLAGS)
 	@echo "✅ All modules linted successfully"
 
 .PHONY: lint-integration
 lint-integration:
 	@echo "🔍 Linting modules in instrumentation/ with integration tag..."
-	@for dir in $$(find ./instrumentation -name go.mod -exec dirname {} \; 2>/dev/null); do \
-		echo "📦 Linting module in $$dir"; \
-		(cd $$dir && $(TOOLS_BIN)/golangci-lint run --build-tags=integration $(FLAGS) ./...) || exit 1; \
-	done
+	@TOOLS_BIN=$(TOOLS_BIN) ./scripts/lint-modules.sh \
+		--find ./instrumentation \
+		-- --build-tags=integration $(FLAGS)
 	@echo "✅ Integration linting completed successfully"
 
 .PHONY: lint-fix
