@@ -194,6 +194,33 @@ func TestResolvedRouteMatchesFiber(t *testing.T) {
 	}
 }
 
+// A custom Ctx implementation (not *fiber.DefaultCtx) must still resolve the
+// route pattern instead of silently falling back to the raw request path.
+func TestResolvedRouteForCustomCtx(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	app := fiber.NewWithCustomCtx(func(app *fiber.App) fiber.CustomCtx {
+		return &customCtx{DefaultCtx: *fiber.NewDefaultCtx(app)}
+	})
+
+	app.Get("/users/:id", func(c fiber.Ctx) error {
+		ctx := request.GetContext(c.Context())
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "/users/:id", ctx.Route, "resolved route should match fiber's pattern, not the raw path")
+		assert.Equal(t, map[string]string{"id": "123"}, ctx.RouteParams)
+
+		return nil
+	})
+
+	r := httptest.NewRequest("GET", "/users/123", http.NoBody)
+	resp, err := app.Test(r)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
 // Both fiber.New calls are instrumented, so a mounted app must still report once.
 func TestMountedAppReportsRequestOnce(t *testing.T) {
 	require.NoError(t, zen.Protect())
