@@ -19,3 +19,11 @@ rules:
       zenfiber: github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v3
     template: |
       func() *fiber.App { a := {{.}}; a.Use(zenfiber.GetMiddleware()); return a }()
+
+  - id: fiber.NewWithCustomCtx
+    type: wrap
+    match: github.com/gofiber/fiber/v3.NewWithCustomCtx
+    imports:
+      zenfiber: github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v3
+    template: |
+      func() *fiber.App { a := {{.}}; a.Use(zenfiber.GetMiddleware()); return a }()

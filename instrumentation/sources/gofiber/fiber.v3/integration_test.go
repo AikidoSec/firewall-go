@@ -49,6 +49,81 @@ func TestFiberNewIsAutomaticallyInstrumented(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
+// customCtx is a minimal fiber.CustomCtx implementation, following the shape
+// fiber's own docs and tests use for fiber.NewWithCustomCtx.
+type customCtx struct {
+	fiber.DefaultCtx
+}
+
+// fiber.NewWithCustomCtx is a second app constructor (used when the app needs
+// extra methods on Ctx) and should be instrumented the same as fiber.New.
+func TestFiberNewWithCustomCtxIsAutomaticallyInstrumented(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	app := fiber.NewWithCustomCtx(func(app *fiber.App) fiber.CustomCtx {
+		return &customCtx{DefaultCtx: *fiber.NewDefaultCtx(app)}
+	})
+
+	app.Get("/route", func(c fiber.Ctx) error {
+		ctx := request.GetContext(c.Context())
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "fiber", ctx.Source)
+		assert.Equal(t, "/route", ctx.Route)
+
+		return nil
+	})
+
+	r := httptest.NewRequest("GET", "/route?query=value", http.NoBody)
+	resp, err := app.Test(r)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestFiberNewWithCustomCtxIsInstrumentedExactlyOnce(t *testing.T) {
+	// fiber.NewWithCustomCtx calls New(...) internally, so this guards against
+	// the zen middleware being registered twice.
+	require.NoError(t, zen.Protect())
+
+	app := fiber.NewWithCustomCtx(func(app *fiber.App) fiber.CustomCtx {
+		return &customCtx{DefaultCtx: *fiber.NewDefaultCtx(app)}
+	})
+
+	assert.Equal(t, uint32(1), app.HandlersCount(), "fiber.NewWithCustomCtx() should register only the zen middleware - no more")
+}
+
+// A NewWithCustomCtx app mounted under a New() app gets middleware from both
+// wrap rules; only the first should report, same as two New() apps.
+func TestMountedCustomCtxAppReportsRequestOnce(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	agent.Stats().GetAndClear()
+
+	sub := fiber.NewWithCustomCtx(func(app *fiber.App) fiber.CustomCtx {
+		return &customCtx{DefaultCtx: *fiber.NewDefaultCtx(app)}
+	})
+	sub.Get("/thing", func(c fiber.Ctx) error {
+		ctx := request.GetContext(c.Context())
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "/api/thing", ctx.Route)
+		return c.SendString("ok")
+	})
+
+	app := fiber.New()
+	app.Use("/api", sub)
+
+	r := httptest.NewRequest("GET", "/api/thing", http.NoBody)
+	resp, err := app.Test(r)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 1, agent.Stats().GetAndClear().Requests.Total)
+}
+
 // The injected resolver reads fiber's unexported router internals, so this
 // compares what it produced against fiber's own answer once the handler runs.
 // A fiber upgrade that renames those internals fails here instead of silently
