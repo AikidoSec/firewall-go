@@ -2,6 +2,7 @@ package filepath
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
@@ -37,7 +38,10 @@ func ExamineDeferred(operationName string, elems []string) error {
 
 	hooks.OnOperationCall(operationName, operation.KindFileSystem)
 
-	path := strings.Join(elems, "")
+	// Join with the OS-specific separator to preserve path segment boundaries for traversal detection.
+	// This ensures split-segment traversal (e.g., filepath.Join(base, "..", file))
+	// is properly detected by matching the normalized form that filepath.Join produces.
+	path := strings.Join(elems, string(filepath.Separator))
 
 	return vulnerabilities.ScanWithOptions(context.Background(), operationName, pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
 		FilePath:       path,
