@@ -20,23 +20,32 @@ func init() {
 	routeresolver.Register(aikidoResolveRoute)
 }
 
+// c is asserted against CustomCtx, not *DefaultCtx: a NewWithCustomCtx app
+// hands middleware its own user-defined Ctx implementation, and DefaultCtx
+// itself satisfies CustomCtx too, so this covers both without a type switch.
 func aikidoResolveRoute(ctx any) (string, map[string]string, bool) {
-	c, ok := ctx.(*DefaultCtx)
-	if !ok || c == nil || c.app == nil {
-		return "", nil, false
-	}
-
-	if c.methodInt < 0 || c.methodInt >= len(c.app.treeStack) {
-		return "", nil, false
-	}
-
-	tree, ok := c.app.treeStack[c.methodInt][c.treePathHash]
+	c, ok := ctx.(CustomCtx)
 	if !ok {
-		tree = c.app.treeStack[c.methodInt][0]
+		return "", nil, false
 	}
 
-	detectionPath := string(c.detectionPath)
-	path := string(c.path)
+	app := c.App()
+	if app == nil {
+		return "", nil, false
+	}
+
+	methodInt := c.getMethodInt()
+	if methodInt < 0 || methodInt >= len(app.treeStack) {
+		return "", nil, false
+	}
+
+	tree, ok := app.treeStack[methodInt][c.getTreePathHash()]
+	if !ok {
+		tree = app.treeStack[methodInt][0]
+	}
+
+	detectionPath := c.getDetectionPath()
+	path := c.Path()
 
 	// Scratch array: c.values belongs to the router, which fills it at dispatch.
 	var values [maxParams]string
