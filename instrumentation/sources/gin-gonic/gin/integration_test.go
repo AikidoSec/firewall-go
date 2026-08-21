@@ -38,6 +38,27 @@ func TestGinIsAutomaticallyInstrumented(t *testing.T) {
 	router.ServeHTTP(w, r)
 }
 
+func TestGinIsInstrumentedWhenConstructorPassedByValue(t *testing.T) {
+	require.NoError(t, zen.Protect())
+
+	f := gin.Default
+	router := f()
+	router.ContextWithFallback = true
+
+	router.GET("/route", func(c *gin.Context) {
+		ctx := request.GetContext(c)
+		require.NotNil(t, ctx, "request context should be set")
+
+		assert.Equal(t, "gin", ctx.Source)
+		assert.Equal(t, "/route", ctx.Route)
+	})
+
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+}
+
 func TestGinDefaultIsInstrumentedExactlyOnce(t *testing.T) {
 	// gin.Default() calls New() internally, so this guards against the
 	// zen middleware being registered twice.
