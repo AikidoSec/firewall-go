@@ -24,3 +24,8 @@ func HasContext(ctx context.Context) bool {
 func Wrap(ctx context.Context, fn func()) {
 	request.WrapWithGLS(ctx, fn)
 }
+
+// EnterGLS is Wrap split into enter/exit, for callers that can't scope the call with a closure.
+func EnterGLS(ctx context.Context) func() {
+	return request.EnterGLS(ctx)
+}
