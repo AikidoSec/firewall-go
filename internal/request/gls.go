@@ -59,19 +59,23 @@ func glsStateFor(ctx context.Context) *glsState {
 
 // WrapWithGLS keeps the context alive in the GLS until the given function has finished executing.
 func WrapWithGLS(ctx context.Context, fn func()) {
+	restore := EnterGLS(ctx)
+	defer restore()
+	fn()
+}
+
+// EnterGLS is WrapWithGLS split into enter/exit, for callers that can't scope the call with a closure.
+func EnterGLS(ctx context.Context) func() {
 	if glsSet == nil {
-		fn()
-		return
+		return func() {}
 	}
 
 	state := glsStateFor(ctx)
 	if state == nil {
-		fn()
-		return
+		return func() {}
 	}
 
 	prev := glsGet()
 	glsSet(state)
-	defer glsSet(prev)
-	fn()
+	return func() { glsSet(prev) }
 }

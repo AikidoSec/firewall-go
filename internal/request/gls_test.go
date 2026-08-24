@@ -79,6 +79,30 @@ func TestWrapWithGLS(t *testing.T) {
 	}
 }
 
+func TestEnterGLS(t *testing.T) {
+	remoteAddr := "192.168.1.1:8080"
+	ctx := SetContext(context.Background(), ContextData{
+		Source:        "test-source",
+		Route:         "/test",
+		RemoteAddress: &remoteAddr,
+		URL:           "https://example.com/test",
+		Path:          "/test",
+		Method:        "GET",
+	})
+
+	assert.Nil(t, getLocalContext(), "GLS should be empty before EnterGLS is called")
+
+	restore := EnterGLS(ctx)
+
+	captured := getLocalContext()
+	require.NotNil(t, captured, "context should be visible via GLS as soon as EnterGLS returns, without needing a wrapping closure")
+	assert.Equal(t, "test-source", captured.Source)
+
+	restore()
+
+	assert.Nil(t, getLocalContext(), "GLS should be restored to its previous state once restore is called")
+}
+
 func TestWrapWithGLS_BypassedContext(t *testing.T) {
 	block := true
 	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
