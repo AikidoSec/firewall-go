@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	_ "github.com/AikidoSec/firewall-go/instrumentation"
+	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/gin-gonic/gin"
@@ -61,10 +63,23 @@ func TestGinIsInstrumentedWhenConstructorPassedByValue(t *testing.T) {
 
 func TestGinDefaultIsInstrumentedExactlyOnce(t *testing.T) {
 	// gin.Default() calls New() internally, so this guards against the
-	// zen middleware being registered twice.
+	// zen hook running twice for the same request.
 	require.NoError(t, zen.Protect())
 
 	router := gin.Default()
+	router.ContextWithFallback = true
 
-	require.Len(t, router.Handlers, 3, "gin.Default() should register Logger, Recovery, and the zen middleware - no more")
+	router.GET("/route", func(c *gin.Context) {})
+
+	r := httptest.NewRequest("GET", "/route", http.NoBody)
+	w := httptest.NewRecorder()
+
+	agent.Stats().GetAndClear()
+
+	router.ServeHTTP(w, r)
+
+	require.Eventually(t, func() bool {
+		stats := agent.Stats().GetAndClear()
+		return stats.Requests.Total == 1
+	}, 100*time.Millisecond, 10*time.Millisecond)
 }
