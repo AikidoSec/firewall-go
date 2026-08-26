@@ -44,6 +44,16 @@ func TestCheckMinVersions_MultipleEntries(t *testing.T) {
 	assert.Contains(t, err.Error(), "b.yml")
 }
 
+func TestCheckMinVersions_UnverifiableCurrentVersion(t *testing.T) {
+	entries := []MinVersionEntry{
+		{File: "a.yml", Version: "99.0.0"},
+	}
+
+	require.NoError(t, CheckMinVersions(entries, "(devel)"))
+	require.NoError(t, CheckMinVersions(entries, "v0.0.0-20240101000000-abcdef123456"))
+	require.NoError(t, CheckMinVersions(entries, "v0.0.0-00010101000000-000000000000")) // zero pseudo-version from a local replace
+}
+
 func TestCheckMinVersions_InvalidCurrentVersion(t *testing.T) {
 	entries := []MinVersionEntry{
 		{File: "a.yml", Version: "0.1.0"},
