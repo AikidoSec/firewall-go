@@ -5,11 +5,23 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"golang.org/x/mod/module"
 )
+
+// isUnverifiableVersion covers devel builds and pseudo-versions (including the
+// zero pseudo-version from a local filesystem `replace`, per CheckModuleVersionSync).
+func isUnverifiableVersion(v string) bool {
+	return v == "(devel)" || module.IsPseudoVersion(v)
+}
 
 // CheckMinVersions checks that currentVersion satisfies all minimum version requirements.
 // Returns an error listing the first unsatisfied requirement.
 func CheckMinVersions(minVersions []MinVersionEntry, currentVersion string) error {
+	if isUnverifiableVersion(currentVersion) {
+		return nil
+	}
+
 	cur, err := parseSemver(currentVersion)
 	if err != nil {
 		return fmt.Errorf("zen-go: failed to parse current version %q: %w", currentVersion, err)
