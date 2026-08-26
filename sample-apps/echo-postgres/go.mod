@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/AikidoSec/firewall-go v1.2.10
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4 v0.0.0-00010101000000-000000000000
-	github.com/labstack/echo/v4 v4.15.0
+	github.com/labstack/echo/v4 v4.15.3
 	github.com/lib/pq v1.10.2
 )
 
@@ -19,11 +19,11 @@ require (
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/labstack/gommon v0.4.2 // indirect
+	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
