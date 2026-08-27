@@ -25,6 +25,10 @@ func newAIStats() *AIStats {
 }
 
 func (a *AIStats) OnAICall(data AICallData) {
+	if data.Provider == "" || data.Model == "" {
+		return
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

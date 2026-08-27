@@ -61,6 +61,18 @@ func TestAIStats_OnAICall(t *testing.T) {
 		result := ai.GetAndClear()
 		assert.Len(t, result, 2)
 	})
+
+	t.Run("ignores calls with empty provider", func(t *testing.T) {
+		ai := newAIStats()
+		ai.OnAICall(AICallData{Provider: "", Model: "gpt-4", InputTokens: 100, OutputTokens: 50})
+		assert.True(t, ai.IsEmpty())
+	})
+
+	t.Run("ignores calls with empty model", func(t *testing.T) {
+		ai := newAIStats()
+		ai.OnAICall(AICallData{Provider: "openai", Model: "", InputTokens: 100, OutputTokens: 50})
+		assert.True(t, ai.IsEmpty())
+	})
 }
 
 func TestAIStats_GetAndClear(t *testing.T) {
