@@ -44,3 +44,23 @@ type Requests struct {
 	AttackWaves     AttackWaves     `json:"attackWaves"`
 	RateLimited     int             `json:"rateLimited"`
 }
+
+type AICallData struct {
+	Provider     string
+	Model        string
+	InputTokens  int
+	OutputTokens int
+}
+
+type AIProviderStats struct {
+	Provider string       `json:"provider"`
+	Model    string       `json:"model"`
+	Calls    int          `json:"calls"`
+	Tokens   AITokenStats `json:"tokens"`
+}
+
+type AITokenStats struct {
+	Input  int `json:"input"`
+	Output int `json:"output"`
+	Total  int `json:"total"`
+}

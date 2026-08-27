@@ -9,8 +9,30 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/cloud"
+	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestOnAICall(t *testing.T) {
+	agent.Stats().GetAndClearAI()
+
+	agent.OnAICall(stats.AICallData{
+		Provider:     "anthropic",
+		Model:        "claude-3",
+		InputTokens:  200,
+		OutputTokens: 75,
+	})
+
+	snap := agent.Stats().GetAndClearAI()
+	require.Len(t, snap, 1)
+	assert.Equal(t, "anthropic", snap[0].Provider)
+	assert.Equal(t, "claude-3", snap[0].Model)
+	assert.Equal(t, 1, snap[0].Calls)
+	assert.Equal(t, 200, snap[0].Tokens.Input)
+	assert.Equal(t, 75, snap[0].Tokens.Output)
+	assert.Equal(t, 275, snap[0].Tokens.Total)
+}
 
 type mockCloudClient struct{}
 

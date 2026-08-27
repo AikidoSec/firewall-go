@@ -27,6 +27,8 @@ type Stats struct {
 	userAgentBreakdown  map[string]int
 
 	mu sync.Mutex
+
+	aiStats *AIStats
 }
 
 func New() *Stats {
@@ -34,6 +36,7 @@ func New() *Stats {
 		operations:         make(map[string]operationData),
 		ipAddressBreakdown: make(map[string]int),
 		userAgentBreakdown: make(map[string]int),
+		aiStats:            newAIStats(),
 	}
 }
 
@@ -174,6 +177,14 @@ func (s *Stats) OnOperationAttack(operation string, blocked bool) {
 		data.attacksBlocked++
 	}
 	s.operations[operation] = data
+}
+
+func (s *Stats) OnAICall(data AICallData) {
+	s.aiStats.OnAICall(data)
+}
+
+func (s *Stats) GetAndClearAI() []AIProviderStats {
+	return s.aiStats.GetAndClear()
 }
 
 func (s *Stats) getAndClearOperations() map[string]OperationStats {

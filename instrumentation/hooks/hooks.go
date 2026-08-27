@@ -10,6 +10,7 @@ type Runtime interface {
 	OnOperationCall(op string, kind operation.Kind)
 	OnDomain(domain string, port uint32)
 	ShouldBlockHostname(hostname string) bool
+	OnAICall(provider, model string, inputTokens, outputTokens int)
 }
 
 var currentRuntime Runtime = noopRuntime{}
@@ -31,8 +32,13 @@ func ShouldBlockHostname(hostname string) bool {
 	return currentRuntime.ShouldBlockHostname(hostname)
 }
 
+func OnAICall(provider, model string, inputTokens, outputTokens int) {
+	currentRuntime.OnAICall(provider, model, inputTokens, outputTokens)
+}
+
 type noopRuntime struct{}
 
 func (noopRuntime) OnOperationCall(string, operation.Kind) {}
 func (noopRuntime) OnDomain(string, uint32)                {}
 func (noopRuntime) ShouldBlockHostname(string) bool        { return false }
+func (noopRuntime) OnAICall(string, string, int, int)      {}

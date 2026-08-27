@@ -13,6 +13,7 @@ func TestNoopRuntime(t *testing.T) {
 	assert.NotPanics(t, func() { n.OnOperationCall("op", operation.KindSQL) })
 	assert.NotPanics(t, func() { n.OnDomain("example.com", 443) })
 	assert.False(t, n.ShouldBlockHostname("example.com"))
+	assert.NotPanics(t, func() { n.OnAICall("openai", "gpt-4", 100, 50) })
 }
 
 func TestDefaultRuntimeIsNoop(t *testing.T) {
@@ -24,6 +25,7 @@ func TestDefaultRuntimeIsNoop(t *testing.T) {
 	assert.NotPanics(t, func() { OnOperationCall("op", operation.KindSQL) })
 	assert.NotPanics(t, func() { OnDomain("example.com", 443) })
 	assert.False(t, ShouldBlockHostname("example.com"))
+	assert.NotPanics(t, func() { OnAICall("openai", "gpt-4", 100, 50) })
 }
 
 func TestPreviousRuntimeRestoredAfterRegister(t *testing.T) {
@@ -46,3 +48,4 @@ type callCountRuntime struct{ count *int }
 func (r *callCountRuntime) OnOperationCall(string, operation.Kind) { *r.count++ }
 func (r *callCountRuntime) OnDomain(string, uint32)                {}
 func (r *callCountRuntime) ShouldBlockHostname(string) bool        { return false }
+func (r *callCountRuntime) OnAICall(string, string, int, int)      {}
