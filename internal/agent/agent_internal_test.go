@@ -39,6 +39,21 @@ func TestAgentRuntime_OnDomain(t *testing.T) {
 	require.Contains(t, hostnames, aikido_types.Hostname{URL: "example.com", Port: 443, Hits: 1})
 }
 
+func TestAgentRuntime_OnAICall(t *testing.T) {
+	rt := agentRuntime{}
+
+	Stats().GetAndClearAI()
+	rt.OnAICall("openai", "gpt-4", 100, 50)
+
+	snap := Stats().GetAndClearAI()
+	require.Len(t, snap, 1)
+	assert.Equal(t, "openai", snap[0].Provider)
+	assert.Equal(t, "gpt-4", snap[0].Model)
+	assert.Equal(t, 1, snap[0].Calls)
+	assert.Equal(t, 100, snap[0].Tokens.Input)
+	assert.Equal(t, 50, snap[0].Tokens.Output)
+}
+
 func TestAgentRuntime_ShouldBlockHostname(t *testing.T) {
 	rt := agentRuntime{}
 
