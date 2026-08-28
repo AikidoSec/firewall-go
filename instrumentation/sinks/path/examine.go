@@ -11,24 +11,22 @@ import (
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
-func Examine(args []string) error {
+func ExamineDeferred(operationName string, args []string) error {
 	if zen.IsDisabled() {
 		return nil
 	}
 
-	hooks.OnOperationCall("path.Join", operation.KindFileSystem)
+	hooks.OnOperationCall(operationName, operation.KindFileSystem)
 
 	path := strings.Join(args, "")
 
-	// The error that the vulnerability scan returns is deferred with path.Join
+	// The error that the vulnerability scan returns is deferred
 	// We delay blocking and reporting until the result is used in os.OpenFile
-	err := vulnerabilities.ScanWithOptions(context.Background(), "path.Join", pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
+	return vulnerabilities.ScanWithOptions(context.Background(), operationName, pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
 		FilePath:       path,
 		CheckPathStart: true,
 	}, vulnerabilities.ScanOptions{
 		DeferReporting: true,
 		Module:         "path",
 	})
-
-	return err
 }
