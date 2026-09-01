@@ -225,6 +225,16 @@ func generateIPList(n int) []string {
 	return ips
 }
 
+func pickMissAddr(list MatchList, gen func(*rand.Rand) netip.Addr, seed int64) netip.Addr {
+	r := rand.New(rand.NewSource(seed))
+	for i := 0; i < 100_000; i++ {
+		if addr := gen(r); !list.Matches(addr) {
+			return addr
+		}
+	}
+	panic("could not find an address outside the generated list")
+}
+
 var benchListSizes = []int{1_000, 10_000, 100_000, 1_000_000}
 
 func BenchmarkBuildMatchList(b *testing.B) {
@@ -245,7 +255,8 @@ func BenchmarkMatchList_Matches(b *testing.B) {
 		list := BuildMatchList("bench", "benchmark list", ips)
 
 		hit := netip.MustParseAddr(strings.SplitN(ips[0], "/", 2)[0])
-		miss := netip.MustParseAddr("203.0.113.1") // RFC 5737 test range
+		missV4 := pickMissAddr(list, randomIPv4, 1)
+		missV6 := pickMissAddr(list, randomIPv6, 2)
 
 		b.Run(fmt.Sprintf("%d_entries/hit", n), func(b *testing.B) {
 			b.ReportAllocs()
@@ -254,10 +265,17 @@ func BenchmarkMatchList_Matches(b *testing.B) {
 			}
 		})
 
-		b.Run(fmt.Sprintf("%d_entries/miss", n), func(b *testing.B) {
+		b.Run(fmt.Sprintf("%d_entries/miss_ipv4", n), func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				list.Matches(miss)
+				list.Matches(missV4)
+			}
+		})
+
+		b.Run(fmt.Sprintf("%d_entries/miss_ipv6", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				list.Matches(missV6)
 			}
 		})
 	}
