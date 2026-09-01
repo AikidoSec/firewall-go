@@ -3,26 +3,24 @@ meta:
   description: Gin is a web framework written in Go.
 
 rules:
-  # Declares a linkname so the prepend rule below can call BeforeNext.
-  - id: gin.Context.Next.linkname
+  # New()/Default() both funnel through With(); Handlers starts empty on a
+  # fresh Engine and With() never clears it, so len(Handlers) == 0 fires
+  # registration on the Engine's first With() call only.
+  - id: gin.Engine.With.linkname
     type: inject-decl
     package: github.com/gin-gonic/gin
     anchor: New
     links:
       - github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
     template: |
-      //go:linkname __aikido_gin_beforeNext github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin.BeforeNext
-      func __aikido_gin_beforeNext(*Context) (func(), bool)
+      //go:linkname __aikido_gin_getMiddleware github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin.GetMiddleware
+      func __aikido_gin_getMiddleware() HandlerFunc
 
-  - id: gin.Context.Next
+  - id: gin.Engine.With
     type: prepend
-    receiver: "*github.com/gin-gonic/gin.Context"
-    function: Next
+    receiver: "*github.com/gin-gonic/gin.Engine"
+    function: With
     template: |
-      if {{ .Function.Receiver }}.index == -1 {
-        _aikido_exit, _aikido_blocked := __aikido_gin_beforeNext({{ .Function.Receiver }})
-        if _aikido_blocked {
-          return
-        }
-        defer _aikido_exit()
+      if len({{ .Function.Receiver }}.Handlers) == 0 {
+        {{ .Function.Receiver }}.Use(__aikido_gin_getMiddleware())
       }
