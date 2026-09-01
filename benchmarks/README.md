@@ -33,6 +33,13 @@ Measures the performance of SQL injection detection across various input pattern
 
 Measures JSON body parsing performance for different payload sizes.
 
+### IP Block/Allow Lists
+
+- `BenchmarkBuildMatchList` - `internal/agent/ipaddr`
+- `BenchmarkMatchList_Matches` - `internal/agent/ipaddr`
+
+Measures building a `MatchList` and looking up an address against one.
+
 ## CI
 
 Benchmarks run automatically on every push to `main` and on pull requests. Results are displayed in the GitHub Actions job summary.
