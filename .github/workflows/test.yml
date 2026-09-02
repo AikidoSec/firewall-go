@@ -66,6 +66,22 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 
+      - name: Convert coverage to LCOV for Aikido
+        if: matrix.os.name == 'ubuntu-x86_64'
+        run: |
+          go install github.com/jandelgado/gcov2lcov@51ca2a7f808b9da700efd71ae060e4c9e0deefc9 # v1.1.1
+          gcov2lcov -infile=coverage.out -outfile=coverage-main-go${{ matrix.go-version }}.lcov
+          gcov2lcov -infile=cmd/zen-go/coverage.out -outfile=coverage-zen-go-go${{ matrix.go-version }}.lcov
+
+      - name: Upload LCOV artifact for Aikido
+        if: matrix.os.name == 'ubuntu-x86_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aikido-lcov-main-go${{ matrix.go-version }}
+          path: |
+            coverage-main-go${{ matrix.go-version }}.lcov
+            coverage-zen-go-go${{ matrix.go-version }}.lcov
+
   test-instrumentation-unit:
     runs-on: ubuntu-latest
     strategy:
@@ -102,6 +118,17 @@ jobs:
           flags: instrumentation-unit
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+
+      - name: Convert coverage to LCOV for Aikido
+        run: |
+          go install github.com/jandelgado/gcov2lcov@51ca2a7f808b9da700efd71ae060e4c9e0deefc9 # v1.1.1
+          gcov2lcov -infile=coverage.out -outfile=coverage-instrumentation-unit-go${{ matrix.go-version }}.lcov
+
+      - name: Upload LCOV artifact for Aikido
+        uses: actions/upload-artifact@v4
+        with:
+          name: aikido-lcov-instrumentation-unit-go${{ matrix.go-version }}
+          path: coverage-instrumentation-unit-go${{ matrix.go-version }}.lcov
 
   test-instrumentation-integration:
     runs-on: ubuntu-latest
@@ -146,6 +173,48 @@ jobs:
           flags: instrumentation-integration
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+
+      - name: Convert coverage to LCOV for Aikido
+        run: |
+          go install github.com/jandelgado/gcov2lcov@51ca2a7f808b9da700efd71ae060e4c9e0deefc9 # v1.1.1
+          gcov2lcov -infile=coverage.out -outfile=coverage-instrumentation-integration-go${{ matrix.go-version }}.lcov
+
+      - name: Upload LCOV artifact for Aikido
+        uses: actions/upload-artifact@v4
+        with:
+          name: aikido-lcov-instrumentation-integration-go${{ matrix.go-version }}
+          path: coverage-instrumentation-integration-go${{ matrix.go-version }}.lcov
+
+  upload-coverage-aikido:
+    needs:
+      - test
+      - test-instrumentation-unit
+      - test-instrumentation-integration
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: aikido-coverage
+          pattern: aikido-lcov-*
+          merge-multiple: true
+
+      - name: List LCOV files
+        id: lcov
+        run: |
+          {
+            echo 'paths<<EOF'
+            find aikido-coverage -name '*.lcov'
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload coverage to Aikido
+        uses: AikidoSec/code-coverage-github-action@c649d671735d625ec9d39bab5efae5921160ea63 # v0.1.0
+        with:
+          lcov-file-paths: ${{ steps.lcov.outputs.paths }}
 
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
