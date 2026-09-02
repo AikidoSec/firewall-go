@@ -1,7 +1,10 @@
 package ipaddr
 
 import (
+	"fmt"
+	"math/rand"
 	"net/netip"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -189,4 +192,91 @@ func TestParse(t *testing.T) {
 		_, err := Parse("192.168.1.0/24")
 		assert.Error(t, err)
 	})
+}
+
+func randomIPv4(r *rand.Rand) netip.Addr {
+	return netip.AddrFrom4([4]byte{byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256))})
+}
+
+func randomIPv6(r *rand.Rand) netip.Addr {
+	var b [16]byte
+	r.Read(b[:])
+	return netip.AddrFrom16(b)
+}
+
+// generateIPList approximates a real block/allow list (e.g. geoip-sourced):
+// almost entirely IPv4 CIDR ranges of varying prefix length, with a small
+// share of IPv6 CIDRs and single addresses.
+func generateIPList(n int) []string {
+	r := rand.New(rand.NewSource(42))
+	ips := make([]string, n)
+	for i := range ips {
+		switch roll := r.Float64(); {
+		case roll < 0.90:
+			ips[i] = fmt.Sprintf("%s/%d", randomIPv4(r), 13+r.Intn(20))
+		case roll < 0.95:
+			ips[i] = fmt.Sprintf("%s/%d", randomIPv6(r), 32+r.Intn(96))
+		case roll < 0.97:
+			ips[i] = randomIPv6(r).String()
+		default:
+			ips[i] = randomIPv4(r).String()
+		}
+	}
+	return ips
+}
+
+func pickMissAddr(list MatchList, gen func(*rand.Rand) netip.Addr, seed int64) netip.Addr {
+	r := rand.New(rand.NewSource(seed))
+	for i := 0; i < 100_000; i++ {
+		if addr := gen(r); !list.Matches(addr) {
+			return addr
+		}
+	}
+	panic("could not find an address outside the generated list")
+}
+
+var benchListSizes = []int{1_000, 10_000, 100_000, 1_000_000}
+
+func BenchmarkBuildMatchList(b *testing.B) {
+	for _, n := range benchListSizes {
+		ips := generateIPList(n)
+		b.Run(fmt.Sprintf("%d_entries", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				BuildMatchList("bench", "benchmark list", ips)
+			}
+		})
+	}
+}
+
+func BenchmarkMatchList_Matches(b *testing.B) {
+	for _, n := range benchListSizes {
+		ips := generateIPList(n)
+		list := BuildMatchList("bench", "benchmark list", ips)
+
+		hit := netip.MustParseAddr(strings.SplitN(ips[0], "/", 2)[0])
+		missV4 := pickMissAddr(list, randomIPv4, 1)
+		missV6 := pickMissAddr(list, randomIPv6, 2)
+
+		b.Run(fmt.Sprintf("%d_entries/hit", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				list.Matches(hit)
+			}
+		})
+
+		b.Run(fmt.Sprintf("%d_entries/miss_ipv4", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				list.Matches(missV4)
+			}
+		})
+
+		b.Run(fmt.Sprintf("%d_entries/miss_ipv6", n), func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				list.Matches(missV6)
+			}
+		})
+	}
 }
