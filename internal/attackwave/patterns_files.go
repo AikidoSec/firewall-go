@@ -304,7 +304,6 @@ func init() {
 		"smb.conf",
 		"iis.log",
 		"pom.xml",
-		"openapi.json",
 		"vim_settings.xml",
 		"winscp.ini",
 		"ws_ftp.ini",
