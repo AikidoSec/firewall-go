@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
 
-go 1.25.0
+go 1.26.0
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
@@ -39,7 +39,7 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/arch v0.22.0 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
