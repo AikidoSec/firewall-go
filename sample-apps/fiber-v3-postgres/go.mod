@@ -1,6 +1,6 @@
 module fiber-v3-postgres
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.10
@@ -46,7 +46,7 @@ require (
 	github.com/valyala/fasthttp v1.72.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
