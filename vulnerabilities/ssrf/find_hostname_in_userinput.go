@@ -9,6 +9,29 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/normalize"
 )
 
+// normalizeTrailingAuthorityColon strips extra trailing colons from the
+// scheme://host:port segment before it reaches url.Parse. Go 1.26 tightened
+// port parsing and now errors on this shape instead of accepting it leniently.
+func normalizeTrailingAuthorityColon(s string) string {
+	authorityStart := strings.Index(s, "://")
+	if authorityStart == -1 {
+		return s
+	}
+	authorityStart += len("://")
+
+	authorityEnd := len(s)
+	if i := strings.IndexAny(s[authorityStart:], "/?#"); i != -1 {
+		authorityEnd = authorityStart + i
+	}
+
+	authority := s[authorityStart:authorityEnd]
+	trimmed := strings.TrimRight(authority, ":")
+	if trimmed == authority {
+		return s
+	}
+	return s[:authorityStart] + trimmed + s[authorityEnd:]
+}
+
 func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 	if len(userInput) <= 1 {
 		return false
@@ -25,6 +48,7 @@ func findHostnameInUserInput(userInput, hostname string, port uint32) bool {
 	variants := []string{userInput, "http://" + userInput, "https://" + userInput}
 
 	for _, variant := range variants {
+		variant = normalizeTrailingAuthorityColon(variant)
 		parsed, err := url.Parse(variant)
 		if err != nil {
 			continue

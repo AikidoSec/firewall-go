@@ -145,6 +145,13 @@ func TestFindHostnameInUserInput(t *testing.T) {
 		assert.True(t, findHostnameInUserInput("http://127.0.0.1:4000:/", "127.0.0.1", 4000))
 	})
 
+	t.Run("trailing colon after port under strict url parsing", func(t *testing.T) {
+		// This is Go 1.26's default, just suppressed here since go.mod
+		// still says `go 1.25.0`. Forcing it to prove the fix.
+		t.Setenv("GODEBUG", "urlstrictcolons=1")
+		assert.True(t, findHostnameInUserInput("http://127.0.0.1:4000:/", "127.0.0.1", 4000))
+	})
+
 	t.Run("unicode confusable ⓛocalhost matches normalized localhost", func(t *testing.T) {
 		// Go's HTTP transport NFKC-normalizes ⓛocalhost → localhost before dialing,
 		// so the hostname argument here is "localhost" (what DialContext receives).
