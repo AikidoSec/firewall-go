@@ -6,6 +6,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/pathtraversal"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -13,7 +14,7 @@ import (
 
 // Examine is the hook entry point for functions that directly open the filesystem (e.g. Walk, WalkDir, Glob).
 func Examine(operationName, path string) error {
-	if zen.IsDisabled() {
+	if zen.IsDisabled() || request.IsScanning() {
 		return nil
 	}
 
@@ -31,7 +32,7 @@ func Examine(operationName, path string) error {
 // ExamineDeferred is the hook entry point for path-building functions that cannot return an error (e.g. Join, Clean).
 // Blocking is deferred until the result is used in a filesystem operation.
 func ExamineDeferred(operationName string, elems []string) error {
-	if zen.IsDisabled() {
+	if zen.IsDisabled() || request.IsScanning() {
 		return nil
 	}
 

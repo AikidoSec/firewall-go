@@ -6,13 +6,14 @@ import (
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/pathtraversal"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
 func ExamineDeferred(operationName string, args []string) error {
-	if zen.IsDisabled() {
+	if zen.IsDisabled() || request.IsScanning() {
 		return nil
 	}
 

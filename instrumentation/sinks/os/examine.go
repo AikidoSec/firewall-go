@@ -5,13 +5,14 @@ import (
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
 	"github.com/AikidoSec/firewall-go/instrumentation/operation"
+	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/vulnerabilities"
 	"github.com/AikidoSec/firewall-go/vulnerabilities/pathtraversal"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
 func ExamineOp(op, path string) error {
-	if zen.IsDisabled() {
+	if zen.IsDisabled() || request.IsScanning() {
 		return nil
 	}
 
