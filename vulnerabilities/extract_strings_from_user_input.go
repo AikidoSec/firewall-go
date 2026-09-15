@@ -55,47 +55,65 @@ func addURLDecodedVariants(results map[string]string, str string, pathToPayload 
 	}
 }
 
-// extractStringsFromUserInput recursively extracts strings from user input
-func extractStringsFromUserInput(obj any, pathToPayload []pathPart) map[string]string {
+const maxDepth = 1024
+
+// extractStringsFromUserInput recursively extracts strings from user input.
+// The second return value is true when recursion was stopped at maxDepth.
+func extractStringsFromUserInput(obj any, pathToPayload []pathPart) (map[string]string, bool) {
 	results := make(map[string]string)
 	// Pre-allocate path with extra capacity so recursive appends reuse the
 	// backing array (stack-like) instead of allocating on every level.
 	path := make([]pathPart, len(pathToPayload), len(pathToPayload)+8)
 	copy(path, pathToPayload)
-	extractStringsInto(obj, path, results)
-	return results
+	truncated := extractStringsInto(obj, path, results)
+	return results, truncated
 }
 
-func extractStringsInto(obj any, path []pathPart, results map[string]string) {
+func extractStringsInto(obj any, path []pathPart, results map[string]string) bool {
+	if len(path) >= maxDepth {
+		return true
+	}
+
+	truncated := false
 	switch v := obj.(type) {
 	case map[string]any:
 		currentPath := buildPathToPayload(path)
 		for key, val := range v {
 			results[key] = currentPath
-			extractStringsInto(val, append(path, pathPart{Type: "object", Key: key}), results)
+			if extractStringsInto(val, append(path, pathPart{Type: "object", Key: key}), results) {
+				truncated = true
+			}
 		}
 	case map[string][]string:
 		currentPath := buildPathToPayload(path)
 		for key, vals := range v {
 			results[key] = currentPath
-			extractStringsInto(vals, append(path, pathPart{Type: "object", Key: key}), results)
+			if extractStringsInto(vals, append(path, pathPart{Type: "object", Key: key}), results) {
+				truncated = true
+			}
 		}
 	case url.Values:
 		currentPath := buildPathToPayload(path)
 		for key, vals := range v {
 			results[key] = currentPath
-			extractStringsInto(vals, append(path, pathPart{Type: "object", Key: key}), results)
+			if extractStringsInto(vals, append(path, pathPart{Type: "object", Key: key}), results) {
+				truncated = true
+			}
 		}
 	case map[string]string:
 		currentPath := buildPathToPayload(path)
 		for key, val := range v {
 			results[key] = currentPath
-			extractStringsInto(val, append(path, pathPart{Type: "object", Key: key}), results)
+			if extractStringsInto(val, append(path, pathPart{Type: "object", Key: key}), results) {
+				truncated = true
+			}
 		}
 	case []any:
 		var values []string
 		for i, item := range v {
-			extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results)
+			if extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results) {
+				truncated = true
+			}
 			values = append(values, fmt.Sprintf("%v", item))
 		}
 		// Add array as string to results
@@ -107,7 +125,9 @@ func extractStringsInto(obj any, path []pathPart, results map[string]string) {
 		}
 	case []string:
 		for i, item := range v {
-			extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results)
+			if extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results) {
+				truncated = true
+			}
 		}
 		if len(v) > 0 {
 			results[strings.Join(v, ",")] = buildPathToPayload(path)
@@ -120,7 +140,9 @@ func extractStringsInto(obj any, path []pathPart, results map[string]string) {
 			jwtPath := append(slices.Clone(path), pathPart{Type: "jwt"})
 			// JWT needs a temporary map for iss filtering before merging.
 			jwtResults := make(map[string]string)
-			extractStringsInto(jwt.Object, jwtPath, jwtResults)
+			if extractStringsInto(jwt.Object, jwtPath, jwtResults) {
+				truncated = true
+			}
 			for k, vv := range jwtResults {
 				if k == "iss" || strings.HasSuffix(vv, "<jwt>.iss") {
 					continue
@@ -129,14 +151,18 @@ func extractStringsInto(obj any, path []pathPart, results map[string]string) {
 			}
 		}
 	default:
-		extractStringsReflect(obj, path, results)
+		if extractStringsReflect(obj, path, results) {
+			truncated = true
+		}
 	}
+	return truncated
 }
 
 // extractStringsReflect is the fallback for types not covered by the typed
 // cases above (named map/slice types, maps with other key/value types, arrays,
 // named string types), e.g. a custom Body passed via the public SetContext API.
-func extractStringsReflect(obj any, path []pathPart, results map[string]string) {
+func extractStringsReflect(obj any, path []pathPart, results map[string]string) bool {
+	truncated := false
 	val := reflect.ValueOf(obj)
 	switch val.Kind() {
 	case reflect.Map:
@@ -144,19 +170,26 @@ func extractStringsReflect(obj any, path []pathPart, results map[string]string) 
 		for _, key := range val.MapKeys() {
 			keyStr := fmt.Sprintf("%v", key.Interface())
 			results[keyStr] = currentPath
-			extractStringsInto(val.MapIndex(key).Interface(), append(path, pathPart{Type: "object", Key: keyStr}), results)
+			if extractStringsInto(val.MapIndex(key).Interface(), append(path, pathPart{Type: "object", Key: keyStr}), results) {
+				truncated = true
+			}
 		}
 	case reflect.Slice, reflect.Array:
 		var values []string
 		for i := 0; i < val.Len(); i++ {
 			item := val.Index(i).Interface()
-			extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results)
+			if extractStringsInto(item, append(path, pathPart{Type: "array", Index: i}), results) {
+				truncated = true
+			}
 			values = append(values, fmt.Sprintf("%v", item))
 		}
 		if len(values) > 0 {
 			results[strings.Join(values, ",")] = buildPathToPayload(path)
 		}
 	case reflect.String:
-		extractStringsInto(val.String(), path, results)
+		if extractStringsInto(val.String(), path, results) {
+			truncated = true
+		}
 	}
+	return truncated
 }
