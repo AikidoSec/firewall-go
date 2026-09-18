@@ -1,6 +1,6 @@
 module echo-postgres
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.10
