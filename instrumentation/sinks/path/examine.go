@@ -18,7 +18,10 @@ func Examine(args []string) error {
 
 	hooks.OnOperationCall("path.Join", operation.KindFileSystem)
 
-	path := strings.Join(args, "")
+	// Join with "/" to preserve path segment boundaries for traversal detection.
+	// This ensures split-segment traversal (e.g., path.Join(base, "..", file))
+	// is properly detected by matching the normalized form that path.Join produces.
+	path := strings.Join(args, "/")
 
 	// The error that the vulnerability scan returns is deferred with path.Join
 	// We delay blocking and reporting until the result is used in os.OpenFile
