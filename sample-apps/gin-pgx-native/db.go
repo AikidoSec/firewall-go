@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -81,7 +83,11 @@ func connectToDb() *pgxpool.Pool {
 	var err error
 	var pool *pgxpool.Pool
 	// Connect to PostgreSQL
-	connStr := "postgresql://localhost:5432/db?user=user&password=password"
+	pgPort := os.Getenv("PG_PORT")
+	if pgPort == "" {
+		pgPort = "5432"
+	}
+	connStr := fmt.Sprintf("postgresql://localhost:%s/db?user=user&password=password", pgPort)
 	pool, err = pgxpool.New(context.Background(), connStr)
 	if err != nil {
 		log.Fatal(err)

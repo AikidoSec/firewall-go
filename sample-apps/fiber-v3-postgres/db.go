@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -70,7 +72,11 @@ func (dh *DatabaseHelper) Close() error {
 }
 
 func connectToDb() *sql.DB {
-	connStr := "postgresql://localhost:5432/db?user=user&password=password&sslmode=disable"
+	pgPort := os.Getenv("PG_PORT")
+	if pgPort == "" {
+		pgPort = "5432"
+	}
+	connStr := fmt.Sprintf("postgresql://localhost:%s/db?user=user&password=password&sslmode=disable", pgPort)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal(err)

@@ -11,7 +11,7 @@ services:
       POSTGRES_USER: "user"
       POSTGRES_PASSWORD: "password"
     ports:
-      - "5432:5432"
+      - "${PG_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d db"]
       interval: 1s
@@ -30,10 +30,20 @@ services:
       MYSQL_PASSWORD: "password"
       MYSQL_ROOT_PASSWORD: "password"
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     command: --init-file /data/application/init.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "user", "-ppassword"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "user",
+          "-ppassword",
+        ]
       interval: 1s
       timeout: 5s
       retries: 30
@@ -45,11 +55,15 @@ services:
       SA_PASSWORD: "Strong!Passw0rd"
       ACCEPT_EULA: "Y"
     ports:
-      - "1433:1433"
+      - "${MSSQL_PORT:-1433}:1433"
     volumes:
       - mssql_db_data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Strong!Passw0rd' -Q 'SELECT 1' -b -o /dev/null"]
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'Strong!Passw0rd' -Q 'SELECT 1' -b -o /dev/null",
+        ]
       interval: 1s
       timeout: 5s
       retries: 30
