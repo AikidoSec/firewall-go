@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -80,7 +82,11 @@ func connectToDb() *sql.DB {
 	var err error
 	var db *sql.DB
 	// Connect to PostgreSQL
-	connStr := "postgresql://localhost:5432/db?user=user&password=password&sslmode=disable"
+	pgPort := os.Getenv("PG_PORT")
+	if pgPort == "" {
+		pgPort = "5432"
+	}
+	connStr := fmt.Sprintf("postgresql://localhost:%s/db?user=user&password=password&sslmode=disable", pgPort)
 	db, err = sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)

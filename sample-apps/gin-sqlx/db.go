@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -70,7 +72,11 @@ func (dh *DatabaseHelper) Close() error {
 
 func connectToDb() *sqlx.DB {
 	// Connect to MySQL
-	connStr := "user:password@tcp(localhost:3306)/db"
+	mysqlPort := os.Getenv("MYSQL_PORT")
+	if mysqlPort == "" {
+		mysqlPort = "3306"
+	}
+	connStr := fmt.Sprintf("user:password@tcp(localhost:%s)/db", mysqlPort)
 	for range 30 {
 		db, err := sqlx.Connect("mysql", connStr)
 		if err == nil {
