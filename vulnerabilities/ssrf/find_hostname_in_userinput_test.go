@@ -145,6 +145,13 @@ func TestFindHostnameInUserInput(t *testing.T) {
 		assert.True(t, findHostnameInUserInput("http://127.0.0.1:4000:/", "127.0.0.1", 4000))
 	})
 
+	t.Run("trailing colon after port under strict url parsing", func(t *testing.T) {
+		// This is Go 1.26's default, just suppressed here since go.mod
+		// still says `go 1.25.0`. Forcing it to prove the fix.
+		t.Setenv("GODEBUG", "urlstrictcolons=1")
+		assert.True(t, findHostnameInUserInput("http://127.0.0.1:4000:/", "127.0.0.1", 4000))
+	})
+
 	t.Run("unicode confusable ⓛocalhost matches normalized localhost", func(t *testing.T) {
 		// Go's HTTP transport NFKC-normalizes ⓛocalhost → localhost before dialing,
 		// so the hostname argument here is "localhost" (what DialContext receives).
@@ -168,6 +175,33 @@ func TestFindHostnameInUserInput(t *testing.T) {
 	t.Run("normalizes trailing dot on both sides", func(t *testing.T) {
 		assert.True(t, findHostnameInUserInput("http://example.com.", "example.com.", 0))
 	})
+}
+
+func TestNormalizeTrailingAuthorityColon(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"returns input unchanged when there is no ://", "localhost:8080", "localhost:8080"},
+		{"returns input unchanged when authority has no trailing colon", "http://127.0.0.1:4000/path", "http://127.0.0.1:4000/path"},
+		{"strips single trailing colon after port", "http://127.0.0.1:4000:", "http://127.0.0.1:4000"},
+		{"strips multiple trailing colons after port", "http://127.0.0.1:4000:::", "http://127.0.0.1:4000"},
+		{"strips trailing colon before path", "http://127.0.0.1:4000:/path", "http://127.0.0.1:4000/path"},
+		{"strips trailing colon before query", "http://127.0.0.1:4000:?query=1", "http://127.0.0.1:4000?query=1"},
+		{"strips trailing colon before fragment", "http://127.0.0.1:4000:#frag", "http://127.0.0.1:4000#frag"},
+		{"strips trailing colon with no port present", "http://localhost:", "http://localhost"},
+		{"leaves bracketed IPv6 authority with port untouched", "http://[::1]:8080", "http://[::1]:8080"},
+		{"strips trailing colon after bracketed IPv6 with no port", "http://[::1]:/path", "http://[::1]/path"},
+		{"handles empty authority without panicking", "http://", "http://"},
+		{"handles authority that is only colons without panicking", "http://:::", "http://"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, normalizeTrailingAuthorityColon(tt.input))
+		})
+	}
 }
 
 func TestGetPortFromURL(t *testing.T) {
