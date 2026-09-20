@@ -202,7 +202,7 @@ func callDetectSQL(
 	alloc, free, detectSQL functionCaller,
 	query, userInput string,
 	dialect int,
-) (int32, bool, error) {
+) (detectionResult int32, cleanupSucceeded bool, err error) {
 	if dialect < 0 || dialect > int(SQLite) {
 		return 0, false, fmt.Errorf("invalid dialect: %d, must be between 0 and %d", dialect, int(SQLite))
 	}
@@ -211,8 +211,8 @@ func callDetectSQL(
 	queryBytes := []byte(query)
 	userInputBytes := []byte(userInput)
 
-	// Track if cleanup succeeds
-	cleanupSucceeded := true
+	// Use the named result so deferred cleanup failures reach the caller.
+	cleanupSucceeded = true
 
 	// Allocate and write query to WASM memory
 	queryPtr, queryLen, freeQuery, err := allocateAndWriteString(ctx, memory, alloc, free, queryBytes, "query")

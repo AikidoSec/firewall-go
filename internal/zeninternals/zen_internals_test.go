@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -163,6 +164,40 @@ func TestAllocateAndWriteStringMemoryWriteFailure(t *testing.T) {
 	assert.Equal(t, uint32(0), ptr)
 	assert.Equal(t, uint64(0), length)
 	assert.Nil(t, cleanup, "cleanup should be nil when allocation fails")
+}
+
+func TestCallDetectSQLCleanup(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		failOnFreeCall int
+	}{
+		{name: "both frees succeed", failOnFreeCall: 0},
+		{name: "user input free fails", failOnFreeCall: 1},
+		{name: "query free fails", failOnFreeCall: 2},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			freeCalls := 0
+			free := &mockFunctionCaller{
+				callHandler: func(_ context.Context, _ []uint64) ([]uint64, error) {
+					freeCalls++
+					if freeCalls == tt.failOnFreeCall {
+						return nil, errors.New("free failed")
+					}
+					return nil, nil
+				},
+			}
+
+			result, cleanupSucceeded, err := callDetectSQL(
+				context.Background(), newMockMemoryWriter(), newMockFunctionCaller([]uint64{100}), free,
+				newMockFunctionCaller([]uint64{1}), "SELECT * FROM users", "user input", int(MySQL),
+			)
+
+			require.NoError(t, err)
+			assert.Equal(t, int32(1), result, "cleanup failures should preserve the detection result")
+			assert.Equal(t, tt.failOnFreeCall == 0, cleanupSucceeded)
+			assert.Equal(t, 2, freeCalls, "both cleanups should run even if one fails")
+		})
+	}
 }
 
 // TestCallDetectSQLSecondAllocationFailure tests the scenario where:
