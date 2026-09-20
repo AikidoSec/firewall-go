@@ -166,7 +166,16 @@ func TestAllocateAndWriteStringMemoryWriteFailure(t *testing.T) {
 	assert.Nil(t, cleanup, "cleanup should be nil when allocation fails")
 }
 
+// TestCallDetectSQLCleanup tests the scenarios where:
+// 1. Both deferred cleanup calls succeed
+// 2. The user input cleanup fails
+// 3. The query cleanup fails
+// 4. Both cleanup calls are attempted even if one fails
+//
+// Note: The function reaches its normal return before deferred cleanup runs,
+// this test verifies cleanup failures are properly returned to the caller.
 func TestCallDetectSQLCleanup(t *testing.T) {
+	// Test each possible individual cleanup failure and the successful case
 	for _, tt := range []struct {
 		name           string
 		failOnFreeCall int
@@ -176,6 +185,7 @@ func TestCallDetectSQLCleanup(t *testing.T) {
 		{name: "query free fails", failOnFreeCall: 2},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			// Mock free function that fails on the configured call
 			freeCalls := 0
 			free := &mockFunctionCaller{
 				callHandler: func(_ context.Context, _ []uint64) ([]uint64, error) {
@@ -187,14 +197,18 @@ func TestCallDetectSQLCleanup(t *testing.T) {
 				},
 			}
 
+			// Call detection with successful allocation and detection mocks
 			result, cleanupSucceeded, err := callDetectSQL(
 				context.Background(), newMockMemoryWriter(), newMockFunctionCaller([]uint64{100}), free,
 				newMockFunctionCaller([]uint64{1}), "SELECT * FROM users", "user input", int(MySQL),
 			)
 
+			// Verify the detection succeeds and cleanup status reaches the caller
 			require.NoError(t, err)
 			assert.Equal(t, int32(1), result, "cleanup failures should preserve the detection result")
 			assert.Equal(t, tt.failOnFreeCall == 0, cleanupSucceeded)
+
+			// Verify both deferred cleanups run even if one fails
 			assert.Equal(t, 2, freeCalls, "both cleanups should run even if one fails")
 		})
 	}

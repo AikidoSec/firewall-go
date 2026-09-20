@@ -196,6 +196,8 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 // Handles string allocation, pointer validation, and cleanup to safely interface
 // with the underlying detection library. Returns the result (1 if SQL injection detected,
 // 0 otherwise), a boolean indicating if cleanup succeeded, or error if allocation/call fails.
+// We use named return values to ensure caller gets the correct cleanup status 
+// in the case of cleanup failures.
 func callDetectSQL(
 	ctx context.Context,
 	memory memoryWriter,
@@ -211,7 +213,7 @@ func callDetectSQL(
 	queryBytes := []byte(query)
 	userInputBytes := []byte(userInput)
 
-	// Use the named result so deferred cleanup failures reach the caller.
+	// Track if cleanup succeeds
 	cleanupSucceeded = true
 
 	// Allocate and write query to WASM memory
