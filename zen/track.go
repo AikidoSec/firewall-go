@@ -60,7 +60,7 @@ func Track(ctx context.Context, name string, opts ...TrackOption) error {
 		return nil
 	}
 
-	agent.OnCustomEvent(name, aikido_types.RequestInfo{
+	go agent.OnCustomEvent(name, aikido_types.RequestInfo{
 		Method:    reqCtx.Method,
 		IPAddress: reqCtx.GetIP(),
 		UserAgent: reqCtx.GetUserAgent(),
