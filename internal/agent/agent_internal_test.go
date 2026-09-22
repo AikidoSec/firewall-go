@@ -327,6 +327,8 @@ func (m *internalMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentI
 func (m *internalMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 	m.sendAttackWaveDetectedCalled = true
 }
+func (m *internalMockCloudClient) SendCustomEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, name string, user *aikido_types.User) {
+}
 func (m *internalMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	return nil
 }

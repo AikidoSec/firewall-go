@@ -55,6 +55,8 @@ func (m *updatingMockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentI
 }
 func (m *updatingMockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, req cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
+func (m *updatingMockCloudClient) SendCustomEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, name string, user *aikido_types.User) {
+}
 func (m *updatingMockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	if m.subscribeFn != nil {
 		return m.subscribeFn(ctx, onUpdate)
