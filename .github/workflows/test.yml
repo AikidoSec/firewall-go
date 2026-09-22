@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
@@ -75,7 +75,7 @@ jobs:
 
       - name: Upload LCOV artifact for Aikido
         if: matrix.os.name == 'ubuntu-x86_64'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: aikido-lcov-main-go${{ matrix.go-version }}
           path: |
@@ -91,7 +91,7 @@ jobs:
     name: test-instrumentation-unit (Go ${{ matrix.go-version }})
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
@@ -125,7 +125,7 @@ jobs:
           gcov2lcov -infile=coverage.out -outfile=coverage-instrumentation-unit-go${{ matrix.go-version }}.lcov
 
       - name: Upload LCOV artifact for Aikido
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: aikido-lcov-instrumentation-unit-go${{ matrix.go-version }}
           path: coverage-instrumentation-unit-go${{ matrix.go-version }}.lcov
@@ -142,7 +142,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
@@ -180,7 +180,7 @@ jobs:
           gcov2lcov -infile=coverage.out -outfile=coverage-instrumentation-integration-go${{ matrix.go-version }}.lcov
 
       - name: Upload LCOV artifact for Aikido
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: aikido-lcov-instrumentation-integration-go${{ matrix.go-version }}
           path: coverage-instrumentation-integration-go${{ matrix.go-version }}.lcov
@@ -196,7 +196,7 @@ jobs:
       contents: read
     steps:
       - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: aikido-coverage
           pattern: aikido-lcov-*
@@ -237,7 +237,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
