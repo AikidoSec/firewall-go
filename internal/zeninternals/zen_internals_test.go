@@ -180,7 +180,7 @@ func TestCallDetectSQLCleanup(t *testing.T) {
 		name           string
 		failOnFreeCall int
 	}{
-		{name: "both frees succeed", failOnFreeCall: 0},
+		{name: "both frees succeed", failOnFreeCall: -1},
 		{name: "user input free fails", failOnFreeCall: 1},
 		{name: "query free fails", failOnFreeCall: 2},
 	} {
@@ -206,7 +206,7 @@ func TestCallDetectSQLCleanup(t *testing.T) {
 			// Verify the detection succeeds and cleanup status reaches the caller
 			require.NoError(t, err)
 			assert.Equal(t, int32(1), result, "cleanup failures should preserve the detection result")
-			assert.Equal(t, tt.failOnFreeCall == 0, cleanupSucceeded)
+			assert.Equal(t, tt.failOnFreeCall == -1, cleanupSucceeded)
 
 			// Verify both deferred cleanups run even if one fails
 			assert.Equal(t, 2, freeCalls, "both cleanups should run even if one fails")
