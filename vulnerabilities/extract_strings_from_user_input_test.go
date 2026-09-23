@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildPathToPayload(t *testing.T) {
@@ -94,7 +96,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		obj := map[string]interface{}{}
 		pathToPayload := []pathPart{}
 		expected := map[string]string{}
-		actual := extractStringsFromUserInput(obj, pathToPayload)
+		actual, _ := extractStringsFromUserInput(obj, pathToPayload)
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -115,7 +117,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"John Doe":   ".token<jwt>.name",
 		}
 
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -133,7 +135,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"$gt": ".age",
 			"21":  ".age.$gt",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -149,7 +151,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"$ne":   ".title",
 			"null":  ".title.$ne",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -167,7 +169,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"dangerous":       ".user_input.[1]",
 			"whaat,dangerous": ".user_input",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -185,7 +187,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"ABC":      ".session",
 			"DEF":      ".session2",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -200,7 +202,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"session":  ".",
 			"ABC":      ".session",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -215,7 +217,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"Content-Type":     ".",
 			"application/json": ".Content-Type",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -226,7 +228,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 		expected = map[string]string{
 			"Content-Type": ".",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -241,7 +243,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"ExtraHeader":      ".",
 			"value":            ".ExtraHeader",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -260,7 +262,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"nested": ".nested",
 			"$ne":    ".nested.nested",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -279,7 +281,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"21":  ".age.$gt",
 			"100": ".age.$lt",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -300,7 +302,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwidXNlcm5hbWUiOnsiJG5lIjpudWxsfSwiaWF0IjoxNTE2MjM5MDIyfQ._jhGJw9WzB6gHKPSozTFHDo9NOHs3CNOlvJ8rWy6VrQ": ".token",
 		}
 
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -317,7 +319,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"/;ping localhost;.e30=.":   ".header",
 		}
 
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -335,7 +337,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"../etc/passwd":                 ".path",
 		}
 
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -353,7 +355,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"%2e%2e%2fetc%2fpasswd":         ".paths.[0]",
 			"../etc/passwd":                 ".paths.[0]",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -371,7 +373,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"2":     ".arr.[1]",
 			"3":     ".arr.[2]",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -386,7 +388,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"test":                                ".arr.[5].test",
 			"1,2,true,<nil>,<nil>,map[test:test]": ".arr",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -404,7 +406,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"test123,test345": ".arr.[5].test",
 			"1,2,true,<nil>,<nil>,map[test:[test123 test345]]": ".arr",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -421,7 +423,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"X-Custom": ".headers",
 			"attack":   ".headers.X-Custom",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -438,7 +440,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"meta":   ".",
 			"count":  ".meta",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -453,7 +455,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"b":   ".arr.[1]",
 			"a,b": ".arr",
 		}
-		actual = extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ = extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -467,7 +469,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"ABC":      ".session",
 			"DEF":      ".session2",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -481,7 +483,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"bob":       ".users.[1]",
 			"alice,bob": ".users",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -495,7 +497,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"bar":     ".q.[1]",
 			"foo,bar": ".q",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -503,7 +505,7 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 
 	t.Run("it handles nil input", func(t *testing.T) {
 		expected := map[string]string{}
-		actual := extractStringsFromUserInput(nil, []pathPart{})
+		actual, _ := extractStringsFromUserInput(nil, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
@@ -525,9 +527,37 @@ func TestExtractStringsFromUserInput(t *testing.T) {
 			"John Doe":   ".token<jwt>.name",
 			"iat":        ".token<jwt>",
 		}
-		actual := extractStringsFromUserInput(obj, []pathPart{})
+		actual, _ := extractStringsFromUserInput(obj, []pathPart{})
 		if !reflect.DeepEqual(expected, actual) {
 			t.Errorf("Expected %v, got %v", expected, actual)
 		}
+	})
+
+	t.Run("it stops recursing at max depth and reports truncation", func(t *testing.T) {
+		path := make([]pathPart, maxDepth)
+		for i := range path {
+			path[i] = pathPart{Type: "object", Key: "k"}
+		}
+		obj := map[string]interface{}{"key": "value"}
+		actual, truncated := extractStringsFromUserInput(obj, path)
+		assert.Empty(t, actual)
+		assert.True(t, truncated)
+	})
+
+	t.Run("it does not report truncation for shallow input", func(t *testing.T) {
+		obj := map[string]interface{}{
+			"nested": map[string]interface{}{"key": "value"},
+		}
+		_, truncated := extractStringsFromUserInput(obj, []pathPart{})
+		assert.False(t, truncated)
+	})
+
+	t.Run("it reports truncation when nesting reaches max depth from the root", func(t *testing.T) {
+		var obj interface{} = "leaf"
+		for i := 0; i < maxDepth; i++ {
+			obj = map[string]interface{}{"k": obj}
+		}
+		_, truncated := extractStringsFromUserInput(obj, []pathPart{})
+		assert.True(t, truncated)
 	})
 }
