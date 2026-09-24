@@ -3,18 +3,24 @@ meta:
   description: Gin is a web framework written in Go.
 
 rules:
-  - id: gin.Default
-    type: wrap
-    match: github.com/gin-gonic/gin.Default
-    imports:
-      zengin: github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
+  # New()/Default() both funnel through With(); Handlers starts empty on a
+  # fresh Engine and With() never clears it, so len(Handlers) == 0 fires
+  # registration on the Engine's first With() call only.
+  - id: gin.Engine.With.linkname
+    type: inject-decl
+    package: github.com/gin-gonic/gin
+    anchor: New
+    links:
+      - github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
     template: |
-      func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()
+      //go:linkname __aikido_gin_getMiddleware github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin.GetMiddleware
+      func __aikido_gin_getMiddleware() HandlerFunc
 
-  - id: gin.New
-    type: wrap
-    match: github.com/gin-gonic/gin.New
-    imports:
-      zengin: github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
+  - id: gin.Engine.With
+    type: prepend
+    receiver: "*github.com/gin-gonic/gin.Engine"
+    function: With
     template: |
-      func() *gin.Engine { e := {{.}}; e.Use(zengin.GetMiddleware()); return e }()
+      if len({{ .Function.Receiver }}.Handlers) == 0 {
+        {{ .Function.Receiver }}.Use(__aikido_gin_getMiddleware())
+      }
