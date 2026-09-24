@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v3
 
-go 1.25.5
+go 1.26.0
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
