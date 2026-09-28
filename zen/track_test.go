@@ -107,27 +107,6 @@ func TestTrack(t *testing.T) {
 		assert.Equal(t, "John Doe", mockClient.CapturedCustomUser.Name)
 	})
 
-	t.Run("WithMetadataOption", func(t *testing.T) {
-		mockClient := testutil.NewMockCloudClient()
-		agent.SetCloudClient(mockClient)
-		t.Cleanup(func() { agent.SetCloudClient(originalClient) })
-
-		ctx := requestContext(t)
-
-		// WithMetadata is accepted but not yet sent to the cloud; this just
-		// verifies passing it doesn't change or break event delivery.
-		err := zen.Track(ctx, "user.login_failed", zen.WithMetadata(map[string]string{"reason": "bad_password"}))
-		require.NoError(t, err)
-
-		select {
-		case <-mockClient.CustomEventSent:
-		case <-time.After(time.Second):
-			t.Fatal("expected custom event to be sent")
-		}
-
-		assert.Equal(t, "user.login_failed", mockClient.CapturedCustomEventName)
-	})
-
 	t.Run("EmptyEventName", func(t *testing.T) {
 		ctx := requestContext(t)
 

@@ -16,20 +16,10 @@ var ErrEventNameEmpty = errors.New("event name cannot be empty")
 
 var trackOutsideRequestWarnOnce sync.Once
 
-type trackOptions struct {
-	metadata map[string]string
-}
-
-type TrackOption func(*trackOptions)
-
-// WithMetadata attaches additional metadata to a tracked event.
-//
-// Not yet used.
-func WithMetadata(metadata map[string]string) TrackOption {
-	return func(o *trackOptions) {
-		o.metadata = metadata
-	}
-}
+type (
+	trackOptions struct{}
+	TrackOption  func(*trackOptions)
+)
 
 // Track records something happening in the application, like a failed
 // login, signup, or password reset, so Aikido can detect patterns such as
@@ -39,11 +29,6 @@ func WithMetadata(metadata map[string]string) TrackOption {
 // from a background job, i.e. there is no request in flight, the event is
 // not sent and a warning is logged once.
 func Track(ctx context.Context, name string, opts ...TrackOption) error {
-	var options trackOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-
 	if config.IsZenDisabled() {
 		return nil
 	}
