@@ -64,7 +64,6 @@ func Track(ctx context.Context, name string, opts ...TrackOption) error {
 		Method:    reqCtx.Method,
 		IPAddress: reqCtx.GetIP(),
 		UserAgent: reqCtx.GetUserAgent(),
-		URL:       reqCtx.URL,
 		Source:    reqCtx.Source,
 		Route:     reqCtx.Route,
 	}, reqCtx.GetUser())

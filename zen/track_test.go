@@ -60,6 +60,7 @@ func TestTrack(t *testing.T) {
 		assert.Equal(t, "test-agent", mockClient.CapturedCustomRequest.UserAgent)
 		assert.Equal(t, "test", mockClient.CapturedCustomRequest.Source)
 		assert.Equal(t, "/login", mockClient.CapturedCustomRequest.Route)
+		assert.Empty(t, mockClient.CapturedCustomRequest.URL, "custom events should not include the request URL")
 		assert.Nil(t, mockClient.CapturedCustomUser, "user should be nil when SetUser was not called")
 	})
 
