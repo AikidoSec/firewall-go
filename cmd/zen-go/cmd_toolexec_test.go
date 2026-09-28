@@ -405,6 +405,32 @@ func TestInstrumentFiles_AddFile(t *testing.T) {
 	assert.Equal(t, fileContent, got)
 }
 
+func TestInstrumentFiles_AddFile_DeterministicName(t *testing.T) {
+	// The added file's name is compiled into the binary, so the same rule must produce the same
+	// name on every build, whatever the objdir or the absolute path of the source file.
+	addedName := func(srcDir, objdir string, rule rules.AddFileRule) string {
+		rule.FilePath = filepath.Join(srcDir, filepath.Base(rule.FilePath))
+		require.NoError(t, os.WriteFile(rule.FilePath, []byte("package os\n"), 0o600))
+		existingFile := filepath.Join(t.TempDir(), "file.go")
+		require.NoError(t, os.WriteFile(existingFile, []byte("package os\n"), 0o600))
+
+		instr := &instrumentor.Instrumentor{AddFileRules: []rules.AddFileRule{rule}}
+		newArgs, _, _, err := instrumentFiles(io.Discard, instr, []string{existingFile}, "os", objdir)
+		require.NoError(t, err)
+		require.Len(t, newArgs, 2)
+		return filepath.Base(newArgs[1])
+	}
+
+	helpers := rules.AddFileRule{ID: "os.helpers", Package: "os", FilePath: "helpers.go"}
+	first := addedName(t.TempDir(), t.TempDir(), helpers)
+	second := addedName(t.TempDir(), t.TempDir(), helpers)
+	assert.Equal(t, first, second, "same rule, different machine paths: same file name")
+
+	other := rules.AddFileRule{ID: "os.other", Package: "os", FilePath: "helpers.go"}
+	assert.NotEqual(t, first, addedName(t.TempDir(), t.TempDir(), other),
+		"different rules adding files with the same base name must not collide")
+}
+
 func TestInstrumentFiles_AddFile_WithImports(t *testing.T) {
 	srcDir := t.TempDir()
 	helpersPath := filepath.Join(srcDir, "helpers.go")
