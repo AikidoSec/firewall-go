@@ -12,6 +12,7 @@ import (
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
+	"github.com/AikidoSec/firewall-go/internal/agent/config"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -60,6 +61,26 @@ func TestTrack(t *testing.T) {
 		assert.Equal(t, "test", mockClient.CapturedCustomRequest.Source)
 		assert.Equal(t, "/login", mockClient.CapturedCustomRequest.Route)
 		assert.Nil(t, mockClient.CapturedCustomUser, "user should be nil when SetUser was not called")
+	})
+
+	t.Run("BypassedIP", func(t *testing.T) {
+		mockClient := testutil.NewMockCloudClient()
+		agent.SetCloudClient(mockClient)
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{BypassedIPs: []string{"192.168.1.1"}}, nil)
+		t.Cleanup(func() {
+			config.UpdateServiceConfig(&aikido_types.CloudConfigData{}, nil)
+			agent.SetCloudClient(originalClient)
+		})
+
+		ctx := requestContext(t)
+		require.True(t, request.IsBypassed(ctx))
+		require.NoError(t, zen.Track(ctx, "user.login_failed"))
+
+		select {
+		case <-mockClient.CustomEventSent:
+			t.Fatal("expected no custom event for a bypassed IP")
+		case <-time.After(100 * time.Millisecond):
+		}
 	})
 
 	t.Run("WithUser", func(t *testing.T) {
