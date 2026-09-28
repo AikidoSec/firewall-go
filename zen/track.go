@@ -45,6 +45,11 @@ func Track(ctx context.Context, name string, opts ...TrackOption) error {
 		return nil
 	}
 
+	if !reqCtx.CanTrackCustomEvent() {
+		log.Warn("zen.Track(...) event dropped, per request limit request was reached")
+		return nil
+	}
+
 	go agent.OnCustomEvent(name, aikido_types.RequestInfo{
 		Method:    reqCtx.Method,
 		IPAddress: reqCtx.GetIP(),

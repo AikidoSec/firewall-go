@@ -7,6 +7,8 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 )
 
+const maxAllowedCustomEventsPerRequest = 25
+
 type DeferredBlock struct {
 	Error error
 }
@@ -35,6 +37,8 @@ type Context struct {
 	// and port are recorded so that the SSRF check on the redirect target
 	// can trace back to user input.
 	outgoingRedirects []RedirectEntry
+
+	customEventCount int
 
 	mu sync.RWMutex
 }
@@ -130,6 +134,19 @@ func (ctx *Context) GetIP() string {
 		return *ctx.RemoteAddress
 	}
 	return ""
+}
+
+func (ctx *Context) CanTrackCustomEvent() bool {
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
+
+	if ctx.customEventCount >= maxAllowedCustomEventsPerRequest {
+		return false
+	}
+
+	ctx.customEventCount++
+
+	return true
 }
 
 // DeferredAttack stores attack information and error to be reported/blocked later

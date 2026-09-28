@@ -107,6 +107,37 @@ func TestTrack(t *testing.T) {
 		assert.Equal(t, "John Doe", mockClient.CapturedCustomUser.Name)
 	})
 
+	t.Run("RateLimitPerRequest", func(t *testing.T) {
+		mockClient := testutil.NewMockCloudClient()
+		agent.SetCloudClient(mockClient)
+		t.Cleanup(func() { agent.SetCloudClient(originalClient) })
+
+		ctx := requestContext(t)
+		for i := 0; i < 25; i++ {
+			require.NoError(t, zen.Track(ctx, fmt.Sprintf("event.%d", i)))
+			select {
+			case <-mockClient.CustomEventSent:
+			case <-time.After(time.Second):
+				t.Fatalf("expected event %d to be sent", i+1)
+			}
+		}
+
+		for i := 0; i < 2; i++ {
+			require.NoError(t, zen.Track(ctx, "over.limit"))
+		}
+		select {
+		case <-mockClient.CustomEventSent:
+			t.Fatal("expected events beyond 25 in the same request to be dropped")
+		case <-time.After(100 * time.Millisecond):
+		}
+		require.NoError(t, zen.Track(requestContext(t), "new.request"))
+		select {
+		case <-mockClient.CustomEventSent:
+		case <-time.After(time.Second):
+			t.Fatal("expected a separate request to have its own event allowance")
+		}
+	})
+
 	t.Run("EmptyEventName", func(t *testing.T) {
 		ctx := requestContext(t)
 
