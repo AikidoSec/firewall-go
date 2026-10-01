@@ -39,4 +39,3 @@ jobs:
         with:
           dockerfile_path: ./zen-demo-go/Dockerfile
           app_port: 3000
-          skip_tests: test-user-ip-from-proxy
