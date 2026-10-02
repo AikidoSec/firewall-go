@@ -15,6 +15,7 @@ import (
 )
 
 type Instrumentor struct {
+	SourceFiles      [][]byte
 	WrapRules        []rules.WrapRule
 	PrependRules     []rules.PrependRule
 	InjectDeclRules  []rules.InjectDeclRule
@@ -43,6 +44,7 @@ func NewInstrumentor(currentVersion string) (*Instrumentor, error) {
 		allRules.StructFieldRules = append(allRules.StructFieldRules, rulesData.StructFieldRules...)
 		allRules.AddFileRules = append(allRules.AddFileRules, rulesData.AddFileRules...)
 		allRules.MinVersions = append(allRules.MinVersions, rulesData.MinVersions...)
+		allRules.SourceFiles = append(allRules.SourceFiles, rulesData.SourceFiles...)
 	}
 
 	return NewInstrumentorWithRules(allRules, currentVersion)
@@ -56,6 +58,7 @@ func NewInstrumentorWithRules(r *rules.InstrumentationRules, currentVersion stri
 		return nil, err
 	}
 	return &Instrumentor{
+		SourceFiles:      r.SourceFiles,
 		WrapRules:        r.WrapRules,
 		PrependRules:     r.PrependRules,
 		InjectDeclRules:  r.InjectDeclRules,

@@ -57,6 +57,8 @@ zen-go also injects a `-X` linker flag that sets a build marker variable. At run
 
 ## Build IDs
 
-The Go toolchain queries each tool's version (`-V=full`) to use as a cache key. zen-go intercepts this and appends a hash of all loaded `zen.instrument.yml` rules to the compiler's version string. This ensures the Go build cache is invalidated whenever instrumentation rules change, forcing recompilation of affected packages.
+The Go toolchain queries each tool's version (`-V=full`) to use as a cache key. zen-go intercepts this and appends a hash of the zen-go version, the raw bytes of all loaded `zen.instrument.yml` files, and the contents of all source files referenced by `add-file` rules to the compiler's version string. Changes to any of these inputs invalidate the compiler cache for all packages, including when only an added source file changes. Comment and formatting changes in rule files also invalidate the cache.
+
+The hash preserves rule-loading order and excludes absolute file paths, so identical instrumentation produces the same hash across checkout paths and machines. Unreadable added files contribute a fixed marker; compilation still warns and skips them as usual.
 
 This is also required to ensure we rebuild the standard library with our instrumentation, such as for the `os` package.

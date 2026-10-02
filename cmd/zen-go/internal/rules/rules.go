@@ -50,6 +50,8 @@ type MinVersionEntry struct {
 
 // InstrumentationRules holds all loaded rules
 type InstrumentationRules struct {
+	// SourceFiles contains raw YAML bytes in rule-loading order for cache invalidation.
+	SourceFiles      [][]byte
 	WrapRules        []WrapRule
 	PrependRules     []PrependRule
 	InjectDeclRules  []InjectDeclRule
@@ -148,6 +150,7 @@ func LoadRulesFromDir(dir string) (*InstrumentationRules, error) {
 		result.StructFieldRules = append(result.StructFieldRules, rules.StructFieldRules...)
 		result.AddFileRules = append(result.AddFileRules, rules.AddFileRules...)
 		result.MinVersions = append(result.MinVersions, rules.MinVersions...)
+		result.SourceFiles = append(result.SourceFiles, rules.SourceFiles...)
 		return nil
 	})
 	if err != nil {
@@ -170,7 +173,7 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 		return nil, fmt.Errorf("parsing YAML: %w", err)
 	}
 
-	result := &InstrumentationRules{}
+	result := &InstrumentationRules{SourceFiles: [][]byte{data}}
 
 	if rulesFile.Meta.MinVersion != "" {
 		result.MinVersions = []MinVersionEntry{
