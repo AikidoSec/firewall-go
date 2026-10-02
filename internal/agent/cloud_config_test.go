@@ -37,6 +37,8 @@ func (m *configTestCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInf
 }
 func (m *configTestCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
 }
+func (m *configTestCloudClient) SendCustomEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, name string, user *aikido_types.User) {
+}
 func (m *configTestCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	return nil
 }

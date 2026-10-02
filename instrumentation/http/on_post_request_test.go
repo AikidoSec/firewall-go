@@ -105,6 +105,9 @@ func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo,
 		metadata:  attack.Metadata,
 	}
 }
+func (m *mockCloudClient) SendCustomEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, name string, user *aikido_types.User) {
+}
+
 func (m *mockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	return nil
 }

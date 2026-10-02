@@ -45,6 +45,7 @@ type CloudClient interface {
 	FetchListsConfig() (*aikido_types.ListsConfigData, error)
 	SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails)
 	SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails)
+	SendCustomEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, name string, user *aikido_types.User)
 	SubscribeToConfigUpdates(ctx context.Context, onUpdate func(configUpdatedAt int64)) error
 }
 
@@ -167,6 +168,14 @@ func OnAttackDetected(attack *DetectedAttack) {
 	}
 
 	Stats().OnAttackDetected(attack.Attack.Blocked)
+}
+
+func OnCustomEvent(name string, request aikido_types.RequestInfo, user *aikido_types.User) {
+	log.Debug("Reporting custom event", slog.String("name", name))
+
+	if client := GetCloudClient(); client != nil {
+		client.SendCustomEvent(getAgentInfo(), request, name, user)
+	}
 }
 
 // agentRuntime implements hooks.Runtime, bridging sink calls into the agent.

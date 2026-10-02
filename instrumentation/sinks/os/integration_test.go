@@ -332,6 +332,10 @@ func (m *mockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo,
 	panic("not implemented")
 }
 
+func (m *mockCloudClient) SendCustomEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, name string, user *aikido_types.User) {
+	panic("not implemented")
+}
+
 func (m *mockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {
 	return nil
 }

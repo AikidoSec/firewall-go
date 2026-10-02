@@ -16,12 +16,19 @@ type MockCloudClient struct {
 	CapturedAgentInfo       cloud.AgentInfo
 	CapturedRequest         aikido_types.RequestInfo
 	CapturedAttack          aikido_types.AttackDetails
-	mu                      sync.Mutex
+
+	CustomEventSent         chan struct{}
+	CapturedCustomEventName string
+	CapturedCustomRequest   aikido_types.RequestInfo
+	CapturedCustomUser      *aikido_types.User
+
+	mu sync.Mutex
 }
 
 func NewMockCloudClient() *MockCloudClient {
 	return &MockCloudClient{
 		AttackDetectedEventSent: make(chan struct{}, 10),
+		CustomEventSent:         make(chan struct{}, 10),
 	}
 }
 
@@ -63,6 +70,17 @@ func (m *MockCloudClient) GetCapturedAttack() aikido_types.AttackDetails {
 }
 
 func (m *MockCloudClient) SendAttackWaveDetectedEvent(agentInfo cloud.AgentInfo, request cloud.AttackWaveRequestInfo, attack cloud.AttackWaveDetails) {
+}
+
+func (m *MockCloudClient) SendCustomEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, name string, user *aikido_types.User) {
+	m.mu.Lock()
+	m.CapturedAgentInfo = agentInfo
+	m.CapturedCustomEventName = name
+	m.CapturedCustomRequest = request
+	m.CapturedCustomUser = user
+	m.mu.Unlock()
+
+	m.CustomEventSent <- struct{}{}
 }
 
 func (m *MockCloudClient) SubscribeToConfigUpdates(ctx context.Context, onUpdate func(int64)) error {

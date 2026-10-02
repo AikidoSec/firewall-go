@@ -31,7 +31,7 @@ type RequestInfo struct {
 	Method    string `json:"method"`
 	IPAddress string `json:"ipAddress"`
 	UserAgent string `json:"userAgent"`
-	URL       string `json:"url"`
+	URL       string `json:"url,omitzero"`
 	Source    string `json:"source"`
 	Route     string `json:"route"`
 }
