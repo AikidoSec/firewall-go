@@ -21,12 +21,18 @@ func TestNewClient(t *testing.T) {
 				Token:       "test-token-123",
 				Platform:    "golang",
 				Version:     "1.2.7",
+				Hostname:    "my-host",
+				IPAddress:   "10.0.1.42",
+				SessionID:   "session-1",
 			},
 			want: &Client{
 				apiEndpoint: "https://localhost:8080",
 				token:       "test-token-123",
 				platform:    "golang",
 				version:     "1.2.7",
+				hostname:    "my-host",
+				ipAddress:   "10.0.1.42",
+				sessionID:   "session-1",
 			},
 		},
 		{
@@ -51,6 +57,9 @@ func TestNewClient(t *testing.T) {
 			assert.Equal(t, tt.want.token, got.token, "token mismatch")
 			assert.Equal(t, tt.want.platform, got.platform, "platform mismatch")
 			assert.Equal(t, tt.want.version, got.version, "version mismatch")
+			assert.Equal(t, tt.want.hostname, got.hostname, "hostname mismatch")
+			assert.Equal(t, tt.want.ipAddress, got.ipAddress, "ipAddress mismatch")
+			assert.Equal(t, tt.want.sessionID, got.sessionID, "sessionID mismatch")
 			assert.NotNil(t, got.httpClient, "httpClient should not be nil")
 		})
 	}
