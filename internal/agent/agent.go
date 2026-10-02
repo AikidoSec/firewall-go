@@ -70,6 +70,9 @@ func Init(environmentConfig *aikido_types.EnvironmentConfigData, aikidoConfig *a
 		APIEndpoint: globals.EnvironmentConfig.Endpoint,
 		Platform:    globals.EnvironmentConfig.PlatformName,
 		Version:     globals.EnvironmentConfig.Version,
+		Hostname:    machine.Machine.HostName,
+		IPAddress:   machine.Machine.IPAddress,
+		SessionID:   cloud.NewSessionID(),
 	})
 	SetCloudClient(client)
 

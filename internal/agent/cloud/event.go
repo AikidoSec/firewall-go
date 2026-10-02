@@ -73,6 +73,7 @@ func (c *Client) sendCloudRequest(ctx context.Context, endpoint string, route st
 	}
 	req.Header.Set("Authorization", c.token)
 	req.Header.Set("Content-Type", "application/json")
+	c.setAgentHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
