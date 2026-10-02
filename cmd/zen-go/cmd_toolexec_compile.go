@@ -1,11 +1,11 @@
 package main
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"maps"
-	"math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -186,7 +186,7 @@ func instrumentFiles(stderr io.Writer, instr *instrumentor.Instrumentor, toolArg
 			fmt.Fprintf(stderr, "zen-go: warning: add-file rule %s: reading %s: %v\n", rule.ID, rule.FilePath, err)
 			continue
 		}
-		destPath, err := writeTempFile(rule.FilePath, content, objdir, fmt.Sprintf("%016x_", rand.Uint64())) // #nosec G404 -- random prefix is for collision avoidance, not security
+		destPath, err := writeTempFile(rule.FilePath, content, objdir, addFilePrefix(rule.ID, pkgPath, rule.FilePath))
 		if err != nil {
 			fmt.Fprintf(stderr, "zen-go: warning: add-file rule %s: writing temp file: %v\n", rule.ID, err)
 			continue
@@ -302,4 +302,14 @@ func writeTempFile(origPath string, content []byte, objdir, prefix string) (stri
 		return "", err
 	}
 	return outPath, nil
+}
+
+// addFilePrefix returns the prefix for a file added by an add-file rule. It keeps two rules that
+// add files with the same base name from colliding in objdir, and it's deterministic: the file's
+// name is compiled into the binary (pclntab, and so the build ID), so a random prefix made every
+// build of the same source produce different bytes. It hashes only machine-independent inputs
+// (the rule, the package, the file's base name), not the absolute path to the module cache.
+func addFilePrefix(ruleID, pkgPath, filePath string) string {
+	sum := sha256.Sum256([]byte(ruleID + "\x00" + pkgPath + "\x00" + filepath.Base(filePath)))
+	return fmt.Sprintf("%x_", sum[:8])
 }
