@@ -67,6 +67,53 @@ func TestClient_sendCloudRequest(t *testing.T) {
 		}
 	})
 
+	t.Run("sends agent headers", func(t *testing.T) {
+		var received http.Header
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			received = r.Header
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("{}"))
+		}))
+		defer server.Close()
+
+		client := NewClient(&ClientConfig{
+			APIEndpoint: server.URL,
+			Token:       "test-token",
+			Platform:    "golang",
+			Version:     "1.2.7",
+			Hostname:    "my-host",
+			IPAddress:   "2001:db8::42",
+			SessionID:   "session-1",
+		})
+
+		_, err := client.sendCloudRequest(context.Background(), server.URL, "/api/test", "GET", nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, "golang", received.Get("X-Agent-Platform"))
+		assert.Equal(t, "1.2.7", received.Get("X-Agent-Version"))
+		assert.Equal(t, "my-host", received.Get("X-Agent-Hostname"))
+		assert.Equal(t, "2001:db8::42", received.Get("X-Agent-IP-Address"))
+		assert.Equal(t, "session-1", received.Get("X-Agent-Session-Id"))
+	})
+
+	t.Run("sends unknown when hostname or IP address is unavailable", func(t *testing.T) {
+		var received http.Header
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			received = r.Header
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("{}"))
+		}))
+		defer server.Close()
+
+		client := NewClient(&ClientConfig{APIEndpoint: server.URL, Token: "test-token", SessionID: "session-1"})
+
+		_, err := client.sendCloudRequest(context.Background(), server.URL, "/api/test", "GET", nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, "unknown", received.Get("X-Agent-Hostname"))
+		assert.Equal(t, "unknown", received.Get("X-Agent-IP-Address"))
+	})
+
 	t.Run("request validation", func(t *testing.T) {
 		tests := []struct {
 			name          string

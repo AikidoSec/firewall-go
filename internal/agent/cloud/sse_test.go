@@ -106,7 +106,15 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client := &Client{apiEndpoint: server.URL, token: "my-secret-token", platform: "golang", version: "1.2.7"}
+		client := &Client{
+			apiEndpoint: server.URL,
+			token:       "my-secret-token",
+			platform:    "golang",
+			version:     "1.2.7",
+			hostname:    "my-host",
+			ipAddress:   "10.0.1.42",
+			sessionID:   "session-1",
+		}
 
 		updates := make(chan int64, 1)
 		done := make(chan error, 1)
@@ -128,6 +136,9 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		assert.Equal(t, "no-cache", receivedHeaders.Get("Cache-Control"))
 		assert.Equal(t, "golang", receivedHeaders.Get("X-Agent-Platform"))
 		assert.Equal(t, "1.2.7", receivedHeaders.Get("X-Agent-Version"))
+		assert.Equal(t, "my-host", receivedHeaders.Get("X-Agent-Hostname"))
+		assert.Equal(t, "10.0.1.42", receivedHeaders.Get("X-Agent-IP-Address"))
+		assert.Equal(t, "session-1", receivedHeaders.Get("X-Agent-Session-Id"))
 
 		close(release)
 
