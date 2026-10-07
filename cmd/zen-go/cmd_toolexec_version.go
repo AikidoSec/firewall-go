@@ -9,6 +9,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/buildid"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
+	zenversion "github.com/AikidoSec/firewall-go/cmd/zen-go/internal/version"
 )
 
 // toolexecVersionQueryCommand handles the -V=full version query that Go uses to compute build IDs.
@@ -28,12 +29,14 @@ func toolexecVersionQueryCommand(stdout io.Writer, stderr io.Writer, tool string
 	}
 
 	// Compute hash of instrumentation rules
-	inst, err := instrumentor.NewInstrumentor(version)
+	resolvedVersion := zenversion.Resolve(version)
+
+	inst, err := instrumentor.NewInstrumentor(resolvedVersion)
 	if err != nil {
 		return err
 	}
 
-	rulesHash := buildid.ComputeInstrumentationHash(inst, version)
+	rulesHash := buildid.ComputeInstrumentationHash(inst, resolvedVersion)
 
 	// Append our hash to the version string
 	versionStr := strings.TrimSpace(versionOutput.String())
