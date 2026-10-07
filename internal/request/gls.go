@@ -19,6 +19,7 @@ func RegisterGLS(get func() interface{}, set func(interface{})) {
 type glsState struct {
 	ctx      *Context
 	bypassed bool
+	scanning bool
 }
 
 func getGLS() *glsState {
@@ -62,6 +63,31 @@ func WrapWithGLS(ctx context.Context, fn func()) {
 	restore := EnterGLS(ctx)
 	defer restore()
 	fn()
+}
+
+// IsScanning reports whether a scan is already running on this goroutine.
+func IsScanning() bool {
+	if s := getGLS(); s != nil {
+		return s.scanning
+	}
+	return false
+}
+
+// EnterScan marks this goroutine as scanning until the returned function is called.
+func EnterScan() func() {
+	if glsSet == nil {
+		return func() {}
+	}
+
+	next := glsState{scanning: true}
+	if s := getGLS(); s != nil {
+		next = *s
+		next.scanning = true
+	}
+
+	prev := glsGet()
+	glsSet(&next)
+	return func() { glsSet(prev) }
 }
 
 // EnterGLS is WrapWithGLS split into enter/exit, for callers that can't scope the call with a closure.

@@ -103,6 +103,58 @@ func TestEnterGLS(t *testing.T) {
 	assert.Nil(t, getLocalContext(), "GLS should be restored to its previous state once restore is called")
 }
 
+func TestEnterScan(t *testing.T) {
+	assert.False(t, IsScanning(), "should not be scanning before EnterScan is called")
+
+	restore := EnterScan()
+	assert.True(t, IsScanning(), "should be scanning as soon as EnterScan returns")
+
+	restore()
+	assert.False(t, IsScanning(), "should be restored to its previous state once restore is called")
+}
+
+func TestEnterScan_Nested(t *testing.T) {
+	outer := EnterScan()
+	inner := EnterScan()
+
+	inner()
+	assert.True(t, IsScanning(), "outer scan should still be marked once the inner one restores")
+
+	outer()
+	assert.False(t, IsScanning())
+}
+
+func TestEnterScan_PreservesRequestContext(t *testing.T) {
+	remoteAddr := "192.168.1.1:8080"
+	ctx := SetContext(context.Background(), ContextData{
+		Source:        "test-source",
+		Route:         "/test",
+		RemoteAddress: &remoteAddr,
+	})
+
+	restoreGLS := EnterGLS(ctx)
+	defer restoreGLS()
+
+	restore := EnterScan()
+	defer restore()
+
+	captured := getLocalContext()
+	require.NotNil(t, captured, "request context must stay visible to the scan that is running")
+	assert.Equal(t, "test-source", captured.Source)
+}
+
+func TestEnterScan_ScopedToGoroutine(t *testing.T) {
+	restore := EnterScan()
+	defer restore()
+
+	scanningElsewhere := make(chan bool, 1)
+	go func() {
+		scanningElsewhere <- IsScanning()
+	}()
+
+	assert.False(t, <-scanningElsewhere, "one goroutine scanning must not suppress scans on another")
+}
+
 func TestWrapWithGLS_BypassedContext(t *testing.T) {
 	block := true
 	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
