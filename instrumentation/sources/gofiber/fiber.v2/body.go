@@ -2,15 +2,26 @@ package fiber
 
 import (
 	"bytes"
+	"log/slog"
 	"net/url"
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/gofiber/fiber/v2"
 )
 
 func extractBody(c *fiber.Ctx) any {
 	raw := c.Body()
 	if len(raw) == 0 {
+		return nil
+	}
+
+	// Enforce the same body size limit as the standard HTTP instrumentation
+	// to prevent unauthenticated denial-of-service via unbounded memory allocation
+	if len(raw) > zenhttp.MaxBodySize {
+		log.Debug("request body exceeds maximum size for extraction",
+			slog.Int("size", len(raw)),
+			slog.Int64("limit", zenhttp.MaxBodySize))
 		return nil
 	}
 

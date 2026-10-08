@@ -9,6 +9,8 @@ import (
 )
 
 func tryExtractJSON(r *http.Request) any {
+	// Note: The body has already been buffered and size-limited by TryExtractBody,
+	// so we work with the restored body stream.
 	var buf bytes.Buffer
 	tee := io.TeeReader(r.Body, &buf)
 

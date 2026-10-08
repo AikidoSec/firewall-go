@@ -312,3 +312,67 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		assert.Equal(t, originalBody, string(bodyBytes))
 	})
 }
+
+func TestTryExtractBodySizeLimit(t *testing.T) {
+	t.Run("rejects body exceeding MaxBodySize", func(t *testing.T) {
+		// Create a body larger than MaxBodySize (10 MB)
+		largeBody := strings.Repeat("A", MaxBodySize+1000)
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(largeBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		// Should return nil for oversized bodies
+		assert.Nil(t, result, "oversized body should not be extracted")
+
+		// Body should still be readable by the application
+		bodyBytes, err := io.ReadAll(req.Body)
+		require.NoError(t, err)
+		// The body will be truncated to MaxBodySize+1 due to LimitReader
+		assert.LessOrEqual(t, len(bodyBytes), MaxBodySize+1)
+	})
+
+	t.Run("accepts body at MaxBodySize", func(t *testing.T) {
+		// Create a body exactly at MaxBodySize with valid JSON
+		bodyContent := `{"data":"` + strings.Repeat("A", MaxBodySize-20) + `"}`
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(bodyContent))
+		req.Header.Set("Content-Type", "application/json")
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		// Should extract the body successfully
+		assert.NotNil(t, result, "body at size limit should be extracted")
+	})
+
+	t.Run("accepts small body well under limit", func(t *testing.T) {
+		smallBody := `{"username":"alice"}`
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(smallBody))
+		req.Header.Set("Content-Type", "application/json")
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		// Should extract normally
+		assert.NotNil(t, result)
+		resultMap, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "alice", resultMap["username"])
+	})
+
+	t.Run("rejects oversized form body", func(t *testing.T) {
+		// Create a large form body
+		formData := url.Values{}
+		formData.Set("data", strings.Repeat("B", MaxBodySize+1000))
+
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(formData.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		// Should return nil for oversized bodies
+		assert.Nil(t, result, "oversized form body should not be extracted")
+	})
+}
