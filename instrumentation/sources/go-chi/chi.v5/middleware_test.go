@@ -213,6 +213,21 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
+
+	t.Run("block route with encoded path bypass attempt", func(t *testing.T) {
+		// Test that encoded paths like /admin%2Fsecret cannot bypass IP allowlist
+		r := httptest.NewRequest("GET", "/admin", http.NoBody)
+		// Manually set RawPath to simulate an encoded path
+		r.URL.RawPath = "/admin"
+		r.RemoteAddr = "192.168.1.1:1234"
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode, "Encoded path should not bypass IP allowlist")
+	})
 }
 
 func BenchmarkMiddleware(b *testing.B) {

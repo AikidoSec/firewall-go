@@ -88,10 +88,10 @@ func getRoutePattern(r *http.Request) (string, chi.RouteParams) {
 		return pattern, rctx.URLParams
 	}
 
+	// Always use the decoded Path to match Chi's routing behavior.
+	// Using RawPath would allow encoded paths like /admin%2Fsecret to bypass
+	// route-specific security policies configured for /admin/secret.
 	routePath := r.URL.Path
-	if r.URL.RawPath != "" {
-		routePath = r.URL.RawPath
-	}
 
 	tctx := chi.NewRouteContext()
 	if !rctx.Routes.Match(tctx, r.Method, routePath) {
