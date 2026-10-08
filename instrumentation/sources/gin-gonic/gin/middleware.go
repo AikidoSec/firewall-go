@@ -43,7 +43,7 @@ func GetMiddleware() gin.HandlerFunc {
 		c.Request = c.Request.WithContext(reqCtx)
 
 		// Write a response using Gin :
-		res := zenhttp.OnInitRequest(c)
+		res := zenhttp.OnInitRequest(c.Request.Context())
 		if res != nil {
 			c.String(res.StatusCode, res.Message)
 			c.Abort()
@@ -54,7 +54,7 @@ func GetMiddleware() gin.HandlerFunc {
 		// It may not run depending where the recovery middleware sits in the middleware chain
 		defer func() {
 			statusCode := c.Writer.Status()
-			zenhttp.OnPostRequest(c, statusCode) // Run post-request logic (should discover route, api spec,...)
+			zenhttp.OnPostRequest(c.Request.Context(), statusCode) // Run post-request logic (should discover route, api spec,...)
 		}()
 
 		request.Wrap(reqCtx, func() {
