@@ -11,17 +11,26 @@ const (
 	noQuote quoteContext = iota
 	singleQuote
 	doubleQuote
+	commandSubstitution // Inside $(...) or `...`
 )
 
 // quoteStatesAt returns the quote context active just before each byte of
 // command, plus one trailing entry for the context once the string ends.
 func quoteStatesAt(command string) []quoteContext {
 	states := make([]quoteContext, len(command)+1)
-	context := noQuote
+
+	// Stack to track nested contexts (quotes and command substitutions)
+	type contextFrame struct {
+		ctx   quoteContext
+		depth int // For tracking $( ) nesting depth
+	}
+	stack := []contextFrame{{ctx: noQuote, depth: 0}}
+
 	escaped := false
 
 	for i := 0; i < len(command); i++ {
-		states[i] = context
+		current := stack[len(stack)-1]
+		states[i] = current.ctx
 		ch := command[i]
 
 		if escaped {
@@ -30,33 +39,100 @@ func quoteStatesAt(command string) []quoteContext {
 		}
 
 		if ch == '\\' {
-			if context != singleQuote {
+			if current.ctx != singleQuote {
 				escaped = true
 			}
 			continue
 		}
 
-		switch ch {
-		case '\'':
-			switch context {
-			case noQuote:
-				context = singleQuote
-			case singleQuote:
-				context = noQuote
+		switch current.ctx {
+		case singleQuote:
+			// Inside single quotes, only ' ends the quote
+			if ch == '\'' {
+				stack = stack[:len(stack)-1]
 			}
-			// Inside double quotes, single quote is literal
-		case '"':
-			switch context {
-			case noQuote:
-				context = doubleQuote
-			case doubleQuote:
-				context = noQuote
+
+		case doubleQuote:
+			switch ch {
+			case '"':
+				// End double quote
+				stack = stack[:len(stack)-1]
+			case '`':
+				// Backtick command substitution inside double quotes
+				stack = append(stack, contextFrame{ctx: commandSubstitution, depth: 0})
+			case '$':
+				// Check for $( command substitution
+				if i+1 < len(command) && command[i+1] == '(' {
+					stack = append(stack, contextFrame{ctx: commandSubstitution, depth: 1})
+					i++ // Skip the '('
+					states[i] = commandSubstitution
+				}
 			}
-			// Inside single quotes, double quote is literal
+
+		case commandSubstitution:
+			switch ch {
+			case '\'':
+				// Single quote inside command substitution
+				stack = append(stack, contextFrame{ctx: singleQuote, depth: 0})
+			case '"':
+				// Double quote inside command substitution
+				stack = append(stack, contextFrame{ctx: doubleQuote, depth: 0})
+			case '`':
+				// End backtick command substitution (if we're in backtick mode)
+				if current.depth == 0 {
+					stack = stack[:len(stack)-1]
+				} else {
+					// Nested backtick inside $() - start new backtick substitution
+					stack = append(stack, contextFrame{ctx: commandSubstitution, depth: 0})
+				}
+			case '$':
+				// Check for nested $( command substitution
+				if i+1 < len(command) && command[i+1] == '(' {
+					stack = append(stack, contextFrame{ctx: commandSubstitution, depth: 1})
+					i++ // Skip the '('
+					states[i] = commandSubstitution
+				}
+			case '(':
+				// Track parenthesis depth for $() substitutions
+				if current.depth > 0 {
+					stack[len(stack)-1].depth++
+				}
+			case ')':
+				// End $() command substitution or decrease depth
+				if current.depth > 0 {
+					if current.depth == 1 {
+						stack = stack[:len(stack)-1]
+					} else {
+						stack[len(stack)-1].depth--
+					}
+				}
+			}
+
+		case noQuote:
+			switch ch {
+			case '\'':
+				stack = append(stack, contextFrame{ctx: singleQuote, depth: 0})
+			case '"':
+				stack = append(stack, contextFrame{ctx: doubleQuote, depth: 0})
+			case '`':
+				stack = append(stack, contextFrame{ctx: commandSubstitution, depth: 0})
+			case '$':
+				// Check for $( command substitution
+				if i+1 < len(command) && command[i+1] == '(' {
+					stack = append(stack, contextFrame{ctx: commandSubstitution, depth: 1})
+					i++ // Skip the '('
+					states[i] = commandSubstitution
+				}
+			}
 		}
 	}
 
-	states[len(command)] = context
+	// Final state
+	if len(stack) > 0 {
+		states[len(command)] = stack[len(stack)-1].ctx
+	} else {
+		states[len(command)] = noQuote
+	}
 	return states
 }
 
@@ -97,6 +173,10 @@ func isSafelyEncapsulated(command, userInput string) bool {
 		case doubleQuote:
 			// https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html
 			breakoutChars = "$`\\!\""
+		case commandSubstitution:
+			// Inside command substitutions, user input is NOT safely encapsulated
+			// because shell metacharacters and separators are active
+			return false
 		}
 		if strings.ContainsAny(userInput, breakoutChars) {
 			return false

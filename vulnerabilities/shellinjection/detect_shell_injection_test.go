@@ -75,6 +75,15 @@ func TestDetectShellInjection(t *testing.T) {
 		isNotShellInjection(t, `ls 'whatever;'`, "whatever;")
 	})
 
+	t.Run("detects semicolon inside command substitution in double quotes", func(t *testing.T) {
+		// Regression test for command substitution bypass
+		// User input "x;id" inside "$(printf x;id)" should be detected as unsafe
+		isShellInjection(t, `echo "$(printf x;id)"`, "x;id")
+		isShellInjection(t, `echo "$(echo foo;id)"`, "foo;id")
+		// Also test with backticks
+		isShellInjection(t, "echo \"`printf x;id`\"", "x;id")
+	})
+
 	t.Run("rm rf executed by using semicolon", func(t *testing.T) {
 		isShellInjection(t, `ls; rm -rf`, "; rm -rf")
 	})
