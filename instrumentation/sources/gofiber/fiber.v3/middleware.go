@@ -2,6 +2,7 @@ package fiber
 
 import (
 	"errors"
+	"maps"
 	"strings"
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
@@ -19,7 +20,21 @@ func GetMiddleware() fiber.Handler {
 		}
 
 		// A mounted app's middleware runs alongside its parent's; only the first should report.
-		if request.HasContext(c.Context()) {
+		existingCtx := request.Context(c.Context())
+		if existingCtx != nil {
+			// If a context exists but the route is the fallback (concrete path),
+			// try to resolve the actual route pattern from this middleware's perspective.
+			// This handles mounted apps where the parent resolver skipped mount entries.
+			if existingCtx.Route == existingCtx.Path {
+				route, routeParams := resolveRoute(c)
+				if route != "" && route != existingCtx.Path {
+					// Update the route and params in the existing context
+					existingCtx.Route = route
+					if routeParams != nil {
+						existingCtx.RouteParams = maps.Clone(routeParams)
+					}
+				}
+			}
 			return c.Next()
 		}
 
