@@ -131,6 +131,16 @@ func TestIsSQLInjection(t *testing.T) {
 			"INSERT INTO pets (name, owner) VALUES ('x', 'dummy'), ('injected', 'hacker'); --', 'owner')",
 			"x', 'dummy'), ('injected', 'hacker'); --    ",
 		},
+
+		// Test cases for alphanumeric SQL keyword bypass prevention
+		// These test the scenario where concatenated SQL uses keywords like OR, AND, UNION
+		{"SELECT * FROM users WHERE id = 0 or 1=1", "or"},
+		{"SELECT * FROM users WHERE id = 0 OR 1=1", "OR"},
+		{"SELECT * FROM users WHERE active = 1 and 1=1", "and"},
+		{"SELECT * FROM users WHERE active = 1 AND 1=1", "AND"},
+		{"SELECT * FROM users WHERE id = 1 union select password from admin", "union"},
+		{"SELECT * FROM users WHERE id = 1 UNION select password from admin", "UNION"},
+		{"SELECT * FROM users WHERE id = 1 union all select password from admin", "union"},
 	}
 
 	for _, tt := range tests {
@@ -255,6 +265,49 @@ func TestShouldReturnEarly(t *testing.T) {
 			name:      "user input is a valid string in query with special characters",
 			query:     "SELECT * FROM users; DROP TABLE",
 			userInput: "users; DROP TABLE",
+			want:      false,
+		},
+		// Test cases for SQL keywords that should NOT return early (bypass prevention)
+		{
+			name:      "user input is SQL keyword OR",
+			query:     "SELECT * FROM users WHERE id = 0 or 1=1",
+			userInput: "or",
+			want:      false,
+		},
+		{
+			name:      "user input is SQL keyword AND",
+			query:     "SELECT * FROM users WHERE id = 1 and 1=1",
+			userInput: "and",
+			want:      false,
+		},
+		{
+			name:      "user input is SQL keyword UNION",
+			query:     "SELECT * FROM users WHERE id = 1 union select password from admin",
+			userInput: "union",
+			want:      false,
+		},
+		{
+			name:      "user input is SQL keyword SELECT",
+			query:     "SELECT * FROM users WHERE id = 1 union select password from admin",
+			userInput: "select",
+			want:      false,
+		},
+		{
+			name:      "user input is SQL keyword DROP",
+			query:     "SELECT * FROM users; drop table users",
+			userInput: "drop",
+			want:      false,
+		},
+		{
+			name:      "user input is SQL keyword DELETE",
+			query:     "SELECT * FROM users; delete from users",
+			userInput: "delete",
+			want:      false,
+		},
+		{
+			name:      "user input is SQL keyword EXEC",
+			query:     "SELECT * FROM users; exec sp_executesql",
+			userInput: "exec",
 			want:      false,
 		},
 	}
