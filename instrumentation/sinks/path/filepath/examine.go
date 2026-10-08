@@ -2,6 +2,7 @@ package filepath
 
 import (
 	"context"
+	stdfilepath "path/filepath"
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
@@ -37,7 +38,7 @@ func ExamineDeferred(operationName string, elems []string) error {
 
 	hooks.OnOperationCall(operationName, operation.KindFileSystem)
 
-	path := strings.Join(elems, "")
+	path := strings.Join(elems, string(stdfilepath.Separator))
 
 	return vulnerabilities.ScanWithOptions(context.Background(), operationName, pathtraversal.PathTraversalVulnerability, &pathtraversal.ScanArgs{
 		FilePath:       path,
