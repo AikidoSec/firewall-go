@@ -5,8 +5,10 @@ import (
 	"net/netip"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/AikidoSec/firewall-go/internal/agent/ipaddr"
+	"github.com/AikidoSec/firewall-go/internal/log"
 )
 
 // GetClientIP returns the client's IP address from the request.
@@ -18,10 +20,22 @@ import (
 //
 // Set AIKIDO_TRUST_PROXY=false to disable proxy header trust entirely and
 // always use the raw TCP remote address instead.
+//
+// When AIKIDO_TRUST_PROXY is enabled, forwarding headers are only trusted
+// if the TCP peer (r.RemoteAddr) is in the AIKIDO_TRUSTED_PROXIES list.
+// AIKIDO_TRUSTED_PROXIES should be a comma-separated list of IP addresses
+// or CIDR ranges (e.g., "10.0.0.1,192.168.1.0/24").
+// If AIKIDO_TRUSTED_PROXIES is not set, forwarding headers are not trusted
+// for security reasons, and the socket IP is always used.
 func GetClientIP(r *http.Request) string {
 	socketIP := parseRemoteAddr(r.RemoteAddr)
 
 	if !isTrustProxy() {
+		return socketIP
+	}
+
+	// Validate that the TCP peer is a trusted proxy before accepting forwarding headers
+	if !isTrustedProxy(socketIP) {
 		return socketIP
 	}
 
@@ -116,4 +130,69 @@ func parseRemoteAddr(remoteAddr string) string {
 		return ""
 	}
 	return addrPort.Addr().String()
+}
+
+var (
+	trustedProxies     *ipaddr.MatchList
+	trustedProxiesOnce sync.Once
+	trustedProxiesWarn sync.Once
+)
+
+// initTrustedProxies initializes the trusted proxy matcher from AIKIDO_TRUSTED_PROXIES.
+func initTrustedProxies() {
+	trustedProxiesOnce.Do(func() {
+		val := os.Getenv("AIKIDO_TRUSTED_PROXIES")
+		if val == "" {
+			// No trusted proxies configured
+			trustedProxies = nil
+			return
+		}
+
+		// Parse comma-separated list of IPs/CIDRs
+		parts := strings.Split(val, ",")
+		cidrs := make([]string, 0, len(parts))
+		for _, part := range parts {
+			trimmed := strings.TrimSpace(part)
+			if trimmed != "" {
+				cidrs = append(cidrs, trimmed)
+			}
+		}
+
+		if len(cidrs) == 0 {
+			trustedProxies = nil
+			return
+		}
+
+		// Build match list from trusted proxy CIDRs
+		matchList := ipaddr.BuildMatchList("trustedProxies", "Trusted proxy IP addresses", cidrs)
+		trustedProxies = &matchList
+	})
+}
+
+// isTrustedProxy checks if the given IP is in the trusted proxy list.
+// If AIKIDO_TRUSTED_PROXIES is not configured, this returns false and logs a warning.
+func isTrustedProxy(ip string) bool {
+	initTrustedProxies()
+
+	if trustedProxies == nil {
+		// No trusted proxies configured - log warning once and reject forwarding headers
+		trustedProxiesWarn.Do(func() {
+			log.Warn("AIKIDO_TRUST_PROXY is enabled but AIKIDO_TRUSTED_PROXIES is not configured. " +
+				"Forwarding headers will not be trusted for security reasons. " +
+				"Set AIKIDO_TRUSTED_PROXIES to a comma-separated list of trusted proxy IPs/CIDRs, " +
+				"or set AIKIDO_TRUST_PROXY=false to always use the socket IP.")
+		})
+		return false
+	}
+
+	if ip == "" {
+		return false
+	}
+
+	ipAddress, err := ipaddr.Parse(ip)
+	if err != nil {
+		return false
+	}
+
+	return trustedProxies.Matches(ipAddress)
 }
