@@ -1,6 +1,7 @@
 package shellinjection
 
 import (
+	"path"
 	"regexp"
 	"slices"
 	"sort"
@@ -187,11 +188,18 @@ func containsShellSyntax(command, userInput string) bool {
 		}
 	}
 
+	// Normalize the user input to handle non-canonical paths like /bin/./rm or /usr/bin//rm
+	// Use path.Clean to resolve . and .. elements and remove redundant separators
+	normalizedUserInput := userInput
+	if strings.HasPrefix(userInput, "/") || strings.Contains(userInput, "/") {
+		normalizedUserInput = path.Clean(userInput)
+	}
+
 	// The command is the same as the user input
 	// Rare case, but it's possible
 	// e.g. command is `shutdown` and user input is `shutdown`
 	// (`shutdown -h now` will be caught by the dangerous chars as it contains a space)
-	if command == userInput {
+	if command == userInput || command == normalizedUserInput {
 
 		match := commandsRegex.FindStringIndex(command)
 
@@ -208,8 +216,10 @@ func containsShellSyntax(command, userInput string) bool {
 		// Check if the command is the same as the user input
 		// If it's not the same, continue searching
 		// Also check the basename to catch cases where userInput is "rm" but the command is "/bin/rm"
+		// Check both original and normalized userInput to catch non-canonical paths
 
-		if userInput != match.value && userInput != match.basename {
+		if userInput != match.value && userInput != match.basename &&
+			normalizedUserInput != match.value && normalizedUserInput != match.basename {
 			continue
 		}
 

