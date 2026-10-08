@@ -223,5 +223,87 @@ func TestExecIsAutomaticallyInstrumented(t *testing.T) {
 				require.ErrorAs(t, err, &detectedErr, "Should detect malicious content even if not referenced")
 			})
 		})
+
+	t.Run("shell injection via environment variables", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/route?cmd=ls%20.", http.NoBody)
+		ip := "127.0.0.1"
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/route"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
+
+		request.WrapWithGLS(ctx, func() {
+			// This is vulnerable because the command uses $PAYLOAD which is set in Env
+			// This simulates: cmd := exec.Command("sh", "-c", "$PAYLOAD")
+			//                 cmd.Env = []string{"PAYLOAD=ls ."}
+			cmd := exec.Command("sh", "-c", "$PAYLOAD")
+			cmd.Env = []string{"PAYLOAD=ls ."}
+			err := cmd.Run()
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr, "Should detect injection via environment variable")
+		})
+	})
+
+	t.Run("complex shell injection via environment variables", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/route?cmd=ls%20.%3B%20cat%20/etc/passwd", http.NoBody)
+		ip := "127.0.0.1"
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/route"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
+
+		request.WrapWithGLS(ctx, func() {
+			// Test with command chaining in environment variable
+			cmd := exec.Command("sh", "-c", "$PAYLOAD")
+			cmd.Env = []string{"PAYLOAD=ls .; cat /etc/passwd"}
+			err := cmd.Run()
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr, "Should detect complex injection via environment variable")
+		})
+	})
+
+	t.Run("multiple environment variables with injection", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/route?file=/etc/passwd", http.NoBody)
+		ip := "127.0.0.1"
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/route"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
+
+		request.WrapWithGLS(ctx, func() {
+			// Test with multiple environment variables
+			cmd := exec.Command("sh", "-c", "$CMD $FILE")
+			cmd.Env = []string{"CMD=cat", "FILE=/etc/passwd"}
+			err := cmd.Run()
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr, "Should detect injection with multiple environment variables")
+		})
+	})
+
+	t.Run("braced variable syntax with injection", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/route?cmd=ls%20.", http.NoBody)
+		ip := "127.0.0.1"
+		data := zenhttp.ContextDataFromRequest(req)
+		data.Source = "test"
+		data.Route = "/route"
+		data.RemoteAddress = &ip
+		ctx := request.SetContext(context.Background(), data)
+
+		request.WrapWithGLS(ctx, func() {
+			// Test with braced variable syntax ${VAR}
+			cmd := exec.Command("sh", "-c", "${PAYLOAD}")
+			cmd.Env = []string{"PAYLOAD=ls ."}
+			err := cmd.Run()
+
+			var detectedErr *vulnerabilities.AttackDetectedError
+			require.ErrorAs(t, err, &detectedErr, "Should detect injection with braced variable syntax")
+		})
+	})
 	})
 }

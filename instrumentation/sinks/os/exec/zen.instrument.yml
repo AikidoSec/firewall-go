@@ -13,14 +13,14 @@ rules:
       - github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec
     template: |
       //go:linkname __aikido_exec_Examine github.com/AikidoSec/firewall-go/instrumentation/sinks/os/exec.Examine
-      func __aikido_exec_Examine(context.Context, string, []string) error
+      func __aikido_exec_Examine(context.Context, string, []string, []string) error
 
   - id: exec.Cmd.Run
     type: prepend
     receiver: "*os/exec.Cmd"
     function: Run
     template: |
-      _aikido_err := __aikido_exec_Examine({{ .Function.Receiver }}.ctx, "exec.Cmd.Run", {{ .Function.Receiver }}.Args)
+      _aikido_err := __aikido_exec_Examine({{ .Function.Receiver }}.ctx, "exec.Cmd.Run", {{ .Function.Receiver }}.Args, {{ .Function.Receiver }}.Env)
       if _aikido_err != nil {
         return _aikido_err
       }
@@ -30,7 +30,7 @@ rules:
     receiver: "*os/exec.Cmd"
     function: Start
     template: |
-      _aikido_err := __aikido_exec_Examine({{ .Function.Receiver }}.ctx, "exec.Cmd.Start", {{ .Function.Receiver }}.Args)
+      _aikido_err := __aikido_exec_Examine({{ .Function.Receiver }}.ctx, "exec.Cmd.Start", {{ .Function.Receiver }}.Args, {{ .Function.Receiver }}.Env)
       if _aikido_err != nil {
         return _aikido_err
       }

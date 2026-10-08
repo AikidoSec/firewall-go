@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/instrumentation/hooks"
@@ -11,7 +12,7 @@ import (
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
-func Examine(cmdCtx context.Context, op string, args []string) error {
+func Examine(cmdCtx context.Context, op string, args []string, env []string) error {
 	if zen.IsDisabled() {
 		return nil
 	}
@@ -43,7 +44,43 @@ func Examine(cmdCtx context.Context, op string, args []string) error {
 	//   cmd := exec.Command("sh", "-c", "$0", userInput)
 	fullCommand := strings.Join(commandsToScan, " ")
 
+	// Expand environment variables in the command string to detect injection
+	// through Cmd.Env. When a shell command like "sh -c $PAYLOAD" is executed
+	// with PAYLOAD set in Cmd.Env, the shell expands the variable before execution.
+	// We need to expand it here too so we can scan the actual command that will run.
+	expandedCommand := ExpandEnvInCommand(fullCommand, env)
+
 	return vulnerabilities.ScanWithOptions(ctx, op, shellinjection.ShellInjectionVulnerability, &shellinjection.ScanArgs{
-		Command: fullCommand,
+		Command: expandedCommand,
 	}, vulnerabilities.ScanOptions{Module: "os/exec"})
+}
+
+// ExpandEnvInCommand expands environment variables in the command string using
+// the provided environment. This handles both $VAR and ${VAR} syntax.
+// If env is nil or empty, it uses the process environment as a fallback.
+func ExpandEnvInCommand(command string, env []string) string {
+	// Build a map of environment variables for quick lookup
+	envMap := make(map[string]string)
+	
+	// Add custom environment variables from Cmd.Env
+	for _, e := range env {
+		if idx := strings.IndexByte(e, '='); idx > 0 {
+			key := e[:idx]
+			value := e[idx+1:]
+			envMap[key] = value
+		}
+	}
+	
+	// Expand variables in the command string
+	// Use os.Expand which handles both $VAR and ${VAR} syntax
+	expanded := os.Expand(command, func(key string) string {
+		// First check custom environment
+		if val, ok := envMap[key]; ok {
+			return val
+		}
+		// Fall back to process environment
+		return os.Getenv(key)
+	})
+	
+	return expanded
 }
