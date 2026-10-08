@@ -785,3 +785,110 @@ func TestRateLimitingWithWildcards(t *testing.T) {
 		assert.False(t, status2.Block, "should not block based on wildcard method limit (10 requests)")
 	})
 }
+
+func TestEntityCardinalityLimit(t *testing.T) {
+	t.Run("blocks new entities when limit reached", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 100, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		// Fill up to the limit with different IPs
+		for i := 0; i < maxEntitiesPerEndpoint; i++ {
+			ip := "192.168." + string(rune(i/256)) + "." + string(rune(i%256))
+			status := rl.ShouldRateLimitRequest("GET", "/api/test", "", ip, "")
+			assert.False(t, status.Block, "should not block entities below limit")
+		}
+
+		// Verify we have exactly maxEntitiesPerEndpoint entities
+		assert.Equal(t, maxEntitiesPerEndpoint, len(rl.rateLimitingMap[key].Counts))
+
+		// Try to add one more entity - should be blocked
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", "10.0.0.1", "")
+		assert.True(t, status.Block, "should block when entity limit reached")
+		assert.Equal(t, "ip", status.Trigger)
+		assert.Greater(t, status.RetryAfterSeconds, 0)
+
+		// Verify the count didn't increase
+		assert.Equal(t, maxEntitiesPerEndpoint, len(rl.rateLimitingMap[key].Counts))
+	})
+
+	t.Run("allows existing entities when limit reached", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 100, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		// Fill up to the limit
+		for i := 0; i < maxEntitiesPerEndpoint; i++ {
+			ip := "192.168." + string(rune(i/256)) + "." + string(rune(i%256))
+			rl.ShouldRateLimitRequest("GET", "/api/test", "", ip, "")
+		}
+
+		// Existing entity should still be allowed (not rate limited yet)
+		firstIP := "192.168." + string(rune(0)) + "." + string(rune(0))
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", firstIP, "")
+		assert.False(t, status.Block, "existing entity should not be blocked by cardinality limit")
+	})
+
+	t.Run("cleanup allows new entities after limit reached", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 100, WindowSizeInMS: 1000}, // 1 second window
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		// Fill up to the limit with old timestamps
+		now := time.Now().UnixMilli()
+		veryOld := now - 10000 // 10 seconds ago, outside the 1-second window
+		for i := 0; i < maxEntitiesPerEndpoint; i++ {
+			ip := "192.168." + string(rune(i/256)) + "." + string(rune(i%256))
+			entityKey := entityKey{Kind: entityKindIP, Value: ip}
+			window := slidingwindow.New(1000, 100)
+			window.TryRecord(veryOld)
+			rl.rateLimitingMap[key].Counts[entityKey] = window
+		}
+
+		// Run cleanup - should remove all inactive entities
+		rl.cleanupInactive()
+
+		// Now we should be able to add new entities
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", "10.0.0.1", "")
+		assert.False(t, status.Block, "should allow new entities after cleanup")
+	})
+
+	t.Run("different entity types share the same limit per endpoint", func(t *testing.T) {
+		rl := New()
+		key := endpointKey{Method: "GET", Route: "/api/test"}
+		rl.rateLimitingMap[key] = &endpointData{
+			Config: rateLimitConfig{MaxRequests: 100, WindowSizeInMS: fiveMinutesInMS},
+			Counts: make(map[entityKey]*slidingwindow.Window),
+		}
+
+		// Add half IPs and half users
+		halfLimit := maxEntitiesPerEndpoint / 2
+		for i := 0; i < halfLimit; i++ {
+			ip := "192.168." + string(rune(i/256)) + "." + string(rune(i%256))
+			rl.ShouldRateLimitRequest("GET", "/api/test", "", ip, "")
+		}
+		for i := 0; i < halfLimit; i++ {
+			user := "user" + string(rune(i))
+			rl.ShouldRateLimitRequest("GET", "/api/test", user, "192.168.1.1", "")
+		}
+
+		// Should be at the limit
+		assert.Equal(t, maxEntitiesPerEndpoint, len(rl.rateLimitingMap[key].Counts))
+
+		// New entity of any type should be blocked
+		status := rl.ShouldRateLimitRequest("GET", "/api/test", "", "10.0.0.1", "")
+		assert.True(t, status.Block, "should block new IP when limit reached")
+
+		status = rl.ShouldRateLimitRequest("GET", "/api/test", "newuser", "192.168.1.1", "")
+		assert.True(t, status.Block, "should block new user when limit reached")
+	})
+}

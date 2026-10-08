@@ -17,6 +17,10 @@ const (
 	minRateLimitingWindowInMs = 60000   // 1 minute
 	maxRateLimitingWindowInMs = 3600000 // 1 hour
 	inactiveCleanupInterval   = 5 * time.Minute
+	// maxEntitiesPerEndpoint limits the number of distinct entities (users/IPs/groups)
+	// tracked per endpoint to prevent unbounded memory growth from high-cardinality attacks.
+	// When this limit is reached, new entities are rate-limited by default (fail-closed).
+	maxEntitiesPerEndpoint = 10000
 )
 
 type rateLimitConfig struct {
@@ -98,11 +102,21 @@ func (rl *RateLimiter) Uninit() {
 	}
 }
 
+// getOrCreateCounts retrieves or creates a sliding window for the given entity key.
+// Returns nil if the entity limit has been reached and the key doesn't exist yet,
+// which signals the caller to block the request (fail-closed behavior).
 func getOrCreateCounts(m map[entityKey]*slidingwindow.Window, key entityKey, windowSizeSeconds int64, maxRequests int) *slidingwindow.Window {
-	if _, ok := m[key]; !ok {
-		m[key] = slidingwindow.New(windowSizeSeconds, maxRequests)
+	if window, ok := m[key]; ok {
+		return window
 	}
 
+	// Enforce cardinality limit: if we've reached the maximum number of tracked entities
+	// and this is a new entity, refuse to create a new entry (fail-closed).
+	if len(m) >= maxEntitiesPerEndpoint {
+		return nil
+	}
+
+	m[key] = slidingwindow.New(windowSizeSeconds, maxRequests)
 	return m[key]
 }
 
@@ -141,8 +155,18 @@ func (rl *RateLimiter) checkEntity(method string, route string, kind entityKind,
 	counts := getOrCreateCounts(rateLimitingDataForRoute.Counts, key,
 		int64(rateLimitingDataForRoute.Config.WindowSizeInMS), maxRequests)
 
+	// If counts is nil, the entity limit has been reached (fail-closed: block the request)
 	if counts == nil {
-		return &Status{Block: false}
+		trigger := kind.String()
+		log.Warn("Rate limiter entity limit reached, blocking request",
+			slog.String(trigger, entityValue),
+			slog.String("method", method),
+			slog.String("route", route),
+			slog.Int("entity_count", len(rateLimitingDataForRoute.Counts)))
+
+		// Block with a default retry-after of the window size
+		retryAfterSeconds := int((rateLimitingDataForRoute.Config.WindowSizeInMS + 999) / 1000)
+		return &Status{Block: true, Trigger: trigger, RetryAfterSeconds: retryAfterSeconds}
 	}
 
 	if !counts.TryRecord(now) {
