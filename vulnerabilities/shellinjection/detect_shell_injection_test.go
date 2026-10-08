@@ -149,4 +149,22 @@ func TestDetectShellInjection(t *testing.T) {
 		isShellInjection(t, "sleep\f10", "sleep\f10")
 		isShellInjection(t, "shutdown\f-h\fnow", "shutdown\f-h\fnow")
 	})
+
+	t.Run("detects newline in user input", func(t *testing.T) {
+		isShellInjection(t, "ls \nrm", "\nrm")
+		isShellInjection(t, "ls \nrm -rf", "\nrm -rf")
+	})
+
+	t.Run("detects newline in user input when user input is command", func(t *testing.T) {
+		isShellInjection(t, "sleep\n10", "sleep\n10")
+		isShellInjection(t, "shutdown\n-h\nnow", "shutdown\n-h\nnow")
+	})
+
+	t.Run("detects boundary newline that could split commands", func(t *testing.T) {
+		// This is the specific bypass case: user input with trailing newline
+		// Command: echo safe\nid
+		// Without the fix, trimming would analyze "safe" (no shell syntax)
+		// while the shell would execute "echo safe" and "id" as separate commands
+		isShellInjection(t, "echo safe\nid", "safe\n")
+	})
 }
