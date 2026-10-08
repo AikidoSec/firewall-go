@@ -21,7 +21,7 @@ func GetMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		ip := c.ClientIP()
+		ip := zenhttp.GetClientIP(c.Request)
 
 		var routeParams map[string]string
 		if len(c.Params) > 0 {
