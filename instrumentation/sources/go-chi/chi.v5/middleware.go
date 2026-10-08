@@ -26,14 +26,10 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 				return
 			}
 
-			// If a context is already set, then middleware has already run
-			if request.HasContext(r.Context()) {
-				next.ServeHTTP(w, r)
-				return
-			}
+			// Check if context already exists from outer middleware
+			existingCtx := request.HasContext(r.Context())
 
-			ip := zenhttp.GetClientIP(r)
-
+			// Get current route information
 			routeCtx := chi.RouteContext(r.Context())
 			var route string
 			var routeParams map[string]string
@@ -50,6 +46,30 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 					}
 				}
 			}
+
+			// If context exists, check if we need to update the route for nested/mounted routers
+			if existingCtx != nil {
+				// If the route has changed (more specific route available), update and re-check
+				if route != "" && route != existingCtx.Route {
+					// Update the route and route params in the existing context
+					existingCtx.Route = route
+					existingCtx.RouteParams = routeParams
+
+					// Re-run OnInitRequest with the updated route to check endpoint-specific policies
+					res := zenhttp.OnInitRequest(r.Context())
+					if res != nil {
+						w.WriteHeader(res.StatusCode)
+						_, _ = w.Write([]byte(res.Message))
+						return
+					}
+				}
+				// Continue with existing context
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// No existing context, create new one
+			ip := zenhttp.GetClientIP(r)
 
 			data := zenhttp.ContextDataFromRequest(r)
 			data.Source = "chi"

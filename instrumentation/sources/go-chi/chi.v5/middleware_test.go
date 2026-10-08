@@ -215,6 +215,57 @@ func TestMiddlewareBlockingRequests(t *testing.T) {
 	})
 }
 
+func TestMiddlewareMountedRouterIPAllowlist(t *testing.T) {
+	block := true
+	config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+		Block: &block,
+		Endpoints: []aikido_types.Endpoint{
+			{
+				Method:             "GET",
+				Route:              "/admin/users",
+				AllowedIPAddresses: []string{"192.168.0.1"},
+			},
+		},
+	})
+
+	router := chi.NewRouter()
+	router.Use(zenchi.GetMiddleware())
+
+	// Create a sub-router for admin
+	adminRouter := chi.NewRouter()
+	adminRouter.Use(zenchi.GetMiddleware())
+
+	adminRouter.Get("/users", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	router.Mount("/admin", adminRouter)
+
+	t.Run("block mounted route with unapproved ip", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/admin/users", http.NoBody)
+		r.RemoteAddr = "192.168.1.1:1234"
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("allow mounted route with approved ip", func(t *testing.T) {
+		r := httptest.NewRequest("GET", "/admin/users", http.NoBody)
+		r.RemoteAddr = "192.168.0.1:4321"
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+
+		resp := w.Result()
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+}
+
 func BenchmarkMiddleware(b *testing.B) {
 	b.Run("simple", func(b *testing.B) {
 		b.Run("plain", func(b *testing.B) {
