@@ -299,9 +299,9 @@ func TestExtractShellCommandString(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:     "combined option at end with no command",
+			name:     "combined option at end with attached command",
 			args:     []string{"sh", "-cx"},
-			expected: nil,
+			expected: []string{"x"},
 		},
 		{
 			name:     "lone dash",
@@ -312,6 +312,37 @@ func TestExtractShellCommandString(t *testing.T) {
 			name:     "double dash only",
 			args:     []string{"sh", "--", "script.sh"},
 			expected: nil,
+		},
+		// Attached command strings (security-critical cases)
+		{
+			name:     "attached command to -c",
+			args:     []string{"sh", "-cecho PWNED; id"},
+			expected: []string{"echo PWNED; id"},
+		},
+		{
+			name:     "attached command to -c with semicolon injection",
+			args:     []string{"sh", "-ccat /etc/passwd; whoami"},
+			expected: []string{"cat /etc/passwd; whoami"},
+		},
+		{
+			name:     "attached command to combined flag -ec",
+			args:     []string{"bash", "-ecls -la"},
+			expected: []string{"ls -la"},
+		},
+		{
+			name:     "attached command to combined flag -xc",
+			args:     []string{"sh", "-xcwhoami"},
+			expected: []string{"whoami"},
+		},
+		{
+			name:     "attached command with c in middle",
+			args:     []string{"bash", "-ecxpwd"},
+			expected: []string{"pwd"},
+		},
+		{
+			name:     "attached command with c first in combined",
+			args:     []string{"sh", "-cxecho test"},
+			expected: []string{"echo test"},
 		},
 	}
 

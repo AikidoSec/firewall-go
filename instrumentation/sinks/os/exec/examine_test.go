@@ -88,3 +88,44 @@ func TestExamine_ReportsModuleName(t *testing.T) {
 		t.Fatal("timeout waiting for attack event")
 	}
 }
+
+func TestExamine_DetectsAttachedCommandInjection(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	defer zen.SetDisabled(originalDisabled)
+
+	require.NoError(t, zen.Protect())
+
+	originalClient := agent.GetCloudClient()
+	defer agent.SetCloudClient(originalClient)
+
+	originalBlocking := config.IsBlockingEnabled()
+	defer config.SetBlocking(originalBlocking)
+	config.SetBlocking(true)
+
+	mockClient := testutil.NewMockCloudClient()
+	agent.SetCloudClient(mockClient)
+
+	// Test the vulnerability case: attached command with injection
+	req := httptest.NewRequest("GET", "/test?cmd=echo%20PWNED%3B%20id", nil)
+	ip := "127.0.0.1"
+	data := zenhttp.ContextDataFromRequest(req)
+	data.Source = "test"
+	data.Route = "/test"
+	data.RemoteAddress = &ip
+	ctx := request.SetContext(context.Background(), data)
+
+	// This should now be detected - the command is attached to -c
+	err := exec.Examine(ctx, "os/exec.Cmd.Run", []string{"sh", "-cecho PWNED; id"})
+
+	// Should detect the injection
+	require.Error(t, err, "Should detect shell injection in attached command")
+
+	select {
+	case <-mockClient.AttackDetectedEventSent:
+		attack := mockClient.GetCapturedAttack()
+		assert.Equal(t, "os/exec", attack.Module)
+		assert.Contains(t, attack.Metadata["command"], "echo PWNED; id")
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for attack event")
+	}
+}
