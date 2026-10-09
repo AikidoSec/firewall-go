@@ -1,9 +1,11 @@
 package zen_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,6 +15,7 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	zenlog "github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/internal/request"
 	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/AikidoSec/firewall-go/zen"
@@ -65,12 +68,17 @@ func TestTrack(t *testing.T) {
 	})
 
 	t.Run("BypassedIP", func(t *testing.T) {
+		zen.ResetTrackWarnOnce()
 		mockClient := testutil.NewMockCloudClient()
 		agent.SetCloudClient(mockClient)
 		config.UpdateServiceConfig(&aikido_types.CloudConfigData{BypassedIPs: []string{"192.168.1.1"}}, nil)
+		origLogger := zenlog.Logger()
+		var logs bytes.Buffer
+		zenlog.SetLogger(slog.New(slog.NewTextHandler(&logs, nil)))
 		t.Cleanup(func() {
 			config.UpdateServiceConfig(&aikido_types.CloudConfigData{}, nil)
 			agent.SetCloudClient(originalClient)
+			zenlog.SetLogger(origLogger)
 		})
 
 		ctx := requestContext(t)
@@ -82,6 +90,7 @@ func TestTrack(t *testing.T) {
 			t.Fatal("expected no custom event for a bypassed IP")
 		case <-time.After(100 * time.Millisecond):
 		}
+		assert.NotContains(t, logs.String(), "outside of an HTTP request")
 	})
 
 	t.Run("WithUser", func(t *testing.T) {
