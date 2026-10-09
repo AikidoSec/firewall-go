@@ -45,6 +45,7 @@ func NewClient(cfg *ClientConfig) *Client {
 
 func (c *Client) setAgentHeaders(req *http.Request) {
 	req.Header.Set("X-Agent-Platform", c.platform)
+	req.Header.Set("X-Agent-Library", "firewall-go")
 	req.Header.Set("X-Agent-Version", c.version)
 	req.Header.Set("X-Agent-Hostname", valueOrUnknown(c.hostname))
 	req.Header.Set("X-Agent-IP-Address", valueOrUnknown(c.ipAddress))
