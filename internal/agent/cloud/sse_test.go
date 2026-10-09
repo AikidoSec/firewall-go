@@ -135,6 +135,7 @@ func TestSubscribeToConfigUpdates(t *testing.T) {
 		assert.Equal(t, "text/event-stream", receivedHeaders.Get("Accept"))
 		assert.Equal(t, "no-cache", receivedHeaders.Get("Cache-Control"))
 		assert.Equal(t, "golang", receivedHeaders.Get("X-Agent-Platform"))
+		assert.Equal(t, "firewall-go", receivedHeaders.Get("X-Agent-Library"))
 		assert.Equal(t, "1.2.7", receivedHeaders.Get("X-Agent-Version"))
 		assert.Equal(t, "my-host", receivedHeaders.Get("X-Agent-Hostname"))
 		assert.Equal(t, "10.0.1.42", receivedHeaders.Get("X-Agent-IP-Address"))

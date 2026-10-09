@@ -90,6 +90,7 @@ func TestClient_sendCloudRequest(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "golang", received.Get("X-Agent-Platform"))
+		assert.Equal(t, "firewall-go", received.Get("X-Agent-Library"))
 		assert.Equal(t, "1.2.7", received.Get("X-Agent-Version"))
 		assert.Equal(t, "my-host", received.Get("X-Agent-Hostname"))
 		assert.Equal(t, "2001:db8::42", received.Get("X-Agent-IP-Address"))
