@@ -37,6 +37,10 @@ func Track(ctx context.Context, name string, opts ...TrackOption) error {
 		return ErrEventNameEmpty
 	}
 
+	if request.IsBypassed(ctx) {
+		return nil
+	}
+
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		trackOutsideRequestWarnOnce.Do(func() {
