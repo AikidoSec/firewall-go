@@ -132,6 +132,8 @@ jobs:
 
   test-instrumentation-integration:
     runs-on: ubuntu-latest
+    env:
+      ZENGO_DEBUG: "true"
 
     strategy:
       matrix:
@@ -163,7 +165,16 @@ jobs:
         run: make build-zen-go
 
       - name: Run tests
+        env:
+          ZENGO_LOG: ${{ runner.temp }}/zen-go.log
         run: make test-instrumentation-integration
+
+      - name: Upload Zen Go debug logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: zen-go-instrumentation-go${{ matrix.go-version }}
+          path: ${{ runner.temp }}/zen-go.log
 
       - name: Upload instrumentation coverage to Codecov
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
@@ -219,6 +230,8 @@ jobs:
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
     runs-on: ubuntu-latest
+    env:
+      ZENGO_DEBUG: "true"
 
     strategy:
       fail-fast: false
@@ -250,9 +263,18 @@ jobs:
             sample-apps/${{ matrix.app }}/go.sum
 
       - name: Run all test suites
+        env:
+          ZENGO_LOG: ${{ runner.temp }}/zen-go.log
         working-directory: ./end2end
         run: make test-all-suites APP=${{ matrix.app }}
 
       - name: Show app logs on failure
         if: failure()
         run: cat /tmp/${{ matrix.app }}.log || true
+
+      - name: Upload Zen Go debug logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: zen-go-e2e-${{ matrix.app }}
+          path: ${{ runner.temp }}/zen-go.log
