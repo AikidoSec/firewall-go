@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync/atomic"
 )
 
 type LogLevel int
@@ -19,7 +20,7 @@ const (
 
 var (
 	levelVar  slog.LevelVar
-	logger    *slog.Logger
+	logger    atomic.Pointer[slog.Logger]
 	logWriter = os.Stdout
 	logFormat = "text" // "text" or "json"
 )
@@ -42,7 +43,7 @@ func init() {
 
 func logMessage(level LogLevel, msg string, args ...any) {
 	slogLevel := toSlogLevel(level)
-	logger.Log(context.Background(), slogLevel, msg, args...)
+	logger.Load().Log(context.Background(), slogLevel, msg, args...)
 }
 
 func Debug(msg string, args ...any) {
@@ -86,13 +87,13 @@ func SetLogger(l *slog.Logger) {
 	if l == nil {
 		return
 	}
-	logger = l.With(slog.String("lib", "aikido"))
+	logger.Store(l.With(slog.String("lib", "aikido")))
 }
 
 // Logger returns the currently in-use instance of *slog.Logger
 // This can be used in tests to get the default loggers to later restore on cleanup.
 func Logger() *slog.Logger {
-	return logger
+	return logger.Load()
 }
 
 func SetFormat(format string) error {

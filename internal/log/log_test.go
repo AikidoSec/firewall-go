@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,8 +37,8 @@ func TestSetLogLevelMapping(t *testing.T) {
 }
 
 func TestLevelFilteringWithSlog(t *testing.T) {
-	original := logger
-	t.Cleanup(func() { logger = original })
+	original := Logger()
+	t.Cleanup(func() { logger.Store(original) })
 
 	var buf bytes.Buffer
 	h := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
@@ -58,8 +59,8 @@ func TestSetLogger(t *testing.T) {
 	defer SetLogger(original)
 
 	t.Run("adds lib attribute", func(t *testing.T) {
-		original := logger
-		t.Cleanup(func() { logger = original })
+		original := Logger()
+		t.Cleanup(func() { logger.Store(original) })
 
 		var buf bytes.Buffer
 		h := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
@@ -78,6 +79,32 @@ func TestSetLogger(t *testing.T) {
 		SetLogger(nil)
 		require.Equal(t, before, Logger(), "logger should not change when SetLogger receives nil")
 	})
+}
+
+func TestConcurrentLoggerAccess(t *testing.T) {
+	original := Logger()
+	t.Cleanup(func() { SetLogger(original) })
+
+	l := slog.New(slog.NewTextHandler(io.Discard, nil))
+	SetLogger(l)
+
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for _, operation := range []func(){
+		func() { SetLogger(l) },
+		func() { Warn("warning message") },
+	} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			for i := 0; i < 1000; i++ {
+				operation()
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
 }
 
 func TestLogLevels(t *testing.T) {
@@ -125,8 +152,8 @@ func TestLogLevels(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			original := logger
-			t.Cleanup(func() { logger = original })
+			original := Logger()
+			t.Cleanup(func() { logger.Store(original) })
 
 			var buf bytes.Buffer
 			h := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: tt.slogLevel})
@@ -160,8 +187,8 @@ func TestSetFormat(t *testing.T) {
 		assert.Equal(t, "text", logFormat)
 
 		// Verify logger still works after format change
-		original := logger
-		t.Cleanup(func() { logger = original })
+		original := Logger()
+		t.Cleanup(func() { logger.Store(original) })
 
 		var buf bytes.Buffer
 		h := slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
