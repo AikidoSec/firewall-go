@@ -33,8 +33,7 @@ type AttacksDetected struct {
 }
 
 type AttackWaves struct {
-	Total   int `json:"total"`
-	Blocked int `json:"blocked"`
+	Total int `json:"total"`
 }
 
 type Requests struct {
