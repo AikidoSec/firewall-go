@@ -25,6 +25,7 @@ type moduleIdentity struct {
 func ComputeModuleGraphHash(moduleFlags []string) (string, error) {
 	args := append([]string{"list", "-m", "-json"}, moduleFlags...)
 	args = append(args, "all")
+	// #nosec G204 -- fixed Go metadata command; moduleFlags contains only the parent build's -mod and -modfile flags
 	cmd := exec.Command("go", args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
