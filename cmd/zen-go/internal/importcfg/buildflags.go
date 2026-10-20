@@ -18,6 +18,23 @@ var (
 	inheritedFlagsOnce sync.Once
 )
 
+// ModuleBuildFlags makes metadata queries use the build's -mod and -modfile.
+// GOFLAGS and workspace settings are already inherited through the environment.
+func ModuleBuildFlags() []string {
+	flags, err := parentBuildFlags()
+	if err != nil {
+		// Direct toolexec invocations may have no parent go process.
+		return nil
+	}
+	var result []string
+	for _, flag := range flags {
+		if strings.HasPrefix(flag, "-mod=") || strings.HasPrefix(flag, "-modfile=") {
+			result = append(result, flag)
+		}
+	}
+	return result
+}
+
 // parentBuildFlags returns build flags from the parent go command.
 // This ensures packages.Load uses the same build configuration,
 // preventing cache misses and fingerprint errors.
