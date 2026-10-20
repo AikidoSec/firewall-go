@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +23,24 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// trackLogBuffer allows tests to read logs while the agent logs in the background.
+type trackLogBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *trackLogBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *trackLogBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
 
 func requestContext(t *testing.T) context.Context {
 	t.Helper()
@@ -73,7 +92,7 @@ func TestTrack(t *testing.T) {
 		agent.SetCloudClient(mockClient)
 		config.UpdateServiceConfig(&aikido_types.CloudConfigData{BypassedIPs: []string{"192.168.1.1"}}, nil)
 		origLogger := zenlog.Logger()
-		var logs bytes.Buffer
+		var logs trackLogBuffer
 		zenlog.SetLogger(slog.New(slog.NewTextHandler(&logs, nil)))
 		t.Cleanup(func() {
 			config.UpdateServiceConfig(&aikido_types.CloudConfigData{}, nil)
