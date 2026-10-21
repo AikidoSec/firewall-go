@@ -46,6 +46,10 @@ func TestDetectShellInjection(t *testing.T) {
 		isNotShellInjection(t, `ls '$(echo "Inner: $(echo \"This is nested\")")'`, `$(echo "Inner: $(echo \"This is nested\")")`)
 	})
 
+	t.Run("detects semicolon inside double-quoted command substitution", func(t *testing.T) {
+		isShellInjection(t, `echo "$(printf x;id)"`, "x;id")
+	})
+
 	t.Run("detects `command`", func(t *testing.T) {
 		isShellInjection(t, "echo `echo`", "`echo`")
 	})

@@ -163,6 +163,32 @@ func TestIsSafelyEncapsulated_NestedQuoting(t *testing.T) {
 			userInput: "$USER",
 			expected:  false,
 		},
+		// Command substitution bypass: semicolons and other separators are
+		// active inside command substitutions, even when nested in double quotes.
+		{
+			name:      "semicolon inside command substitution in double quotes is unsafe",
+			command:   `echo "$(printf x;id)"`,
+			userInput: "x;id",
+			expected:  false,
+		},
+		{
+			name:      "semicolon inside backtick substitution in double quotes is unsafe",
+			command:   "echo \"`printf x;id`\"",
+			userInput: "x;id",
+			expected:  false,
+		},
+		{
+			name:      "pipe inside command substitution in double quotes is unsafe",
+			command:   `echo "$(echo foo|id)"`,
+			userInput: "foo|id",
+			expected:  false,
+		},
+		{
+			name:      "ampersand inside command substitution in double quotes is unsafe",
+			command:   `echo "$(echo foo&id)"`,
+			userInput: "foo&id",
+			expected:  false,
+		},
 	}
 
 	for _, tt := range tests {
