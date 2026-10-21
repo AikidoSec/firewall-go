@@ -206,6 +206,9 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
       - name: Download coverage artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -223,9 +226,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload coverage to Aikido
-        uses: AikidoSec/code-coverage-github-action@18138c9866f45cb159779a167d6e1330c967fe28 # v0.1.1
+        uses: AikidoSec/code-coverage-github-action@af64fbf145a1d80a532f18d7bb75daff398b7d00 # v2.1.0
         with:
-          lcov-file-paths: ${{ steps.lcov.outputs.paths }}
+          file-paths: ${{ steps.lcov.outputs.paths }}
 
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
