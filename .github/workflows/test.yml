@@ -71,7 +71,8 @@ jobs:
         run: |
           go install github.com/jandelgado/gcov2lcov@51ca2a7f808b9da700efd71ae060e4c9e0deefc9 # v1.1.1
           gcov2lcov -infile=coverage.out -outfile=coverage-main-go${{ matrix.go-version }}.lcov
-          gcov2lcov -infile=cmd/zen-go/coverage.out -outfile=coverage-zen-go-go${{ matrix.go-version }}.lcov
+          # cmd/zen-go is a separate module; gcov2lcov must run there or it emits an empty LCOV
+          (cd cmd/zen-go && gcov2lcov -infile=coverage.out -outfile=../../coverage-zen-go-go${{ matrix.go-version }}.lcov)
 
       - name: Upload LCOV artifact for Aikido
         if: matrix.os.name == 'ubuntu-x86_64'
@@ -81,6 +82,7 @@ jobs:
           path: |
             coverage-main-go${{ matrix.go-version }}.lcov
             coverage-zen-go-go${{ matrix.go-version }}.lcov
+          if-no-files-found: error
 
   test-instrumentation-unit:
     runs-on: ubuntu-24.04
@@ -218,19 +220,10 @@ jobs:
           pattern: aikido-lcov-*
           merge-multiple: true
 
-      - name: List LCOV files
-        id: lcov
-        run: |
-          {
-            echo 'paths<<EOF'
-            find aikido-coverage -name '*.lcov'
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
-
       - name: Upload coverage to Aikido
         uses: AikidoSec/code-coverage-github-action@af64fbf145a1d80a532f18d7bb75daff398b7d00 # v2.1.0
         with:
-          file-paths: ${{ steps.lcov.outputs.paths }}
+          file-paths: aikido-coverage/**/*.lcov
 
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
