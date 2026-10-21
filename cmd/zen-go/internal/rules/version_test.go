@@ -70,28 +70,31 @@ func TestCheckMinVersions_VPrefix(t *testing.T) {
 }
 
 func TestParseSemver(t *testing.T) {
-	v, err := parseSemver("1.2.3")
-	require.NoError(t, err)
-	assert.Equal(t, semver{1, 2, 3}, v)
+	tests := []struct {
+		input   string
+		want    semver
+		wantErr string
+	}{
+		{input: "1.2.3", want: semver{1, 2, 3}},
+		{input: "v0.3.0", want: semver{0, 3, 0}},
+		{input: "1.2", wantErr: "expected format major.minor.patch"},
+		{input: "abc", wantErr: "expected format major.minor.patch"},
+		{input: "x.0.0", wantErr: "invalid major version"},
+		{input: "0.x.0", wantErr: "invalid minor version"},
+		{input: "0.0.x", wantErr: "invalid patch version"},
+	}
 
-	v, err = parseSemver("v0.3.0")
-	require.NoError(t, err)
-	assert.Equal(t, semver{0, 3, 0}, v)
-
-	_, err = parseSemver("1.2")
-	assert.Error(t, err)
-
-	_, err = parseSemver("abc")
-	assert.Error(t, err)
-
-	_, err = parseSemver("x.0.0")
-	assert.ErrorContains(t, err, "invalid major version")
-
-	_, err = parseSemver("0.x.0")
-	assert.ErrorContains(t, err, "invalid minor version")
-
-	_, err = parseSemver("0.0.x")
-	assert.ErrorContains(t, err, "invalid patch version")
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			v, err := parseSemver(tt.input)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, v)
+		})
+	}
 }
 
 func TestShortPath(t *testing.T) {
