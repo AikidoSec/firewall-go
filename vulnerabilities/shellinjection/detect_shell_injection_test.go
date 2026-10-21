@@ -50,6 +50,18 @@ func TestDetectShellInjection(t *testing.T) {
 		isShellInjection(t, `echo "$(printf x;id)"`, "x;id")
 	})
 
+	t.Run("detects separators inside double-quoted command substitutions", func(t *testing.T) {
+		isShellInjection(t, "echo \"`printf x;id`\"", "x;id")
+		isShellInjection(t, `echo "$(echo foo|id)"`, "foo|id")
+		isShellInjection(t, `echo "$(echo foo&id)"`, "foo&id")
+	})
+
+	t.Run("allows quoted input inside command substitutions", func(t *testing.T) {
+		isNotShellInjection(t, `echo "$(printf '%s' 'x;id')"`, "x;id")
+		isNotShellInjection(t, `echo "$(printf '%s' "x;id")"`, "x;id")
+		isNotShellInjection(t, "echo \"`printf '%s' 'x;id'`\"", "x;id")
+	})
+
 	t.Run("detects `command`", func(t *testing.T) {
 		isShellInjection(t, "echo `echo`", "`echo`")
 	})

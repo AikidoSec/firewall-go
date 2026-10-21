@@ -189,6 +189,90 @@ func TestIsSafelyEncapsulated_NestedQuoting(t *testing.T) {
 			userInput: "foo&id",
 			expected:  false,
 		},
+		{
+			name:      "semicolon in plain double quotes stays safe",
+			command:   `echo "x;id"`,
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "single-quoted command substitution stays literal",
+			command:   `echo '$(printf x;id)'`,
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "escaped command substitution stays literal",
+			command:   `echo "\$(printf x;id)"`,
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "escaped backtick substitution stays literal",
+			command:   "echo \"\\`printf x;id\\`\"",
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "single-quoted input inside command substitution is safe",
+			command:   `echo "$(printf '%s' 'x;id')"`,
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "double-quoted input inside command substitution is safe",
+			command:   `echo "$(printf '%s' "x;id")"`,
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "single-quoted input inside backtick substitution is safe",
+			command:   "echo \"`printf '%s' 'x;id'`\"",
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "nested command substitution has independent quotes",
+			command:   `echo "$(echo "$(printf x;id)")"`,
+			userInput: "x;id",
+			expected:  false,
+		},
+		{
+			name:      "backtick inside command substitution has independent quotes",
+			command:   "echo \"$(echo \"`printf x;id`\")\"",
+			userInput: "x;id",
+			expected:  false,
+		},
+		{
+			name:      "subshell parentheses do not close command substitution",
+			command:   `echo "$( (printf x); printf x;id)"`,
+			userInput: "x;id",
+			expected:  false,
+		},
+		{
+			name:      "quoted closing parenthesis does not close command substitution",
+			command:   `echo "$(printf ')'; printf x;id)"`,
+			userInput: "x;id",
+			expected:  false,
+		},
+		{
+			name:      "outer quotes resume after command substitution",
+			command:   `echo "$(printf x)x;id"`,
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "outer quotes resume after backtick substitution",
+			command:   "echo \"`printf x`x;id\"",
+			userInput: "x;id",
+			expected:  true,
+		},
+		{
+			name:      "unterminated inner quote cannot be closed by outer quote",
+			command:   "echo \"`printf 'x;id`\" '",
+			userInput: "x;id",
+			expected:  false,
+		},
 	}
 
 	for _, tt := range tests {
