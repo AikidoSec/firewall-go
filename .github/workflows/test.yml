@@ -13,7 +13,7 @@ jobs:
       matrix:
         go-version: ["1.25", "1.26", "1.27"]
         os:
-          - runner: ubuntu-latest
+          - runner: ubuntu-24.04
             name: ubuntu-x86_64
           - runner: ubuntu-24.04-arm
             name: ubuntu-arm64
@@ -48,7 +48,7 @@ jobs:
         run: make test
 
       - name: Upload main module coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         if: ${{ !contains(matrix.os.name, 'arm64') }}
         with:
           fail_ci_if_error: true
@@ -58,7 +58,7 @@ jobs:
           verbose: true
 
       - name: Upload zen-go CLI coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: false
           files: ./cmd/zen-go/coverage.out
@@ -83,7 +83,7 @@ jobs:
             coverage-zen-go-go${{ matrix.go-version }}.lcov
 
   test-instrumentation-unit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         go-version: ["1.25", "1.26", "1.27"]
@@ -111,7 +111,7 @@ jobs:
         run: make test-instrumentation-unit
 
       - name: Upload instrumentation unit coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
           files: ./coverage.out
@@ -131,7 +131,7 @@ jobs:
           path: coverage-instrumentation-unit-go${{ matrix.go-version }}.lcov
 
   test-instrumentation-integration:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ZENGO_DEBUG: "true"
 
@@ -177,7 +177,7 @@ jobs:
           path: ${{ runner.temp }}/zen-go.log
 
       - name: Upload instrumentation coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
           files: ./coverage.out
@@ -201,7 +201,7 @@ jobs:
       - test
       - test-instrumentation-unit
       - test-instrumentation-integration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
@@ -229,7 +229,7 @@ jobs:
 
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ZENGO_DEBUG: "true"
 
