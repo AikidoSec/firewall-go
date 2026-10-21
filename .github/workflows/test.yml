@@ -13,7 +13,7 @@ jobs:
       matrix:
         go-version: ["1.25", "1.26", "1.27"]
         os:
-          - runner: ubuntu-latest
+          - runner: ubuntu-24.04
             name: ubuntu-x86_64
           - runner: ubuntu-24.04-arm
             name: ubuntu-arm64
@@ -83,7 +83,7 @@ jobs:
             coverage-zen-go-go${{ matrix.go-version }}.lcov
 
   test-instrumentation-unit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         go-version: ["1.25", "1.26", "1.27"]
@@ -131,7 +131,7 @@ jobs:
           path: coverage-instrumentation-unit-go${{ matrix.go-version }}.lcov
 
   test-instrumentation-integration:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ZENGO_DEBUG: "true"
 
@@ -201,7 +201,7 @@ jobs:
       - test
       - test-instrumentation-unit
       - test-instrumentation-integration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
@@ -229,7 +229,7 @@ jobs:
 
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ZENGO_DEBUG: "true"
 
