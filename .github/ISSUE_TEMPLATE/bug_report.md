@@ -23,7 +23,7 @@ What actually happened (include logs or error messages if possible).
 
 **Environment**
 - OS: [e.g. Ubuntu 22.04, macOS 15.0, Windows 11]
-- Language version: [e.g. 1.24, 1.25]
+- Language version: [e.g. 1.26, 1.27]
 - Framework: [e.g. Gin, Echo]
 - Environment: [local, Docker, cloud, etc.]
 - Aikido Package version: [e.g. 1.2.3]
