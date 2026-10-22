@@ -295,6 +295,26 @@ rules:
 	assert.Contains(t, rules.InjectDeclRules[0].DeclTemplate, "go:linkname")
 }
 
+func TestLoadRulesFromFile_InjectDeclRule_MissingPackage_Error(t *testing.T) {
+	for _, packageField := range []string{"", `    package: ""`} {
+		t.Run(packageField, func(t *testing.T) {
+			yamlPath := filepath.Join(t.TempDir(), "zen.instrument.yml")
+			yamlContent := `
+rules:
+  - id: bad-rule
+    type: inject-decl
+` + packageField + `
+    anchor: main
+    template: func init() { println("injected") }
+`
+			require.NoError(t, os.WriteFile(yamlPath, []byte(yamlContent), 0o600))
+
+			_, err := loadRulesFromFile(yamlPath)
+			require.EqualError(t, err, "rule bad-rule: inject-decl rules require a package")
+		})
+	}
+}
+
 func TestLoadRulesFromDir_SkipsSubmodulesWithGoMod(t *testing.T) {
 	// Simulate the root module's instrumentation/ dir where some subdirectories
 	// are separate Go modules (have their own go.mod). These should be skipped

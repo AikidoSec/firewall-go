@@ -169,7 +169,7 @@ func (i *Instrumentor) InstrumentFile(filename string, compilingPkg string) (Ins
 	// Apply inject decl rules (for go:linkname declarations)
 	for _, rule := range i.InjectDeclRules {
 		// Only apply if we're compiling the target package
-		if rule.Package != "" && rule.Package != compilingPkg {
+		if rule.Package == "" || rule.Package != compilingPkg {
 			continue
 		}
 

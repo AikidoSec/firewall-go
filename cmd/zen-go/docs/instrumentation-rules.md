@@ -88,7 +88,7 @@ Injects function declarations before an anchor function in a package. Typically 
 
 | Field | Description |
 |---|---|
-| `package` | The package being compiled, e.g. `os` |
+| `package` | The package being compiled (required), e.g. `os` |
 | `anchor` | An existing function in the package to attach the declaration before |
 | `links` | Packages that must be linked for the injected declarations to resolve |
 | `template` | Go declarations to inject (usually `//go:linkname` + function signature) |
