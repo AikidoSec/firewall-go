@@ -449,6 +449,29 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
+func TestMiddlewareDiscoversSuccessfulRoute(t *testing.T) {
+	agent.State().GetRoutesAndClear()
+
+	router := http.NewServeMux()
+	router.HandleFunc("GET /discovered-route/{id}", Middleware(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequest("GET", "/discovered-route/foo?query=value", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	require.Eventually(t, func() bool {
+		for _, route := range agent.State().GetRoutesAndClear() {
+			if route.Path == "/discovered-route/{id}" && route.Method == "GET" {
+				return true
+			}
+		}
+		return false
+	}, 100*time.Millisecond, 10*time.Millisecond, "GET /discovered-route/{id} should be discovered")
+}
+
 func addBrowserHeaders(r *http.Request) {
 	r.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	r.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
