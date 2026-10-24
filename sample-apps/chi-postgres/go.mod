@@ -1,6 +1,6 @@
 module chi-postgres
 
-go 1.25.0
+go 1.26.10
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.12
