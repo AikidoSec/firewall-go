@@ -1,13 +1,13 @@
 module echo-pgx-sql
 
-go 1.25.0
+go 1.26.10
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.12
 	github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5 v0.0.0-00010101000000-000000000000
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4 v0.0.0-00010101000000-000000000000
 	github.com/jackc/pgx/v5 v5.9.2
-	github.com/labstack/echo/v4 v4.15.3
+	github.com/labstack/echo/v4 v4.16.1
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
@@ -44,12 +44,12 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/mod v0.40.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
