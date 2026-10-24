@@ -1,11 +1,11 @@
 module echo-postgres
 
-go 1.25.5
+go 1.26.10
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.12
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v5 v0.0.0-00010101000000-000000000000
-	github.com/labstack/echo/v5 v5.2.0
+	github.com/labstack/echo/v5 v5.4.1
 	github.com/lib/pq v1.10.2
 )
 
@@ -36,11 +36,11 @@ require (
 	github.com/urfave/cli/v3 v3.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/mod v0.40.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
