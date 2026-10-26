@@ -61,7 +61,7 @@ func newMockMemoryWriter() *mockMemoryWriter {
 	}
 }
 
-func (m *mockMemoryWriter) Write(_ uint32, _ []byte) bool {
+func (m *mockMemoryWriter) WriteString(_ uint32, _ string) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.writeCallCount++
@@ -119,7 +119,7 @@ func TestAllocateAndWriteStringHappyPath(t *testing.T) {
 		},
 	}
 
-	testData := []byte("test data")
+	testData := "test data"
 	expectedPtr := uint32(100)
 	expectedLen := uint64(len(testData))
 
@@ -151,7 +151,7 @@ func TestAllocateAndWriteStringMemoryWriteFailure(t *testing.T) {
 	mockAlloc := newMockFunctionCaller([]uint64{100})
 	mockFree := newMockFunctionCaller([]uint64{})
 
-	testData := []byte("test data")
+	testData := "test data"
 
 	// Test write failure
 	memory.failOnWriteCall = 1 // fail on write
