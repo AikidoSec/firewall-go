@@ -442,34 +442,38 @@ func TestCompilationAndPooling(t *testing.T) {
 	require.Equal(t, 1, result)
 }
 
-// TestConcurrentAccess verifies thread safety with concurrent DetectSQLInjection calls
+// Mixed results and input lengths help detect buffers shared between requests.
 func TestConcurrentAccess(t *testing.T) {
-	// Initialize if not already done
-	if interpreterRuntime == nil {
-		err := Init()
-		require.NoError(t, err, "Init should succeed")
+	require.NoError(t, Init())
+	cases := []struct {
+		query, input string
+		want         int
+	}{
+		{"SELECT * FROM users WHERE id = ?", "123", 0},
+		{"SELECT * FROM users WHERE name = 'alice-smith'", "alice-smith", 0},
+		{"SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", 1},
 	}
 
 	const numGoroutines = 10
-	const callsPerGoroutine = 5
+	const callsPerGoroutine = 20
 
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
+	start := make(chan struct{})
 
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			defer wg.Done()
+			<-start
 			for j := 0; j < callsPerGoroutine; j++ {
-				result := DetectSQLInjection(
-					"SELECT * FROM users WHERE id = ?",
-					"123",
-					int(MySQL),
-				)
-				assert.Equal(t, 0, result, "Should not detect injection in safe query")
+				tc := cases[(i+j)%len(cases)]
+				result := DetectSQLInjection(tc.query, tc.input, int(MySQL))
+				assert.Equal(t, tc.want, result, "query=%q input=%q", tc.query, tc.input)
 			}
 		}()
 	}
 
+	close(start)
 	wg.Wait()
 }
 
