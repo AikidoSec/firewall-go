@@ -43,7 +43,7 @@ var (
 // memoryWriter is a minimal interface for writing to memory.
 // This allows for testability as wazero has unexported methods within api.Memory.
 type memoryWriter interface {
-	Write(offset uint32, data []byte) bool
+	WriteString(offset uint32, data string) bool
 }
 
 // functionCaller is a minimal interface for calling functions.
@@ -209,15 +209,11 @@ func callDetectSQL(
 		return 0, false, fmt.Errorf("invalid dialect: %d, must be between 0 and %d", dialect, int(SQLite))
 	}
 
-	// Convert strings to bytes
-	queryBytes := []byte(query)
-	userInputBytes := []byte(userInput)
-
 	// Track if cleanup succeeds
 	cleanupSucceeded = true
 
 	// Allocate and write query to WASM memory
-	queryPtr, queryLen, freeQuery, err := allocateAndWriteString(ctx, memory, alloc, free, queryBytes, "query")
+	queryPtr, queryLen, freeQuery, err := allocateAndWriteString(ctx, memory, alloc, free, query, "query")
 	if err != nil {
 		return 0, false, err
 	}
@@ -228,7 +224,7 @@ func callDetectSQL(
 	}()
 
 	// Allocate and write user input to WASM memory
-	userInputPtr, userInputLen, freeUserInput, err := allocateAndWriteString(ctx, memory, alloc, free, userInputBytes, "user input")
+	userInputPtr, userInputLen, freeUserInput, err := allocateAndWriteString(ctx, memory, alloc, free, userInput, "user input")
 	if err != nil {
 		return 0, false, err
 	}
@@ -264,7 +260,7 @@ func callDetectSQL(
 // allocateAndWriteString allocates memory for a string, writes it to WASM memory, and returns the pointer and length
 // The caller is responsible for freeing the memory using the returned free function
 // The cleanup function returns true if freeing succeeded, false otherwise
-func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, free functionCaller, data []byte, name string) (uint32, uint64, func() bool, error) {
+func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, free functionCaller, data string, name string) (uint32, uint64, func() bool, error) {
 	// Check for potential overflow in string length
 	const maxStringLen = 1 << 30 // 1GB limit to prevent overflow
 	if len(data) > maxStringLen {
@@ -289,7 +285,7 @@ func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, fre
 	ptr := uint32(ptrRaw)
 
 	// Write data to WASM memory
-	if !memory.Write(ptr, data) {
+	if !memory.WriteString(ptr, data) {
 		return 0, 0, nil, fmt.Errorf("failed to write %s to memory", name)
 	}
 
