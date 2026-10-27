@@ -13,69 +13,107 @@ const (
 	doubleQuote
 )
 
-// quoteStatesAt returns the quote context active just before each byte of
-// command, plus one trailing entry for the context once the string ends.
-func quoteStatesAt(command string) []quoteContext {
-	states := make([]quoteContext, len(command)+1)
-	context := noQuote
-	escaped := false
-
-	for i := 0; i < len(command); i++ {
-		states[i] = context
-		ch := command[i]
-
-		if escaped {
-			escaped = false
-			continue
-		}
-
-		if ch == '\\' {
-			if context != singleQuote {
-				escaped = true
-			}
-			continue
-		}
-
-		switch ch {
-		case '\'':
-			switch context {
-			case noQuote:
-				context = singleQuote
-			case singleQuote:
-				context = noQuote
-			}
-			// Inside double quotes, single quote is literal
-		case '"':
-			switch context {
-			case noQuote:
-				context = doubleQuote
-			case doubleQuote:
-				context = noQuote
-			}
-			// Inside single quotes, double quote is literal
-		}
-	}
-
-	states[len(command)] = context
-	return states
+type quoteState struct {
+	context quoteContext
+	quoteID int
 }
 
-// quoteClosesAfter reports whether context is exited again at or after
-// position start. An unterminated quote must not be treated as safe.
-func quoteClosesAfter(states []quoteContext, start int, context quoteContext) bool {
-	for _, state := range states[start:] {
-		if state != context {
-			return true
+type shellContext struct {
+	quoteState
+	terminator  byte
+	parentheses int
+}
+
+// quoteStatesAt tracks quotes independently inside command substitutions.
+// Each quote gets its own closing position, so an outer quote cannot close an
+// unterminated quote inside a substitution.
+func quoteStatesAt(command string) ([]quoteState, []int) {
+	states := make([]quoteState, len(command)+1)
+	quoteEnds := []int{-1}
+	contexts := []shellContext{{}}
+
+	for i := 0; i < len(command); i++ {
+		current := &contexts[len(contexts)-1]
+		states[i] = current.quoteState
+		ch := command[i]
+
+		// Backtick delimiters are processed before the enclosed command's
+		// quotes, unlike the closing parenthesis of a $(...) substitution.
+		if ch == '`' && current.terminator == '`' {
+			contexts = contexts[:len(contexts)-1]
+			continue
+		}
+
+		if ch == '\\' && i+1 < len(command) {
+			next := command[i+1]
+			escapes := current.context == noQuote ||
+				(current.context == doubleQuote && strings.ContainsRune("$`\"\\\n", rune(next))) ||
+				(current.terminator == '`' && strings.ContainsRune("$`\\\n", rune(next)))
+			if escapes {
+				i++
+				states[i] = current.quoteState
+				continue
+			}
+		}
+
+		if current.context != singleQuote && ch == '$' && i+1 < len(command) && command[i+1] == '(' {
+			i++
+			states[i] = current.quoteState
+			contexts = append(contexts, shellContext{terminator: ')'})
+			continue
+		}
+		if current.context != singleQuote && ch == '`' {
+			contexts = append(contexts, shellContext{terminator: '`'})
+			continue
+		}
+		if current.context == noQuote && current.terminator == ')' {
+			switch ch {
+			case '(':
+				current.parentheses++
+			case ')':
+				if current.parentheses == 0 {
+					contexts = contexts[:len(contexts)-1]
+				} else {
+					current.parentheses--
+				}
+				continue
+			}
+		}
+
+		var quote quoteContext
+		switch ch {
+		case '\'':
+			quote = singleQuote
+		case '"':
+			quote = doubleQuote
+		default:
+			continue
+		}
+		switch current.context {
+		case noQuote:
+			current.context = quote
+			current.quoteID = len(quoteEnds)
+			quoteEnds = append(quoteEnds, -1)
+		case quote:
+			quoteEnds[current.quoteID] = i
+			current.quoteState = quoteState{}
 		}
 	}
-	return false
+
+	states[len(command)] = contexts[len(contexts)-1].quoteState
+	return states, quoteEnds
+}
+
+// quoteClosesAfter checks the closing delimiter of this specific quote.
+func quoteClosesAfter(quoteEnds []int, start int, state quoteState) bool {
+	return quoteEnds[state.quoteID] >= start
 }
 
 func isSafelyEncapsulated(command, userInput string) bool {
 	if userInput == "" {
 		return true
 	}
-	states := quoteStatesAt(command)
+	states, quoteEnds := quoteStatesAt(command)
 
 	for start := 0; ; {
 		idx := strings.Index(command[start:], userInput)
@@ -86,10 +124,10 @@ func isSafelyEncapsulated(command, userInput string) bool {
 		occEnd := occStart + len(userInput)
 		start = occEnd
 
-		context := states[occStart]
+		state := states[occStart]
 		// Characters in userInput that would break out of the surrounding quote.
 		var breakoutChars string
-		switch context {
+		switch state.context {
 		case noQuote:
 			return false
 		case singleQuote:
@@ -101,7 +139,7 @@ func isSafelyEncapsulated(command, userInput string) bool {
 		if strings.ContainsAny(userInput, breakoutChars) {
 			return false
 		}
-		if !quoteClosesAfter(states, occEnd, context) {
+		if !quoteClosesAfter(quoteEnds, occEnd, state) {
 			return false
 		}
 	}
