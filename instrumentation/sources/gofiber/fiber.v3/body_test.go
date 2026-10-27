@@ -41,6 +41,7 @@ func extractedBody(t *testing.T, body io.Reader, contentType string) any {
 	resp, err := app.Test(r)
 	require.NoError(t, err)
 	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	return captured
 }
