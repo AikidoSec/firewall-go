@@ -1,12 +1,12 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5
 
-go 1.26.0
+go 1.26.10
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.12
-	github.com/go-chi/chi/v5 v5.2.4
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/stretchr/testify v1.11.1
 )
 
