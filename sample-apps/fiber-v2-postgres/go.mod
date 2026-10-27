@@ -1,6 +1,6 @@
 module fiber-v2-postgres
 
-go 1.26.0
+go 1.26.10
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.12
