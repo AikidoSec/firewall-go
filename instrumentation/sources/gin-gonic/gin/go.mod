@@ -1,6 +1,6 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
 
-go 1.26.0
+go 1.26.10
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
