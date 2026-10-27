@@ -7,7 +7,7 @@ require (
 	github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5 v0.0.0-00010101000000-000000000000
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4 v0.0.0-00010101000000-000000000000
 	github.com/jackc/pgx/v5 v5.9.2
-	github.com/labstack/echo/v4 v4.15.3
+	github.com/labstack/echo/v4 v4.16.1
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
