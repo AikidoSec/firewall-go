@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/AikidoSec/firewall-go v1.2.12
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v5 v0.0.0-00010101000000-000000000000
-	github.com/labstack/echo/v5 v5.2.0
+	github.com/labstack/echo/v5 v5.4.1
 	github.com/lib/pq v1.10.2
 )
 
