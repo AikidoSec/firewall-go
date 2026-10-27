@@ -137,6 +137,30 @@ func TestTryExtractBody(t *testing.T) {
 
 		assert.Nil(t, result)
 	})
+
+	t.Run("preserves duplicate JSON values for inspection", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"field":"malicious","field":null}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		parser := &mockParser{req: req}
+		result := TryExtractBody(req, parser)
+
+		assert.Equal(t, map[string]any{"field": []any{"malicious", nil}}, result)
+	})
+
+	t.Run("duplicate JSON prefix does not suppress form inspection", func(t *testing.T) {
+		body := `{"field":"attack","field":null}=form-value`
+		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		result := TryExtractBody(req, &mockParser{req: req})
+		assert.Equal(t, []any{
+			map[string]any{"field": []any{"attack", nil}},
+			url.Values{`{"field":"attack","field":null}`: {"form-value"}},
+		}, result)
+		restored, err := io.ReadAll(req.Body)
+		require.NoError(t, err)
+		assert.Equal(t, body, string(restored))
+	})
 }
 
 func TestTryExtractBodyBypassVectors(t *testing.T) {

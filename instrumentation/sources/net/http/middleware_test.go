@@ -57,6 +57,27 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	handler(w, r)
 }
 
+func TestMiddlewarePreservesDuplicateJSONValues(t *testing.T) {
+	body := `{"field":"attack","field":null}`
+	called := false
+	handler := Middleware(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx)
+		assert.Equal(t, map[string]any{"field": []any{"attack", nil}}, ctx.Body)
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.Equal(t, body, string(raw))
+		w.WriteHeader(http.StatusOK)
+	})
+	r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handler(w, r)
+	assert.True(t, called)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
 func TestMiddlewareSetsIPInContext(t *testing.T) {
 	handler := Middleware(func(w http.ResponseWriter, r *http.Request) {
 		ctx := request.GetContext(r.Context())

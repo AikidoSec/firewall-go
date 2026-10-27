@@ -59,6 +59,28 @@ func multipartBody(t *testing.T, fields map[string]string) (io.Reader, string) {
 }
 
 func TestExtractBodyJSON(t *testing.T) {
+	t.Run("duplicate values reach the handler for inspection", func(t *testing.T) {
+		body := `{"field":"attack","field":null}`
+		app := newTestApp()
+		app.Use(zenfiber.GetMiddleware())
+		called := false
+		app.Post("/route", func(c *fiber.Ctx) error {
+			called = true
+			ctx := request.GetContext(c.UserContext())
+			require.NotNil(t, ctx)
+			assert.Equal(t, map[string]any{"field": []any{"attack", nil}}, ctx.Body)
+			assert.Equal(t, body, string(c.Body()))
+			return c.SendString("ok")
+		})
+		r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(r)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.True(t, called)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
 	t.Run("valid object", func(t *testing.T) {
 		got := extractedBody(t, strings.NewReader(`{"username":"alice"}`), "application/json")
 
