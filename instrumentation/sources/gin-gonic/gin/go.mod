@@ -2,6 +2,8 @@ module github.com/AikidoSec/firewall-go/instrumentation/sources/gin-gonic/gin
 
 go 1.26.0
 
+toolchain go1.26.10
+
 replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (

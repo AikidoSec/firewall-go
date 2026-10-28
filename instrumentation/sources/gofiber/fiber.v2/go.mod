@@ -2,6 +2,8 @@ module github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2
 
 go 1.26.0
 
+toolchain go1.26.10
+
 replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (

@@ -2,6 +2,8 @@ module fiber-v3-postgres
 
 go 1.26.0
 
+toolchain go1.26.10
+
 require (
 	github.com/AikidoSec/firewall-go v1.2.12
 	github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v3 v0.0.0-00010101000000-000000000000

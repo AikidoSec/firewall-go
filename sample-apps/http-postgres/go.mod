@@ -2,6 +2,8 @@ module http-postgres
 
 go 1.26.0
 
+toolchain go1.26.10
+
 require (
 	github.com/AikidoSec/firewall-go v0.0.0
 	github.com/lib/pq v1.10.2
