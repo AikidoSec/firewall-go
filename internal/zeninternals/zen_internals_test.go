@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 )
 
 func TestVerifyWASMChecksum(t *testing.T) {
@@ -36,6 +38,50 @@ func TestNewWasmInstance(t *testing.T) {
 	// Test that newWasmInstance returns the correct type
 	instance := newWasmInstance()
 	require.NotNil(t, instance, "newWasmInstance should not return nil")
+	t.Cleanup(func() { require.NoError(t, instance.mod.Close(context.Background())) })
+	require.NotNil(t, instance.alloc)
+	require.NotNil(t, instance.free)
+	require.NotNil(t, instance.detectSQL)
+}
+
+func TestValidateExport(t *testing.T) {
+	ctx := context.Background()
+	r := wazero.NewRuntime(ctx)
+	t.Cleanup(func() { require.NoError(t, r.Close(ctx)) })
+	mod, err := r.Instantiate(ctx, wasmBin)
+	require.NoError(t, err)
+	i32 := api.ValueTypeI32
+	i64 := api.ValueTypeI64
+	for _, tc := range []struct {
+		name            string
+		params, results []api.ValueType
+		missing         bool
+		wantError       string
+	}{
+		{"valid", []api.ValueType{i32}, []api.ValueType{i32}, false, ""},
+		{"missing export", nil, nil, true, "missing export"},
+		{"missing parameter", nil, []api.ValueType{i32}, false, "unexpected signature"},
+		{"extra parameter", []api.ValueType{i32, i32}, []api.ValueType{i32}, false, "unexpected signature"},
+		{"wrong parameter type", []api.ValueType{i64}, []api.ValueType{i32}, false, "unexpected signature"},
+		{"missing result", []api.ValueType{i32}, nil, false, "unexpected signature"},
+		{"extra result", []api.ValueType{i32}, []api.ValueType{i32, i32}, false, "unexpected signature"},
+		{"wrong result type", []api.ValueType{i32}, []api.ValueType{i64}, false, "unexpected signature"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := "wasm_alloc"
+			if tc.missing {
+				name = "missing_export"
+			}
+			fn, err := validateExport(mod, name, tc.params, tc.results)
+			if tc.wantError != "" {
+				require.ErrorContains(t, err, tc.wantError)
+				require.Nil(t, fn)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, fn)
+			}
+		})
+	}
 }
 
 func TestDetectSQLInjection(t *testing.T) {
