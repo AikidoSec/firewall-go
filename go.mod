@@ -2,6 +2,8 @@ module github.com/AikidoSec/firewall-go
 
 go 1.26.0
 
+toolchain go1.26.10
+
 require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tetratelabs/wazero v1.11.0
