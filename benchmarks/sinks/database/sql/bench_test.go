@@ -39,7 +39,8 @@ type benchConn struct{}
 
 func (*benchConn) Prepare(string) (driver.Stmt, error) { return nil, errors.New("prepare is not used") }
 func (*benchConn) Close() error                        { return nil }
-func (*benchConn) Begin() (driver.Tx, error)           { return nil, errors.New("transactions are not used") }
+func (*benchConn) Begin() (driver.Tx, error) { return nil, errors.New("transactions are not used") }
+
 func (*benchConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
 	return driver.RowsAffected(1), nil
 }
@@ -162,6 +163,9 @@ func benchmarkHTTPSQL(b *testing.B, run func(*testing.B, func() bool)) {
 	// untimed and separate from the request samples.
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
+		if got := zeninternals.DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(zeninternals.PostgreSQL)); got != 1 {
+			b.Fatalf("WASM warmup injection probe: got %d, want 1", got)
+		}
 		if got := zeninternals.DetectSQLInjection("SELECT * FROM users WHERE name = 'alice-smith'", "alice-smith", int(zeninternals.PostgreSQL)); got != 0 {
 			b.Fatalf("WASM warmup returned %d", got)
 		}
