@@ -39,7 +39,7 @@ type benchConn struct{}
 
 func (*benchConn) Prepare(string) (driver.Stmt, error) { return nil, errors.New("prepare is not used") }
 func (*benchConn) Close() error                        { return nil }
-func (*benchConn) Begin() (driver.Tx, error) { return nil, errors.New("transactions are not used") }
+func (*benchConn) Begin() (driver.Tx, error)           { return nil, errors.New("transactions are not used") }
 
 func (*benchConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
 	return driver.RowsAffected(1), nil
@@ -159,17 +159,20 @@ func BenchmarkHTTPSQLParallel(b *testing.B) {
 func benchmarkHTTPSQL(b *testing.B, run func(*testing.B, func() bool)) {
 	b.Helper()
 	db := setup(b)
-	// Exercise the production pool during asynchronous compilation. Warmup is
-	// untimed and separate from the request samples.
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		if got := zeninternals.DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(zeninternals.PostgreSQL)); got != 1 {
-			b.Fatalf("WASM warmup injection probe: got %d, want 1", got)
-		}
-		if got := zeninternals.DetectSQLInjection("SELECT * FROM users WHERE name = 'alice-smith'", "alice-smith", int(zeninternals.PostgreSQL)); got != 0 {
-			b.Fatalf("WASM warmup returned %d", got)
-		}
-		time.Sleep(10 * time.Millisecond)
+	// Wait for compilation so samples measure steady-state
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	err := zeninternals.WaitForCompilation(ctx)
+	cancel()
+	if err != nil {
+		b.Fatalf("WASM compilation did not complete: %v", err)
+	}
+	// Exercise the production pool before timing. Errors also return 0, so a
+	// safe query alone cannot verify successful detection.
+	if got := zeninternals.DetectSQLInjection("SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", int(zeninternals.PostgreSQL)); got != 1 {
+		b.Fatalf("WASM warmup injection probe: got %d, want 1", got)
+	}
+	if got := zeninternals.DetectSQLInjection("SELECT * FROM users WHERE name = 'alice-smith'", "alice-smith", int(zeninternals.PostgreSQL)); got != 0 {
+		b.Fatalf("WASM warmup returned %d", got)
 	}
 	for _, input := range []struct {
 		name          string
