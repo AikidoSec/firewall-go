@@ -50,6 +50,39 @@ var mockVulnerability = Vulnerability[mockScanArgs]{
 	Error: "",
 }
 
+func TestScanDuplicateJSONValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		wantPath string
+	}{
+		{"first value", `{"field":"attack","field":null}`, ".field.[0]"},
+		{"middle value", `{"field":null,"field":"attack","field":"safe"}`, ".field.[1]"},
+		{"last value", `{"field":"safe","field":"attack"}`, ".field.[1]"},
+		{"nested duplicate", `{"outer":{"field":"attack","field":null}}`, ".outer.field.[0]"},
+		{"duplicate objects", `{"field":{"nested":"attack"},"field":{"other":"safe"}}`, ".field.[0].nested"},
+		{"duplicate arrays", `{"field":["attack","safe"],"field":null}`, ".field.[0].[0]"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := zenhttp.ExtractJSONFromReader(strings.NewReader(tt.body))
+			inputs := extractStringsFromUserInput(body, nil)
+			assert.Equal(t, tt.wantPath, inputs["attack"])
+			ip := "127.0.0.1"
+			ctx := request.SetContext(context.Background(), request.ContextData{
+				Body:          body,
+				RemoteAddress: &ip,
+			})
+			err := ScanWithOptions(ctx, "test", mockVulnerability, mockScanArgs{}, ScanOptions{DeferReporting: true})
+			require.NoError(t, err)
+			attack := request.GetContext(ctx).GetDeferredAttack()
+			require.NotNil(t, attack)
+			assert.Equal(t, "attack", attack.Payload)
+			assert.Equal(t, "body", attack.Source)
+		})
+	}
+}
+
 func TestScanWithOptions_AllSourcesChecked(t *testing.T) {
 	ip := "127.0.0.1"
 	args := mockScanArgs{Value: "test"}
