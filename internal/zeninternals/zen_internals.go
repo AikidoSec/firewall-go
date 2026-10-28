@@ -155,10 +155,7 @@ func newWasmInstance() *wasmInstance {
 	return inst
 }
 
-// loadValidatedExports checks the WASM function signatures once per instance
-// before using CallWithStack, which only checks buffer size rather than exact
-// signatures. This prevents missing exports and signature changes from silently
-// treating stale arguments as results, without checks on individual calls.
+// Validate exact signatures up front: CallWithStack only checks buffer size.
 func (inst *wasmInstance) loadValidatedExports() error {
 	for _, export := range []struct {
 		name    string
