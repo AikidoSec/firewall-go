@@ -35,6 +35,9 @@ func ScanWithOptions[T any](ctx context.Context, operation string, vulnerability
 		return nil
 	}
 
+	restore := request.EnterScan()
+	defer restore()
+
 	reqCtx := request.GetContext(ctx)
 	if reqCtx == nil {
 		return nil
