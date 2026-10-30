@@ -49,7 +49,7 @@ type memoryWriter interface {
 // functionCaller is a minimal interface for calling functions.
 // This allows for testability as wazero has unexported methods within api.Function.
 type functionCaller interface {
-	Call(ctx context.Context, params ...uint64) ([]uint64, error)
+	CallWithStack(ctx context.Context, stack []uint64) error
 }
 
 type wasmInstance struct {
@@ -60,6 +60,8 @@ type wasmInstance struct {
 	memory     api.Memory
 	isCompiled bool // Track if this instance uses the compiled module
 	createdAt  time.Time
+	// Reused exclusively while checked out; sized for detect_sql_injection.
+	callStack [5]uint64
 }
 
 // Init initializes the zen-internals library by verifying the WASM binary checksum,
@@ -162,6 +164,7 @@ func DetectSQLInjection(query string, userInput string, dialect int) int {
 		inst.alloc,
 		inst.free,
 		inst.detectSQL,
+		inst.callStack[:],
 		query, userInput, dialect)
 	if err != nil {
 		log.Error("Failed to call detect_sql_injection", slog.Any("error", err))
@@ -202,6 +205,7 @@ func callDetectSQL(
 	ctx context.Context,
 	memory memoryWriter,
 	alloc, free, detectSQL functionCaller,
+	stack []uint64,
 	query, userInput string,
 	dialect int,
 ) (detectionResult int32, cleanupSucceeded bool, err error) {
@@ -213,7 +217,7 @@ func callDetectSQL(
 	cleanupSucceeded = true
 
 	// Allocate and write query to WASM memory
-	queryPtr, queryLen, freeQuery, err := allocateAndWriteString(ctx, memory, alloc, free, query, "query")
+	queryPtr, queryLen, freeQuery, err := allocateAndWriteString(ctx, memory, alloc, free, stack, query, "query")
 	if err != nil {
 		return 0, false, err
 	}
@@ -224,7 +228,7 @@ func callDetectSQL(
 	}()
 
 	// Allocate and write user input to WASM memory
-	userInputPtr, userInputLen, freeUserInput, err := allocateAndWriteString(ctx, memory, alloc, free, userInput, "user input")
+	userInputPtr, userInputLen, freeUserInput, err := allocateAndWriteString(ctx, memory, alloc, free, stack, userInput, "user input")
 	if err != nil {
 		return 0, false, err
 	}
@@ -235,22 +239,18 @@ func callDetectSQL(
 	}()
 
 	// Call detect_sql_injection(query_ptr, query_len, userinput_ptr, userinput_len, dialect)
-	results, err := detectSQL.Call(ctx,
-		uint64(queryPtr),
-		queryLen,
-		uint64(userInputPtr),
-		userInputLen,
-		uint64(dialect),
-	)
-	if err != nil {
+	// Every argument is overwritten: earlier calls leave their results in stack.
+	stack[0] = uint64(queryPtr)
+	stack[1] = queryLen
+	stack[2] = uint64(userInputPtr)
+	stack[3] = userInputLen
+	stack[4] = uint64(dialect)
+	if err := detectSQL.CallWithStack(ctx, stack[:5]); err != nil {
 		return 0, false, fmt.Errorf("failed to call detect_sql_injection: %w", err)
-	}
-	if len(results) == 0 {
-		return 0, false, fmt.Errorf("detect_sql_injection returned no results")
 	}
 
 	// Safely convert result to int32, checking for overflow
-	result := results[0]
+	result := stack[0]
 	if result > uint64(math.MaxInt32) {
 		return 0, false, fmt.Errorf("detect_sql_injection returned value too large: %d", result)
 	}
@@ -260,7 +260,7 @@ func callDetectSQL(
 // allocateAndWriteString allocates memory for a string, writes it to WASM memory, and returns the pointer and length
 // The caller is responsible for freeing the memory using the returned free function
 // The cleanup function returns true if freeing succeeded, false otherwise
-func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, free functionCaller, data string, name string) (uint32, uint64, func() bool, error) {
+func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, free functionCaller, stack []uint64, data string, name string) (uint32, uint64, func() bool, error) {
 	// Check for potential overflow in string length
 	const maxStringLen = 1 << 30 // 1GB limit to prevent overflow
 	if len(data) > maxStringLen {
@@ -269,16 +269,13 @@ func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, fre
 
 	// Allocate memory
 	dataLen := uint64(len(data))
-	results, err := alloc.Call(ctx, dataLen)
-	if err != nil {
+	stack[0] = dataLen
+	if err := alloc.CallWithStack(ctx, stack[:1]); err != nil {
 		return 0, 0, nil, fmt.Errorf("failed to allocate memory for %s: %w", name, err)
-	}
-	if len(results) == 0 {
-		return 0, 0, nil, fmt.Errorf("allocation failed for %s: no results returned", name)
 	}
 
 	// Safely convert pointer to uint32, checking for overflow
-	ptrRaw := results[0]
+	ptrRaw := stack[0]
 	if ptrRaw > uint64(^uint32(0)) {
 		return 0, 0, nil, fmt.Errorf("%s pointer too large: %d", name, ptrRaw)
 	}
@@ -292,7 +289,10 @@ func allocateAndWriteString(ctx context.Context, memory memoryWriter, alloc, fre
 	// Create cleanup function to free the mmemory we manually allocated in WASM
 	// Returns true if freeing succeeded, false otherwise
 	cleanup := func() bool {
-		if _, freeErr := free.Call(ctx, uint64(ptr), dataLen); freeErr != nil {
+		// Restore captured arguments after other calls overwrite the stack.
+		stack[0] = uint64(ptr)
+		stack[1] = dataLen
+		if freeErr := free.CallWithStack(ctx, stack[:2]); freeErr != nil {
 			// Log error but don't fail the main operation
 			log.Warn("Failed to free memory", slog.String("name", name), slog.Any("error", freeErr))
 			return false
