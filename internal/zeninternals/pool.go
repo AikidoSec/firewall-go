@@ -75,9 +75,17 @@ func (p *Pool) tryGetInstance() *wasmInstance {
 
 func (p *Pool) Put(instance *wasmInstance) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if len(p.idleInstances) < maxIdleInstances {
 		p.idleInstances = append(p.idleInstances, instance)
+		p.mu.Unlock()
+		return
+	}
+	p.mu.Unlock()
+
+	// The pool is full, close the unpooled instance so the runtime releases it.
+	if instance.mod != nil {
+		if err := instance.mod.Close(context.Background()); err != nil {
+			log.Debug("instance could not be closed", slog.Any("error", err))
+		}
 	}
 }
