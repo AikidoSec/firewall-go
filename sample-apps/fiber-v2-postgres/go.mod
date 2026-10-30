@@ -13,7 +13,7 @@ require (
 
 require (
 	github.com/AikidoSec/firewall-go/cmd/zen-go v0.0.0-00010101000000-000000000000 // indirect
-	github.com/andybalholm/brotli v1.2.2 // indirect
+	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/bubbletea v1.1.0 // indirect
 	github.com/charmbracelet/lipgloss v0.13.0 // indirect
