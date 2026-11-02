@@ -19,7 +19,15 @@ func (list *MatchList) Matches(ip netip.Addr) bool {
 		return false
 	}
 
-	return list.ipSet.Contains(ip)
+	// Match both IPv4 and its mapped IPv6 form.
+	ip = ip.Unmap()
+	if list.ipSet.Contains(ip) {
+		return true
+	}
+	if ip.Is4() {
+		return list.ipSet.Contains(netip.AddrFrom16(ip.As16()))
+	}
+	return false
 }
 
 func BuildMatchList(name, description string, ipsList []string) MatchList {

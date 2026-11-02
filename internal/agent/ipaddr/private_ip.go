@@ -45,7 +45,6 @@ func initPrivateIPRanges() {
 			"100::/64",      // Discard prefix (RFC 6666)
 			"2001:db8::/32", // Documentation prefix (RFC 3849)
 			"3fff::/20",     // Documentation prefix (RFC 9637)
-			"::ffff:0:0/96", // IPv4-mapped IPv6 addresses
 		}
 
 		// Combine all ranges

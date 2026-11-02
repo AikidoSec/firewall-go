@@ -187,6 +187,45 @@ func TestUpdateServiceConfig(t *testing.T) {
 	})
 }
 
+func TestMappedIPv4Lists(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+	resetServiceConfig()
+
+	list := aikido_types.IPList{
+		Key:         "mapped",
+		Source:      "manual",
+		Description: "Mapped IPv4 range",
+		IPs:         []string{"::ffff:185.162.16.0/120"},
+	}
+	UpdateServiceConfig(&aikido_types.CloudConfigData{
+		ConfigUpdatedAt: time.Now().UnixMilli(),
+		BypassedIPs:     list.IPs,
+	}, &aikido_types.ListsConfigData{
+		BlockedIPAddresses:   []aikido_types.IPList{list},
+		AllowedIPAddresses:   []aikido_types.IPList{list},
+		MonitoredIPAddresses: []aikido_types.IPList{list},
+	})
+
+	for _, ip := range []string{"185.162.16.188", "::ffff:185.162.16.188"} {
+		blocked, description := IsIPBlocked(ip)
+		assert.True(t, blocked, ip)
+		assert.Equal(t, list.Description, description)
+		assert.True(t, IsIPAllowed(ip), ip)
+		assert.True(t, IsIPBypassed(ip), ip)
+		assert.Equal(t, []string{list.Key}, GetMatchingBlockedIPKeys(ip), ip)
+		assert.Equal(t, []string{list.Key}, GetMatchingMonitoredIPKeys(ip), ip)
+	}
+	for _, ip := range []string{"185.162.17.188", "::ffff:185.162.17.188"} {
+		blocked, _ := IsIPBlocked(ip)
+		assert.False(t, blocked, ip)
+		assert.False(t, IsIPAllowed(ip), ip)
+		assert.False(t, IsIPBypassed(ip), ip)
+		assert.Empty(t, GetMatchingBlockedIPKeys(ip), ip)
+		assert.Empty(t, GetMatchingMonitoredIPKeys(ip), ip)
+	}
+}
+
 func TestIsIPBlocked(t *testing.T) {
 	setupTestGlobals()
 	defer resetServiceConfig()
