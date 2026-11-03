@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.26.10
 
 require (
-	github.com/AikidoSec/firewall-go v1.2.12
+	github.com/AikidoSec/firewall-go v1.2.13
 	github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2 v0.0.0-00010101000000-000000000000
 	github.com/gofiber/fiber/v2 v2.52.14
 	github.com/lib/pq v1.10.2
