@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.26.10
 
 require (
-	github.com/AikidoSec/firewall-go v1.2.12
+	github.com/AikidoSec/firewall-go v1.2.13
 	github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5 v0.0.0-00010101000000-000000000000
 	github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v4 v0.0.0-00010101000000-000000000000
 	github.com/jackc/pgx/v5 v5.9.2
