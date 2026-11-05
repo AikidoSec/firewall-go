@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -138,15 +139,57 @@ func newWasmInstance() *wasmInstance {
 		return nil
 	}
 
-	return &wasmInstance{
+	inst := &wasmInstance{
 		mod:        mod,
-		alloc:      mod.ExportedFunction("wasm_alloc"),
-		free:       mod.ExportedFunction("wasm_free"),
-		detectSQL:  mod.ExportedFunction("detect_sql_injection"),
 		memory:     mod.Memory(),
 		isCompiled: usingCompiled,
 		createdAt:  time.Now(),
 	}
+	if err := inst.loadValidatedExports(); err != nil {
+		log.Error("Invalid zen-internals export", slog.Any("error", err))
+		if closeErr := mod.Close(context.Background()); closeErr != nil {
+			log.Warn("Failed to close WASM module", slog.Any("error", closeErr))
+		}
+		return nil
+	}
+	return inst
+}
+
+// loadValidatedExports checks the WASM function signatures once per instance
+// before using CallWithStack, which only checks buffer size rather than exact
+// signatures. This prevents missing exports and signature changes from silently
+// treating stale arguments as results, without checks on individual calls.
+func (inst *wasmInstance) loadValidatedExports() error {
+	for _, export := range []struct {
+		name    string
+		params  []api.ValueType
+		results []api.ValueType
+		target  *api.Function
+	}{
+		{"wasm_alloc", []api.ValueType{api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}, &inst.alloc},
+		{"wasm_free", []api.ValueType{api.ValueTypeI32, api.ValueTypeI32}, nil, &inst.free},
+		{"detect_sql_injection", []api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32}, []api.ValueType{api.ValueTypeI32}, &inst.detectSQL},
+	} {
+		fn, err := validateExport(inst.mod, export.name, export.params, export.results)
+		if err != nil {
+			return err
+		}
+		*export.target = fn
+	}
+	return nil
+}
+
+func validateExport(mod api.Module, name string, params, results []api.ValueType) (api.Function, error) {
+	fn := mod.ExportedFunction(name)
+	if fn == nil {
+		return nil, fmt.Errorf("missing export %q", name)
+	}
+	def := fn.Definition()
+	if !slices.Equal(def.ParamTypes(), params) || !slices.Equal(def.ResultTypes(), results) {
+		return nil, fmt.Errorf("unexpected signature for %q: got %v -> %v, want %v -> %v",
+			name, def.ParamTypes(), def.ResultTypes(), params, results)
+	}
+	return fn, nil
 }
 
 // DetectSQLInjection performs SQL injection detection using the loaded library
