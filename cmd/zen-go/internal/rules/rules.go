@@ -206,6 +206,9 @@ func loadRulesFromFile(path string) (*InstrumentationRules, error) {
 				PrependTmpl:  strings.TrimSpace(rule.Template),
 			})
 		case "inject-decl":
+			if rule.Package == "" {
+				return nil, fmt.Errorf("rule %s: inject-decl rules require a package", rule.ID)
+			}
 			result.InjectDeclRules = append(result.InjectDeclRules, InjectDeclRule{
 				ID:           rule.ID,
 				Package:      rule.Package,
