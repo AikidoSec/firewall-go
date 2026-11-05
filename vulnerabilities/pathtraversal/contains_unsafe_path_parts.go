@@ -12,5 +12,15 @@ func containsUnsafePathParts(filePath string) bool {
 			return true
 		}
 	}
+
+	parts := strings.FieldsFunc(filePath, func(r rune) bool {
+		return r == '/' || r == '\\'
+	})
+	for _, part := range parts {
+		if part == ".." {
+			return true
+		}
+	}
+
 	return false
 }
