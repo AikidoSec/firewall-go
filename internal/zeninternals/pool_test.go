@@ -1,12 +1,14 @@
 package zeninternals
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tetratelabs/wazero"
 )
 
 func TestPool_Get_CreatesNewInstance(t *testing.T) {
@@ -89,4 +91,24 @@ func TestPool_Concurrency(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestPool_Put_ClosesOverflowInstances(t *testing.T) {
+	ctx := context.Background()
+	r := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfigInterpreter())
+	t.Cleanup(func() { require.NoError(t, r.Close(ctx)) })
+	compiled, err := r.CompileModule(ctx, wasmBin)
+	require.NoError(t, err)
+	pool := NewPool(nil)
+
+	for i := range maxIdleInstances + 1 {
+		mod, err := r.InstantiateModule(ctx, compiled, wazero.NewModuleConfig().WithName(""))
+		require.NoError(t, err)
+		pool.Put(&wasmInstance{mod: mod, createdAt: time.Now()})
+		assert.Equal(t, i == maxIdleInstances, mod.IsClosed(), "only the overflow instance should close")
+	}
+	require.Len(t, pool.idleInstances, maxIdleInstances)
+	for _, inst := range pool.idleInstances {
+		assert.False(t, inst.mod.IsClosed(), "pooled instances must remain open")
+	}
 }
