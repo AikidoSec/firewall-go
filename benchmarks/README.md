@@ -10,6 +10,13 @@ make benchmark
 
 This finds all packages containing benchmarks and runs them.
 
+Filter by benchmark name (a Go benchmark regex) and optionally set its duration:
+
+```bash
+make benchmark BENCH=TryExtractJSON
+make benchmark BENCH=TryExtractBodyMemory BENCHTIME=1x
+```
+
 ## What We Measure
 
 ### Middleware Overhead
