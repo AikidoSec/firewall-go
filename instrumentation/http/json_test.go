@@ -236,19 +236,24 @@ func FuzzJSONInspection(f *testing.F) {
 	})
 }
 
-func BenchmarkSmallBody(b *testing.B) {
-	body := generateString(1 * 1024) // 1KB
-	for b.Loop() {
-		r := httptest.NewRequest("GET", "/route", strings.NewReader(body))
-		tryExtractJSON(r)
-	}
-}
+func BenchmarkTryExtractJSON(b *testing.B) {
+	for _, tc := range []struct {
+		name string
+		size int
+	}{
+		{"1KiB", 1 << 10},
+		{"5MiB", 5 << 20},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			body := generateString(tc.size)
+			b.ReportAllocs()
+			b.SetBytes(int64(tc.size))
 
-func BenchmarkLargeBody(b *testing.B) {
-	body := generateString(5 * 1024 * 1024) // 5MB
-	for b.Loop() {
-		r := httptest.NewRequest("GET", "/route", strings.NewReader(body))
-		tryExtractJSON(r)
+			for b.Loop() {
+				r := httptest.NewRequest("GET", "/route", strings.NewReader(body))
+				tryExtractJSON(r)
+			}
+		})
 	}
 }
 

@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+BENCH="${BENCH:-.}"
+BENCHTIME="${BENCHTIME:-1s}"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -47,7 +50,7 @@ done
 
 if [[ ${#root_pkgs[@]} -gt 0 ]]; then
     echo "Running root module benchmarks: ${root_pkgs[*]}"
-    go test -bench=. -benchmem -run='^$' "${root_pkgs[@]}" || failed=1
+    go test -bench="$BENCH" -benchtime="$BENCHTIME" -benchmem -run='^$' "${root_pkgs[@]}" || failed=1
 fi
 
 for m in "${!sub_bench_mods[@]}"; do
@@ -57,7 +60,7 @@ for m in "${!sub_bench_mods[@]}"; do
         continue
     fi
     echo "Running benchmarks for sub-module: $m"
-    (cd "$m" && go test -bench=. -benchmem -run='^$' ./...) || failed=1
+    (cd "$m" && go test -bench="$BENCH" -benchtime="$BENCHTIME" -benchmem -run='^$' ./...) || failed=1
 done
 
 exit "$failed"

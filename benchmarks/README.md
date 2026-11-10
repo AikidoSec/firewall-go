@@ -10,6 +10,13 @@ make benchmark
 
 This finds all packages containing benchmarks and runs them.
 
+Filter by benchmark name (a Go benchmark regex) and optionally set its duration:
+
+```bash
+make benchmark BENCH=TryExtractJSON
+make benchmark BENCH=TryExtractBodyMemory BENCHTIME=1x
+```
+
 ## What We Measure
 
 ### Middleware Overhead
@@ -43,8 +50,8 @@ include initialization and warmup; per-operation metrics exclude untimed setup.
 
 ### Body Parsing
 
-- `BenchmarkSmallBody` (1KB) - `internal/http`
-- `BenchmarkLargeBody` (5MB) - `internal/http`
+- `BenchmarkTryExtractJSON/1KiB` - `instrumentation/http`
+- `BenchmarkTryExtractJSON/5MiB` - `instrumentation/http`
 
 Measures JSON body parsing performance for different payload sizes.
 
