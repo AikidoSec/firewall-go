@@ -26,8 +26,18 @@ func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
 		return nil
 	}
 
-	bodyFromJSON := tryExtractJSON(req)
+	var buf bytes.Buffer
+	tee := io.TeeReader(req.Body, &buf)
+	bodyFromJSON := ExtractJSONFromReader(tee)
+
+	// Drain any remaining bytes to ensure full body is available in request.
+	// Ignore error - we still need to restore the request body.
+	_, _ = io.Copy(io.Discard, tee)
+	body := buf.Bytes()
+
+	req.Body = io.NopCloser(bytes.NewReader(body))
 	bodyFromForm := tryExtractFormBody(req, parser)
+	req.Body = io.NopCloser(bytes.NewReader(body))
 
 	if bodyFromJSON != nil && bodyFromForm != nil {
 		return []any{bodyFromJSON, bodyFromForm}
@@ -40,26 +50,10 @@ func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
 
 // tryExtractFormBody attempts to extract form data (urlencoded or multipart)
 func tryExtractFormBody(req *http.Request, parser MultipartFormParser) url.Values {
-	// Use TeeReader to preserve the body while MultipartForm consumes it
-	var buf bytes.Buffer
-
-	originalBody := req.Body
-	req.Body = io.NopCloser(io.TeeReader(originalBody, &buf))
-
 	_, err := parser.MultipartForm()
-
-	// Drain any remaining bytes to ensure full body is captured in buffer
-	// This is important if MultipartForm fails early without reading everything
-	_, _ = io.Copy(io.Discard, req.Body)
-
-	// Restore the body from the buffer
-	req.Body = io.NopCloser(&buf)
-
-	if err != nil {
-		if !errors.Is(err, http.ErrNotMultipart) {
-			log.Debug("error on parse multipart form", slog.Any("error", err))
-			return nil
-		}
+	if err != nil && !errors.Is(err, http.ErrNotMultipart) {
+		log.Debug("error on parse multipart form", slog.Any("error", err))
+		return nil
 	}
 
 	if len(req.PostForm) == 0 {

@@ -269,7 +269,7 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		parser := &mockParser{req: req}
-		tryExtractFormBody(req, parser)
+		TryExtractBody(req, parser)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
@@ -287,7 +287,7 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		parser := &mockParser{req: req}
-		tryExtractFormBody(req, parser)
+		TryExtractBody(req, parser)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
@@ -300,7 +300,7 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req.Header.Set("Content-Type", "multipart/form-data") // Missing boundary
 
 		parser := &mockParser{req: req}
-		tryExtractFormBody(req, parser)
+		TryExtractBody(req, parser)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
@@ -335,4 +335,37 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, originalBody, string(bodyBytes))
 	})
+}
+
+func TestTryExtractBodyRestoresBody(t *testing.T) {
+	var multipartBody bytes.Buffer
+	writer := multipart.NewWriter(&multipartBody)
+	require.NoError(t, writer.WriteField("field", "value"))
+	require.NoError(t, writer.Close())
+
+	for _, tc := range []struct {
+		name        string
+		contentType string
+		body        string
+	}{
+		{"binary", "application/octet-stream", strings.Repeat("\x00", 64<<10)},
+		{"invalid JSON", "application/json", "not json"},
+		{"partial JSON", "application/json", `{"name":"Doggo"}{"invalid"}`},
+		{"streaming JSON", "application/json", "{\"first\":true}\n{\"second\":true}"},
+		{"duplicate JSON keys", "application/json", `{"field":"malicious","field":null}`},
+		{"invalid multipart", "multipart/form-data", "not a form"},
+		{"multipart", writer.FormDataContentType(), multipartBody.String()},
+		{"JSON and multipart", writer.FormDataContentType(), "{}\n" + multipartBody.String()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", tc.contentType)
+
+			TryExtractBody(req, &mockParser{req: req})
+
+			restored, err := io.ReadAll(req.Body)
+			require.NoError(t, err)
+			assert.Equal(t, tc.body, string(restored))
+		})
+	}
 }
