@@ -349,6 +349,10 @@ func TestTryExtractBodyRestoresBody(t *testing.T) {
 		body        string
 	}{
 		{"binary", "application/octet-stream", strings.Repeat("\x00", 64<<10)},
+		{"invalid JSON", "application/json", "not json"},
+		{"partial JSON", "application/json", `{"name":"Doggo"}{"invalid"}`},
+		{"streaming JSON", "application/json", "{\"first\":true}\n{\"second\":true}"},
+		{"duplicate JSON keys", "application/json", `{"field":"malicious","field":null}`},
 		{"invalid multipart", "multipart/form-data", "not a form"},
 		{"multipart", writer.FormDataContentType(), multipartBody.String()},
 		{"JSON and multipart", writer.FormDataContentType(), "{}\n" + multipartBody.String()},

@@ -13,7 +13,7 @@ This finds all packages containing benchmarks and runs them.
 Filter by benchmark name (a Go benchmark regex) and optionally set its duration:
 
 ```bash
-make benchmark BENCH=TryExtractJSON
+make benchmark BENCH=ExtractJSONFromReader
 make benchmark BENCH=TryExtractBodyMemory BENCHTIME=1x
 ```
 
@@ -50,8 +50,8 @@ include initialization and warmup; per-operation metrics exclude untimed setup.
 
 ### Body Parsing
 
-- `BenchmarkTryExtractJSON/1KiB` - `instrumentation/http`
-- `BenchmarkTryExtractJSON/5MiB` - `instrumentation/http`
+- `BenchmarkExtractJSONFromReader/1KiB` - `instrumentation/http`
+- `BenchmarkExtractJSONFromReader/5MiB` - `instrumentation/http`
 
 Measures JSON body parsing performance for different payload sizes.
 
