@@ -43,8 +43,8 @@ include initialization and warmup; per-operation metrics exclude untimed setup.
 
 ### Body Parsing
 
-- `BenchmarkSmallBody` (1KB) - `internal/http`
-- `BenchmarkLargeBody` (5MB) - `internal/http`
+- `BenchmarkTryExtractJSON/1KiB` - `instrumentation/http`
+- `BenchmarkTryExtractJSON/5MiB` - `instrumentation/http`
 
 Measures JSON body parsing performance for different payload sizes.
 
