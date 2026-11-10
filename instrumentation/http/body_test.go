@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -17,6 +18,72 @@ import (
 // mockParser implements MultipartFormParser for testing
 type mockParser struct {
 	req *http.Request
+}
+
+func TestTryExtractBodyPreservesClose(t *testing.T) {
+	closeErr := errors.New("close failed")
+
+	for _, tc := range []struct {
+		name        string
+		contentType string
+		body        string
+		closeErr    error
+	}{
+		{"JSON", "application/json", `{"key":"value"}`, nil},
+		{"form", "application/x-www-form-urlencoded", "key=value", nil},
+		{"invalid body", "application/octet-stream", "not json", nil},
+		{"close error", "application/json", `{"key":"value"}`, closeErr},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := &closeTrackingBody{Reader: strings.NewReader(tc.body), err: tc.closeErr}
+			req := httptest.NewRequest(http.MethodPost, "/test", body)
+			req.Header.Set("Content-Type", tc.contentType)
+
+			TryExtractBody(req, &mockParser{req: req})
+
+			assert.Zero(t, body.closes)
+			restored, err := io.ReadAll(req.Body)
+			require.NoError(t, err)
+			assert.Equal(t, tc.body, string(restored))
+
+			assert.Equal(t, tc.closeErr, req.Body.Close())
+			assert.Equal(t, 1, body.closes)
+		})
+	}
+}
+
+type closeTrackingBody struct {
+	io.Reader
+	closes int
+	err    error
+}
+
+func (b *closeTrackingBody) Close() error {
+	b.closes++
+	return b.err
+}
+
+func TestTryExtractBodyParserCloseDoesNotCloseOriginal(t *testing.T) {
+	body := &closeTrackingBody{Reader: strings.NewReader("key=value")}
+	req := httptest.NewRequest(http.MethodPost, "/test", body)
+
+	TryExtractBody(req, &closingBodyParser{req: req})
+
+	assert.Zero(t, body.closes)
+	restored, err := io.ReadAll(req.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "key=value", string(restored))
+
+	require.NoError(t, req.Body.Close())
+	assert.Equal(t, 1, body.closes)
+}
+
+type closingBodyParser struct {
+	req *http.Request
+}
+
+func (p *closingBodyParser) MultipartForm() (*multipart.Form, error) {
+	return nil, p.req.Body.Close()
 }
 
 func (m *mockParser) MultipartForm() (*multipart.Form, error) {

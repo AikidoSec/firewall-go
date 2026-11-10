@@ -26,8 +26,9 @@ func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
 		return nil
 	}
 
+	originalBody := req.Body
 	var buf bytes.Buffer
-	tee := io.TeeReader(req.Body, &buf)
+	tee := io.TeeReader(originalBody, &buf)
 	bodyFromJSON := ExtractJSONFromReader(tee)
 
 	// Drain any remaining bytes to ensure full body is available in request.
@@ -37,7 +38,7 @@ func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
 
 	req.Body = io.NopCloser(bytes.NewReader(body))
 	bodyFromForm := tryExtractFormBody(req, parser)
-	req.Body = io.NopCloser(bytes.NewReader(body))
+	req.Body = &replayBody{Reader: bytes.NewReader(body), Closer: originalBody}
 
 	if bodyFromJSON != nil && bodyFromForm != nil {
 		return []any{bodyFromJSON, bodyFromForm}
@@ -46,6 +47,12 @@ func TryExtractBody(req *http.Request, parser MultipartFormParser) any {
 		return bodyFromJSON
 	}
 	return bodyFromForm
+}
+
+// replayBody reads captured bytes while preserving the original body's Close.
+type replayBody struct {
+	io.Reader
+	io.Closer
 }
 
 // tryExtractFormBody attempts to extract form data (urlencoded or multipart)
