@@ -1,8 +1,6 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/go-chi/chi.v5
 
-go 1.26.0
-
-toolchain go1.26.10
+go 1.26.11
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
