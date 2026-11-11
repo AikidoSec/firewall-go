@@ -61,7 +61,11 @@ type replayBody struct {
 func tryExtractFormBody(req *http.Request) url.Values {
 	err := req.ParseMultipartForm(32 << 20)
 	if req.MultipartForm != nil {
-		defer req.MultipartForm.RemoveAll()
+		defer func() {
+			if err := req.MultipartForm.RemoveAll(); err != nil {
+				log.Debug("error cleaning up multipart form", slog.Any("error", err))
+			}
+		}()
 	}
 	if err != nil && !errors.Is(err, http.ErrNotMultipart) {
 		log.Debug("error on parse multipart form", slog.Any("error", err))
