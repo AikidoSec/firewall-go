@@ -653,6 +653,30 @@ func __example_check(string) error`,
 	assert.Contains(t, resultStr, `"unsafe"`)
 }
 
+func TestInstrumentFile_InjectDeclRule_MissingPackage(t *testing.T) {
+	src := `package main
+func main() {}
+`
+	tmpFile := filepath.Join(t.TempDir(), "main.go")
+	require.NoError(t, os.WriteFile(tmpFile, []byte(src), 0o600))
+
+	inst, err := NewInstrumentorWithRules(&rules.InstrumentationRules{
+		InjectDeclRules: []rules.InjectDeclRule{{
+			ID:           "test.inject",
+			AnchorFunc:   "main",
+			DeclTemplate: `func init() { println("injected") }`,
+			Links:        []string{"example.com/sink"},
+		}},
+	}, "0.0.0")
+	require.NoError(t, err)
+
+	result, err := inst.InstrumentFile(tmpFile, "example.com/app")
+	require.NoError(t, err)
+	assert.False(t, result.Modified)
+	assert.Empty(t, result.Code)
+	assert.Empty(t, result.LinkDeps)
+}
+
 func TestInstrumentFile_InjectDeclRule_NoAnchor(t *testing.T) {
 	src := `package os
 
