@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -175,6 +176,51 @@ func TestMiddlewarePreservesBodyForMultipart(t *testing.T) {
 	handler(w, r)
 
 	assert.Equal(t, "value1", fieldReadInHandler)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestMiddlewareInspectsMultipartParsedBeforeServeMux(t *testing.T) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	require.NoError(t, writer.WriteField("username", "alice"))
+	require.NoError(t, writer.WriteField("email", "alice@example.com"))
+	require.NoError(t, writer.Close())
+	expected := url.Values{
+		"username": {"alice"},
+		"email":    {"alice@example.com"},
+	}
+
+	called := false
+	mux := http.NewServeMux()
+	// Instrumentation wraps registered handlers, not middleware outside the mux.
+	mux.HandleFunc("POST /upload", Middleware(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx)
+		assert.Equal(t, expected, ctx.Body, "inspection must retain form fields parsed by outer middleware")
+		assert.Equal(t, expected, r.PostForm)
+		require.NotNil(t, r.MultipartForm)
+		assert.Equal(t, expected, url.Values(r.MultipartForm.Value))
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	outerMiddleware := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseMultipartForm(32<<20))
+		defer func() {
+			require.NoError(t, r.MultipartForm.RemoveAll())
+		}()
+		remaining, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.Empty(t, remaining, "outer middleware has already consumed the body")
+		mux.ServeHTTP(w, r)
+	})
+
+	r := httptest.NewRequest(http.MethodPost, "/upload", &body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	outerMiddleware.ServeHTTP(w, r)
+
+	assert.True(t, called)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 

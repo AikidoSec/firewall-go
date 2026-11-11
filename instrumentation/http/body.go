@@ -17,7 +17,7 @@ import (
 // will process.
 func TryExtractBody(req *http.Request) any {
 	if req.Body == nil || req.Body == http.NoBody {
-		return nil
+		return copyParsedFormBody(req)
 	}
 
 	originalBody := req.Body
@@ -31,6 +31,10 @@ func TryExtractBody(req *http.Request) any {
 	body := buf.Bytes()
 
 	req.Body = &replayBody{Reader: bytes.NewReader(body), Closer: originalBody}
+	if len(body) == 0 {
+		// Outer middleware may have already parsed and consumed the body.
+		return copyParsedFormBody(req)
+	}
 
 	// Parse only a private request so downstream middleware can still control
 	// the application's form parsing. Clone copies existing form state, which
@@ -49,6 +53,23 @@ func TryExtractBody(req *http.Request) any {
 		return bodyFromJSON
 	}
 	return bodyFromForm
+}
+
+// copyParsedFormBody retains fields parsed by upstream middleware without
+// sharing mutable form values or taking ownership of its multipart files.
+func copyParsedFormBody(req *http.Request) any {
+	form := req.PostForm
+	if len(form) == 0 && req.MultipartForm != nil {
+		form = req.MultipartForm.Value
+	}
+	if len(form) == 0 {
+		return nil
+	}
+	copy := make(url.Values, len(form))
+	for key, values := range form {
+		copy[key] = append([]string(nil), values...)
+	}
+	return copy
 }
 
 // replayBody reads captured bytes while preserving the original body's Close.

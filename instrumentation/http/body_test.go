@@ -389,6 +389,37 @@ func TestTryExtractBodyPreservesFormState(t *testing.T) {
 	}
 }
 
+func TestTryExtractBodyRetainsConsumedForm(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body io.ReadCloser
+	}{
+		{name: "consumed body", body: io.NopCloser(strings.NewReader(""))},
+		{name: "nil body"},
+		{name: "NoBody", body: http.NoBody},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/signup?query=value", nil)
+			req.Body = tc.body
+			req.Form = url.Values{"username": {"alice"}, "query": {"value"}}
+			req.PostForm = url.Values{"username": {"alice", "bob"}}
+			req.MultipartForm = &multipart.Form{Value: map[string][]string{"username": {"alice", "bob"}}}
+			originalMultipartForm := req.MultipartForm
+
+			result, ok := TryExtractBody(req).(url.Values)
+			require.True(t, ok)
+			assert.Equal(t, req.PostForm, result)
+			assert.NotContains(t, result, "query", "query parameters are not body fields")
+
+			result["username"][0] = "changed"
+			result.Set("extra", "value")
+			assert.Equal(t, url.Values{"username": {"alice", "bob"}}, req.PostForm)
+			assert.Equal(t, "alice", req.MultipartForm.Value["username"][0])
+			assert.Same(t, originalMultipartForm, req.MultipartForm)
+		})
+	}
+}
+
 func TestTryExtractBodyPreservesDownstreamFormMiddleware(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
