@@ -80,11 +80,11 @@ type replayBody struct {
 
 // tryExtractFormBody attempts to extract form data (urlencoded or multipart)
 func tryExtractFormBody(req *http.Request) url.Values {
-	err := req.ParseMultipartForm(32 << 20)
+	err := req.ParseMultipartForm(32 << 20) // #nosec G120 -- parses a private request backed by captured bytes.
 	if req.MultipartForm != nil {
 		defer func() {
-			if err := req.MultipartForm.RemoveAll(); err != nil {
-				log.Debug("error cleaning up multipart form", slog.Any("error", err))
+			if cleanupErr := req.MultipartForm.RemoveAll(); cleanupErr != nil {
+				log.Debug("error cleaning up multipart form", slog.Any("error", cleanupErr))
 			}
 		}()
 	}
