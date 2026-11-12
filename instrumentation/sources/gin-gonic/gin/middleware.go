@@ -37,7 +37,7 @@ func GetMiddleware() gin.HandlerFunc {
 		data.Route = c.FullPath()
 		data.RouteParams = routeParams
 		data.RemoteAddress = &ip
-		data.Body = zenhttp.TryExtractBody(c.Request, c)
+		data.Body = zenhttp.TryExtractBody(c.Request)
 
 		reqCtx := request.SetContext(c.Request.Context(), data)
 		c.Request = c.Request.WithContext(reqCtx)

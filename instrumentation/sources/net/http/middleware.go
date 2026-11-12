@@ -1,7 +1,6 @@
 package http
 
 import (
-	"mime/multipart"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -41,7 +40,7 @@ func Middleware(orig func(w http.ResponseWriter, r *http.Request)) func(w http.R
 		data.Route = pattern
 		data.RouteParams = extractRouteParams(r, pattern)
 		data.RemoteAddress = &ip
-		data.Body = zenhttp.TryExtractBody(r, &requestParser{req: r})
+		data.Body = zenhttp.TryExtractBody(r)
 
 		ctx := request.SetContext(r.Context(), data)
 
@@ -101,21 +100,6 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 
 func (r *statusRecorder) Header() http.Header {
 	return r.writer.Header()
-}
-
-type requestParser struct {
-	req *http.Request
-}
-
-func (rp *requestParser) MultipartForm() (*multipart.Form, error) {
-	// Used same max memory as stdlib:
-	// https://cs.opensource.google/go/go/+/refs/tags/go1.25.5:src/net/http/request.go;l=36
-	err := rp.req.ParseMultipartForm(32 << 20)
-	if err != nil {
-		return nil, err
-	}
-
-	return rp.req.MultipartForm, nil
 }
 
 func extractRouteParams(r *http.Request, pattern string) map[string]string {

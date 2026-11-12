@@ -20,7 +20,7 @@ func BenchmarkTryExtractBodyMemory(b *testing.B) {
 				req.ContentLength = size
 				req.Header.Set("Content-Type", "application/octet-stream")
 
-				TryExtractBody(req, &mockParser{req: req})
+				TryExtractBody(req)
 
 				_ = req.Body.Close()
 			}

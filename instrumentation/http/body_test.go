@@ -15,11 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockParser implements MultipartFormParser for testing
-type mockParser struct {
-	req *http.Request
-}
-
 func TestTryExtractBodyPreservesClose(t *testing.T) {
 	closeErr := errors.New("close failed")
 
@@ -39,7 +34,7 @@ func TestTryExtractBodyPreservesClose(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/test", body)
 			req.Header.Set("Content-Type", tc.contentType)
 
-			TryExtractBody(req, &mockParser{req: req})
+			TryExtractBody(req)
 
 			assert.Zero(t, body.closes)
 			restored, err := io.ReadAll(req.Body)
@@ -63,37 +58,6 @@ func (b *closeTrackingBody) Close() error {
 	return b.err
 }
 
-func TestTryExtractBodyParserCloseDoesNotCloseOriginal(t *testing.T) {
-	body := &closeTrackingBody{Reader: strings.NewReader("key=value")}
-	req := httptest.NewRequest(http.MethodPost, "/test", body)
-
-	TryExtractBody(req, &closingBodyParser{req: req})
-
-	assert.Zero(t, body.closes)
-	restored, err := io.ReadAll(req.Body)
-	require.NoError(t, err)
-	assert.Equal(t, "key=value", string(restored))
-
-	require.NoError(t, req.Body.Close())
-	assert.Equal(t, 1, body.closes)
-}
-
-type closingBodyParser struct {
-	req *http.Request
-}
-
-func (p *closingBodyParser) MultipartForm() (*multipart.Form, error) {
-	return nil, p.req.Body.Close()
-}
-
-func (m *mockParser) MultipartForm() (*multipart.Form, error) {
-	err := m.req.ParseMultipartForm(32 << 20)
-	if err != nil {
-		return nil, err
-	}
-	return m.req.MultipartForm, nil
-}
-
 func TestTryExtractFormBody(t *testing.T) {
 	t.Run("urlencoded form", func(t *testing.T) {
 		formData := url.Values{}
@@ -102,8 +66,7 @@ func TestTryExtractFormBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		parser := &mockParser{req: req}
-		result := tryExtractFormBody(req, parser)
+		result := tryExtractFormBody(req)
 
 		assert.NotNil(t, result)
 		assert.Equal(t, "alice", result.Get("username"))
@@ -118,8 +81,7 @@ func TestTryExtractFormBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
-		parser := &mockParser{req: req}
-		result := tryExtractFormBody(req, parser)
+		result := tryExtractFormBody(req)
 
 		assert.NotNil(t, result)
 		assert.Equal(t, "value1", result.Get("field1"))
@@ -129,8 +91,7 @@ func TestTryExtractFormBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader("some data"))
 		req.Header.Set("Content-Type", "multipart/form-data") // Missing boundary
 
-		parser := &mockParser{req: req}
-		result := tryExtractFormBody(req, parser)
+		result := tryExtractFormBody(req)
 
 		assert.Nil(t, result)
 	})
@@ -141,8 +102,7 @@ func TestTryExtractFormBody_EmptyData(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", http.NoBody)
 		req.PostForm = url.Values{"username": []string{"alice"}}
 
-		parser := &mockParser{req: req}
-		result := tryExtractFormBody(req, parser)
+		result := tryExtractFormBody(req)
 
 		assert.NotNil(t, result)
 		assert.Equal(t, "alice", result.Get("username"))
@@ -151,8 +111,7 @@ func TestTryExtractFormBody_EmptyData(t *testing.T) {
 	t.Run("nil body with nil PostForm returns nil", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", http.NoBody)
 
-		parser := &mockParser{req: req}
-		result := tryExtractFormBody(req, parser)
+		result := tryExtractFormBody(req)
 
 		assert.Nil(t, result)
 	})
@@ -164,8 +123,7 @@ func TestTryExtractBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		assert.NotNil(t, result)
 	})
@@ -177,8 +135,7 @@ func TestTryExtractBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		assert.NotNil(t, result)
 		formValues, ok := result.(url.Values)
@@ -190,8 +147,7 @@ func TestTryExtractBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader("some data"))
 		req.Header.Set("Content-Type", "multipart/form-data") // Missing boundary
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		assert.Nil(t, result)
 	})
@@ -199,8 +155,7 @@ func TestTryExtractBody(t *testing.T) {
 	t.Run("returns nil when no body", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", http.NoBody)
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		assert.Nil(t, result)
 	})
@@ -209,8 +164,7 @@ func TestTryExtractBody(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"field":"malicious","field":null}`))
 		req.Header.Set("Content-Type", "application/json")
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		assert.Equal(t, map[string]any{"field": []any{"malicious", nil}}, result)
 	})
@@ -219,7 +173,7 @@ func TestTryExtractBody(t *testing.T) {
 		body := `{"field":"attack","field":null}=form-value`
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		result := TryExtractBody(req, &mockParser{req: req})
+		result := TryExtractBody(req)
 		assert.Equal(t, []any{
 			map[string]any{"field": []any{"attack", nil}},
 			url.Values{`{"field":"attack","field":null}`: {"form-value"}},
@@ -240,8 +194,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader("{}\n"+body.String()))
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		combined, ok := result.([]any)
 		require.True(t, ok, "got %T: %v", result, result)
@@ -261,8 +214,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"key":"val"}`+"\n"+body.String()))
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		combined, ok := result.([]any)
 		require.True(t, ok, "got %T: %v", result, result)
@@ -284,8 +236,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader("[]\n"+body.String()))
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		combined, ok := result.([]any)
 		require.True(t, ok, "got %T: %v", result, result)
@@ -300,8 +251,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(`{"name":"injected"}`))
 		req.Header.Set("Content-Type", "multipart/form-data; boundary=----boundary")
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		resultMap, ok := result.(map[string]interface{})
 		require.True(t, ok, "expected map, got %T: %v", result, result)
@@ -313,8 +263,7 @@ func TestTryExtractBodyBypassVectors(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 
-		parser := &mockParser{req: req}
-		result := TryExtractBody(req, parser)
+		result := TryExtractBody(req)
 
 		resultSlice, ok := result.([]interface{})
 		require.True(t, ok, "expected []interface{} for NDJSON body, got %T: %v", result, result)
@@ -335,8 +284,7 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(originalBody))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		parser := &mockParser{req: req}
-		TryExtractBody(req, parser)
+		TryExtractBody(req)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
@@ -353,8 +301,7 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewReader(originalBody))
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
-		parser := &mockParser{req: req}
-		TryExtractBody(req, parser)
+		TryExtractBody(req)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
@@ -366,8 +313,7 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(originalBody))
 		req.Header.Set("Content-Type", "multipart/form-data") // Missing boundary
 
-		parser := &mockParser{req: req}
-		TryExtractBody(req, parser)
+		TryExtractBody(req)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
@@ -382,8 +328,7 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(originalBody))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		parser := &mockParser{req: req}
-		TryExtractBody(req, parser)
+		TryExtractBody(req)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
@@ -395,13 +340,148 @@ func TestBodyStillReadableAfterExtraction(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(originalBody))
 		req.Header.Set("Content-Type", "application/json")
 
-		parser := &mockParser{req: req}
-		TryExtractBody(req, parser)
+		TryExtractBody(req)
 
 		bodyBytes, err := io.ReadAll(req.Body)
 		require.NoError(t, err)
 		assert.Equal(t, originalBody, string(bodyBytes))
 	})
+}
+
+func TestTryExtractBodyPreservesFormState(t *testing.T) {
+	var multipartBody bytes.Buffer
+	writer := multipart.NewWriter(&multipartBody)
+	require.NoError(t, writer.WriteField("username", "mallory"))
+	require.NoError(t, writer.Close())
+
+	for _, tc := range []struct {
+		name        string
+		contentType string
+		body        string
+		preparsed   bool
+	}{
+		{name: "urlencoded", contentType: "application/x-www-form-urlencoded", body: "username=mallory"},
+		{name: "multipart", contentType: writer.FormDataContentType(), body: multipartBody.String()},
+		{name: "existing form state", contentType: writer.FormDataContentType(), body: multipartBody.String(), preparsed: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", tc.contentType)
+			if tc.preparsed {
+				req.Form = url.Values{"username": {"normalized"}, "query": {"value"}}
+				req.PostForm = url.Values{"username": {"normalized"}}
+				req.MultipartForm = &multipart.Form{Value: url.Values{"username": {"normalized"}}}
+			}
+			originalForm := req.Form
+			originalPostForm := req.PostForm
+			originalMultipartForm := req.MultipartForm
+
+			result := TryExtractBody(req)
+
+			assert.Equal(t, url.Values{"username": {"mallory"}}, result)
+			assert.Equal(t, originalForm, req.Form)
+			assert.Equal(t, originalPostForm, req.PostForm)
+			assert.Same(t, originalMultipartForm, req.MultipartForm)
+			restored, err := io.ReadAll(req.Body)
+			require.NoError(t, err)
+			assert.Equal(t, tc.body, string(restored))
+		})
+	}
+}
+
+func TestTryExtractBodyRetainsConsumedForm(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body io.ReadCloser
+	}{
+		{name: "consumed body", body: io.NopCloser(strings.NewReader(""))},
+		{name: "nil body"},
+		{name: "NoBody", body: http.NoBody},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/signup?query=value", nil)
+			req.Body = tc.body
+			req.Form = url.Values{"username": {"alice"}, "query": {"value"}}
+			req.PostForm = url.Values{"username": {"alice", "bob"}}
+			req.MultipartForm = &multipart.Form{Value: map[string][]string{"username": {"alice", "bob"}}}
+			originalMultipartForm := req.MultipartForm
+
+			result, ok := TryExtractBody(req).(url.Values)
+			require.True(t, ok)
+			assert.Equal(t, req.PostForm, result)
+			assert.NotContains(t, result, "query", "query parameters are not body fields")
+
+			result["username"][0] = "changed"
+			result.Set("extra", "value")
+			assert.Equal(t, url.Values{"username": {"alice", "bob"}}, req.PostForm)
+			assert.Equal(t, "alice", req.MultipartForm.Value["username"][0])
+			assert.Same(t, originalMultipartForm, req.MultipartForm)
+		})
+	}
+}
+
+func TestTryExtractBodyPreservesDownstreamFormMiddleware(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		inspect bool
+	}{
+		{name: "without inspection", inspect: false},
+		{name: "with inspection", inspect: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			newRequest := func(t *testing.T, body string) *http.Request {
+				req := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader(body))
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				if tc.inspect {
+					result := TryExtractBody(req)
+					require.Equal(t, mustParseQuery(t, body), result)
+				}
+				assert.Nil(t, req.Form, "inspection must not populate the application's form cache")
+				assert.Nil(t, req.PostForm, "inspection must not populate the application's body form cache")
+				assert.Nil(t, req.MultipartForm)
+				return req
+			}
+
+			t.Run("body filtering", func(t *testing.T) {
+				req := newRequest(t, "username=mallory&role=admin&is_admin=1")
+
+				// Application middleware removes server-controlled fields from the body.
+				raw, err := io.ReadAll(req.Body)
+				require.NoError(t, err)
+				form := mustParseQuery(t, string(raw))
+				form.Del("role")
+				form.Del("is_admin")
+				clean := form.Encode()
+				req.Body = io.NopCloser(strings.NewReader(clean))
+				req.ContentLength = int64(len(clean))
+
+				// The handler should parse the filtered body, not inspection's cached form.
+				require.NoError(t, req.ParseForm())
+				assert.Equal(t, "mallory", req.PostForm.Get("username"))
+				assert.Empty(t, req.PostForm.Get("role"))
+				assert.Empty(t, req.PostForm.Get("is_admin"))
+			})
+
+			t.Run("body size limit", func(t *testing.T) {
+				const limit = 1024
+				req := newRequest(t, "username="+strings.Repeat("a", 2*limit))
+
+				// Application middleware enforces its limit when the handler reads the body.
+				req.Body = http.MaxBytesReader(httptest.NewRecorder(), req.Body, limit)
+				err := req.ParseForm()
+				var limitErr *http.MaxBytesError
+				require.ErrorAs(t, err, &limitErr, "form parsing must read through the application's body limiter")
+				assert.Equal(t, int64(limit), limitErr.Limit)
+			})
+		})
+	}
+}
+
+func mustParseQuery(t *testing.T, body string) url.Values {
+	t.Helper()
+	form, err := url.ParseQuery(body)
+	require.NoError(t, err)
+	return form
 }
 
 func TestTryExtractBodyRestoresBody(t *testing.T) {
@@ -428,7 +508,7 @@ func TestTryExtractBodyRestoresBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", tc.contentType)
 
-			TryExtractBody(req, &mockParser{req: req})
+			TryExtractBody(req)
 
 			restored, err := io.ReadAll(req.Body)
 			require.NoError(t, err)

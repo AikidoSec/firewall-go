@@ -39,7 +39,7 @@ func GetMiddleware() echo.MiddlewareFunc {
 			data.Route = c.Path()
 			data.RouteParams = routeParams
 			data.RemoteAddress = &ip
-			data.Body = http.TryExtractBody(httpRequest, c)
+			data.Body = http.TryExtractBody(httpRequest)
 
 			reqCtx := request.SetContext(httpRequest.Context(), data)
 			c.SetRequest(httpRequest.WithContext(reqCtx))
