@@ -1,11 +1,29 @@
 package stats
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAIStats_BoundedCardinality(t *testing.T) {
+	ai := newAIStats()
+	for i := range 1001 {
+		ai.OnAICall(AICallData{Provider: "custom", Model: fmt.Sprint(i)})
+	}
+	ai.OnAICall(AICallData{Provider: "custom", Model: "0"})
+	result := ai.GetAndClear()
+	require.Len(t, result, 1000)
+	for _, entry := range result {
+		if entry.Model == "0" {
+			assert.Equal(t, 2, entry.Calls)
+		}
+	}
+	ai.OnAICall(AICallData{Provider: "custom", Model: "1000"})
+	assert.Len(t, ai.GetAndClear(), 1)
+}
 
 func TestAIStats_OnAICall(t *testing.T) {
 	t.Run("tracks single call", func(t *testing.T) {
