@@ -1,8 +1,6 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/gofiber/fiber.v2
 
-go 1.26.0
-
-toolchain go1.26.10
+go 1.26.11
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
@@ -17,7 +15,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.19.1 // indirect
+	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
