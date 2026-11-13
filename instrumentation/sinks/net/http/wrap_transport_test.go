@@ -176,6 +176,19 @@ func TestWrapTransport_ReturnsUnwrappedWhenProtectionDisabled(t *testing.T) {
 	}
 }
 
+func TestWrapTransport_NilTransport_ReturnsNil(t *testing.T) {
+	protectCustomTransportTest(t)
+
+	t.Run("protection enabled", func(t *testing.T) {
+		assert.Nil(t, WrapTransport(nil), "a nil transport must remain nil")
+	})
+
+	t.Run("protection disabled", func(t *testing.T) {
+		zen.SetDisabled(true)
+		assert.Nil(t, WrapTransport(nil), "a nil transport must remain nil")
+	})
+}
+
 func TestPortFromURL(t *testing.T) {
 	t.Run("returns explicit port", func(t *testing.T) {
 		u, _ := url.Parse("http://example.com:8080/path")

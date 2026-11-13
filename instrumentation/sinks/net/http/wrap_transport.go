@@ -104,7 +104,7 @@ var (
 // state), we inject the SSRF DialContext directly onto the original transport.
 // This preserves the transport's existing h2 configuration.
 func WrapTransport(rt http.RoundTripper) http.RoundTripper {
-	if !zen.ShouldProtect() {
+	if rt == nil || !zen.ShouldProtect() {
 		return rt
 	}
 
