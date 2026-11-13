@@ -26,7 +26,7 @@ func (m *mockRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
 	return nil, nil
 }
 
-func TestWrapTransport_NonHTTPTransport_ReturnsSameInstance(t *testing.T) {
+func TestWrapTransport_NonHTTPTransport_IsWrapped(t *testing.T) {
 	originalDisabled := zen.IsDisabled()
 	defer zen.SetDisabled(originalDisabled)
 
@@ -36,9 +36,9 @@ func TestWrapTransport_NonHTTPTransport_ReturnsSameInstance(t *testing.T) {
 	defer agent.SetCloudClient(originalClient)
 	agent.SetCloudClient(testutil.NewMockCloudClient())
 
-	rt := &mockRoundTripper{}
+	rt := &forwardingTransport{inner: &mockRoundTripper{}}
 	result := WrapTransport(rt)
-	assert.Same(t, rt, result, "should return same instance for non-*http.Transport")
+	assert.NotSame(t, rt, result, "custom RoundTrippers need response observation too")
 }
 
 func TestWrapTransport_CachesWrappedTransport(t *testing.T) {
@@ -143,9 +143,18 @@ func TestWrapTransport_DoesNotDoubleWrap(t *testing.T) {
 	defer agent.SetCloudClient(originalClient)
 	agent.SetCloudClient(testutil.NewMockCloudClient())
 
-	wrapped := &ssrfTransport{inner: &http.Transport{}}
-	result := WrapTransport(wrapped)
-	assert.Same(t, wrapped, result, "should not double-wrap an ssrfTransport")
+	for _, tc := range []struct {
+		name string
+		rt   http.RoundTripper
+	}{
+		{name: "standard transport", rt: &http.Transport{}},
+		{name: "custom transport", rt: &forwardingTransport{inner: &mockRoundTripper{}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			wrapped := WrapTransport(tc.rt)
+			assert.Same(t, wrapped, WrapTransport(wrapped), "should not double-wrap a Zen transport")
+		})
+	}
 }
 
 func TestWrapTransport_ReturnsUnwrappedWhenProtectionDisabled(t *testing.T) {
@@ -154,9 +163,30 @@ func TestWrapTransport_ReturnsUnwrappedWhenProtectionDisabled(t *testing.T) {
 
 	zen.SetDisabled(true)
 
-	tr := &http.Transport{}
-	result := WrapTransport(tr)
-	assert.Same(t, tr, result, "should return original transport when protection is disabled")
+	for _, tc := range []struct {
+		name string
+		rt   http.RoundTripper
+	}{
+		{name: "standard transport", rt: &http.Transport{}},
+		{name: "custom transport", rt: &forwardingTransport{inner: &mockRoundTripper{}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Same(t, tc.rt, WrapTransport(tc.rt), "should leave transports untouched when protection is disabled")
+		})
+	}
+}
+
+func TestWrapTransport_NilTransport_ReturnsNil(t *testing.T) {
+	protectCustomTransportTest(t)
+
+	t.Run("protection enabled", func(t *testing.T) {
+		assert.Nil(t, WrapTransport(nil), "a nil transport must remain nil")
+	})
+
+	t.Run("protection disabled", func(t *testing.T) {
+		zen.SetDisabled(true)
+		assert.Nil(t, WrapTransport(nil), "a nil transport must remain nil")
+	})
 }
 
 func TestPortFromURL(t *testing.T) {

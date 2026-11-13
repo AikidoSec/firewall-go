@@ -13,13 +13,12 @@ import (
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
-// ssrfTransport wraps an *http.Transport to check DNS-resolved IPs for SSRF.
+// ssrfTransport wraps any http.RoundTripper for context propagation and redirect
+// tracking. DNS protection is injected separately for *http.Transport in WrapTransport.
 // RoundTrip propagates the request context (including GLS) into the Go context
 // so that DialContext (which runs in a different goroutine) can access user input.
-// DialContext resolves DNS, checks for private IPs, and connects to the resolved
-// IP directly to prevent TOCTOU / DNS rebinding attacks.
 type ssrfTransport struct {
-	inner *http.Transport
+	inner http.RoundTripper
 }
 
 func (t *ssrfTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -31,7 +30,7 @@ func (t *ssrfTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	resp, err := t.inner.RoundTrip(req)
-	if err != nil {
+	if err != nil || resp == nil {
 		return resp, err
 	}
 
@@ -45,6 +44,12 @@ func (t *ssrfTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+func (t *ssrfTransport) CloseIdleConnections() {
+	if inner, ok := t.inner.(interface{ CloseIdleConnections() }); ok {
+		inner.CloseIdleConnections()
+	}
 }
 
 func isRedirect(statusCode int) bool {
@@ -90,15 +95,16 @@ var (
 	wrapMu            sync.Mutex // guards first-time DialContext injection per transport
 )
 
-// WrapTransport wraps an http.RoundTripper with SSRF DNS resolution checking.
-// Only *http.Transport is wrapped (DialContext is needed); other RoundTrippers
-// are returned as-is. Wrapped transports are cached per original transport pointer.
+// WrapTransport wraps an http.RoundTripper for context propagation and redirect
+// tracking. Only directly accessible *http.Transports receive DNS-level SSRF
+// protection, since custom RoundTrippers do not expose their dialers.
+// Standard transport wrappers are cached per original transport pointer.
 //
 // Rather than cloning the transport (which can interfere with HTTP/2 connection
 // state), we inject the SSRF DialContext directly onto the original transport.
 // This preserves the transport's existing h2 configuration.
 func WrapTransport(rt http.RoundTripper) http.RoundTripper {
-	if !zen.ShouldProtect() {
+	if rt == nil || !zen.ShouldProtect() {
 		return rt
 	}
 
@@ -109,7 +115,8 @@ func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 
 	t, ok := rt.(*http.Transport)
 	if !ok {
-		return rt
+		// Custom transports can be non-comparable, so do not use them as cache keys.
+		return &ssrfTransport{inner: rt}
 	}
 
 	// Mutex prevents two goroutines from both reading t.DialContext before
