@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -121,6 +122,41 @@ func TestWrapTransport_CustomTransport_RecordsRedirectChain(t *testing.T) {
 		assert.Equal(t, portFromURL(req.URL), redirect.SourcePort)
 		assert.Equal(t, req.URL.Hostname(), redirect.DestHostname)
 		assert.Equal(t, portFromURL(req.URL), redirect.DestPort)
+	}
+}
+
+func TestWrapTransport_CustomTransport_NonFollowedStatusDoesNotRecordRedirect(t *testing.T) {
+	protectCustomTransportTest(t)
+
+	for _, status := range []int{
+		http.StatusMultipleChoices,
+		http.StatusNotModified,
+		http.StatusUseProxy,
+		306,
+		399,
+	} {
+		t.Run(strconv.Itoa(status), func(t *testing.T) {
+			ctx := request.SetContext(context.Background(), request.ContextData{Source: "test"})
+			calls := 0
+			rt := roundTripperFunc(func(*http.Request) (*http.Response, error) {
+				calls++
+				return &http.Response{
+					StatusCode: status,
+					Header:     http.Header{"Location": {"https://internal.example/target"}},
+					Body:       http.NoBody,
+				}, nil
+			})
+			client := &http.Client{Transport: WrapTransport(rt)}
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://user-controlled.example/start", nil)
+			require.NoError(t, err)
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			assert.Equal(t, status, resp.StatusCode)
+			assert.Equal(t, 1, calls, "net/http must not follow this response")
+			assert.Empty(t, request.GetContext(ctx).GetOutgoingRedirects(), "non-followed statuses must not contaminate later SSRF checks")
+		})
 	}
 }
 
