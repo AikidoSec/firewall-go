@@ -1,8 +1,6 @@
 module gin-pgx-native
 
-go 1.26.0
-
-toolchain go1.26.10
+go 1.26.11
 
 require (
 	github.com/AikidoSec/firewall-go v1.2.13
