@@ -318,8 +318,8 @@ func TestRoundTrip_NonRedirectDoesNotRecord(t *testing.T) {
 }
 
 func TestIsRedirect(t *testing.T) {
-	assert.True(t, isRedirect(301))
-	assert.True(t, isRedirect(302))
-	assert.False(t, isRedirect(200))
-	assert.False(t, isRedirect(400))
+	for status := 100; status <= 599; status++ {
+		expected := status == 301 || status == 302 || status == 303 || status == 307 || status == 308
+		assert.Equal(t, expected, isRedirect(status), "status %d", status)
+	}
 }

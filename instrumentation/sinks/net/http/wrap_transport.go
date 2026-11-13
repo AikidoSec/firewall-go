@@ -53,7 +53,15 @@ func (t *ssrfTransport) CloseIdleConnections() {
 }
 
 func isRedirect(statusCode int) bool {
-	return statusCode >= 300 && statusCode < 400
+	// Match net/http's redirectBehavior: other 3xx responses are not followed,
+	// even when they include a Location header.
+	switch statusCode {
+	case http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther,
+		http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
+		return true
+	default:
+		return false
+	}
 }
 
 func recordRedirect(source *url.URL, location string, reqCtx *request.Context) {
