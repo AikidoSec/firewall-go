@@ -90,7 +90,9 @@ func (b *aiResponseBody) observe(p []byte, err error) {
 		return
 	}
 	b.data = append(b.data, p...)
-	if err == io.EOF || (b.contentLength > 0 && int64(len(b.data)) == b.contentLength) {
+	reachedEOF := err == io.EOF
+	receivedContentLength := b.contentLength > 0 && int64(len(b.data)) == b.contentLength
+	if reachedEOF || receivedContentLength {
 		b.finished = true
 		data := b.data
 		b.data = nil
