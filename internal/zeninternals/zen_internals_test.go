@@ -84,14 +84,20 @@ func newMockFunctionCaller(results []uint64) *mockFunctionCaller {
 	}
 }
 
-func (f *mockFunctionCaller) Call(ctx context.Context, params ...uint64) ([]uint64, error) {
+func (f *mockFunctionCaller) CallWithStack(ctx context.Context, stack []uint64) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.callCount++
+	results := f.callResults
 	if f.callHandler != nil {
-		return f.callHandler(ctx, params)
+		var err error
+		results, err = f.callHandler(ctx, stack)
+		if err != nil {
+			return err
+		}
 	}
-	return f.callResults, nil
+	copy(stack, results)
+	return nil
 }
 
 // TestAllocateAndWriteStringHappyPath tests the happy path where allocation and write succeed.
@@ -123,7 +129,8 @@ func TestAllocateAndWriteStringHappyPath(t *testing.T) {
 	expectedPtr := uint32(100)
 	expectedLen := uint64(len(testData))
 
-	ptr, length, cleanup, err := allocateAndWriteString(ctx, memory, mockAlloc, mockFree, testData, "test")
+	var stack [5]uint64
+	ptr, length, cleanup, err := allocateAndWriteString(ctx, memory, mockAlloc, mockFree, stack[:], testData, "test")
 
 	// Should succeed
 	assert.NoError(t, err)
@@ -156,7 +163,8 @@ func TestAllocateAndWriteStringMemoryWriteFailure(t *testing.T) {
 	// Test write failure
 	memory.failOnWriteCall = 1 // fail on write
 
-	ptr, length, cleanup, err := allocateAndWriteString(ctx, memory, mockAlloc, mockFree, testData, "test")
+	var stack [5]uint64
+	ptr, length, cleanup, err := allocateAndWriteString(ctx, memory, mockAlloc, mockFree, stack[:], testData, "test")
 
 	// Should return error and nil cleanup
 	assert.Error(t, err)
@@ -198,9 +206,10 @@ func TestCallDetectSQLCleanup(t *testing.T) {
 			}
 
 			// Call detection with successful allocation and detection mocks
+			var stack [5]uint64
 			result, cleanupSucceeded, err := callDetectSQL(
 				context.Background(), newMockMemoryWriter(), newMockFunctionCaller([]uint64{100}), free,
-				newMockFunctionCaller([]uint64{1}), "SELECT * FROM users", "user input", int(MySQL),
+				newMockFunctionCaller([]uint64{1}), stack[:], "SELECT * FROM users", "user input", int(MySQL),
 			)
 
 			// Verify the detection succeeds and cleanup status reaches the caller
@@ -265,12 +274,14 @@ func TestCallDetectSQLSecondAllocationFailure(t *testing.T) {
 	// Make memory write fail on the second call (userInput write)
 	memory.failOnWriteCall = 2
 
+	var stack [5]uint64
 	result, cleanupSucceeded, err := callDetectSQL(
 		ctx,
 		memory,
 		mockAlloc,
 		mockFree,
 		mockDetectSQL,
+		stack[:],
 		"SELECT * FROM users", // query - should succeed
 		"user input",          // userInput - should fail on write
 		0,                     // dialect
@@ -302,6 +313,107 @@ func TestCallDetectSQLSecondAllocationFailure(t *testing.T) {
 	assert.Equal(t, 0, mockDetectSQL.callCount, "detectSQL should not be called when allocation fails")
 }
 
+// WASM functions write results into the same buffer used for their arguments.
+// Verify each call replaces old values and cleanup uses the original pointers.
+func TestCallDetectSQLStackReuse(t *testing.T) {
+	ctx := context.Background()
+	stack := [5]uint64{99, 99, 99, 99, 99}
+	for _, tc := range []struct {
+		query, input string
+		dialect      DatabaseType
+		want         uint64
+	}{
+		{"SELECT * FROM users", "alice", PostgreSQL, 1},
+		{"SELECT 1", "bob-smith", SQLite, 0},
+	} {
+		allocations := 0
+		alloc := &mockFunctionCaller{callHandler: func(_ context.Context, params []uint64) ([]uint64, error) {
+			allocations++
+			if allocations == 1 {
+				require.Equal(t, []uint64{uint64(len(tc.query))}, params)
+				return []uint64{100}, nil
+			}
+			require.Equal(t, []uint64{uint64(len(tc.input))}, params)
+			return []uint64{200}, nil
+		}}
+		detect := &mockFunctionCaller{callHandler: func(_ context.Context, params []uint64) ([]uint64, error) {
+			require.Equal(t, []uint64{100, uint64(len(tc.query)), 200, uint64(len(tc.input)), uint64(tc.dialect)}, params)
+			return []uint64{tc.want, 88, 88, 88, 88}, nil
+		}}
+		frees := 0
+		free := &mockFunctionCaller{callHandler: func(_ context.Context, params []uint64) ([]uint64, error) {
+			frees++
+			if frees == 1 {
+				require.Equal(t, []uint64{200, uint64(len(tc.input))}, params)
+			} else {
+				require.Equal(t, []uint64{100, uint64(len(tc.query))}, params)
+			}
+			return []uint64{77, 77}, nil
+		}}
+		result, cleaned, err := callDetectSQL(ctx, newMockMemoryWriter(), alloc, free, detect, stack[:], tc.query, tc.input, int(tc.dialect))
+		require.NoError(t, err)
+		require.True(t, cleaned)
+		require.Equal(t, int32(tc.want), result)
+		require.Equal(t, 2, frees)
+	}
+}
+
+func TestCallDetectSQLStackErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name, wantError string
+		failAllocCall   int
+		detectError     bool
+		allocResult     uint64
+		detectResult    uint64
+		wantFrees       int
+	}{
+		{"allocation error", "failed to allocate memory for query", 1, false, 100, 1, 0},
+		{"second allocation error", "failed to allocate memory for user input", 2, false, 100, 1, 1},
+		{"pointer overflow", "pointer too large", 0, false, 1 << 32, 1, 0},
+		{"detection error", "failed to call detect_sql_injection", 0, true, 100, 1, 2},
+		{"result overflow", "returned value too large", 0, false, 100, 1 << 31, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stack := [5]uint64{1, 1, 1, 1, 1}
+			memory := newMockMemoryWriter()
+			callErr := errors.New("WASM function failed after writing to the argument/result buffer")
+			allocCalls := 0
+			alloc := &mockFunctionCaller{callHandler: func(_ context.Context, params []uint64) ([]uint64, error) {
+				allocCalls++
+				params[0] = tc.allocResult
+				if allocCalls == tc.failAllocCall {
+					return nil, callErr
+				}
+				return nil, nil
+			}}
+			detect := &mockFunctionCaller{callHandler: func(_ context.Context, params []uint64) ([]uint64, error) {
+				params[0] = tc.detectResult
+				if tc.detectError {
+					return nil, callErr
+				}
+				return nil, nil
+			}}
+			free := &mockFunctionCaller{callHandler: func(_ context.Context, params []uint64) ([]uint64, error) {
+				if tc.failAllocCall == 2 {
+					require.Equal(t, []uint64{100, uint64(len("SELECT 1"))}, params)
+				}
+				return nil, nil
+			}}
+			result, cleaned, err := callDetectSQL(context.Background(), memory, alloc, free, detect, stack[:], "SELECT 1", "input", int(PostgreSQL))
+			require.ErrorContains(t, err, tc.wantError)
+			require.Zero(t, result)
+			require.False(t, cleaned)
+			require.Equal(t, tc.wantFrees, free.callCount)
+			if tc.failAllocCall != 0 {
+				require.ErrorIs(t, err, callErr)
+				require.Equal(t, tc.failAllocCall, allocCalls)
+				require.Equal(t, tc.failAllocCall-1, memory.writeCallCount)
+				require.Zero(t, detect.callCount)
+			}
+		})
+	}
+}
+
 // TestCompilationAndPooling tests that:
 // 1. Init() returns quickly (doesn't block on compilation)
 // 2. Compilation happens in background and eventually completes
@@ -330,34 +442,38 @@ func TestCompilationAndPooling(t *testing.T) {
 	require.Equal(t, 1, result)
 }
 
-// TestConcurrentAccess verifies thread safety with concurrent DetectSQLInjection calls
+// Mixed results and input lengths help detect buffers shared between requests.
 func TestConcurrentAccess(t *testing.T) {
-	// Initialize if not already done
-	if interpreterRuntime == nil {
-		err := Init()
-		require.NoError(t, err, "Init should succeed")
+	require.NoError(t, Init())
+	cases := []struct {
+		query, input string
+		want         int
+	}{
+		{"SELECT * FROM users WHERE id = ?", "123", 0},
+		{"SELECT * FROM users WHERE name = 'alice-smith'", "alice-smith", 0},
+		{"SELECT * FROM users WHERE id = '1' OR 1=1", "1' OR 1=1", 1},
 	}
 
 	const numGoroutines = 10
-	const callsPerGoroutine = 5
+	const callsPerGoroutine = 20
 
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
+	start := make(chan struct{})
 
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			defer wg.Done()
+			<-start
 			for j := 0; j < callsPerGoroutine; j++ {
-				result := DetectSQLInjection(
-					"SELECT * FROM users WHERE id = ?",
-					"123",
-					int(MySQL),
-				)
-				assert.Equal(t, 0, result, "Should not detect injection in safe query")
+				tc := cases[(i+j)%len(cases)]
+				result := DetectSQLInjection(tc.query, tc.input, int(MySQL))
+				assert.Equal(t, tc.want, result, "query=%q input=%q", tc.query, tc.input)
 			}
 		}()
 	}
 
+	close(start)
 	wg.Wait()
 }
 
