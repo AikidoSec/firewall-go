@@ -1,12 +1,36 @@
 package stats
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAIStatsCacheTokens(t *testing.T) {
+	ai := newAIStats()
+	for range 2 {
+		ai.OnAICall(AICallData{
+			Provider: "anthropic", Model: "claude", InputTokens: 100, OutputTokens: 20,
+			CacheReadTokens: 30, CacheWriteTokens: 10,
+		})
+	}
+	result := ai.GetAndClear()
+	require.Len(t, result, 1)
+	assert.Equal(t, 2, result[0].Calls)
+	assert.Equal(t, AITokenStats{Input: 200, Output: 40, Total: 240, CacheRead: 60, CacheWrite: 20}, result[0].Tokens)
+	data, err := json.Marshal(result[0].Tokens)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"input":200,"output":40,"total":240,"cacheRead":60,"cacheWrite":20}`, string(data))
+	assert.Empty(t, ai.GetAndClear())
+
+	ai.OnAICall(AICallData{Provider: "anthropic", Model: "claude"})
+	data, err = json.Marshal(ai.GetAndClear()[0].Tokens)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"input":0,"output":0,"total":0,"cacheRead":0,"cacheWrite":0}`, string(data))
+}
 
 func TestAIStats_BoundedCardinality(t *testing.T) {
 	ai := newAIStats()

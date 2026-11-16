@@ -53,9 +53,9 @@ func (benchRuntime) OnOperationCall(op string, kind operation.Kind) {
 	agent.Stats().OnOperationCall(op, kind)
 }
 
-func (benchRuntime) OnDomain(string, uint32)           {}
-func (benchRuntime) ShouldBlockHostname(string) bool   { return false }
-func (benchRuntime) OnAICall(string, string, int, int) {}
+func (benchRuntime) OnDomain(string, uint32)                     {}
+func (benchRuntime) ShouldBlockHostname(string) bool             { return false }
+func (benchRuntime) OnAICall(string, string, int, int, int, int) {}
 
 func setup(b testing.TB) *sql.DB {
 	b.Helper()
