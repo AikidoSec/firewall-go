@@ -2,11 +2,13 @@
 
 ## 1. Bump the version
 
-Update the version constant in `internal/agent/config/globals.go`:
+Update the fallback version constant in `internal/agent/config/globals.go`:
 
 ```go
-Version = "1.2.1"
+fallbackVersion = "1.2.1"
 ```
+
+Released builds resolve the firewall-go module version from Go build info. The fallback is used when the module version is unavailable, such as in local development builds.
 
 ## 2. Create a beta release
 
