@@ -10,13 +10,18 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/zen"
 )
 
 const maxAIResponseBytes = 2 * 1024 * 1024
 
 func captureAIResponse(req *http.Request, resp *http.Response) {
-	defer func() { _ = recover() }()
+	defer func() {
+		if recover() != nil {
+			log.Debug("Recovered panic while setting up AI response capture")
+		}
+	}()
 	if !zen.ShouldProtect() {
 		return
 	}
@@ -72,6 +77,7 @@ func (b *aiResponseBody) observe(p []byte, err error) {
 		if recover() != nil {
 			b.finished = true
 			b.data = nil
+			log.Debug("Recovered panic while observing AI response body")
 		}
 	}()
 	if b.finished {

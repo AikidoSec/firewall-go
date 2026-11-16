@@ -8,6 +8,7 @@ import (
 	"compress/zlib"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/state/stats"
+	"github.com/AikidoSec/firewall-go/internal/log"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -300,6 +302,10 @@ func TestAIBodyRecordsBytesWithEOF(t *testing.T) {
 
 func TestAIBodyRecoversMonitoringPanics(t *testing.T) {
 	r := setupAICapture(t)
+	var logs bytes.Buffer
+	originalLogger := log.Logger()
+	log.SetLogger(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { log.SetLogger(originalLogger) })
 
 	// A nil URL triggers a panic in monitoring, not in the underlying reader.
 	b := &aiResponseBody{inner: io.NopCloser(strings.NewReader(aiTestJSON)), contentLength: -1}
@@ -311,6 +317,8 @@ func TestAIBodyRecoversMonitoringPanics(t *testing.T) {
 	assert.Equal(t, aiTestJSON, string(got))
 	assert.Nil(t, b.data)
 	assert.Empty(t, r.GetAndClearAI())
+	assert.Contains(t, logs.String(), "Recovered panic while observing AI response body")
+	assert.NotContains(t, logs.String(), aiTestJSON)
 }
 
 type aiBlockingBody struct {
