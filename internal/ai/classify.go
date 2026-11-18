@@ -75,5 +75,7 @@ func modelInPath(path, prefix, suffix string) string {
 	if strings.Contains(model, "/") {
 		return ""
 	}
+	// Gemini and Bedrock model names can be URL-encoded.
+	model, _ = url.PathUnescape(model)
 	return strings.Clone(model)
 }
