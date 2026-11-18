@@ -31,6 +31,7 @@ Zen operates autonomously on the same server as your Go app to:
 - ✅ Geo-fencing to block or allow a selection of countries
 - ✅ Rate limit specific API endpoints by IP or by user
 - ✅ Allow you to block specific users manually
+- ✅ Monitor AI model usage and token statistics via outbound HTTP
 
 ## Supported libraries and frameworks
 

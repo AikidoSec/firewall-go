@@ -33,6 +33,10 @@ func (a *AIStats) OnAICall(data AICallData) {
 	defer a.mu.Unlock()
 
 	key := providerModelKey{provider: data.Provider, model: data.Model}
+	// Bound cardinality: model names and custom provider origins come from traffic.
+	if _, exists := a.providers[key]; !exists && len(a.providers) >= 1000 {
+		return
+	}
 	entry := a.providers[key]
 	entry.calls++
 	entry.inputTokens += data.InputTokens
