@@ -46,10 +46,12 @@ type Requests struct {
 }
 
 type AICallData struct {
-	Provider     string
-	Model        string
-	InputTokens  int
-	OutputTokens int
+	Provider         string
+	Model            string
+	InputTokens      int
+	OutputTokens     int
+	CacheReadTokens  int
+	CacheWriteTokens int
 }
 
 type AIProviderStats struct {
@@ -60,7 +62,9 @@ type AIProviderStats struct {
 }
 
 type AITokenStats struct {
-	Input  int `json:"input"`
-	Output int `json:"output"`
-	Total  int `json:"total"`
+	Input      int `json:"input"`
+	Output     int `json:"output"`
+	Total      int `json:"total"`
+	CacheRead  int `json:"cacheRead"`
+	CacheWrite int `json:"cacheWrite"`
 }

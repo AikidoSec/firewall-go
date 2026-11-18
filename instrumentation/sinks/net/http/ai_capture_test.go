@@ -72,6 +72,26 @@ func TestCaptureAIResponse(t *testing.T) {
 	assert.Empty(t, r.GetAndClearAI(), "subsequent reads must not record the call again")
 }
 
+func TestCaptureAIResponseCacheTokens(t *testing.T) {
+	r := setupAICapture(t)
+	req := httptest.NewRequest("POST", "https://api.anthropic.com/v1/messages", nil)
+	body := `{"model":"claude","usage":{"input_tokens":100,"output_tokens":20,"cache_read_input_tokens":30,"cache_creation_input_tokens":10}}`
+	resp := &http.Response{
+		StatusCode:    http.StatusOK,
+		Header:        http.Header{"Content-Type": {"application/json"}},
+		Body:          io.NopCloser(strings.NewReader(body)),
+		ContentLength: -1,
+	}
+	captureAIResponse(req, resp)
+	got, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, body, string(got))
+	calls := r.GetAndClearAI()
+	require.Len(t, calls, 1)
+	assert.Equal(t, stats.AITokenStats{Input: 100, Output: 20, Total: 120, CacheRead: 30, CacheWrite: 10}, calls[0].Tokens)
+}
+
 func TestCaptureFilters(t *testing.T) {
 	r := setupAICapture(t)
 

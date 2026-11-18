@@ -8,9 +8,11 @@ type providerModelKey struct {
 }
 
 type aiProviderData struct {
-	calls        int
-	inputTokens  int
-	outputTokens int
+	calls            int
+	inputTokens      int
+	outputTokens     int
+	cacheReadTokens  int
+	cacheWriteTokens int
 }
 
 type AIStats struct {
@@ -41,6 +43,8 @@ func (a *AIStats) OnAICall(data AICallData) {
 	entry.calls++
 	entry.inputTokens += data.InputTokens
 	entry.outputTokens += data.OutputTokens
+	entry.cacheReadTokens += data.CacheReadTokens
+	entry.cacheWriteTokens += data.CacheWriteTokens
 	a.providers[key] = entry
 }
 
@@ -59,9 +63,11 @@ func (a *AIStats) GetAndClear() []AIProviderStats {
 			Model:    key.model,
 			Calls:    data.calls,
 			Tokens: AITokenStats{
-				Input:  data.inputTokens,
-				Output: data.outputTokens,
-				Total:  data.inputTokens + data.outputTokens,
+				Input:      data.inputTokens,
+				Output:     data.outputTokens,
+				Total:      data.inputTokens + data.outputTokens,
+				CacheRead:  data.cacheReadTokens,
+				CacheWrite: data.cacheWriteTokens,
 			},
 		})
 	}

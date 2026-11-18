@@ -21,10 +21,12 @@ type captureRuntime struct {
 	blockHostCalls   []string
 	blockHostReturns bool
 	aiCalls          []struct {
-		provider     string
-		model        string
-		inputTokens  int
-		outputTokens int
+		provider         string
+		model            string
+		inputTokens      int
+		outputTokens     int
+		cacheReadTokens  int
+		cacheWriteTokens int
 	}
 }
 
@@ -47,13 +49,15 @@ func (r *captureRuntime) ShouldBlockHostname(hostname string) bool {
 	return r.blockHostReturns
 }
 
-func (r *captureRuntime) OnAICall(provider, model string, inputTokens, outputTokens int) {
+func (r *captureRuntime) OnAICall(provider, model string, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens int) {
 	r.aiCalls = append(r.aiCalls, struct {
-		provider     string
-		model        string
-		inputTokens  int
-		outputTokens int
-	}{provider, model, inputTokens, outputTokens})
+		provider         string
+		model            string
+		inputTokens      int
+		outputTokens     int
+		cacheReadTokens  int
+		cacheWriteTokens int
+	}{provider, model, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens})
 }
 
 func TestRegisterReplacesRuntime(t *testing.T) {
@@ -104,11 +108,13 @@ func TestOnAICallDelegates(t *testing.T) {
 	r := &captureRuntime{}
 	hooks.Register(r)
 
-	hooks.OnAICall("openai", "gpt-4", 100, 50)
+	hooks.OnAICall("openai", "gpt-4", 100, 50, 30, 10)
 
 	assert.Len(t, r.aiCalls, 1)
 	assert.Equal(t, "openai", r.aiCalls[0].provider)
 	assert.Equal(t, "gpt-4", r.aiCalls[0].model)
 	assert.Equal(t, 100, r.aiCalls[0].inputTokens)
 	assert.Equal(t, 50, r.aiCalls[0].outputTokens)
+	assert.Equal(t, 30, r.aiCalls[0].cacheReadTokens)
+	assert.Equal(t, 10, r.aiCalls[0].cacheWriteTokens)
 }

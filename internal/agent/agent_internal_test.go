@@ -43,7 +43,7 @@ func TestAgentRuntime_OnAICall(t *testing.T) {
 	rt := agentRuntime{}
 
 	Stats().GetAndClearAI()
-	rt.OnAICall("openai", "gpt-4", 100, 50)
+	rt.OnAICall("openai", "gpt-4", 100, 50, 30, 10)
 
 	snap := Stats().GetAndClearAI()
 	require.Len(t, snap, 1)
@@ -52,6 +52,8 @@ func TestAgentRuntime_OnAICall(t *testing.T) {
 	assert.Equal(t, 1, snap[0].Calls)
 	assert.Equal(t, 100, snap[0].Tokens.Input)
 	assert.Equal(t, 50, snap[0].Tokens.Output)
+	assert.Equal(t, 30, snap[0].Tokens.CacheRead)
+	assert.Equal(t, 10, snap[0].Tokens.CacheWrite)
 }
 
 func TestAgentRuntime_ShouldBlockHostname(t *testing.T) {

@@ -34,7 +34,7 @@ func TestParseAIResponse(t *testing.T) {
 			call, ok := parseAIResponse(u, []byte(tc.body))
 			require.True(t, ok)
 
-			assert.Equal(t, aiCall{"https://gateway.internal:8443", tc.model, tc.input, tc.output}, call)
+			assert.Equal(t, aiCall{provider: "https://gateway.internal:8443", model: tc.model, input: tc.input, output: tc.output}, call)
 		})
 	}
 }
@@ -62,4 +62,32 @@ func TestTokenCount(t *testing.T) {
 	}
 
 	assert.Equal(t, 20, tokenCount([]byte(`20`)))
+}
+
+func TestParseAIResponseCacheTokens(t *testing.T) {
+	cases := []struct {
+		name, path, body      string
+		cacheRead, cacheWrite int
+	}{
+		{"chat", "/v1/chat/completions", `{"model":"gpt","usage":{"prompt_tokens_details":{"cached_tokens":30,"cache_write_tokens":10}}}`, 30, 10},
+		{"responses", "/v1/responses", `{"model":"gpt","usage":{"input_tokens_details":{"cached_tokens":30,"cache_write_tokens":10}}}`, 30, 10},
+		{"anthropic", "/v1/messages", `{"model":"claude","usage":{"cache_read_input_tokens":30,"cache_creation_input_tokens":10}}`, 30, 10},
+		{"anthropic vertex", "/v1/projects/p/locations/l/publishers/anthropic/models/claude:rawPredict", `{"model":"claude","usage":{"cache_read_input_tokens":30,"cache_creation_input_tokens":10}}`, 30, 10},
+		{"bedrock invoke", "/model/claude/invoke", `{"usage":{"cache_read_input_tokens":30,"cache_creation_input_tokens":10}}`, 30, 10},
+		{"bedrock converse", "/model/claude/converse", `{"usage":{"cacheReadInputTokens":30,"cacheWriteInputTokens":10}}`, 30, 10},
+		{"gemini", "/v1beta/models/gemini:generateContent", `{"usageMetadata":{"cachedContentTokenCount":30}}`, 30, 0},
+		{"missing", "/v1/responses", `{"model":"gpt"}`, 0, 0},
+		{"invalid details", "/v1/chat/completions", `{"model":"gpt","usage":{"prompt_tokens_details":"invalid"}}`, 0, 0},
+		{"invalid counts", "/v1/messages", `{"model":"claude","usage":{"cache_read_input_tokens":-1,"cache_creation_input_tokens":"10"}}`, 0, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := url.Parse("https://provider.example" + tc.path)
+			require.NoError(t, err)
+			call, ok := parseAIResponse(u, []byte(tc.body))
+			require.True(t, ok)
+			assert.Equal(t, tc.cacheRead, call.cacheRead)
+			assert.Equal(t, tc.cacheWrite, call.cacheWrite)
+		})
+	}
 }
