@@ -14,16 +14,18 @@ func TestParseAIResponse(t *testing.T) {
 		input, output     int
 	}{
 		{"/proxy/v1/chat/completions", `{"model":"gpt-4o","usage":{"prompt_tokens":100,"completion_tokens":20}}`, "gpt-4o", 100, 20},
-		{"/openai/deployments/gpt/chat/completions?api-version=secret", `{"model":"gpt-4o"}`, "gpt-4o", 0, 0},
+		{"/openai/deployments/gpt/chat/completions?api-version=secret", `{"model":"gpt-4o","usage":{}}`, "gpt-4o", 0, 0},
 		{"/proxy/v1/responses", `{"model":"gpt-4o","usage":{"input_tokens":100,"output_tokens":20}}`, "gpt-4o", 100, 20},
 		{"/proxy/v1/messages", `{"model":"claude","usage":{"input_tokens":1,"output_tokens":2}}`, "claude", 1, 2},
 		{"/v1/projects/p/locations/l/publishers/anthropic/models/claude:rawPredict", `{"model":"claude","usage":{"input_tokens":1,"output_tokens":2}}`, "claude", 1, 2},
 		{"/v1beta/models/gemini:generateContent?key=secret", `{"modelVersion":"gemini-2.5","usageMetadata":{"promptTokenCount":98,"toolUsePromptTokenCount":2,"candidatesTokenCount":15,"thoughtsTokenCount":5}}`, "gemini-2.5", 100, 20},
-		{"/v1/projects/p/locations/l/publishers/google/models/gemini:generateContent", `{}`, "gemini", 0, 0},
+		{"/v1/projects/p/locations/l/publishers/google/models/gemini:generateContent", `{"usageMetadata":{}}`, "gemini", 0, 0},
 		{"/model/us.anthropic.claude-v1%3A0/converse", `{"usage":{"inputTokens":1,"outputTokens":2}}`, "us.anthropic.claude-v1:0", 1, 2},
 		{"/model/anthropic.claude-v1%3A0/invoke", `{"model":"claude","usage":{"input_tokens":1,"output_tokens":2}}`, "anthropic.claude-v1:0", 1, 2},
-		{"/model/arn%3Aaws%3Abedrock%3Amodel/converse", `{"model":"claude"}`, "claude", 0, 0},
-		{"/v1/responses", `{"model":"gpt","usage":{"input_tokens":-1,"output_tokens":"20"}}`, "gpt", 0, 0},
+		{"/model/arn%3Aaws%3Abedrock%3Amodel/converse", `{"model":"claude","usage":{}}`, "claude", 0, 0},
+		{"/v1/messages", `{"model":"claude","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":3,"cache_creation_input_tokens":2}}`, "claude", 15, 5},
+		{"/model/claude/converse", `{"usage":{"inputTokens":10,"outputTokens":5,"cacheReadInputTokens":3,"cacheWriteInputTokens":2}}`, "claude", 15, 5},
+		{"/v1beta/interactions", `{"model":"gemini","usage":{"total_input_tokens":8,"total_tool_use_tokens":2,"total_output_tokens":3,"total_thought_tokens":2}}`, "gemini", 10, 5},
 	}
 
 	for _, tc := range cases {
@@ -40,7 +42,7 @@ func TestParseAIResponse(t *testing.T) {
 }
 
 func TestParseAIResponseIgnoresInvalidResponses(t *testing.T) {
-	for _, body := range []string{`null`, `[]`, `"text"`, `{`, `{}`, `{"model":123}`, `{"model":""}`, `{"error":{"message":"failed"}}`} {
+	for _, body := range []string{`null`, `[]`, `"text"`, `{`, `{}`, `{"model":123}`, `{"model":""}`, `{"error":{"message":"failed"}}`, `{"model":"gpt"}`, `{"model":"gpt","usage":null}`, `{"model":"gpt","usage":{"input_tokens":-1}}`, `{"model":"gpt","usage":{"output_tokens":"20"}}`} {
 		u, _ := url.Parse("https://api.openai.com/v1/responses")
 		_, ok := parseAIResponse(u, []byte(body))
 
@@ -54,12 +56,4 @@ func TestParseAIResponseIgnoresInvalidResponses(t *testing.T) {
 		_, ok := parseAIResponse(u, []byte(`{"model":"gpt"}`))
 		assert.False(t, ok, path)
 	}
-}
-
-func TestTokenCount(t *testing.T) {
-	for _, value := range []string{`-1`, `1.5`, `"20"`, `null`, `true`, `9223372036854775808`, `1e100`, `{}`} {
-		assert.Zero(t, tokenCount([]byte(value)), value)
-	}
-
-	assert.Equal(t, 20, tokenCount([]byte(`20`)))
 }

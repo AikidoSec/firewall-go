@@ -72,6 +72,39 @@ func TestCaptureAIResponse(t *testing.T) {
 	assert.Empty(t, r.GetAndClearAI(), "subsequent reads must not record the call again")
 }
 
+func TestCaptureNormalizedAIUsage(t *testing.T) {
+	r := setupAICapture(t)
+	for _, tc := range []struct {
+		path, body, model string
+		input, output     int
+	}{
+		{"/v1/messages", `{"model":"claude","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":3,"cache_creation_input_tokens":2}}`, "claude", 15, 5},
+		{"/model/claude/converse", `{"usage":{"inputTokens":10,"outputTokens":5,"cacheReadInputTokens":3,"cacheWriteInputTokens":2}}`, "claude", 15, 5},
+		{"/v1beta/interactions", `{"model":"gemini","usage":{"total_input_tokens":8,"total_tool_use_tokens":2,"total_output_tokens":3,"total_thought_tokens":2}}`, "gemini", 10, 5},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "https://GATEWAY.test:443"+tc.path+"?key=secret", nil)
+			resp := &http.Response{
+				StatusCode:    http.StatusOK,
+				Header:        http.Header{"Content-Type": {"application/json"}},
+				Body:          io.NopCloser(strings.NewReader(tc.body)),
+				ContentLength: -1,
+			}
+			captureAIResponse(req, resp)
+			data, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.NoError(t, resp.Body.Close())
+			require.Equal(t, tc.body, string(data))
+			calls := r.GetAndClearAI()
+			require.Len(t, calls, 1)
+			assert.Equal(t, stats.AIProviderStats{
+				Provider: "https://gateway.test", Model: tc.model, Calls: 1,
+				Tokens: stats.AITokenStats{Input: tc.input, Output: tc.output, Total: tc.input + tc.output},
+			}, calls[0])
+		})
+	}
+}
+
 func TestCaptureFilters(t *testing.T) {
 	r := setupAICapture(t)
 
@@ -300,14 +333,14 @@ func TestAIBodyRecordsBytesWithEOF(t *testing.T) {
 	assert.Equal(t, 10, calls[0].Tokens.Input)
 }
 
-func TestAIBodyRecoversMonitoringPanics(t *testing.T) {
+func TestAIBodyIgnoresNilURL(t *testing.T) {
 	r := setupAICapture(t)
 	var logs bytes.Buffer
 	originalLogger := log.Logger()
 	log.SetLogger(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	t.Cleanup(func() { log.SetLogger(originalLogger) })
 
-	// A nil URL triggers a panic in monitoring, not in the underlying reader.
+	// A nil URL is ignored without affecting the underlying reader.
 	b := &aiResponseBody{inner: io.NopCloser(strings.NewReader(aiTestJSON)), contentLength: -1}
 	defer b.Close()
 
@@ -317,7 +350,7 @@ func TestAIBodyRecoversMonitoringPanics(t *testing.T) {
 	assert.Equal(t, aiTestJSON, string(got))
 	assert.Nil(t, b.data)
 	assert.Empty(t, r.GetAndClearAI())
-	assert.Contains(t, logs.String(), "Recovered panic while observing AI response body")
+	assert.Empty(t, logs.String())
 	assert.NotContains(t, logs.String(), aiTestJSON)
 }
 
