@@ -2,7 +2,6 @@ package providers
 
 import (
 	"encoding/json"
-	"net/url"
 	"strings"
 )
 
@@ -47,7 +46,6 @@ func ParseBedrockInvoke(body []byte, usage *Usage) bool {
 }
 
 func bedrockModel(model, responseModel string) string {
-	model, _ = url.PathUnescape(model)
 	if strings.HasPrefix(model, "arn:") && responseModel != "" {
 		return responseModel
 	}
