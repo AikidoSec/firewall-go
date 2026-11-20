@@ -2,7 +2,7 @@ module github.com/AikidoSec/firewall-go
 
 go 1.26.0
 
-toolchain go1.26.10
+toolchain go1.26.11
 
 require (
 	github.com/stretchr/testify v1.11.1
