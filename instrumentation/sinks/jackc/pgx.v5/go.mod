@@ -2,7 +2,7 @@ module github.com/AikidoSec/firewall-go/instrumentation/sinks/jackc/pgx.v5
 
 go 1.26.0
 
-toolchain go1.26.10
+toolchain go1.26.11
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
