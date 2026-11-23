@@ -43,6 +43,8 @@ func (t *ssrfTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 	}
 
+	captureAIResponse(req, resp)
+
 	return resp, nil
 }
 
