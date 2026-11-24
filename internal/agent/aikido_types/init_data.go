@@ -43,20 +43,26 @@ type OutboundDomain struct {
 	Mode     string `json:"mode"`
 }
 
+type RequestCountExclusions struct {
+	Exact  []string `json:"exact"`
+	Suffix []string `json:"suffix"`
+}
+
 type CloudConfigData struct {
-	Success                         bool             `json:"success"`
-	ServiceID                       int              `json:"serviceId"`
-	ConfigUpdatedAt                 int64            `json:"configUpdatedAt"`
-	HeartbeatIntervalInMS           int              `json:"heartbeatIntervalInMS"`
-	Endpoints                       []Endpoint       `json:"endpoints"`
-	BlockedUserIds                  []string         `json:"blockedUserIds"`
-	ExcludedUserIdsFromRateLimiting []string         `json:"excludedUserIdsFromRateLimiting"`
-	BypassedIPs                     []string         `json:"allowedIPAddresses"`
-	ReceivedAnyStats                bool             `json:"receivedAnyStats"`
-	Block                           *bool            `json:"block,omitempty"`
-	BlockNewOutgoingRequests        bool             `json:"blockNewOutgoingRequests"`
-	Domains                         []OutboundDomain `json:"domains"`
-	EnabledFeatures                 []string         `json:"enabledFeatures"`
+	Success                         bool                    `json:"success"`
+	ServiceID                       int                     `json:"serviceId"`
+	ConfigUpdatedAt                 int64                   `json:"configUpdatedAt"`
+	HeartbeatIntervalInMS           int                     `json:"heartbeatIntervalInMS"`
+	Endpoints                       []Endpoint              `json:"endpoints"`
+	BlockedUserIds                  []string                `json:"blockedUserIds"`
+	ExcludedUserIdsFromRateLimiting []string                `json:"excludedUserIdsFromRateLimiting"`
+	BypassedIPs                     []string                `json:"allowedIPAddresses"`
+	ReceivedAnyStats                bool                    `json:"receivedAnyStats"`
+	Block                           *bool                   `json:"block,omitempty"`
+	BlockNewOutgoingRequests        bool                    `json:"blockNewOutgoingRequests"`
+	Domains                         []OutboundDomain        `json:"domains"`
+	EnabledFeatures                 []string                `json:"enabledFeatures"`
+	RequestCountExclusions          *RequestCountExclusions `json:"requestCountExclusions,omitempty"`
 }
 
 func (c *CloudConfigData) UpdatedAt() time.Time {
