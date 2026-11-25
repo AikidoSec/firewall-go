@@ -2,7 +2,7 @@ package config
 
 import "runtime/debug"
 
-const fallbackVersion = "1.2.13"
+const fallbackVersion = "1.2.14"
 
 var Version = resolveVersion()
 
