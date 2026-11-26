@@ -7,7 +7,7 @@ toolchain go1.26.11
 replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (
-	github.com/AikidoSec/firewall-go v1.2.13
+	github.com/AikidoSec/firewall-go v1.2.14
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/stretchr/testify v1.11.1
 )
