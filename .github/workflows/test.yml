@@ -224,7 +224,7 @@ jobs:
           merge-multiple: true
 
       - name: Upload coverage to Aikido
-        uses: AikidoSec/code-coverage-github-action@af64fbf145a1d80a532f18d7bb75daff398b7d00 # v2.1.0
+        uses: AikidoSec/code-coverage-github-action@e0637ab96a560c1ab11671c41a4a4668075bae0e # v2.1.1
         with:
           file-paths: aikido-coverage/**/*.lcov
 
