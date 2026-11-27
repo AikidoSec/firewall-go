@@ -2,6 +2,7 @@ package vulnerabilities
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,6 +20,12 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	// Cloud mocks need agent metadata, even when reporting tests run in isolation.
+	if err := config.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{}); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
 	// Set zen as loaded for all tests in this package
 	original := config.IsZenLoaded()
 	config.SetZenLoaded(true)
@@ -480,6 +487,7 @@ func TestScanWithOptions_ForceProtectionOff(t *testing.T) {
 func TestScanWithOptions_ModuleIsPassedThrough(t *testing.T) {
 	ip := "127.0.0.1"
 	args := mockScanArgs{Value: "test"}
+	operation := t.Name()
 
 	original := config.IsBlockingEnabled()
 	config.SetBlocking(false)
@@ -490,6 +498,7 @@ func TestScanWithOptions_ModuleIsPassedThrough(t *testing.T) {
 
 	client := &mockCloudClient{
 		attackDetectedEventSent: make(chan struct{}, 1),
+		attackOperation:         operation,
 	}
 	agent.SetCloudClient(client)
 
@@ -500,7 +509,7 @@ func TestScanWithOptions_ModuleIsPassedThrough(t *testing.T) {
 	data.RemoteAddress = &ip
 	ctx := request.SetContext(context.Background(), data)
 
-	_ = ScanWithOptions(ctx, "testOp", mockVulnerability, args, ScanOptions{Module: "my-module"})
+	require.NoError(t, ScanWithOptions(ctx, operation, mockVulnerability, args, ScanOptions{Module: "my-module"}))
 
 	select {
 	case <-client.attackDetectedEventSent:
