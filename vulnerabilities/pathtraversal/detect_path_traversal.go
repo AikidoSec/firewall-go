@@ -32,6 +32,13 @@ func detectPathTraversal(filePath, userInput string, checkPathStart bool) bool {
 		return true
 	}
 
+	// Detect split-segment traversal: when the file path contains traversal sequences
+	// and the user input is a bare ".." segment (without trailing separator).
+	// This handles cases like path.Join(base, "..", file) where ".." is a separate argument.
+	if containsUnsafePathParts(normalisedFilePath) && normalisedUserInput == ".." {
+		return true
+	}
+
 	if checkPathStart {
 		// Check for absolute path traversal
 		return startsWithUnsafePath(normalisedFilePath, normalisedUserInput)
