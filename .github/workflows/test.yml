@@ -11,15 +11,15 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: ["1.25", "1.26", "1.27"]
+        go-version: ["1.26", "1.27"]
         os:
-          - runner: ubuntu-latest
+          - runner: ubuntu-24.04
             name: ubuntu-x86_64
           - runner: ubuntu-24.04-arm
             name: ubuntu-arm64
-          - runner: macos-14
+          - runner: macos-26
             name: macos-arm64
-          - runner: macos-14-large
+          - runner: macos-26-intel
             name: macos-x86_64
       fail-fast: false
 
@@ -36,6 +36,7 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
+          check-latest: true
           cache-dependency-path: |
             go.sum
             tools/go.sum
@@ -48,7 +49,7 @@ jobs:
         run: make test
 
       - name: Upload main module coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         if: ${{ !contains(matrix.os.name, 'arm64') }}
         with:
           fail_ci_if_error: true
@@ -58,7 +59,7 @@ jobs:
           verbose: true
 
       - name: Upload zen-go CLI coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: false
           files: ./cmd/zen-go/coverage.out
@@ -71,7 +72,8 @@ jobs:
         run: |
           go install github.com/jandelgado/gcov2lcov@51ca2a7f808b9da700efd71ae060e4c9e0deefc9 # v1.1.1
           gcov2lcov -infile=coverage.out -outfile=coverage-main-go${{ matrix.go-version }}.lcov
-          gcov2lcov -infile=cmd/zen-go/coverage.out -outfile=coverage-zen-go-go${{ matrix.go-version }}.lcov
+          # cmd/zen-go is a separate module; gcov2lcov must run there or it emits an empty LCOV
+          (cd cmd/zen-go && gcov2lcov -infile=coverage.out -outfile=../../coverage-zen-go-go${{ matrix.go-version }}.lcov)
 
       - name: Upload LCOV artifact for Aikido
         if: matrix.os.name == 'ubuntu-x86_64'
@@ -81,12 +83,13 @@ jobs:
           path: |
             coverage-main-go${{ matrix.go-version }}.lcov
             coverage-zen-go-go${{ matrix.go-version }}.lcov
+          if-no-files-found: error
 
   test-instrumentation-unit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        go-version: ["1.25", "1.26", "1.27"]
+        go-version: ["1.26", "1.27"]
       fail-fast: false
     name: test-instrumentation-unit (Go ${{ matrix.go-version }})
     steps:
@@ -99,6 +102,7 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
+          check-latest: true
           cache-dependency-path: |
             go.sum
             tools/go.sum
@@ -111,7 +115,7 @@ jobs:
         run: make test-instrumentation-unit
 
       - name: Upload instrumentation unit coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
           files: ./coverage.out
@@ -131,11 +135,13 @@ jobs:
           path: coverage-instrumentation-unit-go${{ matrix.go-version }}.lcov
 
   test-instrumentation-integration:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      ZENGO_DEBUG: "true"
 
     strategy:
       matrix:
-        go-version: ["1.25", "1.26", "1.27"]
+        go-version: ["1.26", "1.27"]
       fail-fast: false
 
     name: test-instrumentation-integration (Go ${{ matrix.go-version }})
@@ -150,6 +156,7 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go-version }}
+          check-latest: true
           cache-dependency-path: |
             go.sum
             tools/go.sum
@@ -163,10 +170,19 @@ jobs:
         run: make build-zen-go
 
       - name: Run tests
+        env:
+          ZENGO_LOG: ${{ runner.temp }}/zen-go.log
         run: make test-instrumentation-integration
 
+      - name: Upload Zen Go debug logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: zen-go-instrumentation-go${{ matrix.go-version }}
+          path: ${{ runner.temp }}/zen-go.log
+
       - name: Upload instrumentation coverage to Codecov
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           fail_ci_if_error: true
           files: ./coverage.out
@@ -190,11 +206,16 @@ jobs:
       - test
       - test-instrumentation-unit
       - test-instrumentation-integration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
     steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
       - name: Download coverage artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -202,23 +223,16 @@ jobs:
           pattern: aikido-lcov-*
           merge-multiple: true
 
-      - name: List LCOV files
-        id: lcov
-        run: |
-          {
-            echo 'paths<<EOF'
-            find aikido-coverage -name '*.lcov'
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
-
       - name: Upload coverage to Aikido
         uses: AikidoSec/code-coverage-github-action@e0637ab96a560c1ab11671c41a4a4668075bae0e # v2.1.1
         with:
-          file-paths: ${{ steps.lcov.outputs.paths }}
+          file-paths: aikido-coverage/**/*.lcov
 
   test-e2e:
     name: "e2e tests - ${{ matrix.app }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      ZENGO_DEBUG: "true"
 
     strategy:
       fail-fast: false
@@ -244,15 +258,25 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.25"
+          go-version: "1.26"
+          check-latest: true
           cache-dependency-path: |
             go.sum
             sample-apps/${{ matrix.app }}/go.sum
 
       - name: Run all test suites
+        env:
+          ZENGO_LOG: ${{ runner.temp }}/zen-go.log
         working-directory: ./end2end
         run: make test-all-suites APP=${{ matrix.app }}
 
       - name: Show app logs on failure
         if: failure()
         run: cat /tmp/${{ matrix.app }}.log || true
+
+      - name: Upload Zen Go debug logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: zen-go-e2e-${{ matrix.app }}
+          path: ${{ runner.temp }}/zen-go.log

@@ -3,6 +3,7 @@
 package http_test
 
 import (
+	"context"
 	"crypto/tls"
 	"io"
 	"net/http"
@@ -18,10 +19,85 @@ import (
 	"github.com/AikidoSec/firewall-go/internal/agent"
 	"github.com/AikidoSec/firewall-go/internal/agent/aikido_types"
 	"github.com/AikidoSec/firewall-go/internal/agent/config"
+	"github.com/AikidoSec/firewall-go/internal/request"
+	"github.com/AikidoSec/firewall-go/internal/testutil"
 	"github.com/AikidoSec/firewall-go/zen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type customTransport struct {
+	roundTrip func(*http.Request) (*http.Response, error)
+	closes    int
+}
+
+func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return t.roundTrip(req)
+}
+
+func (t *customTransport) CloseIdleConnections() {
+	t.closes++
+}
+
+// Exercise the automatic Client.transport hook without explicitly calling
+// WrapTransport. A custom transport must retain its behavior and still receive
+// context propagation and response observation.
+func TestHTTPClientInstrumentation_CustomTransport(t *testing.T) {
+	originalDisabled := zen.IsDisabled()
+	t.Cleanup(func() { zen.SetDisabled(originalDisabled) })
+	require.NoError(t, zen.Protect())
+	originalClient := agent.GetCloudClient()
+	t.Cleanup(func() { agent.SetCloudClient(originalClient) })
+	agent.SetCloudClient(testutil.NewMockCloudClient())
+	require.True(t, zen.ShouldProtect())
+
+	ctx := request.SetContext(context.Background(), request.ContextData{Source: "test", Route: "/test"})
+	expected := request.GetContext(ctx)
+	calls := 0
+	rt := &customTransport{roundTrip: func(req *http.Request) (*http.Response, error) {
+		calls++
+		captured := make(chan *request.Context, 1)
+		go func() { captured <- request.GetContext(req.Context()) }()
+		assert.Same(t, expected, <-captured)
+		assert.Equal(t, "Bearer test-token", req.Header.Get("Authorization"))
+
+		if req.URL.Path == "/start" {
+			return &http.Response{
+				StatusCode: http.StatusFound,
+				Header:     http.Header{"Location": {"/end"}},
+				Body:       http.NoBody,
+			}, nil
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader("ok")),
+		}, nil
+	}}
+	client := &http.Client{Transport: rt}
+	req, err := http.NewRequest(http.MethodGet, "https://custom-transport.example/start", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer test-token")
+
+	request.WrapWithGLS(ctx, func() {
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, "ok", string(body))
+	})
+
+	assert.Equal(t, 2, calls)
+	assert.Equal(t, []request.RedirectEntry{{
+		SourceHostname: "custom-transport.example",
+		SourcePort:     443,
+		DestHostname:   "custom-transport.example",
+		DestPort:       443,
+	}}, expected.GetOutgoingRedirects())
+	assert.Same(t, rt, client.Transport, "the hook must not replace the client's configured transport")
+	client.CloseIdleConnections()
+	assert.Equal(t, 1, rt.closes)
+}
 
 func TestHTTPClientInstrumentation(t *testing.T) {
 	require.NoError(t, zen.Protect())

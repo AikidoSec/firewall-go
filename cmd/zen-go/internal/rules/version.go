@@ -5,11 +5,25 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"golang.org/x/mod/module"
 )
+
+// isUnverifiableVersion covers devel builds and pseudo-versions (including the
+// zero pseudo-version from a local filesystem `replace`, per CheckModuleVersionSync).
+func isUnverifiableVersion(v string) bool {
+	// Go's pseudo-version detector requires a v prefix, while the CLI reports
+	// versions without one.
+	return v == "(devel)" || module.IsPseudoVersion("v"+strings.TrimPrefix(v, "v"))
+}
 
 // CheckMinVersions checks that currentVersion satisfies all minimum version requirements.
 // Returns an error listing the first unsatisfied requirement.
 func CheckMinVersions(minVersions []MinVersionEntry, currentVersion string) error {
+	if isUnverifiableVersion(currentVersion) {
+		return nil
+	}
+
 	cur, err := parseSemver(currentVersion)
 	if err != nil {
 		return fmt.Errorf("zen-go: failed to parse current version %q: %w", currentVersion, err)
@@ -48,6 +62,9 @@ type semver struct {
 
 func parseSemver(s string) (semver, error) {
 	raw := strings.TrimPrefix(s, "v")
+	if i := strings.IndexAny(raw, "-+"); i != -1 {
+		raw = raw[:i]
+	}
 	parts := strings.SplitN(raw, ".", 3)
 	if len(parts) != 3 {
 		return semver{}, fmt.Errorf("expected format major.minor.patch, got %q", s)

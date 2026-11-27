@@ -547,6 +547,31 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
+func TestMiddlewareDiscoversSuccessfulRoute(t *testing.T) {
+	agent.State().GetRoutesAndClear()
+
+	router := echo.New()
+	router.Use(zenecho.GetMiddleware())
+
+	router.GET("/discovered-route/:id", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
+
+	r := httptest.NewRequest("GET", "/discovered-route/foo?query=value", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	require.Eventually(t, func() bool {
+		for _, route := range agent.State().GetRoutesAndClear() {
+			if route.Path == "/discovered-route/:id" && route.Method == "GET" {
+				return true
+			}
+		}
+		return false
+	}, 100*time.Millisecond, 10*time.Millisecond, "GET /discovered-route/:id should be discovered")
+}
+
 func TestMiddlewareNestedRouters(t *testing.T) {
 	t.Run("nested groups with multiple params", func(t *testing.T) {
 		router := echo.New()

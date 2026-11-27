@@ -58,6 +58,20 @@ func TestOnInitRequest(t *testing.T) {
 		assert.Contains(t, resp.Message, "10.0.0.1")
 	})
 
+	t.Run("duplicate JSON keys alone do not block", func(t *testing.T) {
+		ip := "192.168.1.1"
+		ctx := request.SetContext(context.Background(), request.ContextData{
+			Source:        "test",
+			Route:         "/route",
+			RemoteAddress: &ip,
+			Body:          map[string]any{"field": []any{"first", "second"}},
+		})
+
+		resp := OnInitRequest(ctx)
+
+		assert.Nil(t, resp)
+	})
+
 	t.Run("blocked user agent", func(t *testing.T) {
 		ip := "192.168.1.1"
 		ctx := request.SetContext(context.Background(), request.ContextData{

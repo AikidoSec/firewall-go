@@ -49,6 +49,10 @@ benchmark:
 	@echo "Running benchmarks..."
 	@GIN_MODE=release ./scripts/benchmark.sh
 
+.PHONY: bench-zen-internals
+bench-zen-internals:
+	@go test ./internal/zeninternals -run='^$$' -bench=. -benchmem $(if $(COUNT),-count=$(COUNT)) $(FLAGS)
+
 # Compare a toolexec-instrumented package vanilla vs. zen-go (benchstat).
 .PHONY: bench-os
 bench-os:
@@ -57,6 +61,10 @@ bench-os:
 .PHONY: bench-runtime
 bench-runtime: build-zen-go
 	@TAGS=runtime_bench ./scripts/bench-toolexec.sh ./benchmarks/runtime $(COUNT)
+
+.PHONY: bench-sql
+bench-sql:
+	@TAGS=sink_bench ./scripts/bench-toolexec.sh ./benchmarks/sinks/database/sql $(COUNT)
 
 .PHONY: test-main
 test-main:
@@ -237,4 +245,3 @@ download-binaries: $(addprefix internal/zeninternals/, $(FILES))
 internal/zeninternals/%:
 	@echo "Downloading $*..."
 	curl -L -o $@ $(BASE_URL)/$*
-

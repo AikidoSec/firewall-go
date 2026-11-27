@@ -547,6 +547,31 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
+func TestMiddlewareDiscoversSuccessfulRoute(t *testing.T) {
+	agent.State().GetRoutesAndClear()
+
+	router := chi.NewRouter()
+	router.Use(zenchi.GetMiddleware())
+
+	router.Get("/discovered-route/{id}", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r := httptest.NewRequest("GET", "/discovered-route/foo?query=value", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	require.Eventually(t, func() bool {
+		for _, route := range agent.State().GetRoutesAndClear() {
+			if route.Path == "/discovered-route/{id}" && route.Method == "GET" {
+				return true
+			}
+		}
+		return false
+	}, 100*time.Millisecond, 10*time.Millisecond, "GET /discovered-route/{id} should be discovered")
+}
+
 func TestGetRoutePattern_RawPath(t *testing.T) {
 	router := chi.NewRouter()
 	router.Use(zenchi.GetMiddleware())

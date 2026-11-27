@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -35,6 +36,78 @@ func resetServiceConfig() {
 	serviceConfigMutex.Lock()
 	defer serviceConfigMutex.Unlock()
 	serviceConfig = ServiceConfigData{}
+}
+
+func TestIsExcludedFromRequestCount(t *testing.T) {
+	setupTestGlobals()
+	resetServiceConfig()
+	t.Cleanup(resetServiceConfig)
+
+	assert.False(t, IsExcludedFromRequestCount("/health"))
+	UpdateServiceConfig(&aikido_types.CloudConfigData{
+		RequestCountExclusions: &aikido_types.RequestCountExclusions{
+			Exact:  []string{"/status", ""},
+			Suffix: []string{"/health", "/healthz", ""},
+		},
+	}, nil)
+
+	for _, tt := range []struct {
+		route    string
+		excluded bool
+	}{
+		{"/status", true},
+		{"/status/1", false},
+		{"/health", true},
+		{"/api/v1/healthz", true},
+		{"/healthy", false},
+		{"/healthz/", false},
+		{"/HEALTH", false},
+		{"/", false},
+		{"", false},
+	} {
+		t.Run(tt.route, func(t *testing.T) {
+			assert.Equal(t, tt.excluded, IsExcludedFromRequestCount(tt.route))
+		})
+	}
+}
+
+func TestUpdateRequestCountExclusions(t *testing.T) {
+	setupTestGlobals()
+	t.Cleanup(resetServiceConfig)
+
+	for _, tt := range []struct {
+		name   string
+		config string
+		exact  bool
+		suffix bool
+	}{
+		{"omitted preserves exclusions", `{}`, true, true},
+		{"null preserves exclusions", `{"requestCountExclusions":null}`, true, true},
+		{"empty arrays clear exclusions", `{"requestCountExclusions":{"exact":[],"suffix":[]}}`, false, false},
+		{"null arrays clear exclusions", `{"requestCountExclusions":{"exact":null,"suffix":null}}`, false, false},
+		{"empty object clears exclusions", `{"requestCountExclusions":{}}`, false, false},
+		{"missing suffix clears suffixes", `{"requestCountExclusions":{"exact":["/status"]}}`, true, false},
+		{"missing exact clears exact routes", `{"requestCountExclusions":{"suffix":["/health"]}}`, false, true},
+		{"new routes replace old routes", `{"requestCountExclusions":{"exact":["/ready"],"suffix":["/live"]}}`, false, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			resetServiceConfig()
+			UpdateServiceConfig(&aikido_types.CloudConfigData{
+				RequestCountExclusions: &aikido_types.RequestCountExclusions{
+					Exact: []string{"/status"}, Suffix: []string{"/health"},
+				},
+			}, nil)
+			var cloudConfig aikido_types.CloudConfigData
+			require.NoError(t, json.Unmarshal([]byte(tt.config), &cloudConfig))
+			UpdateServiceConfig(&cloudConfig, nil)
+			assert.Equal(t, tt.exact, IsExcludedFromRequestCount("/status"))
+			assert.Equal(t, tt.suffix, IsExcludedFromRequestCount("/api/health"))
+			if tt.name == "new routes replace old routes" {
+				assert.True(t, IsExcludedFromRequestCount("/ready"))
+				assert.True(t, IsExcludedFromRequestCount("/api/live"))
+			}
+		})
+	}
 }
 
 func TestUpdateServiceConfig(t *testing.T) {
@@ -185,6 +258,45 @@ func TestUpdateServiceConfig(t *testing.T) {
 		assert.Nil(t, serviceConfig.BlockedUserAgents)
 		serviceConfigMutex.RUnlock()
 	})
+}
+
+func TestMappedIPv4Lists(t *testing.T) {
+	setupTestGlobals()
+	defer resetServiceConfig()
+	resetServiceConfig()
+
+	list := aikido_types.IPList{
+		Key:         "mapped",
+		Source:      "manual",
+		Description: "Mapped IPv4 range",
+		IPs:         []string{"::ffff:185.162.16.0/120"},
+	}
+	UpdateServiceConfig(&aikido_types.CloudConfigData{
+		ConfigUpdatedAt: time.Now().UnixMilli(),
+		BypassedIPs:     list.IPs,
+	}, &aikido_types.ListsConfigData{
+		BlockedIPAddresses:   []aikido_types.IPList{list},
+		AllowedIPAddresses:   []aikido_types.IPList{list},
+		MonitoredIPAddresses: []aikido_types.IPList{list},
+	})
+
+	for _, ip := range []string{"185.162.16.188", "::ffff:185.162.16.188"} {
+		blocked, description := IsIPBlocked(ip)
+		assert.True(t, blocked, ip)
+		assert.Equal(t, list.Description, description)
+		assert.True(t, IsIPAllowed(ip), ip)
+		assert.True(t, IsIPBypassed(ip), ip)
+		assert.Equal(t, []string{list.Key}, GetMatchingBlockedIPKeys(ip), ip)
+		assert.Equal(t, []string{list.Key}, GetMatchingMonitoredIPKeys(ip), ip)
+	}
+	for _, ip := range []string{"185.162.17.188", "::ffff:185.162.17.188"} {
+		blocked, _ := IsIPBlocked(ip)
+		assert.False(t, blocked, ip)
+		assert.False(t, IsIPAllowed(ip), ip)
+		assert.False(t, IsIPBypassed(ip), ip)
+		assert.Empty(t, GetMatchingBlockedIPKeys(ip), ip)
+		assert.Empty(t, GetMatchingMonitoredIPKeys(ip), ip)
+	}
 }
 
 func TestIsIPBlocked(t *testing.T) {

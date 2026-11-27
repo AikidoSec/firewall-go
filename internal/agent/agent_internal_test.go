@@ -118,6 +118,30 @@ func resetAgentCtxForTest(t *testing.T) {
 func TestHandleStartEventConfig(t *testing.T) {
 	initAgentForTest(t)
 
+	t.Run("stores request count exclusions from the startup response", func(t *testing.T) {
+		t.Setenv("AIKIDO_FEATURE_SSE", "")
+		config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+			RequestCountExclusions: &aikido_types.RequestCountExclusions{},
+		}, nil)
+		t.Cleanup(func() {
+			config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+				RequestCountExclusions: &aikido_types.RequestCountExclusions{},
+			}, nil)
+		})
+		assert.False(t, config.IsExcludedFromRequestCount("/status"))
+
+		handleStartEventConfig(&internalMockCloudClient{}, &aikido_types.CloudConfigData{
+			ConfigUpdatedAt: time.Now().UnixMilli(),
+			RequestCountExclusions: &aikido_types.RequestCountExclusions{
+				Exact: []string{"/status"}, Suffix: []string{"/healthz"},
+			},
+		})
+
+		assert.True(t, config.IsExcludedFromRequestCount("/status"))
+		assert.True(t, config.IsExcludedFromRequestCount("/api/healthz"))
+		assert.False(t, config.IsExcludedFromRequestCount("/other"))
+	})
+
 	t.Run("starts the SSE subscription when the initial cloud config enables realtime_updates", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			resetAgentCtxForTest(t)
@@ -416,8 +440,42 @@ func TestStats(t *testing.T) {
 
 func TestOnRequestShutdown(t *testing.T) {
 	t.Run("records request metadata", func(t *testing.T) {
-		assert.NotPanics(t, func() {
-			OnRequestShutdown("GET", "/api/test", 200, "user1", "1.2.3.4", nil)
+		synctest.Test(t, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				OnRequestShutdown("GET", "/api/test", 200, "user1", "1.2.3.4", nil)
+			})
+			synctest.Wait()
+		})
+	})
+
+	t.Run("discovers excluded routes without counting their requests", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			initAgentForTest(t)
+			config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+				RequestCountExclusions: &aikido_types.RequestCountExclusions{
+					Exact: []string{"/status"}, Suffix: []string{"/healthz"},
+				},
+			}, nil)
+			t.Cleanup(func() {
+				config.UpdateServiceConfig(&aikido_types.CloudConfigData{
+					RequestCountExclusions: &aikido_types.RequestCountExclusions{},
+				}, nil)
+			})
+			Stats().GetAndClear()
+			stateCollector.GetRoutesAndClear()
+
+			apiSpec := &aikido_types.APISpec{}
+			OnRequestShutdown("GET", "/status", 200, "", "", apiSpec)
+			OnRequestShutdown("GET", "/api/healthz", 200, "", "", apiSpec)
+			OnRequestShutdown("GET", "/test", 200, "", "", nil)
+			synctest.Wait()
+
+			assert.Equal(t, 1, Stats().GetAndClear().Requests.Total)
+			routes := stateCollector.GetRoutesAndClear()
+			require.Len(t, routes, 3)
+			for _, path := range []string{"/status", "/api/healthz"} {
+				assert.Contains(t, routes, aikido_types.Route{Method: "GET", Path: path, Hits: 1, APISpec: apiSpec})
+			}
 		})
 	})
 }

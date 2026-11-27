@@ -10,6 +10,13 @@ make benchmark
 
 This finds all packages containing benchmarks and runs them.
 
+Filter by benchmark name (a Go benchmark regex) and optionally set its duration:
+
+```bash
+make benchmark BENCH=ExtractJSONFromReader
+make benchmark BENCH=TryExtractBodyMemory BENCHTIME=1x
+```
+
 ## What We Measure
 
 ### Middleware Overhead
@@ -26,10 +33,25 @@ We benchmark the middleware for each supported framework to measure the overhead
 
 Measures the performance of SQL injection detection across various input patterns.
 
+### SQL Sink Overhead with HTTP Request Context
+
+```bash
+make bench-sql COUNT=5
+BENCH='BenchmarkHTTPSQLSerial/WASM' BENCHTIME=2s make bench-sql COUNT=5
+```
+
+`benchmarks/sinks/database/sql` compares vanilla vs. zen-go for HTTP requests
+through the SQL sink, using an in-memory driver. Covers early-return and WASM
+paths in `BenchmarkHTTPSQLSerial` and `BenchmarkHTTPSQLParallel`. Results and profiles are saved to
+`bench-results/benchmarks_sinks_database_sql/`.
+
+Parallel `ns/op` measures throughput rather than request latency. Profiles
+include initialization and warmup; per-operation metrics exclude untimed setup.
+
 ### Body Parsing
 
-- `BenchmarkSmallBody` (1KB) - `internal/http`
-- `BenchmarkLargeBody` (5MB) - `internal/http`
+- `BenchmarkExtractJSONFromReader/1KiB` - `instrumentation/http`
+- `BenchmarkExtractJSONFromReader/5MiB` - `instrumentation/http`
 
 Measures JSON body parsing performance for different payload sizes.
 

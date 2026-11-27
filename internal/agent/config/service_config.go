@@ -3,6 +3,7 @@ package config
 import (
 	"log/slog"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -58,6 +59,8 @@ type ServiceConfigData struct {
 	Block                           bool
 	BlockNewOutgoingRequests        bool
 	Domains                         []aikido_types.OutboundDomain
+	RequestCountExclusionsExact     map[string]bool
+	RequestCountExclusionsSuffix    []string
 }
 
 func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsConfig *aikido_types.ListsConfigData) {
@@ -97,6 +100,20 @@ func setServiceConfig(cloudConfigFromAgent *aikido_types.CloudConfigData, listsC
 	serviceConfig.ExcludedUserIDsFromRateLimiting = map[string]bool{}
 	for _, userID := range cloudConfigFromAgent.ExcludedUserIdsFromRateLimiting {
 		serviceConfig.ExcludedUserIDsFromRateLimiting[userID] = true
+	}
+
+	// Omitted or null exclusions leave the current rules unchanged.
+	if exclusions := cloudConfigFromAgent.RequestCountExclusions; exclusions != nil {
+		serviceConfig.RequestCountExclusionsExact = map[string]bool{}
+		for _, route := range exclusions.Exact {
+			serviceConfig.RequestCountExclusionsExact[route] = true
+		}
+		serviceConfig.RequestCountExclusionsSuffix = nil
+		for _, suffix := range exclusions.Suffix {
+			if suffix != "" {
+				serviceConfig.RequestCountExclusionsSuffix = append(serviceConfig.RequestCountExclusionsSuffix, suffix)
+			}
+		}
 	}
 
 	serviceConfig.BypassedIPs = ipaddr.BuildMatchList("bypassedIPs", "bypassed", cloudConfigFromAgent.BypassedIPs)
@@ -323,6 +340,26 @@ func IsUserExcludedFromRateLimiting(userID string) bool {
 	defer serviceConfigMutex.RUnlock()
 
 	return keyExists(serviceConfig.ExcludedUserIDsFromRateLimiting, userID)
+}
+
+// IsExcludedFromRequestCount matches routes without affecting discovery or protection.
+func IsExcludedFromRequestCount(route string) bool {
+	if route == "" {
+		return false
+	}
+
+	serviceConfigMutex.RLock()
+	defer serviceConfigMutex.RUnlock()
+
+	if keyExists(serviceConfig.RequestCountExclusionsExact, route) {
+		return true
+	}
+	for _, suffix := range serviceConfig.RequestCountExclusionsSuffix {
+		if strings.HasSuffix(route, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func SetUserBlocked(userID string) {

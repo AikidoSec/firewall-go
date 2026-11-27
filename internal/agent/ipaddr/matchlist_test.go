@@ -120,25 +120,41 @@ func TestMatchList_Matches(t *testing.T) {
 		ipNoMatch := netip.MustParseAddr("10.0.0.1")
 		assert.False(t, blocklist.Matches(ipNoMatch))
 	})
+}
 
-	t.Run("handles IPv4-mapped IPv6 addresses", func(t *testing.T) {
-		ips := []string{"192.168.1.1", "10.0.0.1"}
-		blocklist := BuildMatchList("test", "IPv4 list", ips)
+func TestMatchList_MappedIPv4(t *testing.T) {
+	tests := []struct {
+		name  string
+		entry string
+		ip    string
+		match bool
+	}{
+		{"mapped CIDR", "::ffff:185.162.16.0/120", "185.162.16.188", true},
+		{"mapped CIDR first address", "::ffff:185.162.16.0/120", "185.162.16.0", true},
+		{"mapped CIDR last address", "::ffff:185.162.16.0/120", "185.162.16.255", true},
+		{"mapped CIDR below range", "::ffff:185.162.16.0/120", "185.162.15.255", false},
+		{"mapped CIDR above range", "::ffff:185.162.16.0/120", "185.162.17.0", false},
+		{"mapped CIDR with host bits", "::ffff:185.162.16.188/120", "185.162.16.1", true},
+		{"mapped exact address", "::ffff:185.162.16.188", "185.162.16.188", true},
+		{"mapped exact address miss", "::ffff:185.162.16.188", "185.162.16.189", false},
+		{"mapped host prefix", "::ffff:185.162.16.188/128", "185.162.16.188", true},
+		{"mapped host prefix miss", "::ffff:185.162.16.188/128", "185.162.16.189", false},
+		{"entire mapped range", "::ffff:0:0/96", "185.162.16.188", true},
+		{"broader IPv6 range", "::fffe:0:0/95", "185.162.16.188", true},
+		{"IPv4 CIDR", "185.162.16.0/24", "185.162.16.188", true},
+		{"IPv4 exact address", "185.162.16.188", "185.162.16.188", true},
+		{"unrelated IPv6 range", "2001:db8::/32", "185.162.16.188", false},
+		{"IPv4-compatible is not mapped", "::185.162.16.188/128", "185.162.16.188", false},
+	}
 
-		// Test IPv4-mapped IPv6 address - netipx handles this automatically
-		// when we use Unmap() in Parse or use the unmapped address
-		ipv4Mapped := netip.MustParseAddr("::ffff:192.168.1.1")
-		// The IPSet should match unmapped addresses
-		assert.True(t, blocklist.Matches(ipv4Mapped.Unmap()), "Unmapped IPv4-mapped address should match")
-
-		// Test non-matching
-		ipv4MappedNoMatch := netip.MustParseAddr("::ffff:172.16.0.1")
-		assert.False(t, blocklist.Matches(ipv4MappedNoMatch.Unmap()), "Unmapped IPv4-mapped address should not match if not in list")
-
-		// Test regular IPv4 address still works
-		ipv4 := netip.MustParseAddr("192.168.1.1")
-		assert.True(t, blocklist.Matches(ipv4))
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			list := BuildMatchList("test", "Mapped IPv4 list", []string{tt.entry})
+			for _, input := range []string{tt.ip, "::ffff:" + tt.ip} {
+				assert.Equal(t, tt.match, list.Matches(netip.MustParseAddr(input)), input)
+			}
+		})
+	}
 }
 
 func TestParse(t *testing.T) {

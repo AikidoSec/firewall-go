@@ -92,7 +92,7 @@ echo ">>> Capturing profiles (single dedicated run each)..."
 
 echo
 if command -v benchstat >/dev/null 2>&1; then
-	benchstat "$OUT_DIR/vanilla.txt" "$OUT_DIR/zen.txt" | tee "$OUT_DIR/benchstat.txt"
+	benchstat "vanilla=$OUT_DIR/vanilla.txt" "zen=$OUT_DIR/zen.txt" | tee "$OUT_DIR/benchstat.txt"
 else
 	echo "benchstat not installed. To install:"
 	echo "  go install golang.org/x/perf/cmd/benchstat@latest"

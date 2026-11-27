@@ -25,7 +25,8 @@ rules:
       //go:linkname __aikido_http_wrap_transport github.com/AikidoSec/firewall-go/instrumentation/sinks/net/http.WrapTransport
       func __aikido_http_wrap_transport(RoundTripper) RoundTripper
 
-  # Prepend to Client.transport to wrap the transport with SSRF check
+  # Wrap all transports for context propagation and redirect tracking;
+  # directly accessible *http.Transports also receive DNS-level SSRF checks.
   - id: net/http.Client.transport
     type: prepend
     receiver: "*net/http.Client"

@@ -8,13 +8,15 @@ import (
 	"strings"
 
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/buildid"
+	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/importcfg"
 	"github.com/AikidoSec/firewall-go/cmd/zen-go/internal/instrumentor"
+	zenversion "github.com/AikidoSec/firewall-go/cmd/zen-go/internal/version"
 )
 
 // toolexecVersionQueryCommand handles the -V=full version query that Go uses to compute build IDs.
 // We intercept this and append our instrumentation hash to the version string, which
-// ensures that when instrumentation rules change, Go will compute different build IDs
-// and rebuild packages.
+// ensures that when instrumentation rules or dependency versions change, Go will compute
+// different build IDs and rebuild packages.
 func toolexecVersionQueryCommand(stdout io.Writer, stderr io.Writer, tool string, toolArgs []string) error {
 	// Run the actual compiler to get its version string
 	// #nosec G204 - tool is the Go toolchain binary passed by Go's -toolexec mechanism, not user input
@@ -28,16 +30,24 @@ func toolexecVersionQueryCommand(stdout io.Writer, stderr io.Writer, tool string
 	}
 
 	// Compute hash of instrumentation rules
-	inst, err := instrumentor.NewInstrumentor(version)
+	resolvedVersion := zenversion.Resolve(version)
+
+	inst, err := instrumentor.NewInstrumentor(resolvedVersion)
 	if err != nil {
 		return err
 	}
 
-	rulesHash := buildid.ComputeInstrumentationHash(inst, version)
+	rulesHash := buildid.ComputeInstrumentationHash(inst, resolvedVersion)
+	// The rules hash covers the injected import paths, but not their selected versions.
+	modulesHash, err := buildid.ComputeModuleGraphHash(importcfg.ModuleBuildFlags())
+	if err != nil {
+		return err
+	}
+	toolHash := buildid.ComputeToolHash(rulesHash, modulesHash)
 
 	// Append our hash to the version string
 	versionStr := strings.TrimSpace(versionOutput.String())
-	modifiedVersion := versionStr + ":" + "zen-go@" + rulesHash
+	modifiedVersion := versionStr + ":" + "zen-go@" + toolHash
 
 	fmt.Fprint(stdout, modifiedVersion)
 	if !strings.HasSuffix(modifiedVersion, "\n") {

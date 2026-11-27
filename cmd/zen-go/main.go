@@ -9,17 +9,18 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	zenversion "github.com/AikidoSec/firewall-go/cmd/zen-go/internal/version"
 	"github.com/urfave/cli/v3"
 )
 
-const version = "1.2.11"
+const version = "1.2.14"
 
 func newCommand() *cli.Command {
 	return &cli.Command{
 		Name:    "zen-go",
 		Usage:   "Aikido Zen CLI tool for Go",
 		Suggest: true,
-		Version: version,
+		Version: zenversion.Resolve(version),
 
 		Commands: []*cli.Command{
 			{

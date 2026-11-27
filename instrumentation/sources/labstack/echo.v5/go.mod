@@ -1,12 +1,14 @@
 module github.com/AikidoSec/firewall-go/instrumentation/sources/labstack/echo.v5
 
-go 1.25.5
+go 1.26.0
+
+toolchain go1.26.11
 
 replace github.com/AikidoSec/firewall-go => ../../../../
 
 require (
-	github.com/AikidoSec/firewall-go v1.2.11
-	github.com/labstack/echo/v5 v5.2.0
+	github.com/AikidoSec/firewall-go v1.2.15
+	github.com/labstack/echo/v5 v5.4.1
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -16,8 +18,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/tetratelabs/wazero v1.11.0 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

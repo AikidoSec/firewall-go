@@ -1,7 +1,6 @@
 package chi
 
 import (
-	"mime/multipart"
 	"net/http"
 
 	zenhttp "github.com/AikidoSec/firewall-go/instrumentation/http"
@@ -56,7 +55,7 @@ func GetMiddleware() func(next http.Handler) http.Handler {
 			data.Route = route
 			data.RouteParams = routeParams
 			data.RemoteAddress = &ip
-			data.Body = zenhttp.TryExtractBody(r, &requestParser{req: r})
+			data.Body = zenhttp.TryExtractBody(r)
 
 			reqCtx := request.SetContext(r.Context(), data)
 
@@ -103,19 +102,4 @@ func getRoutePattern(r *http.Request) (string, chi.RouteParams) {
 
 	// tctx has the updated pattern, since Match mutates it
 	return tctx.RoutePattern(), tctx.URLParams
-}
-
-type requestParser struct {
-	req *http.Request
-}
-
-func (rp *requestParser) MultipartForm() (*multipart.Form, error) {
-	// Used same max memory as stdlib:
-	// https://cs.opensource.google/go/go/+/refs/tags/go1.25.5:src/net/http/request.go;l=36
-	err := rp.req.ParseMultipartForm(32 << 20)
-	if err != nil {
-		return nil, err
-	}
-
-	return rp.req.MultipartForm, nil
 }

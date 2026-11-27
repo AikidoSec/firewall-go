@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -55,6 +56,27 @@ func TestMiddlewareAddsContext(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	handler(w, r)
+}
+
+func TestMiddlewarePreservesDuplicateJSONValues(t *testing.T) {
+	body := `{"field":"attack","field":null}`
+	called := false
+	handler := Middleware(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx)
+		assert.Equal(t, map[string]any{"field": []any{"attack", nil}}, ctx.Body)
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.Equal(t, body, string(raw))
+		w.WriteHeader(http.StatusOK)
+	})
+	r := httptest.NewRequest("POST", "/route", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handler(w, r)
+	assert.True(t, called)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestMiddlewareSetsIPInContext(t *testing.T) {
@@ -154,6 +176,51 @@ func TestMiddlewarePreservesBodyForMultipart(t *testing.T) {
 	handler(w, r)
 
 	assert.Equal(t, "value1", fieldReadInHandler)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestMiddlewareInspectsMultipartParsedBeforeServeMux(t *testing.T) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	require.NoError(t, writer.WriteField("username", "alice"))
+	require.NoError(t, writer.WriteField("email", "alice@example.com"))
+	require.NoError(t, writer.Close())
+	expected := url.Values{
+		"username": {"alice"},
+		"email":    {"alice@example.com"},
+	}
+
+	called := false
+	mux := http.NewServeMux()
+	// Instrumentation wraps registered handlers, not middleware outside the mux.
+	mux.HandleFunc("POST /upload", Middleware(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		ctx := request.GetContext(r.Context())
+		require.NotNil(t, ctx)
+		assert.Equal(t, expected, ctx.Body, "inspection must retain form fields parsed by outer middleware")
+		assert.Equal(t, expected, r.PostForm)
+		require.NotNil(t, r.MultipartForm)
+		assert.Equal(t, expected, url.Values(r.MultipartForm.Value))
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	outerMiddleware := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, r.ParseMultipartForm(32<<20))
+		defer func() {
+			require.NoError(t, r.MultipartForm.RemoveAll())
+		}()
+		remaining, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.Empty(t, remaining, "outer middleware has already consumed the body")
+		mux.ServeHTTP(w, r)
+	})
+
+	r := httptest.NewRequest(http.MethodPost, "/upload", &body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	outerMiddleware.ServeHTTP(w, r)
+
+	assert.True(t, called)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
@@ -447,6 +514,29 @@ func TestMiddlewareCallsOnPostRequest(t *testing.T) {
 		stats := agent.Stats().GetAndClear()
 		require.Equal(c, 1, stats.Requests.Total)
 	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestMiddlewareDiscoversSuccessfulRoute(t *testing.T) {
+	agent.State().GetRoutesAndClear()
+
+	router := http.NewServeMux()
+	router.HandleFunc("GET /discovered-route/{id}", Middleware(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequest("GET", "/discovered-route/foo?query=value", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	require.Eventually(t, func() bool {
+		for _, route := range agent.State().GetRoutesAndClear() {
+			if route.Path == "/discovered-route/{id}" && route.Method == "GET" {
+				return true
+			}
+		}
+		return false
+	}, 100*time.Millisecond, 10*time.Millisecond, "GET /discovered-route/{id} should be discovered")
 }
 
 func addBrowserHeaders(r *http.Request) {

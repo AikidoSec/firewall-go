@@ -146,7 +146,9 @@ func OnRequestShutdown(method string, route string, statusCode int, user string,
 		slog.String("user", user),
 		slog.String("ip", ip))
 
-	stateCollector.Stats().OnRequest()
+	if !config.IsExcludedFromRequestCount(route) {
+		stateCollector.Stats().OnRequest()
+	}
 	go stateCollector.StoreRoute(method, route, apiSpec)
 }
 

@@ -377,45 +377,59 @@ func TestMiddlewareDiscoversSuccessfulRoute(t *testing.T) {
 
 func TestMiddlewareReportsHandlerErrorStatusCode(t *testing.T) {
 	agent.State().GetRoutesAndClear()
+	path := "/" + t.Name()
 
 	app := newTestApp()
 	app.Use(zenfiber.GetMiddleware())
 
-	app.Get("/admin", func(c fiber.Ctx) error {
+	app.Get(path, func(c fiber.Ctx) error {
 		return fiber.NewError(http.StatusForbidden)
 	})
 
-	r := httptest.NewRequest("GET", "/admin", http.NoBody)
+	r := httptest.NewRequest("GET", path, http.NoBody)
 	resp, err := app.Test(r)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 
+	// Earlier tests may still store routes asynchronously; only check this request's route.
 	assert.Never(t, func() bool {
-		return len(agent.State().GetRoutesAndClear()) > 0
+		for _, route := range agent.State().GetRoutesAndClear() {
+			if route.Path == path && route.Method == "GET" {
+				return true
+			}
+		}
+		return false
 	}, 100*time.Millisecond, 10*time.Millisecond, "a 403 route should not be discovered")
 }
 
 func TestMiddlewareReportsPlainErrorStatusCode(t *testing.T) {
 	agent.State().GetRoutesAndClear()
+	path := "/" + t.Name()
 
 	app := newTestApp()
 	app.Use(zenfiber.GetMiddleware())
 
-	app.Get("/admin", func(c fiber.Ctx) error {
+	app.Get(path, func(c fiber.Ctx) error {
 		return errors.New("boom")
 	})
 
-	r := httptest.NewRequest("GET", "/admin", http.NoBody)
+	r := httptest.NewRequest("GET", path, http.NoBody)
 	resp, err := app.Test(r)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
+	// Earlier tests may still store routes asynchronously; only check this request's route.
 	assert.Never(t, func() bool {
-		return len(agent.State().GetRoutesAndClear()) > 0
+		for _, route := range agent.State().GetRoutesAndClear() {
+			if route.Path == path && route.Method == "GET" {
+				return true
+			}
+		}
+		return false
 	}, 100*time.Millisecond, 10*time.Millisecond, "a 500 route should not be discovered")
 }
 

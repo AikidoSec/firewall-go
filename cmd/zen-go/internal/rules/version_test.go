@@ -44,6 +44,18 @@ func TestCheckMinVersions_MultipleEntries(t *testing.T) {
 	assert.Contains(t, err.Error(), "b.yml")
 }
 
+func TestCheckMinVersions_UnverifiableCurrentVersion(t *testing.T) {
+	entries := []MinVersionEntry{
+		{File: "a.yml", Version: "99.0.0"},
+	}
+
+	require.NoError(t, CheckMinVersions(entries, "(devel)"))
+	require.NoError(t, CheckMinVersions(entries, "v0.0.0-20240101000000-abcdef123456"))
+	require.NoError(t, CheckMinVersions(entries, "v0.0.0-00010101000000-000000000000")) // zero pseudo-version from a local replace
+	require.NoError(t, CheckMinVersions(entries, "0.0.0-20240101000000-abcdef123456"))
+	require.NoError(t, CheckMinVersions(entries, "0.0.0-00010101000000-000000000000"))
+}
+
 func TestCheckMinVersions_InvalidCurrentVersion(t *testing.T) {
 	entries := []MinVersionEntry{
 		{File: "a.yml", Version: "0.1.0"},
@@ -70,28 +82,49 @@ func TestCheckMinVersions_VPrefix(t *testing.T) {
 }
 
 func TestParseSemver(t *testing.T) {
-	v, err := parseSemver("1.2.3")
-	require.NoError(t, err)
-	assert.Equal(t, semver{1, 2, 3}, v)
+	tests := []struct {
+		input   string
+		want    semver
+		wantErr string
+	}{
+		{input: "1.2.3", want: semver{1, 2, 3}},
+		{input: "v0.3.0", want: semver{0, 3, 0}},
+		{input: "1.2", wantErr: "expected format major.minor.patch"},
+		{input: "abc", wantErr: "expected format major.minor.patch"},
+		{input: "x.0.0", wantErr: "invalid major version"},
+		{input: "0.x.0", wantErr: "invalid minor version"},
+		{input: "0.0.x", wantErr: "invalid patch version"},
+		{input: "1.2.7-beta.1", want: semver{1, 2, 7}},
+		{input: "v1.2.7-beta.1", want: semver{1, 2, 7}},
+		{input: "v0.0.0-20240101000000-abcdef123456", want: semver{0, 0, 0}},
+		{input: "1.2.7+buildmeta", want: semver{1, 2, 7}},
+	}
 
-	v, err = parseSemver("v0.3.0")
-	require.NoError(t, err)
-	assert.Equal(t, semver{0, 3, 0}, v)
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			v, err := parseSemver(tt.input)
+			if tt.wantErr != "" {
+				assert.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, v)
+		})
+	}
+}
 
-	_, err = parseSemver("1.2")
-	assert.Error(t, err)
+func TestCheckMinVersions_BetaCurrentVersion(t *testing.T) {
+	entries := []MinVersionEntry{
+		{File: "sinks/sql/zen.instrument.yml", Version: "1.2.6"},
+	}
+	require.NoError(t, CheckMinVersions(entries, "v1.2.7-beta.1"))
 
-	_, err = parseSemver("abc")
-	assert.Error(t, err)
-
-	_, err = parseSemver("x.0.0")
-	assert.ErrorContains(t, err, "invalid major version")
-
-	_, err = parseSemver("0.x.0")
-	assert.ErrorContains(t, err, "invalid minor version")
-
-	_, err = parseSemver("0.0.x")
-	assert.ErrorContains(t, err, "invalid patch version")
+	entries = []MinVersionEntry{
+		{File: "sinks/sql/zen.instrument.yml", Version: "1.2.8"},
+	}
+	err := CheckMinVersions(entries, "v1.2.7-beta.1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "requires zen-go >= v1.2.8")
 }
 
 func TestShortPath(t *testing.T) {
