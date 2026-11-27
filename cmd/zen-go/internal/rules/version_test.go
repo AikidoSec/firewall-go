@@ -52,6 +52,8 @@ func TestCheckMinVersions_UnverifiableCurrentVersion(t *testing.T) {
 	require.NoError(t, CheckMinVersions(entries, "(devel)"))
 	require.NoError(t, CheckMinVersions(entries, "v0.0.0-20240101000000-abcdef123456"))
 	require.NoError(t, CheckMinVersions(entries, "v0.0.0-00010101000000-000000000000")) // zero pseudo-version from a local replace
+	require.NoError(t, CheckMinVersions(entries, "0.0.0-20240101000000-abcdef123456"))
+	require.NoError(t, CheckMinVersions(entries, "0.0.0-00010101000000-000000000000"))
 }
 
 func TestCheckMinVersions_InvalidCurrentVersion(t *testing.T) {

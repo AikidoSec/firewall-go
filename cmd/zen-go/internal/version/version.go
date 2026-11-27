@@ -1,6 +1,9 @@
 package version
 
-import "runtime/debug"
+import (
+	"runtime/debug"
+	"strings"
+)
 
 func Resolve(fallback string) string {
 	bi, ok := debug.ReadBuildInfo()
@@ -16,5 +19,5 @@ func resolveFromBuildInfo(bi *debug.BuildInfo, fallback string) string {
 		return fallback
 	}
 
-	return bi.Main.Version
+	return strings.TrimPrefix(bi.Main.Version, "v")
 }

@@ -12,7 +12,9 @@ import (
 // isUnverifiableVersion covers devel builds and pseudo-versions (including the
 // zero pseudo-version from a local filesystem `replace`, per CheckModuleVersionSync).
 func isUnverifiableVersion(v string) bool {
-	return v == "(devel)" || module.IsPseudoVersion(v)
+	// Go's pseudo-version detector requires a v prefix, while the CLI reports
+	// versions without one.
+	return v == "(devel)" || module.IsPseudoVersion("v"+strings.TrimPrefix(v, "v"))
 }
 
 // CheckMinVersions checks that currentVersion satisfies all minimum version requirements.
