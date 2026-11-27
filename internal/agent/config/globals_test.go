@@ -24,17 +24,27 @@ func TestVersionFromBuildInfo(t *testing.T) {
 					{Path: modulePath, Version: "v1.3.0"},
 				},
 			},
-			want: "v1.3.0",
+			want: "1.3.0",
 		},
 		{
 			name: "prerelease dependency",
 			info: debug.BuildInfo{Deps: []*debug.Module{{Path: modulePath, Version: "v1.3.0-beta.1"}}},
-			want: "v1.3.0-beta.1",
+			want: "1.3.0-beta.1",
 		},
 		{
 			name: "main module",
 			info: debug.BuildInfo{Main: debug.Module{Path: modulePath, Version: "v1.3.0"}},
-			want: "v1.3.0",
+			want: "1.3.0",
+		},
+		{
+			name: "version without prefix",
+			info: debug.BuildInfo{Deps: []*debug.Module{{Path: modulePath, Version: "1.2.14"}}},
+			want: "1.2.14",
+		},
+		{
+			name: "release dependency",
+			info: debug.BuildInfo{Deps: []*debug.Module{{Path: modulePath, Version: "v1.2.14"}}},
+			want: "1.2.14",
 		},
 		{
 			name: "development main module",
@@ -62,7 +72,7 @@ func TestVersionFromBuildInfo(t *testing.T) {
 				Path: modulePath, Version: "v1.3.0",
 				Replace: &debug.Module{Path: modulePath, Version: "v1.4.0"},
 			}}},
-			want: "v1.4.0",
+			want: "1.4.0",
 		},
 		{
 			name: "local replacement",

@@ -1,6 +1,9 @@
 package config
 
-import "runtime/debug"
+import (
+	"runtime/debug"
+	"strings"
+)
 
 const fallbackVersion = "1.2.14"
 
@@ -39,5 +42,5 @@ func moduleVersion(mod debug.Module) string {
 	if effectiveModule.Version == "" || effectiveModule.Version == "(devel)" {
 		return fallbackVersion
 	}
-	return effectiveModule.Version
+	return strings.TrimPrefix(effectiveModule.Version, "v")
 }

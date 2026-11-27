@@ -16,7 +16,17 @@ func TestResolveFromBuildInfo(t *testing.T) {
 		{
 			name:     "uses the version go install resolved",
 			bi:       &debug.BuildInfo{Main: debug.Module{Version: "v1.2.7-beta.1"}},
-			expected: "v1.2.7-beta.1",
+			expected: "1.2.7-beta.1",
+		},
+		{
+			name:     "removes the prefix from a release version",
+			bi:       &debug.BuildInfo{Main: debug.Module{Version: "v1.2.14"}},
+			expected: "1.2.14",
+		},
+		{
+			name:     "preserves a version without prefix",
+			bi:       &debug.BuildInfo{Main: debug.Module{Version: "1.2.14"}},
+			expected: "1.2.14",
 		},
 		{
 			name:     "falls back to fallback for a local dev build",
