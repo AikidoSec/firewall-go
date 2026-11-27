@@ -234,8 +234,6 @@ func TestStoreDeferredAttack(t *testing.T) {
 }
 
 func TestReportDeferredAttack(t *testing.T) {
-	require.NoError(t, agent.Init(&aikido_types.EnvironmentConfigData{}, &aikido_types.AikidoConfigData{}))
-
 	t.Run("does nothing when context has no request context", func(t *testing.T) {
 		originalClient := agent.GetCloudClient()
 
@@ -470,6 +468,7 @@ func TestOnStoredSSRF(t *testing.T) {
 
 type mockCloudClient struct {
 	attackDetectedEventSent chan struct{}
+	attackOperation         string // If set, ignore reports for other operations.
 	capturedAgentInfo       cloud.AgentInfo
 	capturedRequest         aikido_types.RequestInfo
 	capturedAttack          aikido_types.AttackDetails
@@ -494,6 +493,10 @@ func (m *mockCloudClient) FetchListsConfig() (*aikido_types.ListsConfigData, err
 }
 
 func (m *mockCloudClient) SendAttackDetectedEvent(agentInfo cloud.AgentInfo, request aikido_types.RequestInfo, attack aikido_types.AttackDetails) {
+	if m.attackOperation != "" && attack.Operation != m.attackOperation {
+		return
+	}
+
 	m.mu.Lock()
 	m.capturedAgentInfo = agentInfo
 	m.capturedRequest = request

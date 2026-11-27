@@ -2,13 +2,21 @@ package attackwave
 
 import (
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLRUCache(t *testing.T) {
-	t.Run("stores and retrieves values", func(t *testing.T) {
+	// Use a fake clock so scheduler delays can't expire entries mid-test.
+	run := func(name string, test func(*testing.T)) {
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, test)
+		})
+	}
+
+	run("stores and retrieves values", func(t *testing.T) {
 		cache := newLRUCache[int](10, 50*time.Millisecond)
 
 		cache.Set("ip1", 1)
@@ -18,7 +26,7 @@ func TestLRUCache(t *testing.T) {
 		assert.Equal(t, 1, val)
 	})
 
-	t.Run("evicts oldest entry when capacity reached", func(t *testing.T) {
+	run("evicts oldest entry when capacity reached", func(t *testing.T) {
 		cache := newLRUCache[int](3, 50*time.Millisecond)
 
 		cache.Set("ip1", 1)
@@ -34,7 +42,7 @@ func TestLRUCache(t *testing.T) {
 		assert.True(t, ok, "newest entry should exist")
 	})
 
-	t.Run("get bumps entry to most recent", func(t *testing.T) {
+	run("get bumps entry to most recent", func(t *testing.T) {
 		cache := newLRUCache[int](3, 50*time.Millisecond)
 
 		cache.Set("ip1", 1)
@@ -51,7 +59,7 @@ func TestLRUCache(t *testing.T) {
 		assert.False(t, ok, "ip2 should be evicted")
 	})
 
-	t.Run("entries expire after TTL", func(t *testing.T) {
+	run("entries expire after TTL", func(t *testing.T) {
 		cache := newLRUCache[int](10, 50*time.Millisecond)
 
 		cache.Set("ip1", 1)
@@ -66,7 +74,7 @@ func TestLRUCache(t *testing.T) {
 		assert.False(t, ok, "entry should be expired")
 	})
 
-	t.Run("updating entry refreshes TTL", func(t *testing.T) {
+	run("updating entry refreshes TTL", func(t *testing.T) {
 		cache := newLRUCache[int](10, 100*time.Millisecond)
 
 		cache.Set("ip1", 1)
@@ -76,7 +84,9 @@ func TestLRUCache(t *testing.T) {
 		cache.Set("ip1", 2)
 		time.Sleep(60 * time.Millisecond)
 
-		_, ok := cache.Get("ip1")
+		// The original TTL has elapsed, but the refreshed TTL has not.
+		val, ok := cache.Get("ip1")
 		assert.True(t, ok, "entry should still be valid after TTL refresh")
+		assert.Equal(t, 2, val)
 	})
 }
